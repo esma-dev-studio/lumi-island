@@ -1,0 +1,112 @@
+// 島のレイアウトデータ(座標系: x=東+, z=南+, y=高さ)。ロジックに埋め込まず全部ここで管理。
+export interface POI {
+  id: string;
+  name: string;
+  x: number;
+  z: number;
+  rotY?: number;
+}
+
+// 主要地点
+export const POIS: Record<string, POI> = {
+  plaza: { id: 'plaza', name: 'ひろば', x: 0, z: 0 },
+  lumiTree: { id: 'lumiTree', name: 'ルミの木', x: 0, z: -7 },
+  playerHouse: { id: 'playerHouse', name: 'ミオの家', x: -34, z: 6, rotY: Math.PI / 2.3 },
+  minamoHouse: { id: 'minamoHouse', name: 'ミナモの小屋', x: 33, z: 14, rotY: -Math.PI / 2.2 },
+  noktoHouse: { id: 'noktoHouse', name: 'ノクトの家', x: 24, z: -30, rotY: Math.PI + 0.5 },
+  shop: { id: 'shop', name: 'ツムギ工房', x: -9, z: -1, rotY: Math.PI / 2 },
+  pier: { id: 'pier', name: 'さんばし', x: 4, z: 48 },
+  pond: { id: 'pond', name: '池', x: 30, z: 20 },
+  hill: { id: 'hill', name: '高台', x: 28, z: -27 },
+  beach: { id: 'beach', name: '浜べ', x: -6, z: 42 },
+  forest: { id: 'forest', name: '林', x: -2, z: -32 },
+};
+
+// 道(ポリライン)。地形の頂点色と平滑化に使う
+export const PATHS: [number, number][][] = [
+  [[0, 3], [0, 20], [-2, 32], [-4, 42], [4, 47]], // 広場→浜→桟橋
+  [[-4, 1], [-14, 3], [-24, 5], [-32, 6]], // 広場→ミオ家
+  [[3, 1], [14, 6], [24, 10], [30, 13]], // 広場→池・ミナモ小屋
+  [[2, -4], [10, -12], [17, -20], [22, -26]], // 広場→高台・ノクト家
+  [[-2, -4], [-4, -16], [-3, -26]], // 広場→林
+  [[-4, -1], [-7, -1]], // 広場→工房前
+];
+
+// 池(中心+半径)と池の水面高さ
+export const POND = { x: 30, z: 20, r: 9, waterY: 0.42 };
+export const SEA_LEVEL = 0.0;
+
+// 建物フットプリント(地形平滑化に使用)
+export const BUILDINGS = [
+  { id: 'playerHouse', w: 7, d: 6.4, kind: 'player' },
+  { id: 'minamoHouse', w: 5.6, d: 5.2, kind: 'minamo' },
+  { id: 'noktoHouse', w: 5.8, d: 5.6, kind: 'nokto' },
+  { id: 'shop', w: 8.2, d: 6.8, kind: 'shop' },
+] as const;
+
+// 採取ノード(リスポーンあり)
+export type NodeKind = 'tree' | 'berry' | 'rock' | 'ore' | 'grass' | 'moss';
+export interface GatherNodeDef {
+  id: string;
+  kind: NodeKind;
+  x: number;
+  z: number;
+}
+const N = (kind: NodeKind, x: number, z: number, i: number): GatherNodeDef => ({
+  id: `${kind}${i}`, kind, x, z,
+});
+export const GATHER_NODES: GatherNodeDef[] = [
+  // 林の木(木材)
+  N('tree', -8, -26, 1), N('tree', 2, -30, 2), N('tree', 8, -25, 3), N('tree', -12, -33, 4),
+  N('tree', 4, -38, 5), N('tree', -4, -40, 6), N('tree', 12, -33, 7), N('tree', -16, -25, 8),
+  // 草原・そのほかの木
+  N('tree', -26, 14, 9), N('tree', -20, -6, 10), N('tree', 20, 26, 11), N('tree', -30, -4, 12),
+  // ベリーの木
+  N('berry', -20, 16, 1), N('berry', -14, 22, 2), N('berry', 6, -20, 3), N('berry', -26, -12, 4),
+  N('berry', 16, 18, 5), N('berry', -34, 14, 6),
+  // 岩(石)
+  N('rock', 14, -14, 1), N('rock', -18, -18, 2), N('rock', 22, 4, 3), N('rock', -28, 20, 4),
+  N('rock', 10, 30, 5), N('rock', -12, 36, 6), N('rock', 36, -18, 7), N('rock', -38, -2, 8),
+  // 鉱石(高台の露頭)
+  N('ore', 32, -24, 1), N('ore', 27, -34, 2), N('ore', 35, -30, 3), N('ore', 30, -21, 4),
+  // 草むら(クサツル)
+  N('grass', -16, 10, 1), N('grass', -24, 2, 2), N('grass', 12, 14, 3), N('grass', -8, 24, 4),
+  N('grass', 18, -6, 5), N('grass', -30, 12, 6), N('grass', 24, 16, 7), N('grass', -22, 26, 8),
+  N('grass', 8, 6, 9), N('grass', -12, -10, 10), N('grass', 34, 6, 11), N('grass', -36, 10, 12),
+  // ヒカリゴケ(林・岩かげ、夜に光る)
+  N('moss', -6, -35, 1), N('moss', 6, -33, 2), N('moss', -14, -29, 3), N('moss', 10, -28, 4),
+  N('moss', 25, -31, 5), N('moss', -20, -22, 6), N('moss', 33, -27, 7), N('moss', -2, -24, 8),
+];
+
+// 装飾の木・やぶ(採取不可のにぎやかし)
+export const DECO_TREES: [number, number, number][] = [
+  // [x, z, スケール]
+  [-14, -38, 1.1], [16, -38, 0.9], [-22, -34, 1.2], [20, -30, 1.0], [-8, -44, 0.95],
+  [8, -44, 1.15], [-28, -26, 0.9], [-40, 6, 1.0], [-38, 16, 0.85], [40, -12, 0.9],
+  [38, 2, 1.05], [26, 30, 0.9], [14, 34, 0.85], [-30, 28, 0.95], [-42, -8, 0.8],
+  [34, -38, 0.85], [-34, -18, 1.0], [44, -22, 0.75], [-16, 40, 0.8], [22, 38, 0.75],
+];
+
+export const SPAWN = { x: -3, z: 6, rotY: Math.PI };
+
+// NPCのスケジュール用スポット
+export const NPC_SPOTS: Record<string, Record<string, { x: number; z: number; rotY?: number }>> = {
+  minamo: {
+    home: { x: 33, z: 14, rotY: -1.4 },
+    pond: { x: 26.5, z: 17.5, rotY: 0.8 },
+    pier: { x: 4, z: 50, rotY: Math.PI },
+    plaza: { x: 3, z: 2 },
+  },
+  nokto: {
+    home: { x: 24, z: -30, rotY: 2.6 },
+    hill: { x: 30, z: -26, rotY: -0.6 },
+    tree: { x: 1.5, z: -5.5 },
+    forest: { x: -2, z: -30 },
+  },
+  tsumugi: {
+    shop: { x: -8.4, z: 1.8, rotY: Math.PI },
+    bench: { x: 2.5, z: -2.5, rotY: -1.2 },
+    plaza: { x: -2, z: 3 },
+    lumi: { x: -1.5, z: -5.5 },
+  },
+};

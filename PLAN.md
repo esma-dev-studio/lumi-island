@@ -137,9 +137,9 @@ GameState {
 ## 7. マイルストーン
 
 - [x] M0 環境確認(Node/Blender/Edge/フォルダ)
-- [ ] M1 計画書6点+scaffold+vite起動確認
-- [ ] M2 キャラ生成パイプラインv1+プレイヤーGLB+Character Showcase Scene
-- [ ] M3 NPC3体+全アニメ → **キャラ品質ゲート合格**(スクショ自己レビュー)
+- [x] M1 計画書6点+scaffold+vite起動確認
+- [x] M2 キャラ生成パイプラインv1+プレイヤーGLB+Character Showcase Scene
+- [x] M3 NPC3体+全アニメ → **キャラ品質ゲート合格**(.logs/gate_review.md、項目9のみM4後に再確認)
 - [ ] M4 島環境(地形・植生・建物・昼夜ライティング・発光)
 - [ ] M5 プレイヤー操作+カメラ+採取+インベントリ
 - [ ] M6 釣り+クラフト+売却+家具配置

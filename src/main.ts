@@ -1,22 +1,35 @@
 import { Engine } from '@babylonjs/core/Engines/engine';
-import { ShowcaseScene } from './scenes/ShowcaseScene';
-import { buildShowcaseUI } from './ui/ShowcaseUI';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const engine = new Engine(canvas, true, { antialias: true, adaptToDeviceRatio: true });
 window.addEventListener('resize', () => engine.resize());
 
 const params = new URLSearchParams(location.search);
-const sceneName = params.get('scene') ?? 'showcase'; // ゲーム本体実装後は 'game' が既定になる
+const sceneName = params.get('scene') ?? 'game';
+const debug = params.get('debug') === '1';
 
 async function boot(): Promise<void> {
+  const lumi: Record<string, unknown> = { engine, ready: false, debug };
+  (window as unknown as Record<string, unknown>).__lumi = lumi;
+
   if (sceneName === 'showcase') {
+    const [{ ShowcaseScene }, { buildShowcaseUI }] = await Promise.all([
+      import('./scenes/ShowcaseScene'),
+      import('./ui/ShowcaseUI'),
+    ]);
     const showcase = new ShowcaseScene(engine);
     await showcase.init();
     buildShowcaseUI(showcase);
     engine.runRenderLoop(() => showcase.scene.render());
-    (window as unknown as Record<string, unknown>).__lumi = { engine, showcase, ready: true };
+    lumi.showcase = showcase;
+  } else {
+    const { GameScene } = await import('./scenes/GameScene');
+    const game = new GameScene(engine, { debug });
+    await game.init();
+    engine.runRenderLoop(() => game.render());
+    lumi.game = game;
   }
+  lumi.ready = true;
   document.getElementById('boot-screen')?.remove();
   console.log('[lumi] boot ok:', sceneName);
 }
