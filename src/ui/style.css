@@ -1,0 +1,23 @@
+:root {
+  --paper: rgba(246, 241, 230, 0.92);
+  --ink: #4a3b2c;
+  --ink-soft: #7a6a56;
+  --line: #d8cdb9;
+  --amber: #c98a3d;
+  --mint: #9fe8c8;
+  --radius: 6px;
+  --font: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #1c2a4a; }
+body { font-family: var(--font); color: var(--ink); }
+#game-canvas { position: fixed; inset: 0; width: 100%; height: 100%; outline: none; touch-action: none; }
+#ui-root { position: fixed; inset: 0; pointer-events: none; }
+#ui-root > * { pointer-events: auto; }
+#boot-screen {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(#16213c, #0e1830); z-index: 99;
+}
+.boot-inner { text-align: center; color: #e8e2d2; }
+.boot-title { font-size: 2rem; font-weight: 900; letter-spacing: 0.12em; }
+.boot-msg { margin-top: 0.8rem; font-size: 0.9rem; color: #9fb2d8; }
