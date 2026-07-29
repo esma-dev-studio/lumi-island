@@ -1,0 +1,45 @@
+// 採取ルール(純ロジック): 何が必要で、何がとれて、いつ復活するか
+import type { GameState } from '../game/GameState';
+import { hasTool } from '../game/GameState';
+import type { ItemId, ToolId } from '../data/items';
+import type { NodeKind } from '../data/island';
+
+export interface GatherRule {
+  tool: ToolId | null; // nullは素手
+  item: ItemId;
+  count: [number, number]; // 最小・最大
+  respawnHours: number;
+  anim: 'interact' | 'pickup';
+  verb: string; // ヒント表示「◯◯」
+  nightOnly?: boolean;
+}
+
+export const GATHER_RULES: Record<NodeKind, GatherRule> = {
+  tree: { tool: 'axe', item: 'wood', count: [1, 2], respawnHours: 1.2, anim: 'interact', verb: '木をきる' },
+  rock: { tool: 'pickaxe', item: 'stone', count: [1, 2], respawnHours: 1.5, anim: 'interact', verb: '岩をくだく' },
+  grass: { tool: 'sickle', item: 'fiber', count: [1, 2], respawnHours: 0.8, anim: 'interact', verb: '草をかる' },
+  berry: { tool: null, item: 'berry', count: [1, 2], respawnHours: 2.2, anim: 'pickup', verb: 'ベリーをつむ' },
+  moss: { tool: null, item: 'moss', count: [1, 1], respawnHours: 3, anim: 'pickup', verb: 'ヒカリゴケをとる' },
+  ore: { tool: 'pickaxe', item: 'ore', count: [1, 1], respawnHours: 2.5, anim: 'interact', verb: 'こうせきをほる' },
+};
+
+export interface GatherCheck {
+  ok: boolean;
+  reason?: string; // だめな理由(ヒントに出す)
+}
+
+export function canGather(state: GameState, kind: NodeKind): GatherCheck {
+  const rule = GATHER_RULES[kind];
+  if (rule.tool && !hasTool(state, rule.tool)) {
+    const toolName = { axe: 'オノ', pickaxe: 'ツルハシ', rod: 'ツリザオ', sickle: 'カマ' }[rule.tool];
+    return { ok: false, reason: `${toolName}が ひつよう` };
+  }
+  return { ok: true };
+}
+
+// 採取量(debug時は最大値固定で決定的に)
+export function gatherAmount(kind: NodeKind, debug: boolean, rand = Math.random): number {
+  const [min, max] = GATHER_RULES[kind].count;
+  if (debug) return max;
+  return min + Math.floor(rand() * (max - min + 1));
+}

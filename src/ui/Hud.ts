@@ -28,10 +28,12 @@ export class Hud {
   setLumina(n: number): void {
     this.luminaEl.textContent = String(n);
   }
-  setHint(text: string): void {
-    if (this.hintEl.textContent !== text) {
-      this.hintEl.textContent = text;
-      this.hintEl.classList.toggle('show', !!text);
+  private lastHint = '';
+  setHint(html: string): void {
+    if (this.lastHint !== html) {
+      this.lastHint = html;
+      this.hintEl.innerHTML = html;
+      this.hintEl.classList.toggle('show', !!html);
     }
   }
 }

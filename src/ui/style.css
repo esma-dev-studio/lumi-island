@@ -59,3 +59,43 @@ body { font-family: var(--font); color: var(--ink); }
   font-family: var(--font); background: var(--amber); color: #fff; border-radius: 4px;
   padding: 0 6px; margin-right: 6px; font-size: 0.8rem;
 }
+
+/* ---- 共通パネル ---- */
+.panel {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 6px 24px rgba(30, 24, 12, 0.22);
+  padding: 14px 16px; min-width: 380px; max-width: 560px; max-height: 76vh; overflow-y: auto;
+}
+.panel.hidden { display: none; }
+.panel-title { font-weight: 900; font-size: 1.02rem; letter-spacing: 0.04em; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+.panel-close { font-size: 0.74rem; font-weight: 700; color: var(--ink-soft); cursor: pointer; border: 1px solid var(--line); border-radius: 4px; padding: 2px 8px; }
+.panel-close:hover { border-color: var(--amber); color: var(--amber); }
+.panel-sub { font-weight: 700; font-size: 0.84rem; color: var(--ink-soft); margin: 12px 0 6px; border-top: 1px solid var(--line); padding-top: 10px; }
+
+/* ---- インベントリ ---- */
+.inv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.inv-slot {
+  display: flex; align-items: center; gap: 6px; background: #fff;
+  border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; font-size: 0.82rem;
+}
+.inv-ico { font-size: 1.25rem; line-height: 0; display: flex; }
+.inv-name { flex: 1; font-weight: 700; }
+.inv-count { color: var(--ink-soft); font-weight: 700; }
+.inv-empty { grid-column: 1 / -1; color: var(--ink-soft); font-size: 0.84rem; padding: 12px 4px; line-height: 1.7; }
+.inv-tools { display: flex; gap: 6px; flex-wrap: wrap; }
+.inv-tool {
+  display: flex; align-items: center; gap: 6px; background: #fff;
+  border: 1px solid var(--line); border-radius: 5px; padding: 5px 10px; font-size: 0.82rem; font-weight: 700;
+}
+
+/* ---- トースト ---- */
+.toast-box { position: absolute; left: 14px; top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.toast {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--paper); border: 1px solid var(--line); border-left: 3px solid var(--amber);
+  border-radius: var(--radius); padding: 6px 12px; font-size: 0.84rem; font-weight: 700;
+  opacity: 0; transform: translateX(-8px); transition: all 0.18s;
+}
+.toast.show { opacity: 1; transform: translateX(0); }
+.t-ico { font-size: 1.15rem; line-height: 0; display: flex; }

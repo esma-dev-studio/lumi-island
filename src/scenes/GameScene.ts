@@ -7,8 +7,12 @@ import { CharacterView } from '../characters/CharacterView';
 import { CHARACTERS } from '../data/characters';
 import { SPAWN } from '../data/island';
 import { PlayerController, type InputState } from '../systems/PlayerController';
+import { InteractionSystem } from '../systems/InteractionSystem';
 import { Hud } from '../ui/Hud';
+import { InventoryUI } from '../ui/InventoryUI';
 import { terrainHeight } from '../entities/terrain';
+import { newGameState, type GameState } from '../game/GameState';
+import { validateItemData } from '../data/items';
 
 const CAM_DIST = 8.4;
 const CAM_HEIGHT = 6.1;
@@ -20,7 +24,11 @@ export class GameScene {
   playerView!: CharacterView;
   cam!: FreeCamera;
   hud!: Hud;
+  state: GameState = newGameState();
+  inter!: InteractionSystem;
+  invUI!: InventoryUI;
   paused = false;
+  wantInteract = false;
   input: InputState = { up: false, down: false, left: false, right: false, run: false };
   private keyHandlers: Array<() => void> = [];
   private faded = new Set<import('@babylonjs/core/Meshes/mesh').Mesh>();
@@ -48,6 +56,9 @@ export class GameScene {
     this.snapCamera();
 
     this.hud = new Hud();
+    this.invUI = new InventoryUI(() => this.state);
+    this.inter = new InteractionSystem(this.island, this.state, !!this.opts.debug);
+    for (const p of validateItemData()) console.warn('[data]', p);
     this.bindKeys();
 
     // デバッグフック
@@ -59,6 +70,14 @@ export class GameScene {
           this.island.dayNight.update(h);
         },
         tp: (x: number, z: number) => this.player.teleport(x, z),
+        state: () => this.state,
+        give: (item: string, n = 1) => {
+          (this.state.inventory as Record<string, number>)[item] =
+            ((this.state.inventory as Record<string, number>)[item] ?? 0) + n;
+        },
+        interact: () => {
+          this.wantInteract = true;
+        },
       };
     }
   }
@@ -70,6 +89,22 @@ export class GameScene {
       ShiftLeft: 'run', ShiftRight: 'run',
     };
     const down = (e: KeyboardEvent): void => {
+      if (e.code === 'KeyE' || e.code === 'Space') {
+        this.wantInteract = true;
+        e.preventDefault();
+        return;
+      }
+      if (e.code === 'Tab' || e.code === 'KeyI') {
+        this.invUI.toggle();
+        this.syncUiLock();
+        e.preventDefault();
+        return;
+      }
+      if (e.code === 'Escape') {
+        this.invUI.close();
+        this.syncUiLock();
+        return;
+      }
       const k = map[e.code];
       if (k) {
         this.input[k] = true;
@@ -86,6 +121,10 @@ export class GameScene {
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
     });
+  }
+
+  syncUiLock(): void {
+    this.player.locked = this.invUI.open || this.inter.busy;
   }
 
   private snapCamera(): void {
@@ -144,9 +183,20 @@ export class GameScene {
     if (!this.paused) {
       this.island.update(dt);
       this.player.update(dt, this.input);
+      this.inter.update(dt, this.player.x, this.player.z);
+      if (this.wantInteract) {
+        this.wantInteract = false;
+        if (!this.invUI.open) this.inter.tryGather(this.player, this.playerView);
+      } else {
+        this.wantInteract = false;
+      }
       this.updateCamera(dt);
       this.updateOcclusion();
       this.hud.setClock(this.island.time.label(), this.island.time.day);
+      this.hud.setLumina(this.state.lumina);
+      this.hud.setHint(this.invUI.open ? '' : (this.inter.hint?.text ?? ''));
+      this.state.time = { day: this.island.time.day, hour: this.island.time.hour };
+      this.state.player = { x: this.player.x, z: this.player.z, rotY: this.player.rotY };
     }
     this.scene.render();
   }
