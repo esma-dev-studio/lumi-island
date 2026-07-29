@@ -34,9 +34,9 @@ export function appendBlob(
     const phi = (r / rings) * Math.PI;
     for (let s = 0; s <= segs; s++) {
       const th = (s / segs) * Math.PI * 2;
-      let dx = Math.sin(phi) * Math.cos(th);
-      let dy = Math.cos(phi);
-      let dz = Math.sin(phi) * Math.sin(th);
+      const dx = Math.sin(phi) * Math.cos(th);
+      const dy = Math.cos(phi);
+      const dz = Math.sin(phi) * Math.sin(th);
       const n = 1 + (vnoise(dx * 2.3 + seed * 17, dz * 2.3 + dy * 1.7 + seed * 31) - 0.5) * noise * 2;
       let y = dy * ry * n;
       if (opts.flatBottom && y < -ry * 0.25) y = -ry * 0.25 - (Math.abs(y) - ry * 0.25) * 0.15;

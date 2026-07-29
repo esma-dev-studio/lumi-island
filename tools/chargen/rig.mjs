@@ -127,6 +127,6 @@ export function limbWeight(idxA, idxB, idxC, t, joints) {
   if (t < 0.58) return duo(idxA, idxB, 1 - s(0.42, 0.58));
   if (t < 0.8) return solo(idxB);
   if (t < 0.92) return duo(idxB, idxC, 1 - s(0.8, 0.92));
-  return solo(idxC);
   void joints;
+  return solo(idxC);
 }
