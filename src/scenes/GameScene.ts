@@ -8,11 +8,19 @@ import { CHARACTERS } from '../data/characters';
 import { SPAWN } from '../data/island';
 import { PlayerController, type InputState } from '../systems/PlayerController';
 import { InteractionSystem } from '../systems/InteractionSystem';
+import { FishingSystem } from '../systems/FishingSystem';
+import { PlacementSystem } from '../systems/PlacementSystem';
 import { Hud } from '../ui/Hud';
 import { InventoryUI } from '../ui/InventoryUI';
+import { CraftUI } from '../ui/CraftUI';
+import { ShopUI } from '../ui/ShopUI';
 import { terrainHeight } from '../entities/terrain';
 import { newGameState, type GameState } from '../game/GameState';
-import { validateItemData } from '../data/items';
+import { validateItemData, ITEMS } from '../data/items';
+import { POIS } from '../data/island';
+
+// 店のカウンター位置(ツムギ工房の正面)
+const SHOP_POINT = { x: POIS.shop.x + 4.6, z: POIS.shop.z };
 
 const CAM_DIST = 8.4;
 const CAM_HEIGHT = 6.1;
@@ -26,7 +34,11 @@ export class GameScene {
   hud!: Hud;
   state: GameState = newGameState();
   inter!: InteractionSystem;
+  fishing!: FishingSystem;
+  placement!: PlacementSystem;
   invUI!: InventoryUI;
+  craftUI!: CraftUI;
+  shopUI!: ShopUI;
   paused = false;
   wantInteract = false;
   input: InputState = { up: false, down: false, left: false, right: false, run: false };
@@ -57,7 +69,12 @@ export class GameScene {
 
     this.hud = new Hud();
     this.invUI = new InventoryUI(() => this.state);
+    this.craftUI = new CraftUI(() => this.state);
+    this.shopUI = new ShopUI(() => this.state);
     this.inter = new InteractionSystem(this.island, this.state, !!this.opts.debug);
+    this.fishing = new FishingSystem(this.scene, this.state, !!this.opts.debug);
+    this.placement = new PlacementSystem(this.island, this.state);
+    this.invUI.onPlace = (item) => this.placement.begin(item);
     for (const p of validateItemData()) console.warn('[data]', p);
     this.bindKeys();
 
@@ -78,6 +95,10 @@ export class GameScene {
         interact: () => {
           this.wantInteract = true;
         },
+        openShop: () => this.shopUI.show(),
+        placeBegin: (item: string) => this.placement.begin(item as never),
+        placeRotate: () => this.placement.rotate(),
+        fishingState: () => this.fishing.state,
       };
     }
   }
@@ -95,14 +116,28 @@ export class GameScene {
         return;
       }
       if (e.code === 'Tab' || e.code === 'KeyI') {
+        this.craftUI.close();
+        this.shopUI.close();
         this.invUI.toggle();
-        this.syncUiLock();
         e.preventDefault();
+        return;
+      }
+      if (e.code === 'KeyC') {
+        this.invUI.close();
+        this.shopUI.close();
+        this.craftUI.toggle();
+        return;
+      }
+      if (e.code === 'KeyR') {
+        if (this.placement.active) this.placement.rotate();
         return;
       }
       if (e.code === 'Escape') {
         this.invUI.close();
-        this.syncUiLock();
+        this.craftUI.close();
+        this.shopUI.close();
+        this.placement.cancel();
+        this.fishing.cancel(this.player, this.playerView);
         return;
       }
       const k = map[e.code];
@@ -121,10 +156,6 @@ export class GameScene {
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
     });
-  }
-
-  syncUiLock(): void {
-    this.player.locked = this.invUI.open || this.inter.busy;
   }
 
   private snapCamera(): void {
@@ -182,23 +213,79 @@ export class GameScene {
     const dt = Math.min(0.25, this.engine.getDeltaTime() / 1000);
     if (!this.paused) {
       this.island.update(dt);
+      const uiOpen = this.invUI.open || this.craftUI.open || this.shopUI.open;
+      this.player.locked = uiOpen || this.inter.busy || this.fishing.state !== 'idle';
       this.player.update(dt, this.input);
       this.inter.update(dt, this.player.x, this.player.z);
-      if (this.wantInteract) {
-        this.wantInteract = false;
-        if (!this.invUI.open) this.inter.tryGather(this.player, this.playerView);
-      } else {
-        this.wantInteract = false;
-      }
+      this.fishing.update(dt, this.player, this.playerView);
+      this.placement.update(this.player);
+      const hint = this.resolveInteraction(uiOpen);
       this.updateCamera(dt);
       this.updateOcclusion();
       this.hud.setClock(this.island.time.label(), this.island.time.day);
       this.hud.setLumina(this.state.lumina);
-      this.hud.setHint(this.invUI.open ? '' : (this.inter.hint?.text ?? ''));
+      this.hud.setHint(uiOpen ? '' : hint);
       this.state.time = { day: this.island.time.day, hour: this.island.time.hour };
       this.state.player = { x: this.player.x, z: this.player.z, rotY: this.player.rotY };
     }
     this.scene.render();
+  }
+
+  /** E入力の行き先とヒントを決める(配置中>釣り中>近くの対象) */
+  private resolveInteraction(uiOpen: boolean): string {
+    const want = this.wantInteract;
+    this.wantInteract = false;
+    if (uiOpen) return '';
+    if (this.placement.active) {
+      if (want) this.placement.place();
+      return this.placement.hint;
+    }
+    if (this.fishing.state !== 'idle') {
+      if (want) this.fishing.action(this.player, this.playerView);
+      return this.fishing.hint ?? '';
+    }
+    if (this.inter.busy) return '';
+    // 候補: 採取ノード / 家具の持ち帰り / 店 / 釣り場
+    interface Cand {
+      d: number;
+      hint: string;
+      run: () => void;
+    }
+    const cands: Cand[] = [];
+    if (this.inter.currentNode && this.inter.hint) {
+      const n = this.inter.currentNode;
+      cands.push({
+        d: Math.hypot(this.player.x - n.def.x, this.player.z - n.def.z),
+        hint: this.inter.hint.text,
+        run: () => void this.inter.tryGather(this.player, this.playerView),
+      });
+    }
+    const near = this.placement.nearest(this.player.x, this.player.z);
+    if (near) {
+      cands.push({
+        d: Math.hypot(this.player.x - near.data.x, this.player.z - near.data.z) + 0.35,
+        hint: `<kbd>E</kbd>${ITEMS[near.data.item].name}を もちかえる`,
+        run: () => this.placement.pickUp(near),
+      });
+    }
+    const shopD = Math.hypot(this.player.x - SHOP_POINT.x, this.player.z - SHOP_POINT.z);
+    if (shopD < 2.0) {
+      cands.push({ d: shopD, hint: '<kbd>E</kbd>お店をみる(うる・かう)', run: () => this.shopUI.show() });
+    }
+    const fish = this.fishing.canFish(this.player.x, this.player.z);
+    if (fish.zone) {
+      cands.push({
+        d: 1.2,
+        hint: fish.ok ? '<kbd>E</kbd>つりをする' : `つりには ${fish.reason}`,
+        run: () => {
+          if (fish.ok) this.fishing.start(this.player, this.playerView);
+        },
+      });
+    }
+    if (!cands.length) return '';
+    cands.sort((a, b) => a.d - b.d);
+    if (want) cands[0].run();
+    return cands[0].hint;
   }
 
   dispose(): void {

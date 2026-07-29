@@ -1,4 +1,4 @@
-// インベントリ画面(Tab/I)。もちもの+道具の一覧。
+// インベントリ画面(Tab/I)。もちもの+道具。家具は「おく」で配置モードへ。
 import type { GameState } from '../game/GameState';
 import { ITEMS, TOOLS, type ItemId } from '../data/items';
 import { icon } from './icons';
@@ -6,6 +6,7 @@ import { icon } from './icons';
 export class InventoryUI {
   private el: HTMLElement;
   open = false;
+  onPlace: ((item: ItemId) => void) | null = null;
 
   constructor(private getState: () => GameState) {
     this.el = document.createElement('div');
@@ -29,10 +30,12 @@ export class InventoryUI {
     const slots = entries
       .map(([id, n]) => {
         const def = ITEMS[id];
+        const placeBtn = def.kind === 'furniture' ? `<button class="craft-btn sub" data-place="${id}">おく</button>` : '';
         return `<div class="inv-slot" title="${def.desc}">
           <span class="inv-ico">${icon(id)}</span>
           <span class="inv-name">${def.name}</span>
           <span class="inv-count">×${n}</span>
+          ${placeBtn}
         </div>`;
       })
       .join('');
@@ -46,5 +49,11 @@ export class InventoryUI {
       <div class="inv-tools">${tools}</div>
     `;
     this.el.querySelector('[data-close]')?.addEventListener('click', () => this.close());
+    this.el.querySelectorAll<HTMLButtonElement>('[data-place]').forEach((b) => {
+      b.onclick = () => {
+        this.close();
+        this.onPlace?.(b.dataset.place as ItemId);
+      };
+    });
   }
 }

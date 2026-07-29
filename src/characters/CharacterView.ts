@@ -91,6 +91,11 @@ export class CharacterView {
     this.root.setEnabled(on);
   }
 
+  /** リグのジョイント(TransformNode)を名前で取得(このキャラの階層内のみ) */
+  getJoint(name: string): TransformNode | null {
+    return this.root.getChildTransformNodes(false).find((n) => n.name === name) ?? null;
+  }
+
   dispose(): void {
     this.disposed = true;
     this.scene.onBeforeRenderObservable.removeCallback(this.update);

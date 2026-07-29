@@ -89,6 +89,36 @@ body { font-family: var(--font); color: var(--ink); }
   border: 1px solid var(--line); border-radius: 5px; padding: 5px 10px; font-size: 0.82rem; font-weight: 700;
 }
 
+/* ---- クラフト・店 ---- */
+.craft-list { display: flex; flex-direction: column; gap: 6px; }
+.craft-row {
+  display: flex; align-items: center; gap: 8px; background: #fff;
+  border: 1px solid var(--line); border-radius: 5px; padding: 7px 10px; font-size: 0.84rem;
+}
+.craft-name { font-weight: 700; min-width: 7.5em; }
+.craft-name small { color: var(--ink-soft); }
+.craft-costs { flex: 1; display: flex; gap: 8px; flex-wrap: wrap; }
+.cost { display: inline-flex; align-items: center; gap: 3px; font-size: 0.78rem; font-weight: 700; }
+.cost svg { font-size: 1rem; }
+.cost.ok { color: #4f7a50; }
+.cost.lack { color: #b0553f; }
+.craft-btn {
+  font-family: var(--font); font-size: 0.8rem; font-weight: 700; padding: 4px 12px;
+  background: var(--amber); color: #fff; border: none; border-radius: 4px; cursor: pointer;
+}
+.craft-btn:disabled { background: #cfc7b8; cursor: default; }
+.craft-btn.sub { background: #fff; color: var(--amber); border: 1px solid var(--amber); }
+.crafted-label { font-size: 0.76rem; color: var(--ink-soft); font-weight: 700; }
+.shop-price { display: inline-flex; align-items: center; gap: 2px; font-weight: 700; color: var(--amber); min-width: 3.4em; }
+.shop-lumina { display: inline-flex; align-items: center; gap: 3px; font-size: 0.9rem; color: var(--amber); margin-left: auto; margin-right: 10px; }
+.shop-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+.shop-tab {
+  font-family: var(--font); font-size: 0.84rem; font-weight: 700; padding: 5px 16px;
+  background: #fff; color: var(--ink); border: 1px solid var(--line); border-radius: 4px; cursor: pointer;
+}
+.shop-tab.on { background: var(--amber); border-color: var(--amber); color: #fff; }
+.bite { color: #cf4f2e; font-size: 1.1rem; }
+
 /* ---- トースト ---- */
 .toast-box { position: absolute; left: 14px; top: 14px; display: flex; flex-direction: column; gap: 6px; }
 .toast {

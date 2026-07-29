@@ -41,12 +41,12 @@ export function buildWater(scene: Scene): WaterRefs {
 
   // ---- 桟橋(板ごとに少し向きを変えて手作り感) ----
   const wood = new StandardMaterial('pierWood', scene);
-  wood.diffuseColor = Color3.FromHexString('#6f5438');
+  wood.diffuseColor = Color3.FromHexString('#60482f');
   wood.specularColor = Color3.Black();
   const planks: Mesh[] = [];
   const nPlanks = Math.floor((PIER.z1 - PIER.z0) / 0.62);
   for (let i = 0; i < nPlanks; i++) {
-    const p = CreateBox(`plank${i}`, { width: PIER.w, height: 0.08, depth: 0.46 }, scene);
+    const p = CreateBox(`plank${i}`, { width: PIER.w, height: 0.08, depth: 0.56 }, scene);
     p.position.set(
       PIER.x + (((i * 37) % 10) - 5) * 0.006,
       PIER.y - 0.045,

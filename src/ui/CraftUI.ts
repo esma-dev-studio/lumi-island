@@ -1,0 +1,69 @@
+// クラフト画面(C)
+import type { GameState } from '../game/GameState';
+import { knownRecipes, canCraft, craft } from '../systems/CraftingSystem';
+import { ITEMS, TOOLS, type ItemId, type ToolId } from '../data/items';
+import { icon } from './icons';
+import { toast } from './Toast';
+
+export class CraftUI {
+  private el: HTMLElement;
+  open = false;
+  onCrafted: (() => void) | null = null;
+
+  constructor(private getState: () => GameState) {
+    this.el = document.createElement('div');
+    this.el.className = 'panel craft-panel hidden';
+    document.getElementById('ui-root')!.appendChild(this.el);
+  }
+
+  toggle(): void {
+    this.open = !this.open;
+    if (this.open) this.render();
+    this.el.classList.toggle('hidden', !this.open);
+  }
+  close(): void {
+    this.open = false;
+    this.el.classList.add('hidden');
+  }
+
+  private render(): void {
+    const s = this.getState();
+    const rows = knownRecipes(s)
+      .map((r) => {
+        const check = canCraft(s, r);
+        const outName = r.outKind === 'tool' ? TOOLS[r.out as ToolId].name : ITEMS[r.out as ItemId].name;
+        const cost = (Object.entries(r.cost) as [ItemId, number][])
+          .map(([item, need]) => {
+            const have = s.inventory[item] ?? 0;
+            return `<span class="cost ${have >= need ? 'ok' : 'lack'}">${icon(item)}${have}/${need}</span>`;
+          })
+          .join('');
+        const btn = check.alreadyOwned
+          ? '<span class="crafted-label">もってる</span>'
+          : `<button class="craft-btn" data-id="${r.id}" ${check.ok ? '' : 'disabled'}>つくる</button>`;
+        return `<div class="craft-row">
+          <span class="inv-ico">${icon(r.out)}</span>
+          <span class="craft-name">${outName}</span>
+          <span class="craft-costs">${cost}</span>
+          ${btn}
+        </div>`;
+      })
+      .join('');
+    this.el.innerHTML = `
+      <div class="panel-title">クラフト <span class="panel-close" data-close>とじる(C)</span></div>
+      <div class="craft-list">${rows || '<div class="inv-empty">まだレシピを知らない。島のみんなに聞いてみよう!</div>'}</div>
+    `;
+    this.el.querySelector('[data-close]')?.addEventListener('click', () => this.close());
+    this.el.querySelectorAll<HTMLButtonElement>('.craft-btn').forEach((b) => {
+      b.onclick = () => {
+        const r = knownRecipes(s).find((x) => x.id === b.dataset.id);
+        if (r && craft(s, r)) {
+          const outName = r.outKind === 'tool' ? TOOLS[r.out as ToolId].name : ITEMS[r.out as ItemId].name;
+          toast(`${outName}を つくった!`, r.out);
+          this.onCrafted?.();
+          this.render();
+        }
+      };
+    });
+  }
+}
