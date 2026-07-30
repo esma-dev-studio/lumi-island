@@ -76,12 +76,17 @@ tests/
 - キャラクターのモデルパス・縮尺・アニメ名は `src/data/characters.ts` で管理
 - ライセンス記録: [ATTRIBUTIONS.md](ATTRIBUTIONS.md)(外部アセットはフォントのみ)
 
-## テスト・検証
+## テスト・検証(3段階)
 
-- `npm run verify` … typecheck + lint + ユニット51件 + 同形異文字チェックを一括実行
-- `npm run e2e` … Playwright 9件(システムのEdgeを使用。うち1件はデバッグAPI不使用の実操作テスト)
-- `node tools/playtest_bot.mjs` … デバッグなしでタイトル→全依頼→開花まで実キー入力で完走する検証ボット
-  (計測結果: `.logs/playtest_report.md`)
+- **A. ユニット** — `npm run verify` … typecheck + lint + Vitest 70件 + 同形異文字チェック
+- **B. 決定的リグレッション** — `npm run e2e`(Playwright 21件・システムのEdge)/
+  `npm run test:regression`(実キー入力でタイトル→全依頼→開花を通しで実行。進行判断に
+  内部状態の読み取りを使うため回帰試験であり、「子どもが遊べた証明」ではない)
+- **C. ブラックボックスUX** — `npm run test:ux` … 画面の目標文・距離・矢印・マーカー・
+  通常キーだけで遊ぶ(内部状態・デバッグAPI不使用)。範囲は最初の依頼の一巡。
+  子ども向けUXの最終判定は人間によるブラインドプレイテスト(`.logs/usability_test_report.md`)
+- 性能 — `npm run test:performance`(結果: `.logs/performance_report.md`)
+- 実測記録: `.logs/playtest_report.md`(回帰ボット) / `.logs/ux_result.json`(UXボット)
 
 ## 制約・既知の事項
 

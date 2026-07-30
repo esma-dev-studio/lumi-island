@@ -45,6 +45,14 @@ test('プレイヤーが移動できる(WASD)', async ({ page }) => {
   expect(after).not.toBe(before);
   const dz = (JSON.parse(after).z as number) - (JSON.parse(before).z as number);
   expect(dz).toBeLessThan(-0.5); // W=北(−z)へ進む
+  // D=画面右。このカメラでは画面右=西(−x)。逆だと左右反転操作になる
+  const bx = (JSON.parse(after).x as number);
+  await page.keyboard.down('d');
+  await page.waitForTimeout(600);
+  await page.keyboard.up('d');
+  await page.waitForTimeout(200);
+  const ax = (await ev(page, '__lumiDebug.state().player.x')) as number;
+  expect(ax - bx).toBeLessThan(-0.4);
 });
 
 test('採取: 木をきって木材を得る(ノードは枯れて非表示化)', async ({ page }) => {

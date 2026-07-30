@@ -9,6 +9,25 @@ export interface ScheduleEntry {
   activity: 'idle' | 'work' | 'fish' | 'watch' | 'stroll' | 'home';
 }
 
+/** いまの時刻に対応するスケジュール枠(6時未満は+24して扱う) */
+export function scheduleEntryAt(schedule: ScheduleEntry[], hour: number): ScheduleEntry {
+  const h = hour < 6 ? hour + 24 : hour;
+  return schedule.find((e) => h >= e.from && h < e.to) ?? schedule[schedule.length - 1];
+}
+
+/** つぎに外(home以外)へ出る枠。いま外にいるならnull(純ロジック・ユニットテスト対象) */
+export function nextOutdoorEntry(schedule: ScheduleEntry[], hour: number): { hour: number; spot: string } | null {
+  if (scheduleEntryAt(schedule, hour).activity !== 'home') return null;
+  const h = hour < 6 ? hour + 24 : hour;
+  let best: { hour: number; spot: string; wait: number } | null = null;
+  for (const e of schedule) {
+    if (e.activity === 'home') continue;
+    const wait = (e.from - h + 24) % 24;
+    if (!best || wait < best.wait) best = { hour: e.from % 24, spot: e.spot, wait };
+  }
+  return best ? { hour: best.hour, spot: best.spot } : null;
+}
+
 export interface NpcDef {
   id: string;
   charId: string;

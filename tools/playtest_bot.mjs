@@ -1,6 +1,8 @@
-// 実プレイ検証ボット: デバッグコマンド(tp/give/setHour/talkTo)を一切使わず、
-// 実際のキー入力とUIクリックだけで タイトル→依頼5件→ルミの木開花 まで完走する。
-// 「いまやること」(ObjectiveSystem)の目標IDに従って行動する = 誘導が壊れていれば完走できない。
+// Deterministic regression bot(決定的リグレッションボット)
+// 実キー入力とUIクリックで タイトル→依頼5件→ルミの木開花 まで通しで実行する回帰試験。
+// デバッグコマンド(tp/give/setHour/talkTo)は使わないが、進行判断に内部状態の
+// 読み取り(座標・目標ID・所持品)を使う。そのため「子どもが自力で遊べたことの証明」
+// ではない(それは tools/ux_bot.mjs のブラックボックス試験と人間テストの領分)。
 import puppeteer from 'puppeteer-core';
 import { writeFileSync } from 'node:fs';
 
@@ -79,8 +81,8 @@ async function navigate(tx, tz, stopDist = 1.5, timeoutMs = 90000) {
         hold = 520;
         const side = unstickN % 2 === 0 ? 1 : -1;
         if (unstickN % 3 === 0) {
-          // 目標と逆方向へ引き返して仕切り直す
-          keys = Math.abs(dx) > Math.abs(dz) ? [dx >= 0 ? 'a' : 'd'] : [dz >= 0 ? 'w' : 's'];
+          // 目標と逆方向へ引き返して仕切り直す(A=東/D=西の画面基準)
+          keys = Math.abs(dx) > Math.abs(dz) ? [dx >= 0 ? 'd' : 'a'] : [dz >= 0 ? 'w' : 's'];
           hold = 650;
         } else if (Math.abs(dx) > Math.abs(dz)) {
           keys = [side > 0 ? 's' : 'w'];
@@ -90,8 +92,9 @@ async function navigate(tx, tz, stopDist = 1.5, timeoutMs = 90000) {
       } else {
         if (dz < -0.35) keys.push('w');
         if (dz > 0.35) keys.push('s');
-        if (dx < -0.35) keys.push('a');
-        if (dx > 0.35) keys.push('d');
+        // 画面基準の操作系: A=画面左=東(+x) / D=画面右=西(-x)
+        if (dx > 0.35) keys.push('a');
+        if (dx < -0.35) keys.push('d');
       }
       for (const k of keys) await page.keyboard.down(k);
       await sleep(hold);

@@ -36,7 +36,9 @@ export class PlayerController {
 
   update(dt: number, input: InputState): void {
     const def = this.view.def;
-    let ix = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+    // このカメラ(北向き固定)では+x(東)が画面左に映るため、
+    // D(右キー)=画面右=西(-x)。ここを逆にすると左右反転操作になる(実バグだった)
+    let ix = (input.left ? 1 : 0) - (input.right ? 1 : 0);
     let iz = (input.down ? 1 : 0) - (input.up ? 1 : 0);
     if (this.locked) {
       ix = 0;

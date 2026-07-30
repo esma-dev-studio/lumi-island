@@ -1,0 +1,60 @@
+{
+  "result": "timeout",
+  "totalSec": 721,
+  "flags": {
+    "title": false,
+    "firstTalk": true,
+    "accepted": true,
+    "gathered": false,
+    "reported": false,
+    "second": false
+  },
+  "marks": [
+    {
+      "sec": 8,
+      "label": "タイトル表示"
+    },
+    {
+      "sec": 9,
+      "label": "ゲーム開始"
+    },
+    {
+      "sec": 10,
+      "label": "目標表示: WASDか矢印キーで あるいてみよう"
+    },
+    {
+      "sec": 11,
+      "label": "目標表示: ツムギの はなしを聞こう"
+    },
+    {
+      "sec": 11,
+      "label": "進捗表示: → 4m"
+    },
+    {
+      "sec": 12,
+      "label": "進捗表示: → 3m"
+    },
+    {
+      "sec": 14,
+      "label": "最初の会話が開いた"
+    },
+    {
+      "sec": 15,
+      "label": "目標表示: もくざいを あつめよう"
+    },
+    {
+      "sec": 15,
+      "label": "最初の依頼を受注できた"
+    },
+    {
+      "sec": 15,
+      "label": "進捗表示: 0 / 5　→ 34m"
+    },
+    {
+      "sec": 39,
+      "label": "進捗表示: 0 / 5　→ 33m"
+    }
+  ],
+  "errors": 0,
+  "errorSamples": []
+}

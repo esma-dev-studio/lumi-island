@@ -2,7 +2,7 @@
 import type { Scene } from '@babylonjs/core/scene';
 import { CharacterView } from '../characters/CharacterView';
 import { CHARACTERS } from '../data/characters';
-import { NPCS, npcSpot, type NpcDef, type ScheduleEntry } from '../data/npcs';
+import { NPCS, npcSpot, scheduleEntryAt, nextOutdoorEntry, type NpcDef, type ScheduleEntry } from '../data/npcs';
 import type { IslandScene } from '../scenes/IslandScene';
 import { vnoise } from '../entities/terrain';
 
@@ -56,8 +56,7 @@ export class NPCSystem {
 
   /** 現在のスケジュール枠を解く(依頼相手は在宅時間でもquestEntryへ差し替え) */
   private resolveEntry(rt: NpcRuntime, hour: number): ScheduleEntry {
-    const h = hour < 6 ? hour + 24 : hour;
-    let entry = rt.def.schedule.find((e) => h >= e.from && h < e.to) ?? rt.def.schedule[rt.def.schedule.length - 1];
+    let entry = scheduleEntryAt(rt.def.schedule, hour);
     // 最初の依頼を受けるまで、ツムギは工房前から動かない(迷子防止)
     if (rt.def.id === 'tsumugi' && this.getFlags().q_wood_accepted !== true) {
       return rt.def.questEntry;
@@ -218,16 +217,8 @@ export class NPCSystem {
   nextAppearance(id: string, hour: number): { hour: number; spot: string } | null {
     const rt = this.npcs.get(id);
     if (!rt) return null;
-    const current = this.resolveEntry(rt, hour);
-    if (current.activity !== 'home') return null;
-    const h = hour < 6 ? hour + 24 : hour;
-    let best: { hour: number; spot: string; wait: number } | null = null;
-    for (const e of rt.def.schedule) {
-      if (e.activity === 'home') continue;
-      const wait = (e.from - h + 24) % 24;
-      if (!best || wait < best.wait) best = { hour: e.from % 24, spot: e.spot, wait };
-    }
-    return best ? { hour: best.hour, spot: best.spot } : null;
+    if (this.resolveEntry(rt, hour).activity !== 'home') return null; // 依頼相手は常に外
+    return nextOutdoorEntry(rt.def.schedule, hour);
   }
 
   /** 睡眠などで時刻が飛んだとき、全NPCを現在のスケジュール位置へ即時配置する */
