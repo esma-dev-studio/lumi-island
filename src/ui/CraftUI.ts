@@ -4,6 +4,7 @@ import { knownRecipes, canCraft, craft } from '../systems/CraftingSystem';
 import { ITEMS, TOOLS, type ItemId, type ToolId } from '../data/items';
 import { icon } from './icons';
 import { toast } from './Toast';
+import { sfx } from '../audio/AudioSystem';
 
 export class CraftUI {
   private el: HTMLElement;
@@ -58,6 +59,7 @@ export class CraftUI {
       b.onclick = () => {
         const r = knownRecipes(s).find((x) => x.id === b.dataset.id);
         if (r && craft(s, r)) {
+          sfx('craft');
           const outName = r.outKind === 'tool' ? TOOLS[r.out as ToolId].name : ITEMS[r.out as ItemId].name;
           toast(`${outName}を つくった!`, r.out);
           this.onCrafted?.();

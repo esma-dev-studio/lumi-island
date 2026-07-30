@@ -1,4 +1,5 @@
 // 会話ボックス(画面下)。Eかクリックで進む。
+import { sfx } from '../audio/AudioSystem';
 export class DialogueUI {
   private el: HTMLElement;
   private lines: string[] = [];
@@ -31,6 +32,7 @@ export class DialogueUI {
 
   advance(): void {
     if (!this.open) return;
+    sfx('talk');
     this.idx++;
     if (this.idx >= this.lines.length) {
       this.close();

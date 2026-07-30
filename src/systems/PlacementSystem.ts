@@ -10,6 +10,8 @@ import { makeFurnitureMesh } from '../entities/furniture';
 import { ITEMS, type ItemId } from '../data/items';
 import type { PlayerController } from './PlayerController';
 import { toast } from '../ui/Toast';
+import { sfx } from '../audio/AudioSystem';
+import { save } from '../save/SaveSystem';
 
 interface PlacedRuntime {
   data: PlacedFurniture;
@@ -154,6 +156,8 @@ export class PlacementSystem {
     this.rebuildColliders();
     this.cancel();
     toast(`${ITEMS[item].name}を おいた`, item);
+    sfx('place');
+    save(this.state);
     return true;
   }
 
@@ -178,6 +182,8 @@ export class PlacementSystem {
     invAdd(this.state, p.data.item, 1);
     this.rebuildColliders();
     toast(`${ITEMS[p.data.item].name}を もちかえった`, p.data.item);
+    sfx('pickup');
+    save(this.state);
   }
 
   get hint(): string {

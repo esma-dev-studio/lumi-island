@@ -19,7 +19,10 @@ import { CraftUI } from '../ui/CraftUI';
 import { ShopUI } from '../ui/ShopUI';
 import { DialogueUI } from '../ui/DialogueUI';
 import { QuestLogUI } from '../ui/QuestLogUI';
+import { PauseMenu } from '../ui/PauseMenu';
 import { toast } from '../ui/Toast';
+import { save } from '../save/SaveSystem';
+import { sfx, setAmbient } from '../audio/AudioSystem';
 import { terrainHeight } from '../entities/terrain';
 import { newGameState, type GameState } from '../game/GameState';
 import { validateItemData, ITEMS } from '../data/items';
@@ -47,8 +50,10 @@ export class GameScene {
   shopUI!: ShopUI;
   dialogue!: DialogueUI;
   questLog!: QuestLogUI;
+  pauseMenu!: PauseMenu;
   npcs!: NPCSystem;
   private lastDay = 1;
+  private saveTimer = 0;
   paused = false;
   wantInteract = false;
   input: InputState = { up: false, down: false, left: false, right: false, run: false };
@@ -57,9 +62,10 @@ export class GameScene {
 
   constructor(
     public engine: Engine,
-    public opts: { debug?: boolean } = {}
+    public opts: { debug?: boolean; state?: GameState } = {}
   ) {
     this.island = new IslandScene(engine);
+    if (opts.state) this.state = opts.state;
   }
 
   get scene() {
@@ -87,9 +93,26 @@ export class GameScene {
     this.invUI.onPlace = (item) => this.placement.begin(item);
     this.dialogue = new DialogueUI();
     this.questLog = new QuestLogUI(() => this.state);
+    this.pauseMenu = new PauseMenu();
+    this.pauseMenu.onBackToTitle = () => {
+      save(this.state);
+      location.reload();
+    };
+    this.craftUI.onCrafted = () => save(this.state);
+    this.shopUI.onTrade = () => {
+      sfx('coin');
+      save(this.state);
+    };
     this.npcs = new NPCSystem(this.scene, this.island);
     await this.npcs.init();
+    // セーブからの復元
+    this.island.time.restore(this.state.time);
+    this.lastDay = this.state.time.day;
+    this.player.teleport(this.state.player.x, this.state.player.z, this.state.player.rotY);
+    this.placement.restore();
     this.island.applyIslandLevel(this.state.islandLevel);
+    this.island.dayNight.update(this.island.time.hour);
+    window.addEventListener('beforeunload', () => save(this.state));
     for (const p of validateItemData()) console.warn('[data]', p);
     this.bindKeys();
 
@@ -162,13 +185,18 @@ export class GameScene {
         return;
       }
       if (e.code === 'Escape') {
+        const wasOpen =
+          this.invUI.open || this.craftUI.open || this.shopUI.open || this.questLog.open ||
+          this.dialogue.open || this.pauseMenu.open || this.placement.active || this.fishing.state !== 'idle';
         this.invUI.close();
         this.craftUI.close();
         this.shopUI.close();
         this.questLog.close();
         this.dialogue.close();
+        this.pauseMenu.close();
         this.placement.cancel();
         this.fishing.cancel(this.player, this.playerView);
+        if (!wasOpen) this.pauseMenu.show(); // なにも開いていなければメニュー
         return;
       }
       const k = map[e.code];
@@ -244,7 +272,7 @@ export class GameScene {
     const dt = Math.min(0.25, this.engine.getDeltaTime() / 1000);
     if (!this.paused) {
       this.island.update(dt);
-      const uiOpen = this.invUI.open || this.craftUI.open || this.shopUI.open || this.questLog.open || this.dialogue.open;
+      const uiOpen = this.invUI.open || this.craftUI.open || this.shopUI.open || this.questLog.open || this.dialogue.open || this.pauseMenu.open;
       this.player.locked = uiOpen || this.inter.busy || this.fishing.state !== 'idle';
       this.player.update(dt, this.input);
       this.inter.update(dt, this.player.x, this.player.z);
@@ -255,6 +283,15 @@ export class GameScene {
         this.lastDay = this.island.time.day;
         for (const n of Object.values(this.state.npcs)) n.talkedToday = false;
       }
+      // オートセーブ(20秒ごと)
+      this.saveTimer += dt;
+      if (this.saveTimer > 20) {
+        this.saveTimer = 0;
+        save(this.state);
+      }
+      // 環境音とチュートリアル
+      setAmbient(this.island.time.isNight ? 'night' : 'day');
+      this.tutorial();
       const hint = this.resolveInteraction(uiOpen);
       this.updateCamera(dt);
       this.updateOcclusion();
@@ -337,6 +374,23 @@ export class GameScene {
     return cands[0].hint;
   }
 
+  /** はじめてのプレイの道しるべ(トースト3段階) */
+  private tutorial(): void {
+    const f = this.state.flags;
+    if (!f.tut_start) {
+      f.tut_start = true;
+      setTimeout(() => {
+        if (!this.state.flags.tut_move) toast('WASD か 矢印キーで あるいてみよう', 'lumina');
+      }, 1200);
+    } else if (!f.tut_move && this.player.moving) {
+      f.tut_move = true;
+      setTimeout(() => toast('近くの木や草に よって Eキー!', 'wood'), 700);
+    } else if (!f.tut_gather && Object.keys(this.state.inventory).length > 0) {
+      f.tut_gather = true;
+      setTimeout(() => toast('ひろばの左にある ツムギ工房に 行ってみよう', 'lumina'), 900);
+    }
+  }
+
   /** NPCと会話(あいさつ or 依頼の提案/進行/達成) */
   talkTo(npcId: string): void {
     const npcDef = NPC_BY_ID[npcId];
@@ -361,12 +415,15 @@ export class GameScene {
         summary.lines.forEach((l, i) => setTimeout(() => toast(l, 'lumina'), 200 + i * 400));
         rtNpc.friendship += 3;
         this.playerView.play('happy');
+        sfx('quest');
         if (q.def.id === 'q_lumi') {
           this.island.applyIslandLevel(2);
+          sfx('bloom');
           setTimeout(() => toast('ルミの木が めをさました!', 'moss'), 1200);
         } else if (q.def.id === 'q_lantern') {
           this.island.applyIslandLevel(Math.max(1, this.state.islandLevel));
         }
+        save(this.state);
       };
     } else if (q && q.mode === 'progress') {
       lines = [q.def.progress.replace('{n}', String(questRemaining(this.state, q.def)))];

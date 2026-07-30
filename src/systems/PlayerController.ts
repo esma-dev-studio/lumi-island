@@ -1,5 +1,8 @@
 // プレイヤー操作: WASD/矢印移動・Shift走り・加減速・地形追従・衝突・アニメ同期
 import type { CharacterView } from '../characters/CharacterView';
+import { sfx } from '../audio/AudioSystem';
+import { onPier } from '../entities/water';
+import { terrainHeight } from '../entities/terrain';
 import type { IslandScene } from '../scenes/IslandScene';
 
 export interface InputState {
@@ -16,6 +19,7 @@ export class PlayerController {
   locked = false; // 会話・メニュー・演出中
   private vx = 0;
   private vz = 0;
+  private stepAcc = 0;
 
   constructor(
     private view: CharacterView,
@@ -93,6 +97,16 @@ export class PlayerController {
       if (this.view.current?.name === 'walk' || this.view.current?.name === 'run') this.view.play('idle');
     }
     this.moving = this.speed > 0.15;
+    // 足音(歩幅ごと)
+    if (this.moving) {
+      this.stepAcc += this.speed * dt;
+      if (this.stepAcc > 0.85) {
+        this.stepAcc = 0;
+        if (onPier(this.x, this.z)) sfx('step_wood');
+        else if (terrainHeight(this.x, this.z) < 0.62) sfx('step_sand');
+        else sfx('step_grass');
+      }
+    }
     this.apply();
   }
 

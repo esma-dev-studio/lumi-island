@@ -7,6 +7,7 @@ import { GATHER_RULES, canGather, gatherAmount } from './GatherSystem';
 import type { PlayerController } from './PlayerController';
 import type { CharacterView } from '../characters/CharacterView';
 import { toast } from '../ui/Toast';
+import { sfx } from '../audio/AudioSystem';
 import { ITEMS } from '../data/items';
 
 interface NodeState {
@@ -111,6 +112,8 @@ export class InteractionSystem {
     });
     // ヒットのタイミングで採取を確定
     setTimeout(() => {
+      const kindSfx = { tree: 'chop', rock: 'mine', grass: 'sickle', berry: 'pickup', moss: 'pickup', ore: 'mine' } as const;
+      sfx(kindSfx[node.def.kind]);
       const n = gatherAmount(node.def.kind, this.debug);
       invAdd(this.state, rule.item, n);
       toast(`+${n} ${ITEMS[rule.item].name}`, rule.item);

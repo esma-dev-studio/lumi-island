@@ -1,0 +1,90 @@
+// タイトル画面(新規/つづき/せってい/そうさ)
+import { hasSave, clearSave, loadOpts, saveOpts } from '../save/SaveSystem';
+import { setSoundEnabled } from '../audio/AudioSystem';
+import { sfx } from '../audio/AudioSystem';
+
+export class TitleScreen {
+  private el: HTMLElement;
+  onStart: ((mode: 'new' | 'continue') => void) | null = null;
+
+  constructor() {
+    this.el = document.createElement('div');
+    this.el.className = 'title-screen';
+    document.getElementById('ui-root')!.appendChild(this.el);
+    this.render();
+  }
+
+  private render(): void {
+    const saved = hasSave();
+    const opts = loadOpts();
+    this.el.innerHTML = `
+      <div class="title-inner">
+        <div class="title-logo">
+          <div class="title-jp">ルミ島のくらし</div>
+          <div class="title-en">Lumi Island</div>
+          <div class="title-sub">夜になると、島がひかる。</div>
+        </div>
+        <div class="title-menu">
+          <button class="title-btn" data-act="new">はじめから</button>
+          <button class="title-btn" data-act="continue" ${saved ? '' : 'disabled'}>つづきから</button>
+          <button class="title-btn sub" data-act="settings">せってい</button>
+          <button class="title-btn sub" data-act="help">そうさほうほう</button>
+        </div>
+        <div class="title-extra hidden" data-panel="settings">
+          <div class="tx-row"><span>おと</span><button class="title-btn sub" data-act="sound">${opts.sound ? 'オン' : 'オフ'}</button></div>
+          <div class="tx-row"><span>セーブデータ</span><button class="title-btn danger" data-act="wipe" ${saved ? '' : 'disabled'}>けす</button></div>
+        </div>
+        <div class="title-extra hidden" data-panel="help">
+          <div class="help-grid">
+            <span><kbd>W A S D</kbd>/<kbd>矢印</kbd></span><span>あるく</span>
+            <span><kbd>Shift</kbd></span><span>はしる</span>
+            <span><kbd>E</kbd>/<kbd>Space</kbd></span><span>しらべる・とる・はなす</span>
+            <span><kbd>Tab</kbd>/<kbd>I</kbd></span><span>もちもの</span>
+            <span><kbd>C</kbd></span><span>クラフト</span>
+            <span><kbd>Q</kbd></span><span>おねがい</span>
+            <span><kbd>R</kbd></span><span>(はいち中)まわす</span>
+            <span><kbd>Esc</kbd></span><span>とじる・メニュー</span>
+          </div>
+        </div>
+        <div class="title-credit">オリジナル作品 / 3Dモデル・音はすべてプログラム生成</div>
+      </div>
+    `;
+    this.el.querySelectorAll<HTMLButtonElement>('[data-act]').forEach((b) => {
+      b.onclick = () => {
+        sfx('ui');
+        const act = b.dataset.act!;
+        if (act === 'new') {
+          if (saved && !confirm('セーブデータがあります。はじめからにすると消えますが、いいですか?')) return;
+          clearSave();
+          this.onStart?.('new');
+        } else if (act === 'continue') {
+          this.onStart?.('continue');
+        } else if (act === 'settings' || act === 'help') {
+          this.el.querySelectorAll<HTMLElement>('.title-extra').forEach((p) => {
+            p.classList.toggle('hidden', p.dataset.panel !== act || !p.classList.contains('hidden'));
+          });
+        } else if (act === 'sound') {
+          const o = loadOpts();
+          o.sound = !o.sound;
+          saveOpts(o);
+          setSoundEnabled(o.sound);
+          b.textContent = o.sound ? 'オン' : 'オフ';
+        } else if (act === 'wipe') {
+          if (confirm('セーブデータを完全に消します。いいですか?')) {
+            clearSave();
+            this.render();
+          }
+        }
+      };
+    });
+  }
+
+  setLoading(): void {
+    const menu = this.el.querySelector('.title-menu');
+    if (menu) menu.innerHTML = '<div class="title-loading">島をじゅんびしています…</div>';
+  }
+
+  dispose(): void {
+    this.el.remove();
+  }
+}

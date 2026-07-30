@@ -13,6 +13,7 @@ import { hasTool, invAdd } from '../game/GameState';
 import type { PlayerController } from './PlayerController';
 import type { CharacterView } from '../characters/CharacterView';
 import { toast } from '../ui/Toast';
+import { sfx } from '../audio/AudioSystem';
 import { ITEMS, type ItemId } from '../data/items';
 
 export type FishZone = 'sea' | 'pond' | null;
@@ -98,6 +99,7 @@ export class FishingSystem {
       this.rod.rotation.set(-0.5, 0, 0);
       this.rod.setEnabled(true);
     }
+    sfx('splash');
     this.state = 'waiting';
     this.waitT = this.debug ? 1.0 : 2.2 + Math.random() * 3.2;
     this.bobTime = 0;
@@ -107,6 +109,7 @@ export class FishingSystem {
   action(player: PlayerController, view: CharacterView): void {
     if (this.state === 'bite') {
       const item = this.pickFish();
+      sfx('catch');
       invAdd(this.game, item, 1);
       toast(`+1 ${ITEMS[item].name}`, item);
       this.onCatch?.(item);
@@ -163,6 +166,7 @@ export class FishingSystem {
       this.waitT -= dt;
       if (this.waitT <= 0) {
         this.state = 'bite';
+        sfx('bite');
         this.biteT = 1.25;
         this.bobber.position.y -= 0.055; // ぐっと沈む
       }
@@ -170,6 +174,7 @@ export class FishingSystem {
       this.biteT -= dt;
       if (this.biteT <= 0) {
         toast('にげられた…', 'fish');
+        sfx('miss');
         this.finish();
         player.locked = false;
         view.play('surprised');
