@@ -103,7 +103,7 @@ export function makeSpecs() {
       leg: { thick: 0.85, bootFlare: 1.0, bootLen: 0.05 },
       ears: { thetaDeg: 36, phiDeg: 20, len: 0.082, r: 0.02 },
       muzzle: { kind: 'owlBrow' },
-      beak: { len: 0.05, r: 0.016 },
+      beak: { len: 0.075, r: 0.022 }, // 正面からも見える小さなくちばし
       outfit: { kind: 'vest', hemY: 0.245, topY: prop.legRatio * H + prop.torsoRatio * H - 0.02 },
       clipOpts: { earMode: 'feather', tailMode: 'fan' },
       palette: {
@@ -135,7 +135,7 @@ export function makeSpecs() {
       },
       arm: { thick: 0.98 },
       leg: { thick: 0.95, bootFlare: 1.0, bootLen: 0.05 },
-      ears: { thetaDeg: 78, phiDeg: 50, len: 0.125, w: 0.078 }, // 横へ張り出す垂れ耳
+      ears: { thetaDeg: 78, phiDeg: 50, len: 0.115, w: 0.108 }, // 横へ張り出す垂れ耳(葉っぱ形に幅広く)
       horns: { x: 0.058, len: 0.185, r: 0.022 },
       muzzle: { kind: 'goat' },
       outfit: { kind: 'apron', hemY: 0.30 },

@@ -83,6 +83,10 @@ export function paintTexture(spec) {
     for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) {
       tex.px(cx0 + sx * (17 + i * 6), cy0 - 1 + (i % 2) * 4, shade(P.fur, 0.6), 0.8); // ひげのつけ根
     }
+    // ひげ線(カワウソの決め手。クマ・サルとの誤認を防ぐ)
+    for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) {
+      tex.line(cx0 + sx * 15, cy0 - 3 + i * 4, cx0 + sx * (36 + i * 2), cy0 - 8 + i * 6, 1.1, shade(P.fur, 0.58), 0.55);
+    }
     // 頭頂は少し濃い毛色
     bandTop(tex, REG.head, 0.22, shade(P.fur, 0.94));
   } else if (sp === 'nokto') {

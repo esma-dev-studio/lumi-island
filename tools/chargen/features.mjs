@@ -114,10 +114,10 @@ export function buildLopEars(rig, spec) {
   const th = d2r(e.thetaDeg);
   // 耳の面: side=頭の接線方向(前後), down=垂れる方向。ヤギらしく横へ張り出してから垂れる
   const side = norm([Math.cos(th), 0, -Math.sin(th) * 0.6]);
-  const down = norm([Math.sin(th) * 1.05, -0.62, 0.06]);
+  const down = norm([Math.sin(th) * 0.95, -0.76, 0.06]); // しっかり垂れる(細い触角に見せない)
   const out = s.dir;
   const ear = patch({
-    cols: 5, rows: 8, thickness: 0.011,
+    cols: 5, rows: 8, thickness: 0.014,
     uvRegion: REG.earInner.tb,
     surfaceFn: (u, v) => {
       // しずく形: 付け根せまい→中ふくらむ→先すぼむ。先端ほど外へカール
@@ -162,7 +162,7 @@ export function buildBeak(rig, spec) {
   const c = headCenter(spec);
   const front = c[2] + hs.rz;
   const b = spec.beak; // {len, r}
-  const base = [0, c[1] - hs.rx * 0.06, front * 0.96];
+  const base = [0, c[1] - hs.rx * 0.1, front * 0.985]; // めがねの下・顔から前へ出す
   const path = [
     base,
     [0, base[1] - b.len * 0.25, base[2] + b.len * 0.7],
