@@ -69,7 +69,7 @@ export const QUESTS: QuestDef[] = [
       'お礼にルミナと、「ベリージャム」のレシピをあげる。ベリー3つでできて、高く売れるんだ。',
     ],
     objective: { kind: 'gather', item: 'fish', targetId: 'pier' },
-    lostHint: '草むらで クサツルをとって、C でツリザオを作ろう。釣りは 南の桟橋で!',
+    lostHint: 'まず岩から いしをとって カマを作ろう。カマで クサツルがかれるよ。ザオができたら 南の桟橋へ!',
   },
   {
     id: 'q_ore',

@@ -25,6 +25,7 @@ export interface Objective {
 const R_LANTERN = RECIPES.find((r) => r.id === 'r_lantern')!;
 const R_STONELAMP = RECIPES.find((r) => r.id === 'r_stonelamp')!;
 const R_ROD = RECIPES.find((r) => r.id === 'r_rod')!;
+const R_SICKLE = RECIPES.find((r) => r.id === 'r_sickle')!;
 
 function npcName(id: string): string {
   return NPC_BY_ID[id]?.name ?? id;
@@ -44,12 +45,24 @@ function inProgressObjective(state: GameState, q: QuestDef): Objective {
       };
     case 'q_fish': {
       if (!hasTool(state, 'rod')) {
+        // クサツルはカマが必要。カマ→ザオの順に1歩ずつ案内する
+        if (!hasTool(state, 'sickle')) {
+          if (canCraft(state, R_SICKLE).ok) {
+            return { ...base, id: 'q_fish_sickle_craft', headline: 'いまやること', label: '<kbd>C</kbd>で カマを作ろう', target: { kind: 'none' } };
+          }
+          return {
+            ...base, id: 'q_fish_sickle_mats', headline: 'いまやること',
+            label: 'カマの材料: 木2つ+いし1つ(岩をツルハシで)',
+            target: { kind: 'poi', id: 'meadow' },
+            progress: { cur: Math.min(2, invCount(state, 'wood')) + Math.min(1, invCount(state, 'stone')), max: 3 },
+          };
+        }
         if (canCraft(state, R_ROD).ok) {
           return { ...base, id: 'q_fish_craft', headline: 'いまやること', label: '<kbd>C</kbd>で ツリザオを作ろう', target: { kind: 'none' } };
         }
         return {
           ...base, id: 'q_fish_mats', headline: 'いまやること',
-          label: 'ザオの材料: 木とクサツルを集めよう',
+          label: 'ザオの材料: 木2つ+クサツル2つ(カマでかる)',
           target: { kind: 'poi', id: 'meadow' },
           progress: { cur: Math.min(2, invCount(state, 'wood')) + Math.min(2, invCount(state, 'fiber')), max: 4 },
         };

@@ -36,12 +36,19 @@ describe('ObjectiveSystem(いまやること)', () => {
     const o = currentObjective(s);
     expect(o.id).toBe('q_wood_report');
   });
-  it('q_fishはザオの有無で目標が変わる', () => {
+  it('q_fishはカマ→ザオの順に1歩ずつ案内する', () => {
     const s = newGameState();
     s.quests.q_wood = 'done';
+    giveTool(s, 'pickaxe'); // q_woodの報酬
     s.quests.q_fish = 'open';
     acceptQuest(s, QUEST_BY_ID.q_fish);
-    expect(currentObjective(s).id).toBe('q_fish_mats'); // 材料もない
+    expect(currentObjective(s).id).toBe('q_fish_sickle_mats'); // カマも材料もない
+    invAdd(s, 'wood', 2);
+    invAdd(s, 'stone', 1);
+    expect(currentObjective(s).id).toBe('q_fish_sickle_craft'); // カマが作れる
+    giveTool(s, 'sickle');
+    s.inventory = {}; // クラフトで消費された想定
+    expect(currentObjective(s).id).toBe('q_fish_mats'); // つぎはザオの材料
     invAdd(s, 'wood', 2);
     invAdd(s, 'fiber', 2);
     expect(currentObjective(s).id).toBe('q_fish_craft'); // 作れる

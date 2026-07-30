@@ -13,7 +13,8 @@
     "lint": "eslint src tools tests",
     "format": "prettier -w \"src/**/*.{ts,css}\" \"tools/**/*.mjs\" \"*.md\"",
     "gen:characters": "node tools/chargen/generate.mjs",
-    "check:chars": "node tools/charcheck.mjs"
+    "check:chars": "node tools/charcheck.mjs",
+    "verify": "npm run typecheck && npm run lint && npm test && npm run check:chars"
   },
   "dependencies": {
     "@babylonjs/core": "^8.0.0",

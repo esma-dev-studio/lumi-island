@@ -8,8 +8,9 @@ import { buildTerrain, terrainHeight, type Terrain } from '../entities/terrain';
 import { initEffects, attachLightPool, registerGlowSource } from '../entities/effects';
 import { buildWater, onPier, PIER, type WaterRefs } from '../entities/water';
 import {
-  makeTree, makeBerryTree, makeRock, makeOreNode, makeGrassNode, makeMoss, makeLumiTree, scatterDeco, getGlowMats,
+  makeTree, makeBerryTree, makeRock, makeOreNode, makeGrassNode, makeMoss, makeLumiTree, getGlowMats,
 } from '../entities/flora';
+import { scatterDeco } from '../entities/deco';
 import { buildHouse, makeBench, makeLamp, makeStoneRing } from '../entities/buildings';
 import { makeLogPile, makeCrate, makeBucketRod, makeTelescope, makeDriftwood, makeStump } from '../entities/props';
 import { GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, type GatherNodeDef } from '../data/island';
