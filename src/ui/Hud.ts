@@ -22,11 +22,20 @@ export class Hud {
     this.hintEl = hint;
   }
 
+  private lastClock = '';
   setClock(label: string, day: number): void {
-    this.clockEl.textContent = `${day}日め ${label}`;
+    const s = `${day}日め ${label}`;
+    if (s !== this.lastClock) {
+      this.lastClock = s;
+      this.clockEl.textContent = s;
+    }
   }
+  private lastLumina = -1;
   setLumina(n: number): void {
-    this.luminaEl.textContent = String(n);
+    if (n !== this.lastLumina) {
+      this.lastLumina = n;
+      this.luminaEl.textContent = String(n);
+    }
   }
   private lastHint = '';
   setHint(html: string): void {

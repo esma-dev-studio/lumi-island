@@ -30,6 +30,9 @@ export class FishingSystem {
   private bobTime = 0;
   private zone: FishZone = null;
   onCatch: ((item: ItemId) => void) | null = null;
+  // 毎フレーム再利用(newしない)
+  private rodTipLocal = new Vector3(0, 1.0, 0.38);
+  private linePts = [new Vector3(), new Vector3()];
 
   constructor(
     scene: Scene,
@@ -47,11 +50,6 @@ export class FishingSystem {
     appendTrunk(R, [[0, 0, 0], [0, 0.55, 0.12], [0, 1.0, 0.38]], 0.018, 0.007, Color3.FromHexString('#6f5438'), 5);
     this.rod = toMesh(scene, 'rodProp', R);
     this.rod.setEnabled(false);
-  }
-
-  /** 竿の先端のワールド座標 */
-  private rodTip(): Vector3 {
-    return Vector3.TransformCoordinates(new Vector3(0, 1.0, 0.38), this.rod.getWorldMatrix());
   }
 
   /** その場所で釣りができるか */
@@ -157,15 +155,16 @@ export class FishingSystem {
   update(dt: number, player: PlayerController, view: CharacterView): void {
     if (this.state === 'idle') return;
     this.bobTime += dt;
-    // 釣り糸(竿先→ウキ)
-    const pts = [this.rodTip(), this.bobber.position.clone()];
+    // 釣り糸(竿先→ウキ)。毎フレームのnew Vector3/配列生成を避けて再利用する
+    Vector3.TransformCoordinatesToRef(this.rodTipLocal, this.rod.getWorldMatrix(), this.linePts[0]);
+    this.linePts[1].copyFrom(this.bobber.position);
     if (!this.line) {
-      this.line = CreateLines('fline', { points: pts, updatable: true }, this.scene);
+      this.line = CreateLines('fline', { points: this.linePts, updatable: true }, this.scene);
       this.line.color = Color3.FromHexString('#e8e8e8');
       this.line.alpha = 0.7;
       this.line.isPickable = false;
     } else {
-      CreateLines('fline', { points: pts, instance: this.line });
+      CreateLines('fline', { points: this.linePts, instance: this.line });
     }
     if (this.state === 'waiting') {
       this.bobber.position.y += Math.sin(this.bobTime * 3) * 0.0006;

@@ -95,6 +95,7 @@ export class GameScene {
   private keyHandlers: Array<() => void> = [];
   private faded = new Set<import('@babylonjs/core/Meshes/mesh').Mesh>();
   private recovering = new Set<import('@babylonjs/core/Meshes/mesh').Mesh>();
+  private occScratch = new Set<import('@babylonjs/core/Meshes/mesh').Mesh>(); // 15Hzごとのnew Setを避ける
 
   constructor(
     public engine: Engine,
@@ -414,7 +415,8 @@ export class GameScene {
     const c = this.camCtl.cam.position;
     const dx = p.x - c.x, dy = p.y + 0.8 - c.y, dz = p.z - c.z;
     const L = Math.hypot(dx, dy, dz);
-    const nowFaded = new Set<import('@babylonjs/core/Meshes/mesh').Mesh>();
+    const nowFaded = this.occScratch;
+    nowFaded.clear();
     for (const m of this.island.occludables) {
       const b = m.getBoundingInfo().boundingSphere;
       const cw = b.centerWorld;
@@ -440,6 +442,7 @@ export class GameScene {
       m.visibility = Math.min(1, m.visibility + 0.1);
       if (m.visibility >= 1) this.recovering.delete(m);
     }
+    this.occScratch = this.faded; // 前回セットを次回のスクラッチとして再利用
     this.faded = nowFaded;
   }
 

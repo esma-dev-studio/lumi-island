@@ -33,7 +33,11 @@ export class ObjectiveHud {
     let sub = '';
     if (o.progress) sub = `${o.progress.cur} / ${o.progress.max}`;
     if (dist !== null && dist > 3) sub += (sub ? '　' : '') + `→ ${Math.round(dist)}m`;
-    if (this.subEl.textContent !== sub) this.subEl.textContent = sub;
-    this.subEl.style.display = sub ? '' : 'none';
+    if (this.lastSub !== sub) {
+      this.lastSub = sub;
+      this.subEl.textContent = sub;
+      this.subEl.style.display = sub ? '' : 'none';
+    }
   }
+  private lastSub: string | null = null;
 }

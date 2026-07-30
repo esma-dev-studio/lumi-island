@@ -1,0 +1,25 @@
+{
+  "date": "2026-07-30T11:53:23.561Z",
+  "resolution": "1280x720 (DPR上限1.5)",
+  "day": {
+    "avg": 59,
+    "min": 46,
+    "p5": 58
+  },
+  "night": {
+    "avg": 60,
+    "min": 60,
+    "p5": 60
+  },
+  "nightAfter40s": {
+    "avg": 60,
+    "min": 60,
+    "p5": 60
+  },
+  "errors": 0,
+  "targets": {
+    "dayAvg": 55,
+    "nightMin": 45
+  },
+  "pass": true
+}

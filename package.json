@@ -14,7 +14,10 @@
     "format": "prettier -w \"src/**/*.{ts,css}\" \"tools/**/*.mjs\" \"*.md\"",
     "gen:characters": "node tools/chargen/generate.mjs",
     "check:chars": "node tools/charcheck.mjs",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run check:chars"
+    "verify": "npm run typecheck && npm run lint && npm test && npm run check:chars",
+    "test:regression": "node tools/playtest_bot.mjs",
+    "test:ux": "node tools/ux_bot.mjs",
+    "test:performance": "node tools/perf_probe.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "^8.0.0",
