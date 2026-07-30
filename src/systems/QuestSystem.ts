@@ -2,7 +2,7 @@
 import type { GameState } from '../game/GameState';
 import { invCount, invRemove, giveTool, learnRecipe } from '../game/GameState';
 import { QUESTS, QUEST_BY_ID, OFFER_RECIPES, type QuestDef } from '../data/quests';
-import { ITEMS } from '../data/items';
+import { ITEMS, TOOLS } from '../data/items';
 
 export type QuestMode = 'offer' | 'progress' | 'done';
 
@@ -10,9 +10,21 @@ export function glowPlacedCount(state: GameState): number {
   return state.furniture.filter((f) => ITEMS[f.item].glow).length;
 }
 
+/** 指定アイテムの配置数(placeItem型の判定用) */
+export function placedItemCount(state: GameState, item: QuestDef['item']): number {
+  if (!item) return 0;
+  return state.furniture.filter((f) => f.item === item).length;
+}
+
 export function questRemaining(state: GameState, def: QuestDef): number {
-  if (def.type === 'collect') return Math.max(0, def.count - invCount(state, def.item!));
-  return Math.max(0, def.count - glowPlacedCount(state));
+  switch (def.type) {
+    case 'collect':
+      return Math.max(0, def.count - invCount(state, def.item!));
+    case 'placeItem':
+      return Math.max(0, def.count - placedItemCount(state, def.item));
+    case 'placeGlow':
+      return Math.max(0, def.count - glowPlacedCount(state));
+  }
 }
 
 /** そのNPCに話しかけたときに扱う依頼と状態 */
@@ -33,10 +45,11 @@ export function acceptQuest(state: GameState, def: QuestDef): void {
 }
 
 export interface QuestRewardSummary {
-  lines: string[]; // トースト用
+  lines: string[]; // 達成表示用
 }
 
 export function completeQuest(state: GameState, def: QuestDef): QuestRewardSummary {
+  // 配置型の依頼は配置物を消費しない(インベントリからも取らない)
   if (def.type === 'collect') invRemove(state, def.item!, def.count);
   const lines: string[] = [];
   if (def.reward.lumina) {
@@ -45,7 +58,7 @@ export function completeQuest(state: GameState, def: QuestDef): QuestRewardSumma
   }
   if (def.reward.tool) {
     giveTool(state, def.reward.tool);
-    lines.push(`どうぐ「${{ axe: 'オノ', pickaxe: 'ツルハシ', rod: 'ツリザオ', sickle: 'カマ' }[def.reward.tool]}」を もらった!`);
+    lines.push(`どうぐ「${TOOLS[def.reward.tool].name}」を もらった!`);
   }
   for (const r of def.reward.recipes ?? []) {
     if (learnRecipe(state, r)) lines.push('新しいレシピを おぼえた!');

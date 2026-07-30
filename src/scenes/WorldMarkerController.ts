@@ -1,0 +1,150 @@
+// 目的地の誘導: 画面端の方向矢印+距離 / 目的地の光の柱 / NPC頭上マーカー(!・報告)
+import { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { CreateCylinder } from '@babylonjs/core/Meshes/Builders/cylinderBuilder';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { Color3 } from '@babylonjs/core/Maths/math.color';
+import { Vector3, Matrix } from '@babylonjs/core/Maths/math.vector';
+import type { Scene } from '@babylonjs/core/scene';
+import type { Camera } from '@babylonjs/core/Cameras/camera';
+import { terrainHeight } from '../entities/terrain';
+
+export interface MarkerNpc {
+  id: string;
+  x: number;
+  y: number;
+  z: number;
+  kind: 'target' | 'report';
+}
+
+const AMBER = '#e8c890';
+
+export class WorldMarkerController {
+  private arrowEl: HTMLElement;
+  private npcEls = new Map<string, HTMLElement>();
+  private beacon: Mesh;
+  private beaconMat: StandardMaterial;
+  private tmp = new Vector3();
+  private idMatrix = Matrix.Identity();
+
+  constructor(private scene: Scene) {
+    this.arrowEl = document.createElement('div');
+    this.arrowEl.className = 'dir-arrow hidden';
+    this.arrowEl.innerHTML = `<svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 2 L19 16 L12 12.5 L5 16 Z" fill="currentColor"/></svg><span class="dir-dist"></span>`;
+    document.getElementById('ui-root')!.appendChild(this.arrowEl);
+
+    // 目的地の光の柱(控えめ)
+    this.beacon = CreateCylinder('beacon', { height: 5.5, diameterTop: 1.15, diameterBottom: 0.55, tessellation: 12 }, scene);
+    this.beaconMat = new StandardMaterial('beaconMat', scene);
+    this.beaconMat.emissiveColor = Color3.FromHexString(AMBER);
+    this.beaconMat.diffuseColor = Color3.Black();
+    this.beaconMat.alpha = 0.16;
+    this.beaconMat.disableLighting = true;
+    this.beacon.material = this.beaconMat;
+    this.beacon.isPickable = false;
+    this.beacon.setEnabled(false);
+  }
+
+  private npcEl(id: string): HTMLElement {
+    let el = this.npcEls.get(id);
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'npc-marker hidden';
+      document.getElementById('ui-root')!.appendChild(el);
+      this.npcEls.set(id, el);
+    }
+    return el;
+  }
+
+  /** world→screen(CSSピクセル)。画面内ならtrue */
+  private project(x: number, y: number, z: number, out: { sx: number; sy: number; behind: boolean }): boolean {
+    const engine = this.scene.getEngine();
+    const w = engine.getRenderWidth();
+    const h = engine.getRenderHeight();
+    this.tmp.set(x, y, z);
+    const cam = this.scene.activeCamera as Camera;
+    const p = Vector3.Project(this.tmp, this.idMatrix, this.scene.getTransformMatrix(), cam.viewport.toGlobal(w, h));
+    out.sx = (p.x / w) * window.innerWidth;
+    out.sy = (p.y / h) * window.innerHeight;
+    out.behind = p.z > 1 || p.z < 0;
+    return !out.behind && p.x >= 0 && p.x <= w && p.y >= 0 && p.y <= h;
+  }
+
+  private proj = { sx: 0, sy: 0, behind: false };
+
+  update(
+    targetPos: { x: number; z: number } | null,
+    targetIsNpc: boolean,
+    playerX: number,
+    playerZ: number,
+    npcMarkers: MarkerNpc[],
+    reportMode: boolean
+  ): void {
+    // ---- 光の柱(固定目的地のみ) ----
+    if (targetPos && !targetIsNpc) {
+      const dist = Math.hypot(playerX - targetPos.x, playerZ - targetPos.z);
+      if (dist > 7) {
+        this.beacon.setEnabled(true);
+        this.beacon.position.set(targetPos.x, terrainHeight(targetPos.x, targetPos.z) + 2.6, targetPos.z);
+        this.beaconMat.alpha = 0.1 + Math.min(0.1, (dist - 7) * 0.004);
+      } else {
+        this.beacon.setEnabled(false);
+      }
+    } else {
+      this.beacon.setEnabled(false);
+    }
+
+    // ---- 方向矢印 ----
+    if (targetPos) {
+      const dist = Math.hypot(playerX - targetPos.x, playerZ - targetPos.z);
+      const y = targetIsNpc ? terrainHeight(targetPos.x, targetPos.z) + 1.2 : terrainHeight(targetPos.x, targetPos.z) + 1.5;
+      const onScreen = this.project(targetPos.x, y, targetPos.z, this.proj);
+      if (dist < 2.6 || (onScreen && !this.proj.behind)) {
+        this.arrowEl.classList.add('hidden');
+      } else {
+        // 画面端へクランプして方向を示す
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+        let dx = this.proj.sx - cx;
+        let dy = this.proj.sy - cy;
+        if (this.proj.behind) {
+          dx = -dx;
+          dy = -dy;
+        }
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) dy = -1;
+        const margin = 56;
+        const kk = 1 / Math.max(Math.abs(dx) / (cx - margin), Math.abs(dy) / (cy - margin));
+        const ex = cx + dx * Math.min(1, kk);
+        const ey = cy + dy * Math.min(1, kk);
+        const ang = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+        this.arrowEl.classList.remove('hidden');
+        this.arrowEl.style.left = `${Math.round(ex)}px`;
+        this.arrowEl.style.top = `${Math.round(ey)}px`;
+        (this.arrowEl.querySelector('svg') as unknown as HTMLElement).style.transform = `rotate(${Math.round(ang)}deg)`;
+        (this.arrowEl.querySelector('.dir-dist') as HTMLElement).textContent = `${Math.round(dist)}m`;
+        this.arrowEl.classList.toggle('report', reportMode);
+      }
+    } else {
+      this.arrowEl.classList.add('hidden');
+    }
+
+    // ---- NPC頭上マーカー ----
+    const seen = new Set<string>();
+    for (const m of npcMarkers.slice(0, 3)) {
+      seen.add(m.id);
+      const el = this.npcEl(m.id);
+      const on = this.project(m.x, m.y + 1.45, m.z, this.proj);
+      if (!on) {
+        el.classList.add('hidden');
+        continue;
+      }
+      el.classList.remove('hidden');
+      el.classList.toggle('report', m.kind === 'report');
+      el.textContent = m.kind === 'report' ? '✓' : '!';
+      el.style.left = `${Math.round(this.proj.sx)}px`;
+      el.style.top = `${Math.round(this.proj.sy)}px`;
+    }
+    for (const [id, el] of this.npcEls) {
+      if (!seen.has(id)) el.classList.add('hidden');
+    }
+  }
+}

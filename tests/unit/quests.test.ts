@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { newGameState, invAdd, invCount, hasTool } from '../../src/game/GameState';
-import { questFor, acceptQuest, completeQuest, questRemaining, glowPlacedCount } from '../../src/systems/QuestSystem';
+import { questFor, acceptQuest, completeQuest, questRemaining, glowPlacedCount, placedItemCount } from '../../src/systems/QuestSystem';
 import { QUEST_BY_ID } from '../../src/data/quests';
 
 describe('依頼', () => {
@@ -37,7 +37,51 @@ describe('依頼', () => {
     acceptQuest(s, QUEST_BY_ID.q_lantern);
     expect(s.recipes).toContain('r_lantern');
   });
-  it('q_lumiは光る家具の設置数で判定し、達成で島レベル2', () => {
+
+  describe('q_lantern(placeItem型)', () => {
+    const prep = () => {
+      const s = newGameState();
+      // 先行依頼は完了済みの状態にする(questForが順に走査するため)
+      s.quests.q_wood = 'done';
+      s.quests.q_fish = 'done';
+      s.quests.q_ore = 'done';
+      s.quests.q_lantern = 'open';
+      acceptQuest(s, QUEST_BY_ID.q_lantern);
+      return s;
+    };
+    it('ランタンを作っただけでは達成にならない', () => {
+      const s = prep();
+      invAdd(s, 'f_lantern', 1);
+      expect(questRemaining(s, QUEST_BY_ID.q_lantern)).toBe(1);
+      expect(questFor(s, 'tsumugi')?.mode).toBe('progress');
+    });
+    it('ランタン以外の家具を置いても達成にならない', () => {
+      const s = prep();
+      s.furniture.push({ id: 1, item: 'f_table', x: 0, z: 0, rotY: 0 });
+      s.furniture.push({ id: 2, item: 'f_stonelamp', x: 1, z: 0, rotY: 0 });
+      expect(questRemaining(s, QUEST_BY_ID.q_lantern)).toBe(1);
+    });
+    it('ランタンを1個置くと達成(報告待ち)になる', () => {
+      const s = prep();
+      s.furniture.push({ id: 1, item: 'f_lantern', x: 0, z: 0, rotY: 0 });
+      expect(placedItemCount(s, 'f_lantern')).toBe(1);
+      expect(questRemaining(s, QUEST_BY_ID.q_lantern)).toBe(0);
+      expect(questFor(s, 'tsumugi')?.mode).toBe('done');
+    });
+    it('完了しても配置済みランタンは消えず、インベントリも消費されない', () => {
+      const s = prep();
+      s.furniture.push({ id: 1, item: 'f_lantern', x: 0, z: 0, rotY: 0 });
+      invAdd(s, 'f_lantern', 1); // 予備をもう1個持っている
+      completeQuest(s, QUEST_BY_ID.q_lantern);
+      expect(s.furniture.length).toBe(1); // 置いたものは残る
+      expect(invCount(s, 'f_lantern')).toBe(1); // 追加消費なし
+      expect(s.lumina).toBe(30 + 100);
+      expect(s.quests.q_lantern).toBe('done');
+      expect(s.quests.q_lumi).toBe('open');
+    });
+  });
+
+  it('q_lumi(placeGlow)は光る家具の設置数で判定し、達成で島レベル2', () => {
     const s = newGameState();
     s.quests.q_lumi = 'open';
     acceptQuest(s, QUEST_BY_ID.q_lumi);
@@ -51,6 +95,7 @@ describe('依頼', () => {
     expect(questRemaining(s, QUEST_BY_ID.q_lumi)).toBe(0);
     completeQuest(s, QUEST_BY_ID.q_lumi);
     expect(s.islandLevel).toBe(2);
+    expect(s.furniture.length).toBe(4); // placeGlowも配置物を消費しない
   });
   it('q_lumiはどのNPCでも扱える(npc: any)', () => {
     const s = newGameState();

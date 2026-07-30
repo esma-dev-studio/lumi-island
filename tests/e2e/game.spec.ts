@@ -63,7 +63,7 @@ test('クラフト: 材料からカマを作る(UI操作)', async ({ page }) => 
   watchErrors(page);
   await page.goto(GAME);
   await waitReady(page);
-  await ev(page, '__lumiDebug.give("wood",2); __lumiDebug.give("stone",1)');
+  await ev(page, '__lumiDebug.unlockAll(); __lumiDebug.give("wood",2); __lumiDebug.give("stone",1)');
   await page.keyboard.press('c');
   await page.waitForTimeout(300);
   await page.click('.craft-btn:not([disabled])');
@@ -108,6 +108,31 @@ test('NPC会話と依頼の受注', async ({ page }) => {
   expect(await ev(page, '__lumiDebug.state().flags.q_wood_accepted === true')).toBe(true);
   // 親密度(その日はじめての会話で+1)
   expect(await ev(page, '__lumiDebug.state().npcs.tsumugi.friendship')).toBeGreaterThanOrEqual(1);
+});
+
+test('ポーズ中はゲーム内時間が止まる', async ({ page }) => {
+  watchErrors(page);
+  await page.goto(GAME);
+  await waitReady(page);
+  await page.keyboard.press('Escape'); // メニューを開く
+  await page.waitForTimeout(300);
+  expect(await ev(page, 'window.__lumi.game.pauseMenu.open')).toBe(true);
+  const h1 = (await ev(page, '__lumiDebug.state().time.hour')) as number;
+  await page.waitForTimeout(2000);
+  const h2 = (await ev(page, '__lumiDebug.state().time.hour')) as number;
+  expect(h2, 'ポーズ中は時計が進まない').toBe(h1);
+  // Esc連打でも壊れない(トグルなので最後に閉じた状態へそろえる)
+  for (let i = 0; i < 5; i++) await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+  if ((await ev(page, 'window.__lumi.game.pauseMenu.open')) === true) {
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(200);
+  }
+  expect(await ev(page, 'window.__lumi.game.pauseMenu.open')).toBe(false);
+  const h3 = (await ev(page, '__lumiDebug.state().time.hour')) as number;
+  await page.waitForTimeout(1200);
+  const h4 = (await ev(page, '__lumiDebug.state().time.hour')) as number;
+  expect(h4, '閉じたら再開する').toBeGreaterThan(h3);
 });
 
 test('釣り: 桟橋でサカナがつれる', async ({ page }) => {

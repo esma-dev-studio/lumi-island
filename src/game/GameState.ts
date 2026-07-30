@@ -39,7 +39,7 @@ export interface GameState {
 export function newGameState(): GameState {
   return {
     version: SAVE_VERSION,
-    time: { day: 1, hour: 6 },
+    time: { day: 1, hour: 18.5 }, // 夕方開始: 開始90秒以内に夜の発光を見せる
     player: { x: -3, z: 6, rotY: Math.PI },
     lumina: 30,
     tools: ['axe'],

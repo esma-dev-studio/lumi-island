@@ -88,7 +88,11 @@ export class FishingSystem {
       wy = POND.waterY;
     }
     player.face(tx, tz);
-    view.play('fish_idle');
+    if (view.groups.has('fish_cast')) {
+      view.play('fish_cast', { onEnd: () => view.play('fish_idle') });
+    } else {
+      view.play('fish_idle');
+    }
     this.bobber.position.set(tx, wy + 0.02, tz);
     this.bobber.setEnabled(true);
     // 竿を右手に
@@ -113,7 +117,8 @@ export class FishingSystem {
       invAdd(this.game, item, 1);
       toast(`+1 ${ITEMS[item].name}`, item);
       this.onCatch?.(item);
-      view.play('happy', {
+      const finishAnim = view.groups.has('fish_reel') ? 'fish_reel' : 'happy';
+      view.play(finishAnim, {
         onEnd: () => {
           player.locked = false;
         },

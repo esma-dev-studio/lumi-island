@@ -12,6 +12,7 @@ import type { PlayerController } from './PlayerController';
 import { toast } from '../ui/Toast';
 import { sfx } from '../audio/AudioSystem';
 import { save } from '../save/SaveSystem';
+import { attachLightPool, registerGlowSource, unregisterGlowSource } from '../entities/effects';
 
 interface PlacedRuntime {
   data: PlacedFurniture;
@@ -72,10 +73,15 @@ export class PlacementSystem {
 
   private spawn(f: PlacedFurniture): void {
     const fm = makeFurnitureMesh(this.island.scene, f.item);
-    fm.root.position.set(f.x, this.island.groundY(f.x, f.z) - 0.01, f.z);
+    const y = this.island.groundY(f.x, f.z) - 0.01;
+    fm.root.position.set(f.x, y, f.z);
     fm.root.rotation.y = f.rotY;
     this.island.shadows.addShadowCaster(fm.root, true);
     fm.root.receiveShadows = true;
+    if (ITEMS[f.item].glow) {
+      attachLightPool(fm.root, 0, 0.05, 0, 1.6, f.item === 'f_stonelamp' ? 'blue' : 'amber');
+      registerGlowSource(f.x, y + 0.9, f.z);
+    }
     this.placed.set(f.id, { data: f, mesh: fm.root, colliderR: fm.colliderR });
   }
 
@@ -176,6 +182,7 @@ export class PlacementSystem {
   }
 
   pickUp(p: PlacedRuntime): void {
+    if (ITEMS[p.data.item].glow) unregisterGlowSource(p.data.x, p.data.z);
     this.placed.delete(p.data.id);
     this.state.furniture = this.state.furniture.filter((f) => f.id !== p.data.id);
     p.mesh.dispose(false, true);

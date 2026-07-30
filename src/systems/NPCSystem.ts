@@ -30,7 +30,8 @@ export class NPCSystem {
 
   constructor(
     private scene: Scene,
-    private island: IslandScene
+    private island: IslandScene,
+    private getFlags: () => Record<string, boolean> = () => ({})
   ) {}
 
   async init(): Promise<void> {
@@ -85,7 +86,11 @@ export class NPCSystem {
     for (const rt of this.npcs.values()) {
       if (rt.talking) continue; // 会話中はその場でtalk
       const h = hour < 6 ? hour + 24 : hour;
-      const entry = rt.def.schedule.find((e) => h >= e.from && h < e.to) ?? rt.def.schedule[rt.def.schedule.length - 1];
+      let entry = rt.def.schedule.find((e) => h >= e.from && h < e.to) ?? rt.def.schedule[rt.def.schedule.length - 1];
+      // 最初の依頼を受けるまで、ツムギは工房前から動かない(迷子防止)
+      if (rt.def.id === 'tsumugi' && this.getFlags().q_wood_accepted !== true) {
+        entry = { from: 0, to: 30, spot: 'shop', activity: 'work' };
+      }
       const spot = npcSpot(rt.def.id, entry.spot);
       const newEntry = entry !== rt.entry;
       if (newEntry) {
@@ -171,6 +176,13 @@ export class NPCSystem {
         this.apply(rt);
       }
     }
+  }
+
+  /** マーカー用: 表示中NPCの位置 */
+  positionOf(id: string): { x: number; y: number; z: number; hidden: boolean } | null {
+    const rt = this.npcs.get(id);
+    if (!rt) return null;
+    return { x: rt.x, y: rt.y, z: rt.z, hidden: rt.hidden };
   }
 
   private apply(rt: NpcRuntime): void {

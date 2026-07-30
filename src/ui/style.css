@@ -60,6 +60,75 @@ body { font-family: var(--font); color: var(--ink); }
   padding: 0 6px; margin-right: 6px; font-size: 0.8rem;
 }
 
+/* ---- いまやること(左上) ---- */
+.obj-hud {
+  position: absolute; left: 14px; top: 14px; min-width: 220px; max-width: 320px;
+  background: var(--paper); border: 1px solid var(--line); border-left: 4px solid var(--amber);
+  border-radius: var(--radius); padding: 8px 14px;
+  box-shadow: 0 2px 8px rgba(30, 24, 12, 0.12);
+}
+.obj-head { font-size: 0.68rem; font-weight: 700; color: var(--amber); letter-spacing: 0.08em; }
+.obj-head.done { color: #4f9a78; }
+.obj-label { font-size: 0.92rem; font-weight: 900; line-height: 1.5; margin-top: 1px; }
+.obj-label kbd {
+  font-family: var(--font); background: var(--amber); color: #fff; border-radius: 4px;
+  padding: 0 5px; font-size: 0.78rem;
+}
+.obj-sub { font-size: 0.8rem; font-weight: 700; color: var(--ink-soft); margin-top: 2px; }
+
+/* トーストは「いまやること」の下に積む */
+.toast-box { top: 112px; }
+
+/* ---- 方向矢印・NPCマーカー ---- */
+.dir-arrow {
+  position: absolute; transform: translate(-50%, -50%); text-align: center;
+  color: #e8c890; pointer-events: none; z-index: 5;
+  filter: drop-shadow(0 1px 3px rgba(20, 16, 8, 0.5));
+}
+.dir-arrow.report { color: #9fe8c8; }
+.dir-arrow.hidden { display: none; }
+.dir-dist {
+  display: block; font-size: 0.72rem; font-weight: 900; color: #fff;
+  background: rgba(40, 32, 20, 0.55); border-radius: 4px; padding: 0 5px; margin-top: -3px;
+}
+.npc-marker {
+  position: absolute; transform: translate(-50%, -100%);
+  font-size: 1.15rem; font-weight: 900; color: #fff; pointer-events: none; z-index: 5;
+  background: var(--amber); border-radius: 50%; width: 26px; height: 26px;
+  line-height: 26px; text-align: center;
+  box-shadow: 0 2px 6px rgba(20, 16, 8, 0.35);
+  animation: marker-float 1.6s ease-in-out infinite;
+}
+.npc-marker.report { background: #4f9a78; }
+.npc-marker.hidden { display: none; }
+@keyframes marker-float {
+  0%, 100% { margin-top: 0; }
+  50% { margin-top: -5px; }
+}
+
+/* ---- 依頼達成 ---- */
+.quest-complete {
+  position: absolute; left: 50%; top: 34%; transform: translate(-50%, -50%);
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 8px 30px rgba(30, 24, 12, 0.3);
+  padding: 0 0 14px; min-width: 300px; text-align: center; cursor: pointer; z-index: 8;
+}
+.quest-complete.hidden { display: none; }
+.qc-band {
+  background: var(--amber); color: #fff; font-weight: 900; letter-spacing: 0.1em;
+  padding: 6px 0; border-radius: var(--radius) var(--radius) 0 0; font-size: 0.9rem;
+}
+.qc-title { font-size: 1.05rem; font-weight: 900; margin: 10px 0 4px; }
+.qc-reward { font-size: 0.88rem; font-weight: 700; color: #4f7a50; margin-top: 2px; }
+.qc-next { font-size: 0.8rem; color: var(--ink-soft); margin-top: 8px; border-top: 1px solid var(--line); padding-top: 8px; margin-left: 16px; margin-right: 16px; }
+
+/* ---- ねむり ---- */
+.sleep-fade {
+  position: absolute; inset: 0; background: #0e1626; opacity: 0; pointer-events: none;
+  transition: opacity 0.45s;
+}
+.sleep-fade.show { opacity: 1; }
+
 /* ---- 共通パネル ---- */
 .panel {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);

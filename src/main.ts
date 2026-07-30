@@ -4,7 +4,9 @@ import { loadOpts, load } from './save/SaveSystem';
 import { newGameState } from './game/GameState';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
-const engine = new Engine(canvas, true, { antialias: true, adaptToDeviceRatio: true });
+const engine = new Engine(canvas, true, { antialias: true, adaptToDeviceRatio: false });
+// 高DPI画面で描画解像度が過剰にならないよう上限を設ける(見た目の劣化が出ない範囲)
+engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio || 1, 1.5));
 window.addEventListener('resize', () => engine.resize());
 
 const params = new URLSearchParams(location.search);

@@ -5,6 +5,7 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { CascadedShadowGenerator } from '@babylonjs/core/Lights/Shadows/cascadedShadowGenerator';
 import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
 import { buildTerrain, terrainHeight, type Terrain } from '../entities/terrain';
+import { initEffects, attachLightPool, registerGlowSource } from '../entities/effects';
 import { buildWater, onPier, PIER, type WaterRefs } from '../entities/water';
 import {
   makeTree, makeBerryTree, makeRock, makeOreNode, makeGrassNode, makeMoss, makeLumiTree, scatterDeco, getGlowMats,
@@ -43,6 +44,7 @@ export class IslandScene {
 
   build(): void {
     const s = this.scene;
+    initEffects(s);
     this.terrain = buildTerrain(s);
     this.water = buildWater(s);
     this.dayNight = new DayNight(s, this.water);
@@ -135,9 +137,12 @@ export class IslandScene {
     const lampDefs: [number, number][] = [[5.5, 1.5], [-5.5, -4], [1.5, 7.5], [-2, -11.5]];
     for (const [lx, lz] of lampDefs) {
       const lamp = makeLamp(s);
-      lamp.mesh.position.set(lx, terrainHeight(lx, lz) - 0.02, lz);
+      const ly = terrainHeight(lx, lz) - 0.02;
+      lamp.mesh.position.set(lx, ly, lz);
       lamp.mesh.rotation.y = Math.atan2(-lx, -lz); // ランタンを広場中心へ向ける
       caster(lamp.mesh);
+      attachLightPool(lamp.mesh, 0, 0.06, 0.3, 1.7, 'amber');
+      registerGlowSource(lx, ly + 1.77, lz);
     }
     const lumi = makeLumiTree(s);
     const lp = POIS.lumiTree;
@@ -146,6 +151,8 @@ export class IslandScene {
     const ring = makeStoneRing(s);
     ring.position.set(lp.x, terrainHeight(lp.x, lp.z) - 0.02, lp.z);
     this.lumiFruits = lumi.fruits;
+    attachLightPool(lumi.root, 0, 0.06, 0, 3.4, 'mint');
+    registerGlowSource(lp.x, terrainHeight(lp.x, lp.z) + 4.5, lp.z);
     this.circles.push({ x: lp.x, z: lp.z, r: 1.7 });
     this.circles.push({ x: 5.5, z: 1.5, r: 0.2 }, { x: -5.5, z: -4, r: 0.2 }, { x: 1.5, z: 7.5, r: 0.2 }, { x: -2, z: -11.5, r: 0.2 });
 
@@ -203,7 +210,6 @@ export class IslandScene {
 
   update(dtSec: number): void {
     this.time.advance(dtSec);
-    this.dayNight.update(this.time.hour);
   }
 
   /** ルミの木の段階(0=ねむり 1=めばえ 2=かいか)を見た目へ反映 */

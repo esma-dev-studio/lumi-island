@@ -19,6 +19,7 @@ export const POIS: Record<string, POI> = {
   pond: { id: 'pond', name: '池', x: 30, z: 20 },
   hill: { id: 'hill', name: '高台', x: 28, z: -27 },
   beach: { id: 'beach', name: '浜べ', x: -6, z: 42 },
+  meadow: { id: 'meadow', name: '草原', x: -22, z: 10 },
   forest: { id: 'forest', name: '林', x: -2, z: -32 },
 };
 

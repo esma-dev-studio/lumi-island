@@ -8,6 +8,7 @@ import type { PlayerController } from './PlayerController';
 import type { CharacterView } from '../characters/CharacterView';
 import { toast } from '../ui/Toast';
 import { sfx } from '../audio/AudioSystem';
+import { burst, flyItem } from '../entities/effects';
 import { ITEMS } from '../data/items';
 
 interface NodeState {
@@ -23,6 +24,11 @@ interface Tween {
   dur: number;
 }
 
+interface Shake {
+  mesh: { rotation: { z: number } };
+  t: number;
+}
+
 export interface Hint {
   text: string;
   ok: boolean;
@@ -31,9 +37,12 @@ export interface Hint {
 export class InteractionSystem {
   private nodeStates = new Map<string, NodeState>();
   private tweens: Tween[] = [];
+  private shakes: Shake[] = [];
   currentNode: GatherNodeRuntime | null = null;
   hint: Hint | null = null;
   busy = false;
+  /** ヒット時にGameSceneが差し込む演出(カメラシェイク・ヒットストップ) */
+  onHit: (() => void) | null = null;
 
   constructor(
     private island: IslandScene,
@@ -53,6 +62,17 @@ export class InteractionSystem {
         st.depleted = false;
         const node = this.island.nodes.get(id)!;
         this.restoreVisual(node);
+      }
+    }
+    // 対象のゆれ
+    for (let i = this.shakes.length - 1; i >= 0; i--) {
+      const sh = this.shakes[i];
+      sh.t += dt;
+      if (sh.t >= 0.32) {
+        sh.mesh.rotation.z = 0;
+        this.shakes.splice(i, 1);
+      } else {
+        sh.mesh.rotation.z = Math.sin(sh.t * 42) * 0.06 * (1 - sh.t / 0.32);
       }
     }
     // ツイーン
@@ -114,6 +134,12 @@ export class InteractionSystem {
     setTimeout(() => {
       const kindSfx = { tree: 'chop', rock: 'mine', grass: 'sickle', berry: 'pickup', moss: 'pickup', ore: 'mine' } as const;
       sfx(kindSfx[node.def.kind]);
+      // ヒット演出: 対象のゆれ+素材の粒+アイテムがプレイヤーへ飛ぶ
+      this.shakes.push({ mesh: node.root, t: 0 });
+      const hitY = node.y + (node.def.kind === 'tree' || node.def.kind === 'berry' ? 1.6 : 0.5);
+      burst(node.def.x, hitY, node.def.z, node.def.kind, node.def.kind === 'tree' ? 12 : 8);
+      flyItem(node.def.x, hitY - 0.3, node.def.z);
+      this.onHit?.();
       const n = gatherAmount(node.def.kind, this.debug);
       invAdd(this.state, rule.item, n);
       toast(`+${n} ${ITEMS[rule.item].name}`, rule.item);

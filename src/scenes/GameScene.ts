@@ -1,64 +1,77 @@
-// ゲーム本体シーン: 島+プレイヤー+カメラ+HUD(以後、採取・NPC・依頼をここに載せる)
+// ゲーム本体シーン: 各システム・UI・コントローラの組み立てとフレームループ
+// 個別の責務は systems/ と scenes/*Controller に分離してある。
 import type { Engine } from '@babylonjs/core/Engines/engine';
-import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
-import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { IslandScene } from './IslandScene';
+import { CameraController } from './CameraController';
+import { WorldMarkerController, type MarkerNpc } from './WorldMarkerController';
+import { QuestDialogueController } from './QuestDialogueController';
 import { CharacterView } from '../characters/CharacterView';
 import { CHARACTERS } from '../data/characters';
-import { SPAWN } from '../data/island';
+import { POIS } from '../data/island';
+import { ITEMS, validateItemData } from '../data/items';
+import { newGameState, type GameState } from '../game/GameState';
 import { PlayerController, type InputState } from '../systems/PlayerController';
 import { InteractionSystem } from '../systems/InteractionSystem';
 import { FishingSystem } from '../systems/FishingSystem';
 import { PlacementSystem } from '../systems/PlacementSystem';
 import { NPCSystem } from '../systems/NPCSystem';
-import { questFor, acceptQuest, completeQuest, questRemaining } from '../systems/QuestSystem';
-import { NPC_BY_ID } from '../data/npcs';
+import { TutorialSystem } from '../systems/TutorialSystem';
+import { currentObjective, type Objective } from '../systems/ObjectiveSystem';
+import { questFor } from '../systems/QuestSystem';
+import { resolveCandidate, PRIORITY, type InteractionCandidate } from '../systems/InteractionResolver';
 import { Hud } from '../ui/Hud';
+import { ObjectiveHud } from '../ui/ObjectiveHud';
 import { InventoryUI } from '../ui/InventoryUI';
 import { CraftUI } from '../ui/CraftUI';
 import { ShopUI } from '../ui/ShopUI';
 import { DialogueUI } from '../ui/DialogueUI';
 import { QuestLogUI } from '../ui/QuestLogUI';
+import { QuestCompleteUI } from '../ui/QuestCompleteUI';
 import { PauseMenu } from '../ui/PauseMenu';
 import { toast } from '../ui/Toast';
 import { save } from '../save/SaveSystem';
 import { sfx, setAmbient } from '../audio/AudioSystem';
+import { updateEffects, burst } from '../entities/effects';
 import { terrainHeight } from '../entities/terrain';
-import { newGameState, type GameState } from '../game/GameState';
-import { validateItemData, ITEMS } from '../data/items';
-import { POIS } from '../data/island';
 
-// 店のカウンター位置(ツムギ工房の正面)
-const SHOP_POINT = { x: POIS.shop.x + 4.6, z: POIS.shop.z };
-
-const CAM_DIST = 8.4;
-const CAM_HEIGHT = 6.1;
-const CAM_LOOK_UP = 1.05;
+const SHOP_POINT = { x: POIS.shop.x + 4.6, z: POIS.shop.z }; // 店カウンター(工房の正面)
+const SLEEP_POINT = { x: -30.9, z: 6.7 }; // ミオの家のドア前
 
 export class GameScene {
   island: IslandScene;
   player!: PlayerController;
   playerView!: CharacterView;
-  cam!: FreeCamera;
+  camCtl!: CameraController;
+  markers!: WorldMarkerController;
+  questDlg!: QuestDialogueController;
   hud!: Hud;
+  objHud!: ObjectiveHud;
   state: GameState = newGameState();
   inter!: InteractionSystem;
   fishing!: FishingSystem;
   placement!: PlacementSystem;
+  npcs!: NPCSystem;
+  tutorial!: TutorialSystem;
   invUI!: InventoryUI;
   craftUI!: CraftUI;
   shopUI!: ShopUI;
   dialogue!: DialogueUI;
   questLog!: QuestLogUI;
+  questComplete!: QuestCompleteUI;
   pauseMenu!: PauseMenu;
-  npcs!: NPCSystem;
-  private lastDay = 1;
-  private saveTimer = 0;
   paused = false;
   wantInteract = false;
   input: InputState = { up: false, down: false, left: false, right: false, run: false };
+  private lastDay = 1;
+  private saveTimer = 0;
+  private hitstop = 0;
+  private seqT = -1; // 夜の見せ場/開花のタイマー(-1=なし)
+  private seqKind: 'intro' | 'bloom' | null = null;
+  private occAcc = 0;
+  private lastObjective: Objective | null = null;
   private keyHandlers: Array<() => void> = [];
   private faded = new Set<import('@babylonjs/core/Meshes/mesh').Mesh>();
+  private sleepFade: HTMLElement | null = null;
 
   constructor(
     public engine: Engine,
@@ -76,77 +89,77 @@ export class GameScene {
     this.island.build();
     this.playerView = await CharacterView.load(this.scene, CHARACTERS.mio);
     for (const m of this.playerView.meshes) this.island.shadows.addShadowCaster(m, true);
-    this.player = new PlayerController(this.playerView, this.island, SPAWN);
-
-    this.cam = new FreeCamera('cam', new Vector3(0, 10, 10), this.scene);
-    this.cam.minZ = 0.3;
-    this.cam.maxZ = 400;
-    this.snapCamera();
+    this.player = new PlayerController(this.playerView, this.island, {
+      x: this.state.player.x, z: this.state.player.z, rotY: this.state.player.rotY,
+    });
+    this.camCtl = new CameraController(this.scene);
+    this.markers = new WorldMarkerController(this.scene);
 
     this.hud = new Hud();
+    this.objHud = new ObjectiveHud();
     this.invUI = new InventoryUI(() => this.state);
     this.craftUI = new CraftUI(() => this.state);
     this.shopUI = new ShopUI(() => this.state);
+    this.dialogue = new DialogueUI();
+    this.questLog = new QuestLogUI(() => this.state);
+    this.questComplete = new QuestCompleteUI();
+    this.pauseMenu = new PauseMenu();
+    this.tutorial = new TutorialSystem(this.state);
     this.inter = new InteractionSystem(this.island, this.state, !!this.opts.debug);
     this.fishing = new FishingSystem(this.scene, this.state, !!this.opts.debug);
     this.placement = new PlacementSystem(this.island, this.state);
-    this.invUI.onPlace = (item) => this.placement.begin(item);
-    this.dialogue = new DialogueUI();
-    this.questLog = new QuestLogUI(() => this.state);
-    this.pauseMenu = new PauseMenu();
+    this.npcs = new NPCSystem(this.scene, this.island, () => this.state.flags);
+    await this.npcs.init();
+    this.questDlg = new QuestDialogueController({
+      state: this.state, npcs: this.npcs, dialogue: this.dialogue,
+      questComplete: this.questComplete, tutorial: this.tutorial, player: this.player,
+      onDialogueCamera: (npcId) => {
+        if (npcId) {
+          const p = this.npcs.positionOf(npcId);
+          if (p) this.camCtl.beginDialogue(this.player.x, this.player.y, this.player.z, p.x, p.y, p.z);
+        } else {
+          this.camCtl.endDialogue();
+        }
+      },
+      onIslandLevel: (lv) => this.island.applyIslandLevel(lv),
+      onCelebrate: () => this.startSequence('bloom'),
+    });
+
+    // イベント連携
     this.pauseMenu.onBackToTitle = () => {
       save(this.state);
       location.reload();
     };
-    this.craftUI.onCrafted = () => save(this.state);
+    this.invUI.onPlace = (item) => this.placement.begin(item);
+    this.craftUI.onCrafted = () => {
+      if (Object.keys(this.state.inventory).some((k) => ITEMS[k as keyof typeof ITEMS]?.kind === 'furniture')) {
+        this.tutorial.onFirstFurniture();
+      }
+      save(this.state);
+    };
     this.shopUI.onTrade = () => {
       sfx('coin');
       save(this.state);
     };
-    this.npcs = new NPCSystem(this.scene, this.island);
-    await this.npcs.init();
-    // セーブからの復元
+    this.inter.onHit = () => {
+      this.camCtl.shake(0.09);
+      this.hitstop = 0.055;
+    };
+
+    // 復元
     this.island.time.restore(this.state.time);
     this.lastDay = this.state.time.day;
-    this.player.teleport(this.state.player.x, this.state.player.z, this.state.player.rotY);
     this.placement.restore();
     this.island.applyIslandLevel(this.state.islandLevel);
-    this.island.dayNight.update(this.island.time.hour);
+    this.island.dayNight.update(this.island.time.hour, this.player.x, this.player.z);
+    this.camCtl.snapTo(this.player.x, this.player.y, this.player.z);
     window.addEventListener('beforeunload', () => save(this.state));
     for (const p of validateItemData()) console.warn('[data]', p);
     this.bindKeys();
-
-    // デバッグフック
-    if (this.opts.debug) {
-      const w = window as unknown as Record<string, unknown>;
-      w.__lumiDebug = {
-        setHour: (h: number) => {
-          this.island.time.hour = h;
-          this.island.dayNight.update(h);
-        },
-        tp: (x: number, z: number) => this.player.teleport(x, z),
-        state: () => this.state,
-        give: (item: string, n = 1) => {
-          (this.state.inventory as Record<string, number>)[item] =
-            ((this.state.inventory as Record<string, number>)[item] ?? 0) + n;
-        },
-        interact: () => {
-          this.wantInteract = true;
-        },
-        openShop: () => this.shopUI.show(),
-        placeBegin: (item: string) => this.placement.begin(item as never),
-        placeRotate: () => this.placement.rotate(),
-        fishingState: () => this.fishing.state,
-        talkTo: (id: string) => this.talkTo(id),
-        advance: () => this.dialogue.advance(),
-        npcPos: (id: string) => {
-          const rt = this.npcs.npcs.get(id);
-          return rt ? { x: rt.x, z: rt.z, hidden: rt.hidden } : null;
-        },
-      };
-    }
+    this.bindDebug();
   }
 
+  // ---------- 入力 ----------
   private bindKeys(): void {
     const map: Record<string, keyof InputState> = {
       KeyW: 'up', ArrowUp: 'up', KeyS: 'down', ArrowDown: 'down',
@@ -154,19 +167,22 @@ export class GameScene {
       ShiftLeft: 'run', ShiftRight: 'run',
     };
     const down = (e: KeyboardEvent): void => {
+      const gates = this.tutorial.gates();
       if (e.code === 'KeyE' || e.code === 'Space') {
         this.wantInteract = true;
         e.preventDefault();
         return;
       }
       if (e.code === 'Tab' || e.code === 'KeyI') {
+        e.preventDefault();
+        if (!gates.inventory) return; // 未解放(混乱する画面を出さない)
         this.craftUI.close();
         this.shopUI.close();
         this.invUI.toggle();
-        e.preventDefault();
         return;
       }
       if (e.code === 'KeyC') {
+        if (!gates.craft) return;
         this.invUI.close();
         this.shopUI.close();
         this.questLog.close();
@@ -174,6 +190,7 @@ export class GameScene {
         return;
       }
       if (e.code === 'KeyQ') {
+        if (!gates.quest) return;
         this.invUI.close();
         this.craftUI.close();
         this.shopUI.close();
@@ -187,16 +204,18 @@ export class GameScene {
       if (e.code === 'Escape') {
         const wasOpen =
           this.invUI.open || this.craftUI.open || this.shopUI.open || this.questLog.open ||
-          this.dialogue.open || this.pauseMenu.open || this.placement.active || this.fishing.state !== 'idle';
+          this.dialogue.open || this.pauseMenu.open || this.questComplete.open ||
+          this.placement.active || this.fishing.state !== 'idle';
         this.invUI.close();
         this.craftUI.close();
         this.shopUI.close();
         this.questLog.close();
         this.dialogue.close();
+        this.questComplete.hide();
         this.pauseMenu.close();
         this.placement.cancel();
         this.fishing.cancel(this.player, this.playerView);
-        if (!wasOpen) this.pauseMenu.show(); // なにも開いていなければメニュー
+        if (!wasOpen) this.pauseMenu.show();
         return;
       }
       const k = map[e.code];
@@ -217,97 +236,18 @@ export class GameScene {
     });
   }
 
-  private snapCamera(): void {
-    const p = this.player;
-    this.cam.position.set(p.x, p.y + CAM_HEIGHT, p.z + CAM_DIST);
-    this.cam.setTarget(new Vector3(p.x, p.y + CAM_LOOK_UP, p.z));
-  }
-
-  private updateCamera(dt: number): void {
-    const p = this.player;
-    const tx = p.x, tz = p.z + CAM_DIST;
-    let ty = p.y + CAM_HEIGHT;
-    // カメラが地形へ潜らないように
-    const g = terrainHeight(tx, tz) + 0.6;
-    if (ty < g) ty = g;
-    const k = Math.min(1, dt * 6.5);
-    this.cam.position.x += (tx - this.cam.position.x) * k;
-    this.cam.position.y += (ty - this.cam.position.y) * k;
-    this.cam.position.z += (tz - this.cam.position.z) * k;
-    this.cam.setTarget(new Vector3(p.x, p.y + CAM_LOOK_UP, p.z));
-  }
-
-  // カメラとプレイヤーの間の木・建物を半透明化
-  private updateOcclusion(): void {
-    const p = this.player;
-    const c = this.cam.position;
-    const dx = p.x - c.x, dy = p.y + 0.8 - c.y, dz = p.z - c.z;
-    const L = Math.hypot(dx, dy, dz);
-    const nowFaded = new Set<import('@babylonjs/core/Meshes/mesh').Mesh>();
-    for (const m of this.island.occludables) {
-      const b = m.getBoundingInfo().boundingSphere;
-      const cw = b.centerWorld;
-      // カメラ自体がメッシュの中にある場合(大木の葉群など)
-      const dc = Math.hypot(cw.x - c.x, cw.y - c.y, cw.z - c.z);
-      if (dc < b.radiusWorld * 0.95) {
-        nowFaded.add(m);
-        continue;
-      }
-      // 線分との距離
-      const t = Math.max(0.05, Math.min(0.95, ((cw.x - c.x) * dx + (cw.y - c.y) * dy + (cw.z - c.z) * dz) / (L * L)));
-      const px = c.x + dx * t, py = c.y + dy * t, pz = c.z + dz * t;
-      const d = Math.hypot(cw.x - px, cw.y - py, cw.z - pz);
-      if (d < b.radiusWorld * 0.72 && t < 0.93) nowFaded.add(m);
-    }
-    for (const m of nowFaded) {
-      if (m.visibility > 0.35) m.visibility = Math.max(0.35, m.visibility - 0.12);
-    }
-    for (const m of this.faded) {
-      if (!nowFaded.has(m) && m.visibility < 1) m.visibility = Math.min(1, m.visibility + 0.1);
-    }
-    this.faded = nowFaded;
-  }
-
-  render(): void {
-    const dt = Math.min(0.25, this.engine.getDeltaTime() / 1000);
-    if (!this.paused) {
-      this.island.update(dt);
-      const uiOpen = this.invUI.open || this.craftUI.open || this.shopUI.open || this.questLog.open || this.dialogue.open || this.pauseMenu.open;
-      this.player.locked = uiOpen || this.inter.busy || this.fishing.state !== 'idle';
-      this.player.update(dt, this.input);
-      this.inter.update(dt, this.player.x, this.player.z);
-      this.fishing.update(dt, this.player, this.playerView);
-      this.placement.update(this.player);
-      this.npcs.update(dt, this.island.time.hour, this.player.x, this.player.z);
-      if (this.island.time.day !== this.lastDay) {
-        this.lastDay = this.island.time.day;
-        for (const n of Object.values(this.state.npcs)) n.talkedToday = false;
-      }
-      // オートセーブ(20秒ごと)
-      this.saveTimer += dt;
-      if (this.saveTimer > 20) {
-        this.saveTimer = 0;
-        save(this.state);
-      }
-      // 環境音とチュートリアル
-      setAmbient(this.island.time.isNight ? 'night' : 'day');
-      this.tutorial();
-      const hint = this.resolveInteraction(uiOpen);
-      this.updateCamera(dt);
-      this.updateOcclusion();
-      this.hud.setClock(this.island.time.label(), this.island.time.day);
-      this.hud.setLumina(this.state.lumina);
-      this.hud.setHint(uiOpen ? '' : hint);
-      this.state.time = { day: this.island.time.day, hour: this.island.time.hour };
-      this.state.player = { x: this.player.x, z: this.player.z, rotY: this.player.rotY };
-    }
-    this.scene.render();
-  }
-
-  /** E入力の行き先とヒントを決める(配置中>釣り中>近くの対象) */
+  // ---------- E入力のルーティング(優先度と距離を分離) ----------
   private resolveInteraction(uiOpen: boolean): string {
     const want = this.wantInteract;
     this.wantInteract = false;
+    if (this.questComplete.open && want) {
+      this.questComplete.hide();
+      return '';
+    }
+    if (this.seqT >= 0) {
+      if (want) this.endSequence();
+      return '';
+    }
     if (this.dialogue.open) {
       if (want) this.dialogue.advance();
       return '';
@@ -322,125 +262,301 @@ export class GameScene {
       return this.fishing.hint ?? '';
     }
     if (this.inter.busy) return '';
-    // 候補: 採取ノード / 家具の持ち帰り / 店 / 釣り場
-    interface Cand {
-      d: number;
-      hint: string;
-      run: () => void;
+
+    const cands: InteractionCandidate[] = [];
+    const px = this.player.x, pz = this.player.z;
+    // NPC(依頼が進むNPCは優先度を上げる)
+    const npc = this.npcs.nearest(px, pz);
+    if (npc) {
+      const rt = npc as unknown as { def: { id: string; name: string }; x: number; z: number };
+      const hasQuest = questFor(this.state, rt.def.id) !== null;
+      cands.push({
+        id: `npc_${rt.def.id}`,
+        priority: hasQuest ? PRIORITY.npcQuest : PRIORITY.npc,
+        distance: Math.hypot(px - rt.x, pz - rt.z),
+        enabled: true,
+        hint: `<kbd>E</kbd>${rt.def.name}と はなす`,
+        run: () => this.questDlg.talkTo(rt.def.id),
+      });
     }
-    const cands: Cand[] = [];
+    // 採取ノード
     if (this.inter.currentNode && this.inter.hint) {
       const n = this.inter.currentNode;
       cands.push({
-        d: Math.hypot(this.player.x - n.def.x, this.player.z - n.def.z),
+        id: `node_${n.def.id}`,
+        priority: PRIORITY.gather,
+        distance: Math.hypot(px - n.def.x, pz - n.def.z),
+        enabled: this.inter.hint.ok,
         hint: this.inter.hint.text,
         run: () => void this.inter.tryGather(this.player, this.playerView),
       });
+      if (!this.inter.hint.ok) {
+        // 道具不足の理由も候補として表示だけする(実行不可)
+        cands.push({
+          id: `node_reason`, priority: PRIORITY.gather + 5,
+          distance: Math.hypot(px - n.def.x, pz - n.def.z),
+          enabled: true, hint: this.inter.hint.text, run: () => {},
+        });
+      }
     }
-    const near = this.placement.nearest(this.player.x, this.player.z);
+    // 店
+    const shopD = Math.hypot(px - SHOP_POINT.x, pz - SHOP_POINT.z);
+    if (shopD < 2.0) {
+      cands.push({
+        id: 'shop', priority: PRIORITY.shop, distance: shopD, enabled: true,
+        hint: '<kbd>E</kbd>お店をみる(うる・かう)',
+        run: () => this.shopUI.show(),
+      });
+    }
+    // 釣り場
+    const fish = this.fishing.canFish(px, pz);
+    if (fish.zone) {
+      cands.push({
+        id: 'fishing', priority: PRIORITY.fishing, distance: 1.0, enabled: fish.ok,
+        hint: fish.ok ? '<kbd>E</kbd>つりをする' : `つりには ${fish.reason}`,
+        run: () => this.fishing.start(this.player, this.playerView),
+      });
+      if (!fish.ok) {
+        cands.push({ id: 'fishing_reason', priority: PRIORITY.fishing + 5, distance: 1.0, enabled: true, hint: `つりには ${fish.reason}`, run: () => {} });
+      }
+    }
+    // ねる(自宅のドア)
+    const sleepD = Math.hypot(px - SLEEP_POINT.x, pz - SLEEP_POINT.z);
+    if (sleepD < 2.0) {
+      cands.push({
+        id: 'sleep', priority: PRIORITY.shop, distance: sleepD, enabled: true,
+        hint: '<kbd>E</kbd>ねる(あさまで)',
+        run: () => this.doSleep(),
+      });
+    }
+    // 設置家具の持ち帰り
+    const near = this.placement.nearest(px, pz);
     if (near) {
       cands.push({
-        d: Math.hypot(this.player.x - near.data.x, this.player.z - near.data.z) + 0.35,
+        id: `furn_${near.data.id}`, priority: PRIORITY.furniture,
+        distance: Math.hypot(px - near.data.x, pz - near.data.z), enabled: true,
         hint: `<kbd>E</kbd>${ITEMS[near.data.item].name}を もちかえる`,
         run: () => this.placement.pickUp(near),
       });
     }
-    const npc = this.npcs.nearest(this.player.x, this.player.z);
-    if (npc) {
-      const rt = npc as unknown as { def: { id: string; name: string }; x: number; z: number };
-      cands.push({
-        d: Math.hypot(this.player.x - rt.x, this.player.z - rt.z) - 0.25,
-        hint: `<kbd>E</kbd>${rt.def.name}と はなす`,
-        run: () => this.talkTo(rt.def.id),
-      });
-    }
-    const shopD = Math.hypot(this.player.x - SHOP_POINT.x, this.player.z - SHOP_POINT.z);
-    if (shopD < 2.0) {
-      cands.push({ d: shopD, hint: '<kbd>E</kbd>お店をみる(うる・かう)', run: () => this.shopUI.show() });
-    }
-    const fish = this.fishing.canFish(this.player.x, this.player.z);
-    if (fish.zone) {
-      cands.push({
-        d: 1.2,
-        hint: fish.ok ? '<kbd>E</kbd>つりをする' : `つりには ${fish.reason}`,
-        run: () => {
-          if (fish.ok) this.fishing.start(this.player, this.playerView);
-        },
-      });
-    }
-    if (!cands.length) return '';
-    cands.sort((a, b) => a.d - b.d);
-    if (want) cands[0].run();
-    return cands[0].hint;
+    const best = resolveCandidate(cands);
+    if (!best) return '';
+    if (want) best.run();
+    return best.hint;
   }
 
-  /** はじめてのプレイの道しるべ(トースト3段階) */
-  private tutorial(): void {
-    const f = this.state.flags;
-    if (!f.tut_start) {
-      f.tut_start = true;
-      setTimeout(() => {
-        if (!this.state.flags.tut_move) toast('WASD か 矢印キーで あるいてみよう', 'lumina');
-      }, 1200);
-    } else if (!f.tut_move && this.player.moving) {
-      f.tut_move = true;
-      setTimeout(() => toast('近くの木や草に よって Eキー!', 'wood'), 700);
-    } else if (!f.tut_gather && Object.keys(this.state.inventory).length > 0) {
-      f.tut_gather = true;
-      setTimeout(() => toast('ひろばの左にある ツムギ工房に 行ってみよう', 'lumina'), 900);
-    }
-  }
-
-  /** NPCと会話(あいさつ or 依頼の提案/進行/達成) */
-  talkTo(npcId: string): void {
-    const npcDef = NPC_BY_ID[npcId];
-    const rtNpc = this.state.npcs[npcId];
-    this.npcs.setTalking(npcId, true, this.player.x, this.player.z);
-    const rt = this.npcs.npcs.get(npcId)!;
-    this.player.face(rt.x, rt.z);
-
-    const q = questFor(this.state, npcId);
-    let lines: string[];
-    let after: (() => void) | null = null;
-    if (q && q.mode === 'offer') {
-      lines = q.def.offer;
-      after = () => {
-        acceptQuest(this.state, q.def);
-        toast(`おねがい「${q.def.title}」をうけた(Qでかくにん)`, 'lumina');
-      };
-    } else if (q && q.mode === 'done') {
-      lines = q.def.done;
-      after = () => {
-        const summary = completeQuest(this.state, q.def);
-        summary.lines.forEach((l, i) => setTimeout(() => toast(l, 'lumina'), 200 + i * 400));
-        rtNpc.friendship += 3;
-        this.playerView.play('happy');
-        sfx('quest');
-        if (q.def.id === 'q_lumi') {
-          this.island.applyIslandLevel(2);
-          sfx('bloom');
-          setTimeout(() => toast('ルミの木が めをさました!', 'moss'), 1200);
-        } else if (q.def.id === 'q_lantern') {
-          this.island.applyIslandLevel(Math.max(1, this.state.islandLevel));
-        }
-        save(this.state);
-      };
-    } else if (q && q.mode === 'progress') {
-      lines = [q.def.progress.replace('{n}', String(questRemaining(this.state, q.def)))];
+  // ---------- 見せ場(初回の夜・ルミの木開花) ----------
+  private startSequence(kind: 'intro' | 'bloom'): void {
+    this.seqKind = kind;
+    this.seqT = 0;
+    const lp = POIS.lumiTree;
+    const y = terrainHeight(lp.x, lp.z);
+    this.camCtl.beginEvent(lp.x, y, lp.z, kind === 'intro' ? 13 : 11, kind === 'intro' ? 8 : 6.5);
+    if (kind === 'intro') {
+      toast('夜になると、島の光が めをさます。', 'moss');
     } else {
-      const f = rtNpc.friendship;
-      const tier = f >= 7 ? 2 : f >= 3 ? 1 : 0;
-      const variants = npcDef.greetings[tier];
-      lines = [variants[(this.state.time.day + f) % variants.length]];
+      sfx('bloom');
     }
-    if (!rtNpc.talkedToday) {
-      rtNpc.talkedToday = true;
-      rtNpc.friendship += 1;
+  }
+
+  private endSequence(): void {
+    if (this.seqKind === 'bloom') this.island.lumiFruits.scaling.setAll(1.2);
+    this.seqT = -1;
+    this.seqKind = null;
+    this.camCtl.endEvent();
+  }
+
+  private updateSequence(dt: number): void {
+    // 初回の夜: 夕方開始から日没を迎えた瞬間に一度だけ
+    if (this.seqT < 0 && !this.state.flags.intro_done && this.island.time.hour >= 19.4 && this.island.time.hour < 22) {
+      this.state.flags.intro_done = true;
+      this.startSequence('intro');
+      sfx('bloom');
     }
-    this.dialogue.show(npcDef.name, lines, () => {
-      this.npcs.setTalking(npcId, false);
-      after?.();
-    });
+    if (this.seqT < 0) return;
+    this.seqT += dt;
+    const lp = POIS.lumiTree;
+    if (this.seqKind === 'bloom') {
+      // 実がふくらみ、粒が立ちのぼる
+      const k = Math.min(1, this.seqT / 4.5);
+      this.island.lumiFruits.scaling.setAll(0.55 + (1.2 - 0.55) * k);
+      if (Math.floor(this.seqT * 3) !== Math.floor((this.seqT - dt) * 3)) {
+        burst(lp.x + (Math.random() - 0.5) * 3, terrainHeight(lp.x, lp.z) + 4 + Math.random() * 2.5, lp.z + (Math.random() - 0.5) * 3, 'bloom', 10);
+      }
+      if (this.seqT > 6.5) this.endSequence();
+    } else if (this.seqT > 2.8) {
+      this.endSequence();
+    }
+  }
+
+  private doSleep(): void {
+    if (!this.sleepFade) {
+      this.sleepFade = document.createElement('div');
+      this.sleepFade.className = 'sleep-fade';
+      document.getElementById('ui-root')!.appendChild(this.sleepFade);
+    }
+    const el = this.sleepFade;
+    el.classList.add('show');
+    this.player.locked = true;
+    setTimeout(() => {
+      this.island.time.sleep();
+      this.island.dayNight.update(this.island.time.hour, this.player.x, this.player.z);
+      toast('よくねむれた! あさになった', 'lumina');
+      save(this.state);
+      el.classList.remove('show');
+      this.player.locked = false;
+    }, 450);
+  }
+
+  // ---------- 目的・マーカー ----------
+  private targetPosOf(o: Objective): { x: number; z: number; isNpc: boolean } | null {
+    if (o.target.kind === 'npc' && o.target.id) {
+      const p = this.npcs.positionOf(o.target.id);
+      if (p && !p.hidden) return { x: p.x, z: p.z, isNpc: true };
+      // 家にいる間はその家の場所を指す
+      if (p) return { x: p.x, z: p.z, isNpc: true };
+      return null;
+    }
+    if (o.target.kind === 'poi' && o.target.id) {
+      const poi = POIS[o.target.id];
+      if (poi) return { x: poi.x, z: poi.z, isNpc: false };
+    }
+    return null;
+  }
+
+  private updateObjective(dt: number): void {
+    const nearestNpc = this.npcs.nearest(this.player.x, this.player.z, 999) as unknown as { def: { id: string } } | null;
+    const obj = this.tutorial.overrideObjective() ?? currentObjective(this.state, nearestNpc?.def.id ?? 'tsumugi');
+    this.lastObjective = obj;
+    const tp = this.targetPosOf(obj);
+    const dist = tp ? Math.hypot(this.player.x - tp.x, this.player.z - tp.z) : null;
+    this.objHud.update(obj, dist);
+    // NPCマーカー: 目標NPC(!)+報告先(✓)
+    const marks: MarkerNpc[] = [];
+    const reportMode = obj.headline === 'できた!';
+    if (obj.target.kind === 'npc' && obj.target.id) {
+      const p = this.npcs.positionOf(obj.target.id);
+      if (p && !p.hidden) marks.push({ id: obj.target.id, x: p.x, y: p.y, z: p.z, kind: reportMode ? 'report' : 'target' });
+    }
+    this.markers.update(tp, tp?.isNpc ?? false, this.player.x, this.player.z, marks, reportMode);
+    const progressKey = obj.progress ? `${obj.progress.cur}/${obj.progress.max}` : '';
+    this.tutorial.update(dt, this.player.moving, obj, progressKey, dist);
+  }
+
+  // ---------- カメラ遮蔽 ----------
+  private updateOcclusion(): void {
+    const p = this.player;
+    const c = this.camCtl.cam.position;
+    const dx = p.x - c.x, dy = p.y + 0.8 - c.y, dz = p.z - c.z;
+    const L = Math.hypot(dx, dy, dz);
+    const nowFaded = new Set<import('@babylonjs/core/Meshes/mesh').Mesh>();
+    for (const m of this.island.occludables) {
+      const b = m.getBoundingInfo().boundingSphere;
+      const cw = b.centerWorld;
+      const dc = Math.hypot(cw.x - c.x, cw.y - c.y, cw.z - c.z);
+      if (dc < b.radiusWorld * 0.95) {
+        nowFaded.add(m);
+        continue;
+      }
+      const t = Math.max(0.05, Math.min(0.95, ((cw.x - c.x) * dx + (cw.y - c.y) * dy + (cw.z - c.z) * dz) / (L * L)));
+      const qx = c.x + dx * t, qy = c.y + dy * t, qz = c.z + dz * t;
+      const d = Math.hypot(cw.x - qx, cw.y - qy, cw.z - qz);
+      if (d < b.radiusWorld * 0.72 && t < 0.93) nowFaded.add(m);
+    }
+    for (const m of nowFaded) {
+      if (m.visibility > 0.35) m.visibility = Math.max(0.35, m.visibility - 0.12);
+    }
+    for (const m of this.faded) {
+      if (!nowFaded.has(m) && m.visibility < 1) m.visibility = Math.min(1, m.visibility + 0.1);
+    }
+    this.faded = nowFaded;
+  }
+
+  // ---------- メインループ ----------
+  render(): void {
+    const dt = Math.min(0.25, this.engine.getDeltaTime() / 1000);
+    const menuPaused = this.pauseMenu.open || this.paused;
+    if (!menuPaused) {
+      if (this.hitstop > 0) {
+        this.hitstop -= dt; // ヒットストップ: 描画は続け、世界を一瞬止める
+      } else {
+        const uiOpen =
+          this.invUI.open || this.craftUI.open || this.shopUI.open || this.questLog.open || this.dialogue.open;
+        this.island.update(dt);
+        this.island.dayNight.tick(dt, this.island.time.hour, this.player.x, this.player.z);
+        this.player.locked =
+          uiOpen || this.inter.busy || this.fishing.state !== 'idle' || this.seqT >= 0 || this.dialogue.open;
+        this.player.update(dt, this.input);
+        this.npcs.update(dt, this.island.time.hour, this.player.x, this.player.z);
+        this.inter.update(dt, this.player.x, this.player.z);
+        this.fishing.update(dt, this.player, this.playerView);
+        this.placement.update(this.player);
+        updateEffects(dt, this.player.x, this.player.y, this.player.z);
+        this.updateSequence(dt);
+        const hint = this.resolveInteraction(uiOpen);
+        this.hud.setHint(uiOpen || this.pauseMenu.open ? '' : hint);
+        this.updateObjective(dt);
+        // 進行まわり
+        if (this.island.time.day !== this.lastDay) {
+          this.lastDay = this.island.time.day;
+          for (const n of Object.values(this.state.npcs)) n.talkedToday = false;
+        }
+        if (Object.keys(this.state.inventory).length > 0) this.tutorial.onFirstItem();
+        this.saveTimer += dt;
+        if (this.saveTimer > 20) {
+          this.saveTimer = 0;
+          save(this.state);
+        }
+        setAmbient(this.island.time.isNight ? 'night' : 'day');
+        this.hud.setClock(this.island.time.label(), this.island.time.day);
+        this.hud.setLumina(this.state.lumina);
+        this.state.time = { day: this.island.time.day, hour: this.island.time.hour };
+        this.state.player = { x: this.player.x, z: this.player.z, rotY: this.player.rotY };
+      }
+      this.camCtl.update(dt, this.player.x, this.player.y, this.player.z);
+      this.occAcc += dt;
+      if (this.occAcc > 1 / 15) {
+        this.occAcc = 0;
+        this.updateOcclusion();
+      }
+    }
+    this.scene.render();
+  }
+
+  // ---------- デバッグフック(決定的テスト用。実プレイ検証はデバッグなしで行う) ----------
+  private bindDebug(): void {
+    if (!this.opts.debug) return;
+    const w = window as unknown as Record<string, unknown>;
+    w.__lumiDebug = {
+      setHour: (h: number) => {
+        this.island.time.hour = h;
+        this.island.dayNight.update(h, this.player.x, this.player.z);
+      },
+      tp: (x: number, z: number) => this.player.teleport(x, z),
+      state: () => this.state,
+      give: (item: string, n = 1) => {
+        (this.state.inventory as Record<string, number>)[item] =
+          ((this.state.inventory as Record<string, number>)[item] ?? 0) + n;
+      },
+      interact: () => {
+        this.wantInteract = true;
+      },
+      openShop: () => this.shopUI.show(),
+      placeBegin: (item: string) => this.placement.begin(item as never),
+      placeRotate: () => this.placement.rotate(),
+      fishingState: () => this.fishing.state,
+      talkTo: (id: string) => this.questDlg.talkTo(id),
+      advance: () => this.dialogue.advance(),
+      npcPos: (id: string) => this.npcs.positionOf(id),
+      objective: () => this.lastObjective,
+      unlockAll: () => {
+        this.state.flags.unlock_inv = true;
+        this.state.flags.unlock_craft = true;
+        this.state.flags.unlock_quest = true;
+        this.state.flags.tut_move = true;
+        this.state.flags.intro_done = true;
+      },
+    };
   }
 
   dispose(): void {
