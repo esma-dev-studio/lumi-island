@@ -11,6 +11,7 @@ import {
   makeTree, makeBerryTree, makeRock, makeOreNode, makeGrassNode, makeMoss, makeLumiTree, scatterDeco, getGlowMats,
 } from '../entities/flora';
 import { buildHouse, makeBench, makeLamp, makeStoneRing } from '../entities/buildings';
+import { makeLogPile, makeCrate, makeBucketRod, makeTelescope, makeDriftwood, makeStump } from '../entities/props';
 import { GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, type GatherNodeDef } from '../data/island';
 import { DayNight } from './DayNight';
 import { TimeSystem } from '../systems/TimeSystem';
@@ -155,6 +156,23 @@ export class IslandScene {
     registerGlowSource(lp.x, terrainHeight(lp.x, lp.z) + 4.5, lp.z);
     this.circles.push({ x: lp.x, z: lp.z, r: 1.7 });
     this.circles.push({ x: 5.5, z: 1.5, r: 0.2 }, { x: -5.5, z: -4, r: 0.2 }, { x: 1.5, z: 7.5, r: 0.2 }, { x: -2, z: -11.5, r: 0.2 });
+
+    // ---- エリアの性格づけ小物 ----
+    const putProp = (mesh: Mesh, x: number, z: number, rotY: number, colliderR: number): void => {
+      mesh.position.set(x, terrainHeight(x, z) - 0.02, z);
+      mesh.rotation.y = rotY;
+      caster(mesh);
+      if (colliderR > 0) this.circles.push({ x, z, r: colliderR });
+    };
+    putProp(makeLogPile(s), -7.0, -5.2, 0.4, 0.6); // 工房よこ
+    putProp(makeCrate(s), -5.6, -3.4, 0.2, 0.4);
+    putProp(makeBucketRod(s), 30.6, 15.6, -0.8, 0.3); // ミナモの釣り場
+    putProp(makeTelescope(s), 30.4, -24.6, -0.6, 0.35); // ノクトの観測場所
+    putProp(makeDriftwood(s, 1), -11.5, 39.0, 0.5, 0.7); // 浜辺の流木
+    putProp(makeDriftwood(s, 5), 13.5, 37.0, 2.4, 0.7);
+    putProp(makeStump(s, 1), -10.5, -30.5, 0, 0.3); // 林の切りかぶ
+    putProp(makeStump(s, 3), 5.5, -35.5, 0.7, 0.3);
+    putProp(makeStump(s, 7), -1.5, -27.5, 1.9, 0.3);
 
     // ---- 散布デコ ----
     scatterDeco(s);

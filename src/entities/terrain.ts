@@ -102,7 +102,7 @@ function terrainColor(x: number, z: number, h: number): Color3 {
   let c: Color3;
   if (h < 0.2) c = C_SEABED;
   else if (h < 0.62) c = Color3.Lerp(C_SAND, C_SEABED, Math.max(0, (0.45 - h) * 1.6));
-  else if (h > 3.4) c = Color3.Lerp(C_GRASS2, C_ROCK, Math.min(1, (h - 3.4) / 2.2));
+  else if (h > 3.0) c = Color3.Lerp(C_GRASS2, C_ROCK, Math.min(1, (h - 3.0) / 1.8));
   else c = Color3.Lerp(C_GRASS, C_GRASS2, n);
   // 道
   const pd = pathDist(x, z);

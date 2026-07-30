@@ -122,6 +122,15 @@ body { font-family: var(--font); color: var(--ink); }
 .qc-reward { font-size: 0.88rem; font-weight: 700; color: #4f7a50; margin-top: 2px; }
 .qc-next { font-size: 0.8rem; color: var(--ink-soft); margin-top: 8px; border-top: 1px solid var(--line); padding-top: 8px; margin-left: 16px; margin-right: 16px; }
 
+.craft-pop {
+  position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%) scale(0.92);
+  background: var(--paper); border: 1px solid var(--amber); border-radius: var(--radius);
+  padding: 9px 22px; font-size: 1rem; font-weight: 900; display: flex; align-items: center; gap: 8px;
+  opacity: 0; transition: all 0.16s; pointer-events: none; z-index: 9;
+  box-shadow: 0 4px 16px rgba(30, 24, 12, 0.25);
+}
+.craft-pop.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
 /* ---- ねむり ---- */
 .sleep-fade {
   position: absolute; inset: 0; background: #0e1626; opacity: 0; pointer-events: none;

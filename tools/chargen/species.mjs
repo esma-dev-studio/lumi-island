@@ -67,9 +67,9 @@ export function makeSpecs() {
       },
       arm: { thick: 1.05 },
       leg: { thick: 1.05, bootFlare: 1.0, bootLen: 0.055 },
-      ears: { thetaDeg: 80, phiDeg: 52, r: 0.036, tilt: 58 },
+      ears: { thetaDeg: 88, phiDeg: 60, r: 0.031, tilt: 64 }, // 低め・横=クマに見えないように
       muzzle: { kind: 'otter' },
-      tailSpec: { len: 0.19, r: 0.042 },
+      tailSpec: { len: 0.21, r: 0.05 }, // カワウソの太い尾
       outfit: { kind: 'overalls' },
       clipOpts: { earMode: 'perk', tailMode: 'thick' },
       palette: {
@@ -135,8 +135,8 @@ export function makeSpecs() {
       },
       arm: { thick: 0.98 },
       leg: { thick: 0.95, bootFlare: 1.0, bootLen: 0.05 },
-      ears: { thetaDeg: 74, phiDeg: 46, len: 0.115, w: 0.068 },
-      horns: { x: 0.052, len: 0.16, r: 0.019 },
+      ears: { thetaDeg: 78, phiDeg: 50, len: 0.125, w: 0.078 }, // 横へ張り出す垂れ耳
+      horns: { x: 0.058, len: 0.185, r: 0.022 },
       muzzle: { kind: 'goat' },
       outfit: { kind: 'apron', hemY: 0.30 },
       clipOpts: { earMode: 'lop', tailMode: 'stub' },

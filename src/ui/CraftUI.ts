@@ -3,7 +3,6 @@ import type { GameState } from '../game/GameState';
 import { knownRecipes, canCraft, craft } from '../systems/CraftingSystem';
 import { ITEMS, TOOLS, type ItemId, type ToolId } from '../data/items';
 import { icon } from './icons';
-import { toast } from './Toast';
 import { sfx } from '../audio/AudioSystem';
 
 export class CraftUI {
@@ -25,6 +24,19 @@ export class CraftUI {
   close(): void {
     this.open = false;
     this.el.classList.add('hidden');
+  }
+
+  /** 完成の短いポップ(0.7秒・中央上) */
+  private showPop(name: string, iconId: string): void {
+    const pop = document.createElement('div');
+    pop.className = 'craft-pop';
+    pop.innerHTML = `<span class="inv-ico">${icon(iconId)}</span> ${name}を つくった!`;
+    document.getElementById('ui-root')!.appendChild(pop);
+    requestAnimationFrame(() => pop.classList.add('show'));
+    setTimeout(() => {
+      pop.classList.remove('show');
+      setTimeout(() => pop.remove(), 250);
+    }, 720);
   }
 
   private render(): void {
@@ -61,7 +73,7 @@ export class CraftUI {
         if (r && craft(s, r)) {
           sfx('craft');
           const outName = r.outKind === 'tool' ? TOOLS[r.out as ToolId].name : ITEMS[r.out as ItemId].name;
-          toast(`${outName}を つくった!`, r.out);
+          this.showPop(outName, r.out);
           this.onCrafted?.();
           this.render();
         }

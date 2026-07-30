@@ -112,9 +112,9 @@ export function buildLopEars(rig, spec) {
   const e = spec.ears; // {thetaDeg, phiDeg, len, w}
   const s = headSurface(spec, e.thetaDeg, e.phiDeg, 0.99);
   const th = d2r(e.thetaDeg);
-  // 耳の面: side=頭の接線方向(前後), down=垂れる方向(外・下へ)
+  // 耳の面: side=頭の接線方向(前後), down=垂れる方向。ヤギらしく横へ張り出してから垂れる
   const side = norm([Math.cos(th), 0, -Math.sin(th) * 0.6]);
-  const down = norm([Math.sin(th) * 0.55, -1, 0.08]);
+  const down = norm([Math.sin(th) * 1.05, -0.62, 0.06]);
   const out = s.dir;
   const ear = patch({
     cols: 5, rows: 8, thickness: 0.011,
@@ -142,15 +142,17 @@ export function applyMuzzle(headMesh, rig, spec) {
   if (kind === 'human') {
     bump(headMesh, [0, c[1] - hs.rx * 0.1, front * 0.98], 0.03 * H, 0.009 * H, [0, 0.1, 1]);
   } else if (kind === 'otter') {
-    bump(headMesh, [0, c[1] - hs.rx * 0.28, front * 0.94], 0.085 * H, 0.034 * H, [0, -0.12, 1]);
-    bump(headMesh, [0, c[1] - hs.rx * 0.1, front * 0.97], 0.032 * H, 0.010 * H, [0, 0.25, 1]); // 鼻
+    // カワウソ: 丸みのある大きめのマズル
+    bump(headMesh, [0, c[1] - hs.rx * 0.26, front * 0.94], 0.095 * H, 0.042 * H, [0, -0.1, 1]);
+    bump(headMesh, [0, c[1] - hs.rx * 0.08, front * 0.97], 0.036 * H, 0.013 * H, [0, 0.25, 1]); // 鼻
   } else if (kind === 'goat') {
-    bump(headMesh, [0, c[1] - hs.rx * 0.3, front * 0.92], 0.10 * H, 0.045 * H, [0, -0.25, 1]);
-    bump(headMesh, [0, c[1] - hs.rx * 0.16, front * 0.99], 0.03 * H, 0.008 * H, [0, 0.2, 1]);
+    // ヤギ: 長めのマズル+鼻すじ
+    bump(headMesh, [0, c[1] - hs.rx * 0.28, front * 0.92], 0.105 * H, 0.058 * H, [0, -0.28, 1]);
+    bump(headMesh, [0, c[1] - hs.rx * 0.12, front * 0.99], 0.034 * H, 0.011 * H, [0, 0.2, 1]);
   } else if (kind === 'owlBrow') {
     // 目の上の羽毛の眉(V字)
-    bump(headMesh, [hs.rx * 0.3, c[1] + hs.rx * 0.22, front * 0.9], 0.05 * H, 0.012 * H, [0.15, 0.5, 1]);
-    bump(headMesh, [-hs.rx * 0.3, c[1] + hs.rx * 0.22, front * 0.9], 0.05 * H, 0.012 * H, [-0.15, 0.5, 1]);
+    bump(headMesh, [hs.rx * 0.3, c[1] + hs.rx * 0.22, front * 0.9], 0.052 * H, 0.016 * H, [0.15, 0.5, 1]);
+    bump(headMesh, [-hs.rx * 0.3, c[1] + hs.rx * 0.22, front * 0.9], 0.052 * H, 0.016 * H, [-0.15, 0.5, 1]);
   }
   return headMesh;
 }
@@ -194,11 +196,12 @@ export function buildGoatHorns(rig, spec) {
   const c = headCenter(spec);
   const g = spec.horns; // {x, len, r}
   const base = [g.x, c[1] + (hs.yTop - hs.yBottom) * 0.42, c[2] - hs.rz * 0.1];
+  // 正面からも見えるよう、外へ張り出しつつ後ろへカール
   const path = [
     base,
-    add(base, [g.x * 0.3, g.len * 0.42, -g.len * 0.3]),
-    add(base, [g.x * 0.5, g.len * 0.5, -g.len * 0.75]),
-    add(base, [g.x * 0.55, g.len * 0.18, -g.len * 1.0]),
+    add(base, [g.x * 0.9, g.len * 0.42, -g.len * 0.28]),
+    add(base, [g.x * 1.5, g.len * 0.48, -g.len * 0.72]),
+    add(base, [g.x * 1.7, g.len * 0.14, -g.len * 0.98]),
   ];
   const horn = tube({
     path, steps: 10, seg: 9,

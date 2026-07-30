@@ -270,6 +270,40 @@ export function buildClips({ earMode = 'tuft', tailMode = 'none' } = {}) {
     pos: {},
   };
 
+  // ---- fish_cast (1.1s one-shot): ふりかぶって前へ投げる ----
+  const castArm = keys([[0, 0], [0.32, -132], [0.52, -38], [0.8, -52], [1, -55]]);
+  clips.fish_cast = {
+    duration: 1.1, loop: false,
+    rot: {
+      upperArmR: (t) => [castArm(t), 0, 12],
+      foreArmR: (t) => [castArm(t) * 0.3 - 16, 0, -8],
+      upperArmL: (t) => [castArm(t) * 0.6, 0, -12],
+      foreArmL: (t) => [castArm(t) * 0.22 - 18, 0, 6],
+      spine: (t) => [keys([[0, 0], [0.32, -10], [0.52, 9], [1, 6]])(t), 0, 0],
+      chest: (t) => [keys([[0, 0], [0.32, -6], [0.52, 4], [1, 2]])(t), 0, 0],
+      head: (t) => [keys([[0, -4], [0.52, 8], [1, 10]])(t), 0, 0],
+      earL: (t) => [0, 0, 8 * hump(t, 0.3, 0.6)],
+      earR: (t) => [0, 0, -8 * hump(t, 0.3, 0.6)],
+    },
+    pos: {},
+  };
+  // ---- fish_reel (1.1s one-shot): リールをくるくる巻く ----
+  clips.fish_reel = {
+    duration: 1.1, loop: false,
+    rot: {
+      upperArmL: () => [-50, 0, -12],
+      foreArmL: (t) => [-38 + 14 * S(t * 3), 0, 8 + 6 * C(t * 3)],
+      upperArmR: () => [-58, 0, 14],
+      foreArmR: () => [-30, 0, -10],
+      spine: () => [-4, 0, 0],
+      chest: () => [-2, 0, 0],
+      head: (t) => [5, 0, 2 * S(t * 2)],
+      hips: (t) => [0, 0, 1.5 * S(t * 3)],
+      tail1: (t) => [0, tailAmp * 1.4 * S(t * 3), 0],
+    },
+    pos: {},
+  };
+
   return clips;
 }
 

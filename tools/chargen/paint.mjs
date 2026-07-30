@@ -72,23 +72,26 @@ export function paintTexture(spec) {
     const [nx, ny] = headPx(spec, 0, mouthY + 0.02);
     tex.ellipse(nx, ny, 3, 2, shade(P.skin, 0.9), 0.5);
   } else if (sp === 'minamo') {
-    // クリーム色のマズルと顎
+    // クリーム色のマズル〜ほほ(カワウソらしい明るい口元)
     const [cx0, cy0] = headPx(spec, 0, mouthY + 0.012);
-    tex.ellipse(cx0, cy0, 42, 30, P.furLight);
+    tex.ellipse(cx0, cy0, 52, 36, P.furLight);
+    tex.ellipse(cx0 - 30, cy0 - 4, 16, 14, P.furLight, 0.85);
+    tex.ellipse(cx0 + 30, cy0 - 4, 16, 14, P.furLight, 0.85);
     const [nx, ny] = headPx(spec, 0, mouthY + 0.045);
-    tex.ellipse(nx, ny, 7.5, 5.5, P.nose); // 鼻
-    tex.bezier(cx0 - 8, cy0 + 8, cx0, cy0 + 13, cx0 + 8, cy0 + 8, 2, shade(P.fur, 0.72)); // 口
+    tex.ellipse(nx, ny, 9.5, 6.5, P.nose); // 大きめの鼻
+    tex.bezier(cx0 - 9, cy0 + 9, cx0, cy0 + 14, cx0 + 9, cy0 + 9, 2.2, shade(P.fur, 0.7)); // 口
     for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) {
-      tex.px(cx0 + sx * (16 + i * 6), cy0 - 2 + (i % 2) * 4, shade(P.fur, 0.6), 0.8); // ひげのつけ根
+      tex.px(cx0 + sx * (17 + i * 6), cy0 - 1 + (i % 2) * 4, shade(P.fur, 0.6), 0.8); // ひげのつけ根
     }
     // 頭頂は少し濃い毛色
     bandTop(tex, REG.head, 0.22, shade(P.fur, 0.94));
   } else if (sp === 'nokto') {
-    // 顔盤(フェイシャルディスク)
+    // 顔盤(フェイシャルディスク): 輪郭リングで面を強調
     for (const s of [-1, 1]) {
       const [dx, dy] = headPx(spec, s * spec.eye.thetaDeg, eyeY);
+      tex.ellipse(dx, dy + 2, 33, 37, shade(P.fur, 0.72)); // 外側の縁取り
       tex.ellipse(dx, dy + 2, 30, 34, P.facialDisc);
-      tex.ellipse(dx, dy + 2, 30, 34, shade(P.facialDisc, 0.9), 0.35, 6);
+      tex.ellipse(dx, dy + 2, 16, 18, shade(P.facialDisc, 0.93)); // 目のまわりを少し沈める
     }
     // 羽模様(V字の細かい斑)
     for (let i = 0; i < 46; i++) {
@@ -98,10 +101,13 @@ export function paintTexture(spec) {
     }
   } else if (sp === 'tsumugi') {
     const [cx0, cy0] = headPx(spec, 0, mouthY + 0.005);
-    tex.ellipse(cx0, cy0 + 2, 21, 16, mix(P.fur, P.muzzlePink, 0.4));
-    const [nx, ny] = headPx(spec, 0, mouthY + 0.04);
-    tex.ellipse(nx, ny - 1, 5.5, 3.5, mix(P.muzzlePink, [90, 60, 50], 0.5));
-    tex.bezier(cx0 - 6, cy0 + 6, cx0, cy0 + 10, cx0 + 6, cy0 + 6, 2, shade(P.fur, 0.68));
+    tex.ellipse(cx0, cy0 + 2, 25, 19, mix(P.fur, P.muzzlePink, 0.42));
+    const [nx, ny] = headPx(spec, 0, mouthY + 0.042);
+    // ヤギらしい逆三角の鼻
+    tex.ellipse(nx, ny - 2, 7, 4.5, [96, 62, 52]);
+    tex.bezier(nx - 5, ny - 3, nx, ny + 4, nx + 5, ny - 3, 2.2, [96, 62, 52]);
+    tex.line(nx, ny + 2, nx, ny + 7, 1.6, shade(P.fur, 0.66)); // 鼻すじ→口
+    tex.bezier(cx0 - 7, cy0 + 8, cx0, cy0 + 11, cx0 + 7, cy0 + 8, 2, shade(P.fur, 0.66));
     bandTop(tex, REG.head, 0.2, shade(P.fur, 0.96));
   }
   noiseReg(tex, REG.head, sp === 'mio' ? 0.03 : 0.06, 11);
