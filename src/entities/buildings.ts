@@ -193,10 +193,13 @@ export function makeLamp(scene: Scene): { mesh: Mesh; globe: Mesh } {
   const A = A0();
   appendTrunk(A, [[0, 0, 0], [0, 2.05, 0]], 0.075, 0.055, C_WOOD_D, 23);
   box(A, 0, 1.98, 0.15, 0.06, 0.06, 0.38, C_WOOD_D);
-  box(A, 0, 1.76, 0.3, 0.26, 0.3, 0.26, C_WOOD_D, 0.04);
+  // ランタンの枠(上下キャップ+4隅の柱)。中の発光球が見えるように
+  box(A, 0, 1.62, 0.3, 0.24, 0.03, 0.24, C_WOOD_D);
+  box(A, 0, 1.92, 0.3, 0.28, 0.045, 0.28, C_WOOD_D);
+  for (const sx of [-0.1, 0.1]) for (const sz of [-0.1, 0.1]) box(A, sx, 1.77, 0.3 + sz, 0.028, 0.28, 0.028, C_WOOD_D);
   const mesh = toMesh(scene, 'lamp', A);
   const G = A0();
-  appendBlob(G, 0, 1.76, 0.3, 0.088, 0.105, 0.088, Color3.FromHexString('#f2e0b8'), { segs: 6, noise: 0.03 });
+  appendBlob(G, 0, 1.77, 0.3, 0.093, 0.12, 0.093, Color3.FromHexString('#f2e0b8'), { segs: 6, noise: 0.03 });
   const globe = new Mesh('lampGlobe', scene);
   applyArrays(globe, G);
   globe.material = getGlowMats(scene).amber;

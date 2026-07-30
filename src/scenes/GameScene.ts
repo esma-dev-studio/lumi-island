@@ -10,10 +10,16 @@ import { PlayerController, type InputState } from '../systems/PlayerController';
 import { InteractionSystem } from '../systems/InteractionSystem';
 import { FishingSystem } from '../systems/FishingSystem';
 import { PlacementSystem } from '../systems/PlacementSystem';
+import { NPCSystem } from '../systems/NPCSystem';
+import { questFor, acceptQuest, completeQuest, questRemaining } from '../systems/QuestSystem';
+import { NPC_BY_ID } from '../data/npcs';
 import { Hud } from '../ui/Hud';
 import { InventoryUI } from '../ui/InventoryUI';
 import { CraftUI } from '../ui/CraftUI';
 import { ShopUI } from '../ui/ShopUI';
+import { DialogueUI } from '../ui/DialogueUI';
+import { QuestLogUI } from '../ui/QuestLogUI';
+import { toast } from '../ui/Toast';
 import { terrainHeight } from '../entities/terrain';
 import { newGameState, type GameState } from '../game/GameState';
 import { validateItemData, ITEMS } from '../data/items';
@@ -39,6 +45,10 @@ export class GameScene {
   invUI!: InventoryUI;
   craftUI!: CraftUI;
   shopUI!: ShopUI;
+  dialogue!: DialogueUI;
+  questLog!: QuestLogUI;
+  npcs!: NPCSystem;
+  private lastDay = 1;
   paused = false;
   wantInteract = false;
   input: InputState = { up: false, down: false, left: false, right: false, run: false };
@@ -75,6 +85,11 @@ export class GameScene {
     this.fishing = new FishingSystem(this.scene, this.state, !!this.opts.debug);
     this.placement = new PlacementSystem(this.island, this.state);
     this.invUI.onPlace = (item) => this.placement.begin(item);
+    this.dialogue = new DialogueUI();
+    this.questLog = new QuestLogUI(() => this.state);
+    this.npcs = new NPCSystem(this.scene, this.island);
+    await this.npcs.init();
+    this.island.applyIslandLevel(this.state.islandLevel);
     for (const p of validateItemData()) console.warn('[data]', p);
     this.bindKeys();
 
@@ -99,6 +114,12 @@ export class GameScene {
         placeBegin: (item: string) => this.placement.begin(item as never),
         placeRotate: () => this.placement.rotate(),
         fishingState: () => this.fishing.state,
+        talkTo: (id: string) => this.talkTo(id),
+        advance: () => this.dialogue.advance(),
+        npcPos: (id: string) => {
+          const rt = this.npcs.npcs.get(id);
+          return rt ? { x: rt.x, z: rt.z, hidden: rt.hidden } : null;
+        },
       };
     }
   }
@@ -125,7 +146,15 @@ export class GameScene {
       if (e.code === 'KeyC') {
         this.invUI.close();
         this.shopUI.close();
+        this.questLog.close();
         this.craftUI.toggle();
+        return;
+      }
+      if (e.code === 'KeyQ') {
+        this.invUI.close();
+        this.craftUI.close();
+        this.shopUI.close();
+        this.questLog.toggle();
         return;
       }
       if (e.code === 'KeyR') {
@@ -136,6 +165,8 @@ export class GameScene {
         this.invUI.close();
         this.craftUI.close();
         this.shopUI.close();
+        this.questLog.close();
+        this.dialogue.close();
         this.placement.cancel();
         this.fishing.cancel(this.player, this.playerView);
         return;
@@ -213,12 +244,17 @@ export class GameScene {
     const dt = Math.min(0.25, this.engine.getDeltaTime() / 1000);
     if (!this.paused) {
       this.island.update(dt);
-      const uiOpen = this.invUI.open || this.craftUI.open || this.shopUI.open;
+      const uiOpen = this.invUI.open || this.craftUI.open || this.shopUI.open || this.questLog.open || this.dialogue.open;
       this.player.locked = uiOpen || this.inter.busy || this.fishing.state !== 'idle';
       this.player.update(dt, this.input);
       this.inter.update(dt, this.player.x, this.player.z);
       this.fishing.update(dt, this.player, this.playerView);
       this.placement.update(this.player);
+      this.npcs.update(dt, this.island.time.hour, this.player.x, this.player.z);
+      if (this.island.time.day !== this.lastDay) {
+        this.lastDay = this.island.time.day;
+        for (const n of Object.values(this.state.npcs)) n.talkedToday = false;
+      }
       const hint = this.resolveInteraction(uiOpen);
       this.updateCamera(dt);
       this.updateOcclusion();
@@ -235,6 +271,10 @@ export class GameScene {
   private resolveInteraction(uiOpen: boolean): string {
     const want = this.wantInteract;
     this.wantInteract = false;
+    if (this.dialogue.open) {
+      if (want) this.dialogue.advance();
+      return '';
+    }
     if (uiOpen) return '';
     if (this.placement.active) {
       if (want) this.placement.place();
@@ -268,6 +308,15 @@ export class GameScene {
         run: () => this.placement.pickUp(near),
       });
     }
+    const npc = this.npcs.nearest(this.player.x, this.player.z);
+    if (npc) {
+      const rt = npc as unknown as { def: { id: string; name: string }; x: number; z: number };
+      cands.push({
+        d: Math.hypot(this.player.x - rt.x, this.player.z - rt.z) - 0.25,
+        hint: `<kbd>E</kbd>${rt.def.name}と はなす`,
+        run: () => this.talkTo(rt.def.id),
+      });
+    }
     const shopD = Math.hypot(this.player.x - SHOP_POINT.x, this.player.z - SHOP_POINT.z);
     if (shopD < 2.0) {
       cands.push({ d: shopD, hint: '<kbd>E</kbd>お店をみる(うる・かう)', run: () => this.shopUI.show() });
@@ -286,6 +335,55 @@ export class GameScene {
     cands.sort((a, b) => a.d - b.d);
     if (want) cands[0].run();
     return cands[0].hint;
+  }
+
+  /** NPCと会話(あいさつ or 依頼の提案/進行/達成) */
+  talkTo(npcId: string): void {
+    const npcDef = NPC_BY_ID[npcId];
+    const rtNpc = this.state.npcs[npcId];
+    this.npcs.setTalking(npcId, true, this.player.x, this.player.z);
+    const rt = this.npcs.npcs.get(npcId)!;
+    this.player.face(rt.x, rt.z);
+
+    const q = questFor(this.state, npcId);
+    let lines: string[];
+    let after: (() => void) | null = null;
+    if (q && q.mode === 'offer') {
+      lines = q.def.offer;
+      after = () => {
+        acceptQuest(this.state, q.def);
+        toast(`おねがい「${q.def.title}」をうけた(Qでかくにん)`, 'lumina');
+      };
+    } else if (q && q.mode === 'done') {
+      lines = q.def.done;
+      after = () => {
+        const summary = completeQuest(this.state, q.def);
+        summary.lines.forEach((l, i) => setTimeout(() => toast(l, 'lumina'), 200 + i * 400));
+        rtNpc.friendship += 3;
+        this.playerView.play('happy');
+        if (q.def.id === 'q_lumi') {
+          this.island.applyIslandLevel(2);
+          setTimeout(() => toast('ルミの木が めをさました!', 'moss'), 1200);
+        } else if (q.def.id === 'q_lantern') {
+          this.island.applyIslandLevel(Math.max(1, this.state.islandLevel));
+        }
+      };
+    } else if (q && q.mode === 'progress') {
+      lines = [q.def.progress.replace('{n}', String(questRemaining(this.state, q.def)))];
+    } else {
+      const f = rtNpc.friendship;
+      const tier = f >= 7 ? 2 : f >= 3 ? 1 : 0;
+      const variants = npcDef.greetings[tier];
+      lines = [variants[(this.state.time.day + f) % variants.length]];
+    }
+    if (!rtNpc.talkedToday) {
+      rtNpc.talkedToday = true;
+      rtNpc.friendship += 1;
+    }
+    this.dialogue.show(npcDef.name, lines, () => {
+      this.npcs.setTalking(npcId, false);
+      after?.();
+    });
   }
 
   dispose(): void {

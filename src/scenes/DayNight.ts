@@ -37,6 +37,7 @@ export class DayNight {
   sun: DirectionalLight;
   hemi: HemisphericLight;
   glow: GlowLayer;
+  lumiBoost = 1; // ルミの木の段階で島の発光を強める
 
   constructor(
     private scene: Scene,
@@ -87,10 +88,10 @@ export class DayNight {
 
     // 発光(植物・窓・街灯)
     const gm = getGlowMats(this.scene);
-    gm.mint.emissiveColor = c3('#9fe8c8').scale(L(a.glowMint, b.glowMint));
+    gm.mint.emissiveColor = c3('#9fe8c8').scale(L(a.glowMint, b.glowMint) * this.lumiBoost);
     gm.amber.emissiveColor = c3('#ffd9a0').scale(L(a.glowAmber, b.glowAmber));
-    gm.blue.emissiveColor = c3('#a8c8ff').scale(L(a.glowBlue, b.glowBlue));
-    this.glow.intensity = 0.25 + L(a.glowMint, b.glowMint) * 0.5;
+    gm.blue.emissiveColor = c3('#a8c8ff').scale(L(a.glowBlue, b.glowBlue) * Math.min(1.3, this.lumiBoost));
+    this.glow.intensity = (0.25 + L(a.glowMint, b.glowMint) * 0.5) * Math.min(1.4, this.lumiBoost);
 
     // 海・池の色
     this.water.seaMat.diffuseColor = LC(a.sea, b.sea);

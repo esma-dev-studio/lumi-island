@@ -205,6 +205,13 @@ export class IslandScene {
     this.time.advance(dtSec);
     this.dayNight.update(this.time.hour);
   }
+
+  /** ルミの木の段階(0=ねむり 1=めばえ 2=かいか)を見た目へ反映 */
+  applyIslandLevel(level: number): void {
+    const scale = [0.55, 0.85, 1.2][Math.max(0, Math.min(2, level))];
+    this.lumiFruits.scaling.setAll(scale);
+    this.dayNight.lumiBoost = [1, 1.18, 1.65][Math.max(0, Math.min(2, level))];
+  }
 }
 
 function hashId(id: string): number {

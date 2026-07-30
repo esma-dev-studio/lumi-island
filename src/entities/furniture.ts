@@ -55,10 +55,12 @@ export function makeFurnitureMesh(scene: Scene, item: ItemId): FurnitureMesh {
       return { root: makeBench(scene, 0), colliderR: 0.55 };
     case 'f_lantern': {
       const A = A0();
-      appendTrunk(A, [[0, 0, 0], [0, 0.78, 0]], 0.05, 0.04, WOOD_D, 3);
-      fbox(A, 0, 0.9, 0, 0.24, 0.28, 0.24, WOOD_D);
+      appendTrunk(A, [[0, 0, 0], [0, 0.72, 0]], 0.05, 0.04, WOOD_D, 3);
+      fbox(A, 0, 0.75, 0, 0.22, 0.03, 0.22, WOOD_D);
+      fbox(A, 0, 1.03, 0, 0.26, 0.04, 0.26, WOOD_D);
+      for (const sx of [-0.09, 0.09]) for (const sz of [-0.09, 0.09]) fbox(A, sx, 0.89, sz, 0.026, 0.26, 0.026, WOOD_D);
       const root = toMesh(scene, 'f_lantern', A);
-      const glowPart = mkGlow((G) => appendBlob(G, 0, 0.9, 0, 0.08, 0.1, 0.08, Color3.FromHexString('#f2e0b8'), { segs: 6, noise: 0.03 }), 'amber', root);
+      const glowPart = mkGlow((G) => appendBlob(G, 0, 0.89, 0, 0.085, 0.11, 0.085, Color3.FromHexString('#f2e0b8'), { segs: 6, noise: 0.03 }), 'amber', root);
       return { root, glowPart, colliderR: 0.28 };
     }
     case 'f_stonelamp': {
