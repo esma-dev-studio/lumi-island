@@ -90,22 +90,23 @@ export const DECO_TREES: [number, number, number][] = [
 export const SPAWN = { x: -3, z: 6, rotY: Math.PI };
 
 // NPCのスケジュール用スポット
+// 注意: スポットは必ず建物コライダーの外に置く(中に置くとNPCが到達できない)
 export const NPC_SPOTS: Record<string, Record<string, { x: number; z: number; rotY?: number }>> = {
   minamo: {
-    home: { x: 33, z: 14, rotY: -1.4 },
+    home: { x: 29.7, z: 14.5, rotY: 1.6 }, // 小屋のドア前(西向きの入口)
     pond: { x: 26.5, z: 17.5, rotY: 0.8 },
-    pier: { x: 4, z: 50, rotY: Math.PI },
+    pier: { x: 4, z: 49.5, rotY: Math.PI },
     plaza: { x: 3, z: 2 },
   },
   nokto: {
-    home: { x: 24, z: -30, rotY: 2.6 },
+    home: { x: 22.3, z: -33.1, rotY: -0.5 }, // 家のドア前
     hill: { x: 30, z: -26, rotY: -0.6 },
     tree: { x: 1.5, z: -5.5 },
     forest: { x: -2, z: -30 },
   },
   tsumugi: {
-    shop: { x: -8.4, z: 1.8, rotY: Math.PI },
-    bench: { x: 2.5, z: -2.5, rotY: -1.2 },
+    shop: { x: -4.6, z: 0.6, rotY: 1.35 }, // 工房のカウンター前(店先で作業)
+    bench: { x: 2.1, z: -1.5, rotY: -1.2 }, // ベンチのわき
     plaza: { x: -2, z: 3 },
     lumi: { x: -1.5, z: -5.5 },
   },
