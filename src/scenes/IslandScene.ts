@@ -31,6 +31,15 @@ export class IslandScene {
   scene: Scene;
   time = new TimeSystem();
   dayNight!: DayNight;
+
+  /** 建物の屋内(概円)か: 会話カメラを建物の中に入れない判定に使う */
+  insideBuilding(x: number, z: number): boolean {
+    for (const b of BUILDINGS) {
+      const p = POIS[b.id];
+      if (Math.hypot(x - p.x, z - p.z) < Math.max(b.w, b.d) * 0.55) return true;
+    }
+    return false;
+  }
   terrain!: Terrain;
   water!: WaterRefs;
   shadows!: CascadedShadowGenerator;

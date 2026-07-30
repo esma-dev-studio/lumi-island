@@ -56,7 +56,9 @@ export class PlayerController {
 
     if (this.speed > 0.02) {
       // 向きをなめらかに(急回転しない)
-      const targetRot = Math.atan2(this.vx, this.vz);
+      // 注意: 描画はrotY+πで回すため、進行方向へ「顔」を向けるにはatan2に+πが必要
+      // (これが無いと全編うしろ歩きになる。会話スクショで発覚した実バグ)
+      const targetRot = Math.atan2(this.vx, this.vz) + Math.PI;
       let d = targetRot - this.rotY;
       while (d > Math.PI) d -= Math.PI * 2;
       while (d < -Math.PI) d += Math.PI * 2;
@@ -116,7 +118,7 @@ export class PlayerController {
   }
 
   face(tx: number, tz: number): void {
-    this.rotY = Math.atan2(tx - this.x, tz - this.z);
+    this.rotY = Math.atan2(tx - this.x, tz - this.z) + Math.PI; // 描画の+π補正ぶんを打ち消して顔を向ける
     this.apply();
   }
 

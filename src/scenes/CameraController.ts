@@ -13,7 +13,8 @@ type Mode = 'follow' | 'dialogue' | 'event';
 export class CameraController {
   cam: FreeCamera;
   private mode: Mode = 'follow';
-  private dlgMid = new Vector3();
+  private dlgPos = new Vector3();
+  private dlgTgt = new Vector3();
   private evTarget = new Vector3();
   private evDist = 12;
   private evHeight = 7;
@@ -35,9 +36,11 @@ export class CameraController {
     this.cam.setTarget(this.lookAt);
   }
 
-  beginDialogue(px: number, py: number, pz: number, nx: number, ny: number, nz: number): void {
+  /** 会話カメラ: 呼び出し側(GameScene)が遮蔽・建物を避けて選んだ位置と注視点を渡す */
+  beginDialogue(pos: [number, number, number], tgt: [number, number, number]): void {
     this.mode = 'dialogue';
-    this.dlgMid.set((px + nx) / 2, (py + ny) / 2, (pz + nz) / 2);
+    this.dlgPos.set(pos[0], pos[1], pos[2]);
+    this.dlgTgt.set(tgt[0], tgt[1], tgt[2]);
   }
   endDialogue(): void {
     if (this.mode === 'dialogue') this.mode = 'follow';
@@ -61,12 +64,16 @@ export class CameraController {
     return this.mode === 'event';
   }
 
+  get isFollow(): boolean {
+    return this.mode === 'follow';
+  }
+
   update(dt: number, px: number, py: number, pz: number): void {
     let k = Math.min(1, dt * 6.5);
     if (this.mode === 'dialogue') {
       // 会話: ふたりが見える近さへ(180-300msで寄る)
-      this.desiredPos.set(this.dlgMid.x + 1.2, this.dlgMid.y + 2.6, this.dlgMid.z + 3.4);
-      this.desiredTgt.set(this.dlgMid.x, this.dlgMid.y + 0.75, this.dlgMid.z);
+      this.desiredPos.copyFrom(this.dlgPos);
+      this.desiredTgt.copyFrom(this.dlgTgt);
       k = Math.min(1, dt * 11);
     } else if (this.mode === 'event') {
       this.desiredPos.set(this.evTarget.x, this.evTarget.y + this.evHeight, this.evTarget.z + this.evDist);
