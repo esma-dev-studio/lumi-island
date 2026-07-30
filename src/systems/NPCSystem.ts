@@ -197,6 +197,16 @@ export class NPCSystem {
     this.apply(rt);
   }
 
+  /** 開花の見せ場: 外にいるNPC全員が木のほうを向く/よろこぶ */
+  reactToBloom(treeX: number, treeZ: number, happy: boolean): void {
+    for (const rt of this.npcs.values()) {
+      if (rt.hidden) continue;
+      rt.rotY = Math.atan2(treeX - rt.x, treeZ - rt.z) + Math.PI; // 顔を木へ
+      if (happy) rt.view.play('happy', { onEnd: () => rt.view.play('idle') });
+      this.apply(rt);
+    }
+  }
+
   /** マーカー用: 表示中NPCの位置 */
   positionOf(id: string): { x: number; y: number; z: number; hidden: boolean } | null {
     const rt = this.npcs.get(id);

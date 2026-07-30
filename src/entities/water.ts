@@ -3,10 +3,12 @@ import { CreateDisc } from '@babylonjs/core/Meshes/Builders/discBuilder';
 import { CreateBox } from '@babylonjs/core/Meshes/Builders/boxBuilder';
 import { CreateCylinder } from '@babylonjs/core/Meshes/Builders/cylinderBuilder';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 import { POND } from '../data/island';
+import { vnoise } from './terrain';
 
 export const SEA_Y = 0.3;
 // 桟橋: 浜(z=44)から海(z=57)へ。デッキ上は歩行可
@@ -29,15 +31,24 @@ export function buildWater(scene: Scene): WaterRefs {
   sea.material = seaMat;
   sea.isPickable = false;
 
+  // 池: 真円に見えないよう岸の半径をゆらし、中心に深い色の層を重ねる
   const pondMat = new StandardMaterial('pondMat', scene);
   pondMat.diffuseColor = Color3.FromHexString('#4e86a0');
   pondMat.specularColor = new Color3(0.05, 0.07, 0.08);
   pondMat.alpha = 0.88;
-  const pond = CreateDisc('pond', { radius: POND.r, tessellation: 36 }, scene);
-  pond.rotation.x = Math.PI / 2;
+  const pond = makeIrregularDisc(scene, 'pond', POND.r, 0.13, 3);
   pond.position.set(POND.x, POND.waterY, POND.z);
   pond.material = pondMat;
   pond.isPickable = false;
+
+  const deepMat = new StandardMaterial('pondDeepMat', scene);
+  deepMat.diffuseColor = Color3.FromHexString('#33607e');
+  deepMat.specularColor = new Color3(0.03, 0.05, 0.06);
+  deepMat.alpha = 0.72;
+  const deep = makeIrregularDisc(scene, 'pondDeep', POND.r * 0.52, 0.2, 11);
+  deep.position.set(POND.x + 0.6, POND.waterY + 0.012, POND.z - 0.5);
+  deep.material = deepMat;
+  deep.isPickable = false;
 
   // ---- 桟橋(板ごとに少し向きを変えて手作り感) ----
   const wood = new StandardMaterial('pierWood', scene);
@@ -80,4 +91,24 @@ export function buildWater(scene: Scene): WaterRefs {
 
 export function onPier(x: number, z: number): boolean {
   return Math.abs(x - PIER.x) < PIER.w / 2 + 0.1 && z > PIER.z0 - 0.2 && z < PIER.z1 + 0.2;
+}
+
+/** 半径をノイズでゆらした水面ディスク(真円・単純多角形に見せない) */
+function makeIrregularDisc(scene: Scene, name: string, radius: number, wobble: number, seed: number): Mesh {
+  const segs = 40;
+  const pos: number[] = [0, 0, 0];
+  const idx: number[] = [];
+  for (let i = 0; i <= segs; i++) {
+    const th = (i / segs) * Math.PI * 2;
+    const n = 1 + (vnoise(Math.cos(th) * 2.1 + seed * 13, Math.sin(th) * 2.1 + seed * 7) - 0.5) * wobble * 2;
+    pos.push(Math.cos(th) * radius * n, 0, Math.sin(th) * radius * n);
+    if (i > 0) idx.push(0, i, i + 1 > segs ? 1 : i + 1);
+  }
+  const mesh = new Mesh(name, scene);
+  const vd = new VertexData();
+  vd.positions = pos;
+  vd.indices = idx;
+  vd.normals = pos.map((_, i) => (i % 3 === 1 ? 1 : 0));
+  vd.applyToMesh(mesh);
+  return mesh;
 }

@@ -46,9 +46,25 @@ async function boot(): Promise<void> {
   } else {
     const { TitleScreen } = await import('./ui/TitleScreen');
     const title = new TitleScreen();
+    // タイトルの背景: 夜のルミ島(失敗してもタイトル自体は使える)
+    let backdrop: import('./scenes/TitleBackdrop').TitleBackdrop | null = null;
+    try {
+      const { TitleBackdrop } = await import('./scenes/TitleBackdrop');
+      backdrop = new TitleBackdrop(engine);
+      await backdrop.init();
+      const bd = backdrop;
+      engine.runRenderLoop(() => bd.render());
+    } catch (e) {
+      console.warn('[lumi] タイトル背景をスキップ:', e);
+    }
     lumi.titleReady = true;
     title.onStart = async (mode) => {
       title.setLoading();
+      if (backdrop) {
+        engine.stopRenderLoop();
+        backdrop.dispose();
+        backdrop = null;
+      }
       const state = mode === 'continue' ? (load() ?? newGameState()) : newGameState();
       await bootGame(state);
       title.dispose();

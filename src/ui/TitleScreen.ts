@@ -50,11 +50,11 @@ export class TitleScreen {
       </div>
     `;
     this.el.querySelectorAll<HTMLButtonElement>('[data-act]').forEach((b) => {
-      b.onclick = () => {
+      b.onclick = async () => {
         sfx('ui');
         const act = b.dataset.act!;
         if (act === 'new') {
-          if (saved && !confirm('セーブデータがあります。はじめからにすると消えますが、いいですか?')) return;
+          if (saved && !(await this.confirmModal('セーブデータがあります。<br>はじめからにすると消えますが、いいですか?'))) return;
           clearSave();
           this.onStart?.('new');
         } else if (act === 'continue') {
@@ -70,12 +70,36 @@ export class TitleScreen {
           setSoundEnabled(o.sound);
           b.textContent = o.sound ? 'オン' : 'オフ';
         } else if (act === 'wipe') {
-          if (confirm('セーブデータを完全に消します。いいですか?')) {
+          if (await this.confirmModal('セーブデータを完全に消します。いいですか?')) {
             clearSave();
             this.render();
           }
         }
       };
+    });
+  }
+
+  /** ネイティブconfirm()の代わりのゲーム内モーダル */
+  private confirmModal(msgHtml: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const m = document.createElement('div');
+      m.className = 'title-confirm';
+      m.innerHTML = `
+        <div class="tc-box">
+          <div class="tc-msg">${msgHtml}</div>
+          <div class="tc-btns">
+            <button class="title-btn danger" data-a="ok">はい</button>
+            <button class="title-btn" data-a="no">やめる</button>
+          </div>
+        </div>`;
+      this.el.appendChild(m);
+      m.querySelectorAll<HTMLButtonElement>('button').forEach((btn) => {
+        btn.onclick = () => {
+          sfx('ui');
+          m.remove();
+          resolve(btn.dataset.a === 'ok');
+        };
+      });
     });
   }
 

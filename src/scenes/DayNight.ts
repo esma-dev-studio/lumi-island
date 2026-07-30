@@ -110,7 +110,8 @@ export class DayNight {
     this.sun.intensity = L(a.sunI, b.sunI);
     Color3.LerpToRef(a.hemiC, b.hemiC, t, this.hemi.diffuse);
     Color3.LerpToRef(a.hemiG, b.hemiG, t, this.hemi.groundColor);
-    this.hemi.intensity = L(a.hemiI, b.hemiI);
+    // 開花後は夜の環境光がわずかに明るくなる(島がめざめた感じ)
+    this.hemi.intensity = L(a.hemiI, b.hemiI) * (1 + (this.lumiBoost - 1) * 0.08);
 
     // 太陽の向き(6時=東から、18時=西へ。夜は月の固定方向)
     const dayT = Math.max(0, Math.min(1, (hour - 6) / 12.5));

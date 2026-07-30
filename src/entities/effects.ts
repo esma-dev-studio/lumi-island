@@ -21,11 +21,10 @@ interface Fly {
 const flies: Fly[] = [];
 const flyPool: Mesh[] = [];
 
-interface Pool {
-  mat: StandardMaterial;
-  tint: 'amber' | 'mint' | 'blue';
-}
-const pools: Pool[] = [];
+type PoolTint = 'amber' | 'mint' | 'blue';
+// 光だまりはテクスチャ1枚+色別マテリアル3つを全家具で共有する(家具ごとに生成しない)
+let poolTex: DynamicTexture | null = null;
+const poolMats: Partial<Record<PoolTint, StandardMaterial>> = {};
 const glowSources: { x: number; y: number; z: number }[] = [];
 
 const TINTS = {
@@ -47,7 +46,13 @@ const BURST_COLORS: Record<string, [Color4, Color4]> = {
 };
 
 export function initEffects(s: Scene): void {
+  // タイトル背景→ゲーム本編などシーンを作り直すとき、旧シーンの資産を参照しない
   scene = s;
+  poolTex = null;
+  for (const k of Object.keys(poolMats) as PoolTint[]) delete poolMats[k];
+  flies.length = 0;
+  flyPool.length = 0;
+  glowSources.length = 0;
   // 丸いドットのテクスチャ(外部素材なし)
   const tex = new DynamicTexture('fxDot', { width: 32, height: 32 }, s, false);
   const ctx = tex.getContext() as CanvasRenderingContext2D;
@@ -106,33 +111,46 @@ export function flyItem(x: number, y: number, z: number): void {
   flies.push({ mesh, from: new Vector3(x, y, z), t: 0 });
 }
 
+/** 共有の光だまりテクスチャ/マテリアル(初回だけ生成) */
+function poolMat(tint: PoolTint): StandardMaterial {
+  if (!poolTex) {
+    // 中心を白飛びさせず、外周まで輪郭が出ないなめらかな減衰にする
+    poolTex = new DynamicTexture('poolTexShared', { width: 128, height: 128 }, scene!, false);
+    const ctx = poolTex.getContext() as CanvasRenderingContext2D;
+    const g = ctx.createRadialGradient(64, 64, 4, 64, 64, 63);
+    g.addColorStop(0, 'rgba(255,244,224,0.52)');
+    g.addColorStop(0.35, 'rgba(255,244,224,0.34)');
+    g.addColorStop(0.65, 'rgba(255,244,224,0.16)');
+    g.addColorStop(0.88, 'rgba(255,244,224,0.05)');
+    g.addColorStop(1, 'rgba(255,244,224,0)');
+    ctx.clearRect(0, 0, 128, 128);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 128, 128);
+    poolTex.update();
+    poolTex.hasAlpha = true;
+  }
+  let mat = poolMats[tint];
+  if (!mat) {
+    mat = new StandardMaterial(`poolMat_${tint}`, scene!);
+    mat.emissiveTexture = poolTex;
+    mat.opacityTexture = poolTex;
+    mat.emissiveColor = TINTS[tint];
+    mat.disableLighting = true;
+    mat.alpha = 0;
+    poolMats[tint] = mat;
+  }
+  return mat;
+}
+
 /** 発光する光だまり(親メッシュに追従)。DayNightが明るさを制御する */
-export function attachLightPool(parent: Mesh, lx: number, ly: number, lz: number, radius: number, tint: Pool['tint']): void {
+export function attachLightPool(parent: Mesh, lx: number, ly: number, lz: number, radius: number, tint: PoolTint): void {
   if (!scene) return;
   const disc = CreateDisc(`pool_${tint}`, { radius, tessellation: 24 }, scene);
   disc.rotation.x = Math.PI / 2;
   disc.parent = parent;
   disc.position.set(lx, ly, lz);
   disc.isPickable = false;
-  const tex = new DynamicTexture('poolTex', { width: 64, height: 64 }, scene, false);
-  const ctx = tex.getContext() as CanvasRenderingContext2D;
-  const g = ctx.createRadialGradient(32, 32, 4, 32, 32, 31);
-  g.addColorStop(0, 'rgba(255,255,255,0.9)');
-  g.addColorStop(0.55, 'rgba(255,255,255,0.35)');
-  g.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.clearRect(0, 0, 64, 64);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 64, 64);
-  tex.update();
-  tex.hasAlpha = true;
-  const mat = new StandardMaterial('poolMat', scene);
-  mat.emissiveTexture = tex;
-  mat.opacityTexture = tex;
-  mat.emissiveColor = TINTS[tint];
-  mat.disableLighting = true;
-  mat.alpha = 0;
-  disc.material = mat;
-  pools.push({ mat, tint });
+  disc.material = poolMat(tint);
 }
 
 /** 夜のプレイヤー近傍ライトの対象になる発光位置 */
@@ -156,10 +174,12 @@ export function nearestGlowSource(x: number, z: number): { x: number; y: number;
   return best;
 }
 
-/** DayNightから: 光だまりの強さを設定(15Hz) */
+/** DayNightから: 光だまりの強さを設定(15Hz)。共有マテリアル3つを更新するだけ */
 export function setPoolLevels(amber: number, mint: number, blue: number): void {
-  const lv = { amber, mint, blue };
-  for (const p of pools) p.mat.alpha = Math.min(0.85, lv[p.tint] * 0.8);
+  const lv: Record<PoolTint, number> = { amber, mint, blue };
+  for (const tint of Object.keys(poolMats) as PoolTint[]) {
+    poolMats[tint]!.alpha = Math.min(0.62, lv[tint] * 0.62);
+  }
 }
 
 /** 毎フレーム: 飛んでいくアイテムの更新 */
