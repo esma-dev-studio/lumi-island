@@ -1,0 +1,186 @@
+{
+  "completed": true,
+  "totalSec": 377,
+  "timeline": [
+    {
+      "sec": 3,
+      "label": "タイトル表示"
+    },
+    {
+      "sec": 4,
+      "label": "ゲーム開始(新規)"
+    },
+    {
+      "sec": 4,
+      "label": "目標: tut_move"
+    },
+    {
+      "sec": 6,
+      "label": "目標: q_wood_offer"
+    },
+    {
+      "sec": 8,
+      "label": "目標: q_wood_gather"
+    },
+    {
+      "sec": 17,
+      "label": "はじめての採取"
+    },
+    {
+      "sec": 28,
+      "label": "目標: q_wood_report"
+    },
+    {
+      "sec": 43,
+      "label": "はじめての夜(発光を確認)"
+    },
+    {
+      "sec": 43,
+      "label": "目標: q_fish_offer"
+    },
+    {
+      "sec": 91,
+      "label": "目標: q_fish_sickle_mats"
+    },
+    {
+      "sec": 118,
+      "label": "目標: q_fish_sickle_craft"
+    },
+    {
+      "sec": 119,
+      "label": "はじめてのクラフト"
+    },
+    {
+      "sec": 119,
+      "label": "目標: q_fish_mats"
+    },
+    {
+      "sec": 134,
+      "label": "目標: q_fish_craft"
+    },
+    {
+      "sec": 135,
+      "label": "目標: q_fish_fish"
+    },
+    {
+      "sec": 163,
+      "label": "目標: q_fish_report"
+    },
+    {
+      "sec": 203,
+      "label": "目標: q_ore_offer"
+    },
+    {
+      "sec": 216,
+      "label": "目標: q_ore_gather"
+    },
+    {
+      "sec": 230,
+      "label": "目標: q_ore_report"
+    },
+    {
+      "sec": 235,
+      "label": "目標: q_lantern_offer"
+    },
+    {
+      "sec": 252,
+      "label": "目標: q_lantern_mats"
+    },
+    {
+      "sec": 273,
+      "label": "目標: q_lantern_craft"
+    },
+    {
+      "sec": 275,
+      "label": "目標: q_lantern_place"
+    },
+    {
+      "sec": 289,
+      "label": "はじめての家具配置"
+    },
+    {
+      "sec": 289,
+      "label": "目標: q_lantern_report"
+    },
+    {
+      "sec": 294,
+      "label": "目標: q_lumi_offer"
+    },
+    {
+      "sec": 296,
+      "label": "目標: q_lumi_mats"
+    },
+    {
+      "sec": 318,
+      "label": "目標: q_lumi_craft"
+    },
+    {
+      "sec": 320,
+      "label": "目標: q_lumi_place"
+    },
+    {
+      "sec": 335,
+      "label": "目標: q_lumi_mats"
+    },
+    {
+      "sec": 357,
+      "label": "目標: q_lumi_craft"
+    },
+    {
+      "sec": 358,
+      "label": "目標: q_lumi_place"
+    },
+    {
+      "sec": 372,
+      "label": "目標: q_lumi_report"
+    },
+    {
+      "sec": 377,
+      "label": "目標: free"
+    },
+    {
+      "sec": 377,
+      "label": "ルミの木 開花!"
+    },
+    {
+      "sec": 377,
+      "label": "終了(6分17秒)"
+    }
+  ],
+  "errors": 0,
+  "errorSamples": [],
+  "fps": [
+    60,
+    60,
+    60,
+    60,
+    60,
+    60,
+    46,
+    41,
+    44,
+    32,
+    41,
+    33,
+    60,
+    60,
+    49,
+    38,
+    38,
+    38,
+    36,
+    37,
+    44,
+    34,
+    37,
+    42
+  ],
+  "quests": {
+    "q_wood": "done",
+    "q_fish": "done",
+    "q_ore": "done",
+    "q_lantern": "done",
+    "q_lumi": "done"
+  },
+  "day": 2
+}

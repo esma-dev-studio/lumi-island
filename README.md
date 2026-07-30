@@ -3,45 +3,52 @@
 夜になると植物や鉱石がやわらかく光る小さな島で、採取・釣り・クラフトをしながら島に「灯り」を取り戻す、ブラウザで遊べる3Dスローライフゲーム(Vertical Slice、15〜30分)。
 
 - 完全オリジナルIP。キャラクター・建物・音・テクスチャはすべてプログラム生成の自作アセット
-- キャラクターはスキンメッシュ+9種アニメーションのGLB(自作プロシージャル生成パイプライン製)
-- スクリーンショット: `.logs/screenshots/final/`(タイトル/キャラ展示/昼/夜/会話/採取/クラフト/配置/所持品/依頼完了)
+- キャラクターはスキンメッシュ+12種アニメーションのGLB(自作プロシージャル生成パイプライン製)
+- スクリーンショット: `.logs/screenshots/review_v2/`(16枚: 誘導・演出・エリア・開花前後など)
 
 ## 起動方法
 
 ```bash
-npm install
+npm ci        # (はじめてなら npm install でも可)
 npm run dev
 ```
 
 ブラウザで http://localhost:5183 を開く(PCブラウザ推奨。Edge/Chromeで確認済み)。
 
-- キャラクターGLBはリポジトリに同梱済み。再生成する場合: `npm run gen:characters`
+- キャラクターGLB(`public/assets/characters/`)は同梱済み。追加生成なしで起動できる。再生成: `npm run gen:characters`
+- 配布用ビルド: `npm run build` → `dist/`(この開発機でローカル成功を確認済み)
 - キャラクター展示画面(開発用): http://localhost:5183/?scene=showcase
 - デバッグ起動(テストフック有効): http://localhost:5183/?scene=game&debug=1
 
 ## 操作方法
 
-| 入力 | 動作 |
-|---|---|
-| WASD / 矢印キー | あるく |
-| Shift | はしる |
-| E / Space | しらべる・とる・はなす・つりあげる |
-| Tab / I | もちもの |
-| C | クラフト |
-| Q | 島のおねがい(依頼リスト) |
-| R | (配置モード中)回転 |
-| Esc | 閉じる / メニュー |
+最初に必要なのは**移動とEだけ**。ほかのキーは遊びが進むと解放され、そのつど画面で案内される。
+
+| 入力 | 動作 | 使えるようになるタイミング |
+|---|---|---|
+| WASD / 矢印キー | あるく | 最初から |
+| Shift | はしる | 最初から |
+| E / Space | しらべる・とる・はなす・つりあげる | 最初から |
+| Esc | 閉じる / メニュー | 最初から |
+| Tab / I | もちもの | はじめて素材を手に入れたら |
+| Q | 島のおねがい | はじめて依頼を受けたら |
+| C | クラフト | 最初の依頼を達成したら |
+| R | (配置モード中)回転 | 配置モード中のみ |
 
 ## 遊び方(ゲームの流れ)
+
+ゲームは**夕方から始まり、開始から1分ほどで夜**になって島の植物や鉱石が光り出します。
+画面左上の**「いまやること」**に、次の1アクションと目的地への距離が常に表示され、
+画面端の矢印・目的地の光の柱・NPC頭上の「!」マーカーが道案内をします。
 
 1. 広場の左にある**ツムギ工房**であいさつ → 最初のおねがい「工房の材料あつめ」
 2. 北の林で木をきる → 報酬のツルハシで岩・高台の鉱石もとれるように
 3. ツリザオをクラフトして釣り(昼はサカナ、**夜はヨザカナ**) → ミナモのおねがい
 4. 夜の高台にいる**ノクト**の研究をてつだう → 「いしのランプ」のレシピ
-5. ランタンなど**光る家具を島に3つ置く**と、広場の「ルミの木」が目をさます
+5. **ランタンを作って島に置く**(ツムギのおねがい) → さらに光る家具を合計3つ置くと、広場の「ルミの木」が目をさます
 
 売却はツムギ工房のカウンター(うる/かう)。家具は「もちもの」から「おく」で配置できます。
-セーブは自動(約20秒ごと+節目)。タイトルの「つづきから」で再開できます。
+自宅のドアで「ねる」と朝までスキップ。セーブは自動(約20秒ごと+節目)。タイトルの「つづきから」で再開できます。
 
 ## 構成
 
@@ -49,10 +56,10 @@ npm run dev
 src/
   main.ts          エントリ(タイトル→ゲーム/展示のルーティング)
   game/            GameState(純データ。セーブ対象)
-  scenes/          GameScene(統括) / IslandScene(環境) / DayNight / ShowcaseScene
+  scenes/          GameScene(統括) / InteractionRouting(E入力) / SequenceDirector(見せ場) / IslandScene / DayNight / ShowcaseScene
   systems/         Player/NPC/Interaction/Gather/Fishing/Crafting/Quest/Placement/Time(純ロジック)
   characters/      CharacterView(GLBロード・クロスフェード・まばたき)
-  entities/        terrain/water/flora/buildings/furniture(実行時プロシージャル生成)
+  entities/        terrain/water/flora/deco/buildings/furniture(実行時プロシージャル生成)
   data/            items/recipes/quests/npcs/island(データ駆動。起動時に整合性検査)
   ui/              HUD/会話/所持品/クラフト/店/依頼/タイトル/メニュー(DOM)
   audio/           WebAudio合成の効果音・環境音
@@ -61,29 +68,25 @@ tools/
   chargen/         キャラクターGLB生成パイプライン(リグ・アニメ・テクスチャ)
   shot.mjs 等      ヘッドレスEdgeでのスクリーンショット検証ハーネス
 tests/
-  unit/            Vitest(30件: 状態・クラフト・依頼・時間・セーブ・採取)
-  e2e/             Playwright(7件: 開始・移動・採取・クラフト・配置復元・会話依頼・釣り)
+  unit/            Vitest(51件: 状態・クラフト・依頼・目標・候補選択・時間・セーブ・採取)
+  e2e/             Playwright(9件: 基本フロー8+デバッグAPI不使用のオンボーディング1)
 ```
 
 - ロジック(systems)はBabylon/DOM非依存でユニットテスト可能
 - キャラクターのモデルパス・縮尺・アニメ名は `src/data/characters.ts` で管理
 - ライセンス記録: [ATTRIBUTIONS.md](ATTRIBUTIONS.md)(外部アセットはフォントのみ)
 
-## テスト
+## テスト・検証
 
-```bash
-npm run typecheck   # TypeScript
-npm run lint        # ESLint
-npm test            # Vitest(ユニット)
-npm run e2e         # Playwright(要: システムのEdge。ブラウザDL不要)
-npm run check:chars # 同形異文字の混入検査
-```
+- `npm run verify` … typecheck + lint + ユニット51件 + 同形異文字チェックを一括実行
+- `npm run e2e` … Playwright 9件(システムのEdgeを使用。うち1件はデバッグAPI不使用の実操作テスト)
+- `node tools/playtest_bot.mjs` … デバッグなしでタイトル→全依頼→開花まで実キー入力で完走する検証ボット
+  (計測結果: `.logs/playtest_report.md`)
 
 ## 制約・既知の事項
 
 - PCブラウザ・キーボード操作が対象(モバイル用UIは未実装。入力・UIは分離してあり追加可能)
 - 採取ノードの枯れ/復活状態はセーブ対象外(リロードで復活。仕様)
-- `npm run build` はこの開発機では動作確認済みだが、配布は未実施(ローカル起動が前提)
 - 音はブラウザの自動再生制限のため、最初のクリック/キー入力後に有効になる
 
 ## 開発ドキュメント
