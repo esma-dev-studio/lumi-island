@@ -60,12 +60,12 @@ test('新規開始→誘導どおりに歩いてツムギから最初の依頼�
     const dx = nx - px;
     const dz = nz - pz;
     if (near && Math.hypot(dx, dz) < 1.7) break;
-    // 方向に応じてキーを短く押す(実入力)
+    // 方向に応じてキーを短く押す(実入力)。A=画面左=東(+x) / D=画面右=西(-x)
     const keys: string[] = [];
     if (dz < -0.4) keys.push('w');
     if (dz > 0.4) keys.push('s');
-    if (dx < -0.4) keys.push('a');
-    if (dx > 0.4) keys.push('d');
+    if (dx > 0.4) keys.push('a');
+    if (dx < -0.4) keys.push('d');
     for (const k of keys) await page.keyboard.down(k);
     await page.waitForTimeout(240);
     for (const k of keys) await page.keyboard.up(k);

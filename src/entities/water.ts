@@ -42,10 +42,10 @@ export function buildWater(scene: Scene): WaterRefs {
   pond.isPickable = false;
 
   const deepMat = new StandardMaterial('pondDeepMat', scene);
-  deepMat.diffuseColor = Color3.FromHexString('#33607e');
+  deepMat.diffuseColor = Color3.FromHexString('#2b5573');
   deepMat.specularColor = new Color3(0.03, 0.05, 0.06);
-  deepMat.alpha = 0.72;
-  const deep = makeIrregularDisc(scene, 'pondDeep', POND.r * 0.52, 0.2, 11);
+  deepMat.alpha = 0.85;
+  const deep = makeIrregularDisc(scene, 'pondDeep', POND.r * 0.58, 0.2, 11);
   deep.position.set(POND.x + 0.6, POND.waterY + 0.012, POND.z - 0.5);
   deep.material = deepMat;
   deep.isPickable = false;

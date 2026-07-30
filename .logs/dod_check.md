@@ -1,3 +1,33 @@
+# Definition of Done チェック(v3: 2026-07-30)
+
+品質判定は3区分で行う: **Automated test / Visual review / Human usability test**。
+自動テストの成功だけで視覚品質・子ども向けUXをPASSにしない。
+
+## v3最終ゴールの判定
+
+| ゴール | Automated | Visual | Human |
+|---|---|---|---|
+| 小2が攻略情報なしで進められる | PASS(UXボットが画面情報のみで受注まで12〜29秒) | PASS(誘導表示を目視) | **NOT TESTED** |
+| NPC不在時も次の行動が分かる | PASS(ユニット3+E2E) | PASS(02/03) | NOT TESTED |
+| 睡眠連打で日付・セーブが壊れない | PASS(ユニット6+E2E4) | ― | NOT TESTED |
+| 不足素材を正しく案内 | PASS(ユニット6) | PASS(04) | NOT TESTED |
+| 夜魚で釣り依頼が進む | PASS(ユニット4+E2E+回帰ボット実走) | ― | ― |
+| 会話・画面閲覧中にNPCが帰宅しない | PASS(E2E4) | ― | ― |
+| 会話で両者の顔が見える | PASS(E2E3: 向き・遮蔽0・建物外) | PASS(05/06/07) | NOT TESTED |
+| 初回夜にルミの木が半透明にならない | PASS(E2E faded=0) | PASS(08) | ― |
+| タイトルで夜光る島の魅力が伝わる | ―(起動E2Eのみ) | PASS(01) | NOT TESTED |
+| 森・池・高台・広場をUIなしで区別 | ― | PASS(09/10/11+20) | NOT TESTED |
+| 光が白い円盤に見えない | ― | PASS(12/13) | ― |
+| 木として開花して見える | ― | PASS(14/15/16) | NOT TESTED |
+| 種族を名前なしで判別 | ― | PASS(17/18/19・自己評価) | **NOT TESTED** |
+| 推奨環境で50〜60FPS | PASS(昼平均59/夜60・最低60) | ― | ― |
+| 回帰とUXテストの区別 | PASS(3段階+命名変更) | ― | ― |
+
+Humanの行はブラインドプレイテスト未実施のためすべてNOT TESTED(PASS扱いにしない)。
+実施手順は `.logs/usability_test_report.md`。
+
+---
+
 # Definition of Done チェック(v2: 改修後 2026-07-30)
 
 v1(初版)の20項目に加えて、改修指示の最終完了条件を検証した。
