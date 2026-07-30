@@ -23,6 +23,23 @@ export function canCraft(state: GameState, recipe: RecipeDef): CraftCheck {
   return { ok: lacks.length === 0 && !alreadyOwned, lacks, alreadyOwned };
 }
 
+export interface MissingIngredient {
+  item: ItemId;
+  owned: number; // 表示用に必要数でクランプ
+  required: number;
+  missing: number;
+}
+
+/** レシピの不足素材(レシピのcost記載順)。目的表示・誘導はこれを使い、依頼ごとにハードコードしない */
+export function missingIngredients(state: GameState, recipe: RecipeDef): MissingIngredient[] {
+  const out: MissingIngredient[] = [];
+  for (const [item, need] of Object.entries(recipe.cost) as [ItemId, number][]) {
+    const have = invCount(state, item);
+    if (have < need) out.push({ item, owned: Math.min(have, need), required: need, missing: need - have });
+  }
+  return out;
+}
+
 export function craft(state: GameState, recipe: RecipeDef): boolean {
   const check = canCraft(state, recipe);
   if (!check.ok) return false;

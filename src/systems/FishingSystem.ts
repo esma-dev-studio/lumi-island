@@ -115,7 +115,8 @@ export class FishingSystem {
       const item = this.pickFish();
       sfx('catch');
       invAdd(this.game, item, 1);
-      toast(`+1 ${ITEMS[item].name}`, item);
+      // 夜魚はすこし特別に(依頼はどちらの魚でも進む)
+      toast(item === 'nightfish' ? `+1 ${ITEMS[item].name}! よるにしか つれない魚だ` : `+1 ${ITEMS[item].name}`, item);
       this.onCatch?.(item);
       const finishAnim = view.groups.has('fish_reel') ? 'fish_reel' : 'happy';
       view.play(finishAnim, {

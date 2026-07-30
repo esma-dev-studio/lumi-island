@@ -81,6 +81,42 @@ describe('依頼', () => {
     });
   });
 
+  describe('q_fish(collectAny型: 夜魚でも進む)', () => {
+    const prep = () => {
+      const s = newGameState();
+      s.quests.q_wood = 'done';
+      s.quests.q_fish = 'open';
+      acceptQuest(s, QUEST_BY_ID.q_fish);
+      return s;
+    };
+    it('通常魚1匹で達成できる', () => {
+      const s = prep();
+      invAdd(s, 'fish', 1);
+      expect(questRemaining(s, QUEST_BY_ID.q_fish)).toBe(0);
+    });
+    it('夜魚1匹でも達成できる', () => {
+      const s = prep();
+      invAdd(s, 'nightfish', 1);
+      expect(questRemaining(s, QUEST_BY_ID.q_fish)).toBe(0);
+      expect(questFor(s, 'minamo')?.mode).toBe('done'); // 追加の通常魚を要求しない
+    });
+    it('通常魚と夜魚を合算できる・達成時はぶんだけ消費する', () => {
+      const s = prep();
+      invAdd(s, 'nightfish', 1);
+      completeQuest(s, QUEST_BY_ID.q_fish);
+      expect(invCount(s, 'nightfish')).toBe(0); // 1匹ぶん消費
+      expect(s.quests.q_fish).toBe('done');
+    });
+    it('両方持っている場合は先頭(fish)から消費し、余りは残る', () => {
+      const s = prep();
+      invAdd(s, 'fish', 1);
+      invAdd(s, 'nightfish', 1);
+      completeQuest(s, QUEST_BY_ID.q_fish);
+      expect(invCount(s, 'fish')).toBe(0);
+      expect(invCount(s, 'nightfish')).toBe(1); // 夜魚は手元に残る
+    });
+  });
+
   it('q_lumi(placeGlow)は光る家具の設置数で判定し、達成で島レベル2', () => {
     const s = newGameState();
     s.quests.q_lumi = 'open';

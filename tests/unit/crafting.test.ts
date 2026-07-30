@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { newGameState, invAdd, invCount, hasTool } from '../../src/game/GameState';
-import { canCraft, craft, knownRecipes } from '../../src/systems/CraftingSystem';
+import { canCraft, craft, knownRecipes, missingIngredients } from '../../src/systems/CraftingSystem';
 import { RECIPES, validateItemData } from '../../src/data/items';
 
 const recipe = (id: string) => RECIPES.find((r) => r.id === id)!;
@@ -18,6 +18,14 @@ describe('クラフト', () => {
       { item: 'wood', need: 2, have: 1 },
       { item: 'stone', need: 1, have: 0 },
     ]);
+  });
+  it('missingIngredients: 不足素材をレシピ記載順で返す(所持数は必要数でクランプ)', () => {
+    const s = newGameState();
+    invAdd(s, 'moss', 5); // 必要2に対して過剰所持
+    const missing = missingIngredients(s, recipe('r_lantern')); // 木1+コケ2
+    expect(missing).toEqual([{ item: 'wood', owned: 0, required: 1, missing: 1 }]);
+    invAdd(s, 'wood', 1);
+    expect(missingIngredients(s, recipe('r_lantern'))).toEqual([]); // そろった
   });
   it('クラフトで材料を消費し産出を得る(道具)', () => {
     const s = newGameState();

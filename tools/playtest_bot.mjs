@@ -36,7 +36,8 @@ async function gameInfo() {
     const o = g.lastObjective ?? { id: 'none' };
     return JSON.stringify({
       px: g.player.x, pz: g.player.z,
-      obj: o.id, hour: g.state.time.hour, day: g.state.time.day,
+      obj: o.id, objGather: o.gatherItem ?? null, objCraft: o.craftRecipe ?? null,
+      hour: g.state.time.hour, day: g.state.time.day,
       dialogue: g.dialogue.open, qc: g.questComplete.open, paused: g.pauseMenu.open,
       fishing: g.fishing.state, placing: g.placement.active !== null,
       lumina: g.state.lumina, level: g.state.islandLevel,
@@ -261,6 +262,9 @@ async function fishOnce() {
 }
 
 // ---- 本編 ----
+// 目標の構造情報(gatherItem/craftRecipe)→ノード種別・レシピ表示名
+const GATHER_KIND = { wood: 'tree', stone: 'rock', fiber: 'grass', moss: 'moss', ore: 'ore', berry: 'berry' };
+const RECIPE_NAMES = { r_sickle: 'カマ', r_rod: 'ツリザオ', r_lantern: 'ランタン', r_stonelamp: 'いしのランプ', r_bench: 'ウッドベンチ' };
 const flags = { night: false, gather: false, craft: false, place: false };
 try {
   await page.goto('http://localhost:5183/', { waitUntil: 'networkidle2' });
@@ -305,6 +309,25 @@ try {
 
     if (info.level >= 2) { mark('ルミの木 開花!'); await snap('bloom'); break; }
 
+    // 目標の構造情報で汎用処理(採取・クラフト・不在時のベッド誘導)
+    if (info.obj.endsWith('_wait')) {
+      await sleepAtBed();
+      continue;
+    }
+    if (info.objGather) {
+      const kind = GATHER_KIND[info.objGather] ?? info.objGather;
+      if (!(await gatherOne(kind))) await sleep(2500); // 全部枯れていたらリスポーン待ち
+      continue;
+    }
+    if (info.objCraft) {
+      if (await craftByName(RECIPE_NAMES[info.objCraft] ?? info.objCraft)) {
+        if (!flags.craft) { flags.craft = true; mark('はじめてのクラフト'); }
+      } else {
+        await sleep(600);
+      }
+      continue;
+    }
+
     switch (info.obj) {
       case 'tut_move': {
         await page.keyboard.down('w');
@@ -346,52 +369,8 @@ try {
         await talkFlow(target);
         break;
       }
-      case 'q_wood_gather': {
-        if (!(await gatherOne('tree'))) await sleep(2500);
-        break;
-      }
-      case 'q_fish_sickle_mats': {
-        if ((await invCount('wood')) < 2) { if (!(await gatherOne('tree'))) await sleep(2000); }
-        else if (!(await gatherOne('rock'))) await sleep(2000);
-        break;
-      }
-      case 'q_fish_sickle_craft': {
-        if (await craftByName('カマ')) { if (!flags.craft) { flags.craft = true; mark('はじめてのクラフト'); } }
-        break;
-      }
-      case 'q_fish_mats': {
-        if ((await invCount('wood')) < 2) { if (!(await gatherOne('tree'))) await sleep(2000); }
-        else if (!(await gatherOne('grass'))) await sleep(2000);
-        break;
-      }
-      case 'q_fish_craft': {
-        if (await craftByName('ツリザオ')) { if (!flags.craft) { flags.craft = true; mark('はじめてのクラフト'); } }
-        break;
-      }
       case 'q_fish_fish': {
         await fishOnce();
-        break;
-      }
-      case 'q_ore_gather': {
-        if (!(await gatherOne('ore'))) await sleep(3000);
-        break;
-      }
-      case 'q_lantern_mats':
-      case 'q_lumi_mats': {
-        // ランタン優先: 木1+コケ2 / だめなら いしのランプ: 石2+こうせき1
-        if ((await invCount('moss')) < 2 && (await gatherOne('moss'))) break;
-        if ((await invCount('wood')) < 1 && (await gatherOne('tree'))) break;
-        if ((await invCount('moss')) >= 2 && (await invCount('wood')) >= 1) break; // objective側が craft へ進める
-        if ((await invCount('stone')) < 2 && (await gatherOne('rock'))) break;
-        if ((await invCount('ore')) < 1 && (await gatherOne('ore'))) break;
-        await sleep(2500); // リスポーン待ち
-        break;
-      }
-      case 'q_lantern_craft':
-      case 'q_lumi_craft': {
-        const okL = await craftByName('ランタン');
-        if (!okL) await craftByName('いしのランプ');
-        if (!flags.craft) { flags.craft = true; mark('はじめてのクラフト'); }
         break;
       }
       case 'q_lantern_place':

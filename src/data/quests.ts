@@ -12,8 +12,9 @@ export interface QuestDef {
   id: string;
   npc: string; // 依頼主(q_lumiは誰に話しても進む)
   title: string;
-  type: 'collect' | 'placeItem' | 'placeGlow';
+  type: 'collect' | 'collectAny' | 'placeItem' | 'placeGlow';
   item?: ItemId;
+  acceptedItems?: ItemId[]; // collectAny: どれでも合算できるアイテム
   count: number;
   reward: { lumina?: number; tool?: ToolId; recipes?: string[] };
   unlocks: string[];
@@ -53,8 +54,9 @@ export const QUESTS: QuestDef[] = [
     id: 'q_fish',
     npc: 'minamo',
     title: 'はじめての釣り',
-    type: 'collect',
+    type: 'collectAny', // 夜つれる「ヨルサカナ」でも達成できる
     item: 'fish',
+    acceptedItems: ['fish', 'nightfish'],
     count: 1,
     reward: { lumina: 50, recipes: ['r_jam'] },
     unlocks: ['q_lantern'],

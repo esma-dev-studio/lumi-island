@@ -17,7 +17,7 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     return '';
   }
   if (gs.seq.active) {
-    if (want) gs.seq.end();
+    if (want) gs.seq.skip(); // intro/bloomは早送り可。就寝はスキップ不可
     return '';
   }
   if (gs.dialogue.open) {

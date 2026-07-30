@@ -21,6 +21,7 @@ export const POIS: Record<string, POI> = {
   beach: { id: 'beach', name: '浜べ', x: -6, z: 42 },
   meadow: { id: 'meadow', name: '草原', x: -22, z: 10 },
   forest: { id: 'forest', name: '林', x: -2, z: -32 },
+  bed: { id: 'bed', name: 'おうちのベッド', x: -30.9, z: 6.7 }, // ミオの家のドア前(ねる場所)
 };
 
 // 道(ポリライン)。地形の頂点色と平滑化に使う

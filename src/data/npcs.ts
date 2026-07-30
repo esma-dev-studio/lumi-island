@@ -15,6 +15,8 @@ export interface NpcDef {
   name: string;
   likes: ItemId[];
   schedule: ScheduleEntry[];
+  // 依頼の受注・報告相手になっている間は家に入らず、ここに居続ける(子どもを待たせない)
+  questEntry: ScheduleEntry;
   greetings: [string[], string[], string[]]; // 親密度 低/中/高
 }
 
@@ -31,6 +33,7 @@ export const NPCS: NpcDef[] = [
       { from: 18, to: 20, spot: 'pond', activity: 'idle' },
       { from: 20, to: 30, spot: 'home', activity: 'home' },
     ],
+    questEntry: { from: 0, to: 30, spot: 'pond', activity: 'idle' },
     greetings: [
       ['やあ! きみが新しい子だね。ぼくはミナモ。', '今日はどのへんで釣ろうかな〜。'],
       ['お、きたね! 今日も釣り日和だ。', 'ヨザカナって知ってる? 夜の池で光るんだよ。'],
@@ -48,6 +51,7 @@ export const NPCS: NpcDef[] = [
       { from: 20, to: 26, spot: 'hill', activity: 'watch' },
       { from: 26, to: 30, spot: 'home', activity: 'home' },
     ],
+    questEntry: { from: 0, to: 30, spot: 'hill', activity: 'watch' },
     greetings: [
       ['ふぁ…ワシはノクト。夜にならんと頭がまわらんのじゃ。', '夜の島は良いぞ。光るものだらけじゃ。'],
       ['おぬしか。ちょうど星の記録をしておったところじゃ。', 'ヒカリゴケは夜に見るとようわかる。おぼえておくとよい。'],
@@ -66,6 +70,7 @@ export const NPCS: NpcDef[] = [
       { from: 19, to: 21, spot: 'lumi', activity: 'stroll' },
       { from: 21, to: 30, spot: 'home', activity: 'home' },
     ],
+    questEntry: { from: 0, to: 30, spot: 'shop', activity: 'work' },
     greetings: [
       ['いらっしゃい。ゆっくりしていってね。', '家具のことなら、なんでも聞いて。'],
       ['あら、こんにちは! 今日は何を作ろうかしら。', 'あなたの置いた家具、いいセンスね。'],

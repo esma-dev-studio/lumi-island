@@ -20,6 +20,11 @@ export function questRemaining(state: GameState, def: QuestDef): number {
   switch (def.type) {
     case 'collect':
       return Math.max(0, def.count - invCount(state, def.item!));
+    case 'collectAny': {
+      // どのアイテムでも合算できる(例: サカナ+ヨルサカナ)
+      const total = (def.acceptedItems ?? []).reduce((sum, it) => sum + invCount(state, it), 0);
+      return Math.max(0, def.count - total);
+    }
     case 'placeItem':
       return Math.max(0, def.count - placedItemCount(state, def.item));
     case 'placeGlow':
@@ -51,6 +56,15 @@ export interface QuestRewardSummary {
 export function completeQuest(state: GameState, def: QuestDef): QuestRewardSummary {
   // 配置型の依頼は配置物を消費しない(インベントリからも取らない)
   if (def.type === 'collect') invRemove(state, def.item!, def.count);
+  if (def.type === 'collectAny') {
+    let need = def.count;
+    for (const it of def.acceptedItems ?? []) {
+      const take = Math.min(need, invCount(state, it));
+      if (take > 0) invRemove(state, it, take);
+      need -= take;
+      if (need <= 0) break;
+    }
+  }
   const lines: string[] = [];
   if (def.reward.lumina) {
     state.lumina += def.reward.lumina;

@@ -18,7 +18,9 @@ import { FishingSystem } from '../systems/FishingSystem';
 import { PlacementSystem } from '../systems/PlacementSystem';
 import { NPCSystem } from '../systems/NPCSystem';
 import { TutorialSystem } from '../systems/TutorialSystem';
-import { currentObjective, type Objective } from '../systems/ObjectiveSystem';
+import { currentObjective, type Objective, type NpcAvailability } from '../systems/ObjectiveSystem';
+import { questFor } from '../systems/QuestSystem';
+import { NPC_BY_ID } from '../data/npcs';
 import { Hud } from '../ui/Hud';
 import { ObjectiveHud } from '../ui/ObjectiveHud';
 import { InventoryUI } from '../ui/InventoryUI';
@@ -31,6 +33,33 @@ import { PauseMenu } from '../ui/PauseMenu';
 import { save } from '../save/SaveSystem';
 import { sfx, setAmbient } from '../audio/AudioSystem';
 import { updateEffects } from '../entities/effects';
+import { terrainHeight } from '../entities/terrain';
+
+// NPCスポット→子ども向けの場所名(不在案内用)
+const SPOT_NAMES: Record<string, string> = {
+  pond: '池', hill: '高台', forest: '林', shop: '工房', plaza: 'ひろば',
+  pier: 'さんばし', bench: 'ひろばのベンチ', lumi: 'ルミの木', tree: 'ひろば',
+};
+function fmtHour(h: number): string {
+  const disp = h > 12 ? h - 12 : h;
+  if (h >= 19.5 || h < 5) return `よる${disp}時`;
+  if (h >= 17) return `ゆうがた${disp}時`;
+  if (h < 11) return `あさ${disp}時`;
+  return `ひる${disp}時`;
+}
+
+/** 相手の方向から、カメラ側へ少しだけ開いた向き(ツーショットで顔が見えるように)。描画の+π補正込み */
+function leanToward(fromX: number, fromZ: number, tgtX: number, tgtZ: number, camX: number, camZ: number, blend: number): number {
+  let dx = tgtX - fromX, dz = tgtZ - fromZ;
+  const L = Math.hypot(dx, dz) || 1;
+  dx /= L;
+  dz /= L;
+  let cx = camX - fromX, cz = camZ - fromZ;
+  const CL = Math.hypot(cx, cz) || 1;
+  cx /= CL;
+  cz /= CL;
+  return Math.atan2(dx + cx * blend, dz + cz * blend) + Math.PI;
+}
 
 export class GameScene {
   island: IslandScene;
@@ -65,6 +94,7 @@ export class GameScene {
   private lastObjective: Objective | null = null;
   private keyHandlers: Array<() => void> = [];
   private faded = new Set<import('@babylonjs/core/Meshes/mesh').Mesh>();
+  private recovering = new Set<import('@babylonjs/core/Meshes/mesh').Mesh>();
 
   constructor(
     public engine: Engine,
@@ -76,6 +106,14 @@ export class GameScene {
 
   get scene() {
     return this.island.scene;
+  }
+
+  /** 何かモーダルUIが開いているか(演出の自動開始を遅らせる判定にも使う) */
+  get modalOpen(): boolean {
+    return (
+      this.invUI.open || this.craftUI.open || this.shopUI.open ||
+      this.questLog.open || this.dialogue.open || this.questComplete.open
+    );
   }
 
   async init(): Promise<void> {
@@ -101,7 +139,12 @@ export class GameScene {
     this.inter = new InteractionSystem(this.island, this.state, !!this.opts.debug);
     this.fishing = new FishingSystem(this.scene, this.state, !!this.opts.debug);
     this.placement = new PlacementSystem(this.island, this.state);
-    this.npcs = new NPCSystem(this.scene, this.island, () => this.state.flags);
+    this.npcs = new NPCSystem(
+      this.scene, this.island,
+      () => this.state.flags,
+      // 依頼の受注・報告相手のNPCは家に入らない(子どもを待たせない)
+      (id) => questFor(this.state, id) !== null
+    );
     await this.npcs.init();
     this.seq = new SequenceDirector(this);
     this.questDlg = new QuestDialogueController({
@@ -110,7 +153,14 @@ export class GameScene {
       onDialogueCamera: (npcId) => {
         if (npcId) {
           const p = this.npcs.positionOf(npcId);
-          if (p) this.camCtl.beginDialogue(this.player.x, this.player.y, this.player.z, p.x, p.y, p.z);
+          if (p) {
+            this.restoreAllOcclusionImmediately();
+            const c = this.dialogueCamera(p.x, p.y, p.z);
+            this.camCtl.beginDialogue(c.pos, c.tgt);
+            // 顔がカメラに写るよう、互いの向きをカメラ側へ約45度開く(ツーショットの基本)
+            this.player.rotY = leanToward(this.player.x, this.player.z, p.x, p.z, c.pos[0], c.pos[2], 1.0);
+            this.npcs.setFacing(npcId, leanToward(p.x, p.z, this.player.x, this.player.z, c.pos[0], c.pos[2], 1.0));
+          }
         } else {
           this.camCtl.endDialogue();
         }
@@ -196,6 +246,7 @@ export class GameScene {
         return;
       }
       if (e.code === 'Escape') {
+        if (this.seq.active) return; // 就寝・見せ場の途中で中断やポーズをさせない(状態破壊防止)
         const wasOpen =
           this.invUI.open || this.craftUI.open || this.shopUI.open || this.questLog.open ||
           this.dialogue.open || this.pauseMenu.open || this.questComplete.open ||
@@ -234,9 +285,8 @@ export class GameScene {
   private targetPosOf(o: Objective): { x: number; z: number; isNpc: boolean } | null {
     if (o.target.kind === 'npc' && o.target.id) {
       const p = this.npcs.positionOf(o.target.id);
+      // 不在(hidden)のNPCは指さない(ObjectiveSystem側がベッド誘導へ切り替える)
       if (p && !p.hidden) return { x: p.x, z: p.z, isNpc: true };
-      // 家にいる間はその家の場所を指す
-      if (p) return { x: p.x, z: p.z, isNpc: true };
       return null;
     }
     if (o.target.kind === 'poi' && o.target.id) {
@@ -246,9 +296,33 @@ export class GameScene {
     return null;
   }
 
+  /** NPCの在/不在と、不在時の案内文(「もうねているよ」等)を組み立てる */
+  private npcAvailability(): Record<string, NpcAvailability> {
+    const out: Record<string, NpcAvailability> = {};
+    for (const id of Object.keys(NPC_BY_ID)) {
+      const p = this.npcs.positionOf(id);
+      if (!p) continue;
+      if (!p.hidden) {
+        out[id] = { hidden: false };
+        continue;
+      }
+      const name = NPC_BY_ID[id].name;
+      const next = this.npcs.nextAppearance(id, this.island.time.hour);
+      out[id] = {
+        hidden: true,
+        waitLabel: next && next.hour !== 6
+          ? `${name}は ${fmtHour(next.hour)}に ${SPOT_NAMES[next.spot] ?? 'そと'}へ くるよ<br>ベッドで ねて まとう`
+          : `${name}は もう ねているよ<br>家のベッドで 朝まで ねよう`,
+      };
+    }
+    return out;
+  }
+
   private updateObjective(dt: number): void {
     const nearestNpc = this.npcs.nearest(this.player.x, this.player.z, 999) as unknown as { def: { id: string } } | null;
-    const obj = this.tutorial.overrideObjective() ?? currentObjective(this.state, nearestNpc?.def.id ?? 'tsumugi');
+    const obj =
+      this.tutorial.overrideObjective() ??
+      currentObjective(this.state, nearestNpc?.def.id ?? 'tsumugi', this.npcAvailability());
     this.lastObjective = obj;
     const tp = this.targetPosOf(obj);
     const dist = tp ? Math.hypot(this.player.x - tp.x, this.player.z - tp.z) : null;
@@ -265,7 +339,76 @@ export class GameScene {
     this.tutorial.update(dt, this.player.moving, obj, progressKey, dist);
   }
 
+  // ---------- 会話カメラの構図選び ----------
+  /**
+   * 2人を斜めから見るツーショット候補(左右2側×寄り引き)から、
+   * 遮蔽物が少なく、建物の中に入らない位置を選ぶ。
+   */
+  private dialogueCamera(nx: number, ny: number, nz: number): { pos: [number, number, number]; tgt: [number, number, number] } {
+    const px = this.player.x, py = this.player.y, pz = this.player.z;
+    const mx = (px + nx) / 2, my = (py + ny) / 2, mz = (pz + nz) / 2;
+    let dx = nx - px, dz = nz - pz;
+    const L = Math.hypot(dx, dz) || 1;
+    dx /= L;
+    dz /= L;
+    const perpX = -dz, perpZ = dx;
+    let best: { x: number; y: number; z: number; score: number } | null = null;
+    for (const side of [1, -1]) {
+      for (const [out, along, h] of [[2.9, 0.6, 1.55], [3.5, -0.6, 1.85]] as const) {
+        const cx = mx + perpX * out * side + dx * along;
+        const cz = mz + perpZ * out * side + dz * along;
+        const cy = Math.max(my + h, terrainHeight(cx, cz) + 1.3);
+        let score = 0;
+        if (this.island.insideBuilding(cx, cz)) score += 100; // 建物の中はほぼ却下
+        else if (!this.island.walkable(cx, cz)) score += 8; // 水面などは減点どまり(カメラは通れる)
+        score += this.countBlockers(cx, cy, cz, mx, my + 0.9, mz) * 10; // 視線をさえぎる物
+        if (this.terrainBlocks(cx, cy, cz, mx, my + 0.9, mz)) score += 60; // 尾根・斜面ごし
+        // 背景(注視点の先)に壁があると画面の大半をふさぐので避ける
+        const bx = mx + (mx - cx) * 0.9, bz = mz + (mz - cz) * 0.9;
+        score += this.countBlockers(mx, my + 1.2, mz, bx, my + 1.2, bz) * 4;
+        score += Math.abs(h - 1.55) * 0.5; // わずかに目線の高さを優先
+        if (!best || score < best.score) best = { x: cx, y: cy, z: cz, score };
+      }
+    }
+    return { pos: [best!.x, best!.y, best!.z], tgt: [mx, my + 0.95, mz] };
+  }
+
+  /** カメラ→注視点の視線が地形(尾根・斜面)にささるか */
+  private terrainBlocks(ax: number, ay: number, az: number, bx: number, by: number, bz: number): boolean {
+    for (const t of [0.3, 0.55, 0.8]) {
+      const x = ax + (bx - ax) * t;
+      const y = ay + (by - ay) * t;
+      const z = az + (bz - az) * t;
+      if (terrainHeight(x, z) + 0.25 > y) return true;
+    }
+    return false;
+  }
+
+  /** 線分(カメラ→注視点)をさえぎる遮蔽メッシュ数 */
+  private countBlockers(ax: number, ay: number, az: number, bx: number, by: number, bz: number): number {
+    const dx = bx - ax, dy = by - ay, dz = bz - az;
+    const L2 = dx * dx + dy * dy + dz * dz || 1;
+    let n = 0;
+    for (const m of this.island.occludables) {
+      const b = m.getBoundingInfo().boundingSphere;
+      const cw = b.centerWorld;
+      const t = Math.max(0, Math.min(1, ((cw.x - ax) * dx + (cw.y - ay) * dy + (cw.z - az) * dz) / L2));
+      const qx = ax + dx * t, qy = ay + dy * t, qz = az + dz * t;
+      const d = Math.hypot(cw.x - qx, cw.y - qy, cw.z - qz);
+      if (d < b.radiusWorld * 0.8) n++;
+    }
+    return n;
+  }
+
   // ---------- カメラ遮蔽 ----------
+  /** 透明化中・回復途中のメッシュを即座に全復元する(会話・イベントカメラ開始前に呼ぶ) */
+  restoreAllOcclusionImmediately(): void {
+    for (const m of this.faded) m.visibility = 1;
+    for (const m of this.recovering) m.visibility = 1;
+    this.faded.clear();
+    this.recovering.clear();
+  }
+
   private updateOcclusion(): void {
     const p = this.player;
     const c = this.camCtl.cam.position;
@@ -287,9 +430,15 @@ export class GameScene {
     }
     for (const m of nowFaded) {
       if (m.visibility > 0.35) m.visibility = Math.max(0.35, m.visibility - 0.12);
+      this.recovering.delete(m);
     }
+    // 対象から外れたメッシュは、完全に戻りきるまで回復を続ける(途中で0.98等のまま残さない)
     for (const m of this.faded) {
-      if (!nowFaded.has(m) && m.visibility < 1) m.visibility = Math.min(1, m.visibility + 0.1);
+      if (!nowFaded.has(m)) this.recovering.add(m);
+    }
+    for (const m of this.recovering) {
+      m.visibility = Math.min(1, m.visibility + 0.1);
+      if (m.visibility >= 1) this.recovering.delete(m);
     }
     this.faded = nowFaded;
   }
@@ -304,14 +453,17 @@ export class GameScene {
       } else {
         const uiOpen =
           this.invUI.open || this.craftUI.open || this.shopUI.open || this.questLog.open || this.dialogue.open;
-        this.island.update(dt);
-        this.island.dayNight.tick(dt, this.island.time.hour, this.player.x, this.player.z);
-        this.player.locked =
-          uiOpen || this.inter.busy || this.fishing.state !== 'idle' || this.seq.active || this.dialogue.open;
+        // 会話・モーダルUI・見せ場・就寝中はゲーム内時間とNPCを完全に止める(P0-5)
+        const worldFrozen = uiOpen || this.questComplete.open || this.seq.active;
+        if (!worldFrozen) {
+          this.island.update(dt);
+          this.island.dayNight.tick(dt, this.island.time.hour, this.player.x, this.player.z);
+          this.npcs.update(dt, this.island.time.hour, this.player.x, this.player.z);
+          this.inter.update(dt, this.player.x, this.player.z);
+          this.fishing.update(dt, this.player, this.playerView);
+        }
+        this.player.locked = worldFrozen || this.inter.busy || this.fishing.state !== 'idle';
         this.player.update(dt, this.input);
-        this.npcs.update(dt, this.island.time.hour, this.player.x, this.player.z);
-        this.inter.update(dt, this.player.x, this.player.z);
-        this.fishing.update(dt, this.player, this.playerView);
         this.placement.update(this.player);
         updateEffects(dt, this.player.x, this.player.y, this.player.z);
         this.seq.update(dt);
@@ -337,8 +489,8 @@ export class GameScene {
       }
       this.camCtl.update(dt, this.player.x, this.player.y, this.player.z);
       this.occAcc += dt;
-      // 見せ場(イベントカメラ)中はフェードさせない: ルミの木が透けると演出が台なしになる
-      if (this.occAcc > 1 / 15 && !this.camCtl.isEvent) {
+      // 遮蔽フェードは追従カメラ中のみ。会話・見せ場は構図側で遮蔽を避ける(透け壁を出さない)
+      if (this.occAcc > 1 / 15 && this.camCtl.isFollow) {
         this.occAcc = 0;
         this.updateOcclusion();
       }
