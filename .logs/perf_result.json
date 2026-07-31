@@ -1,10 +1,10 @@
 {
-  "date": "2026-07-31T00:41:54.681Z",
+  "date": "2026-07-31T03:52:29.495Z",
   "resolution": "1280x720 (DPR上限1.5)",
   "note": "放置計測は3分(10分は実行時間の都合で短縮)。判定対象はc〜i。aのタイトルとjの放置後は参考値(判定外)。dで21時にしたあとは時刻を触らないので、各シナリオのhourに実測時刻を記録している。",
   "load": {
-    "titleMs": 1349,
-    "gameStartMs": 477
+    "titleMs": 1539,
+    "gameStartMs": 707
   },
   "limits": {
     "ftAvg": 18,
@@ -19,21 +19,21 @@
       "label": "タイトル画面",
       "judged": false,
       "hour": null,
-      "ftAvg": 16.71,
-      "ftP95": 18.6,
-      "ftP99": 21.3,
-      "ftMax": 33.4,
-      "ftSamples": 380,
+      "ftAvg": 16.66,
+      "ftP95": 19,
+      "ftP99": 22.3,
+      "ftMax": 27.2,
+      "ftSamples": 377,
       "fpsAvg": 60,
-      "fpsMin": 58,
+      "fpsMin": 60,
       "stats": {
-        "drawCalls": 329,
-        "activeMeshes": 79,
-        "totalMeshes": 141,
-        "materials": 15,
+        "drawCalls": 359,
+        "activeMeshes": 87,
+        "totalMeshes": 151,
+        "materials": 17,
         "textures": 10,
         "particles": 0,
-        "heapMB": 37
+        "heapMB": 45
       }
     },
     {
@@ -41,21 +41,21 @@
       "label": "昼の広場(歩行)",
       "judged": true,
       "hour": 10.3,
-      "ftAvg": 16.66,
-      "ftP95": 18.5,
-      "ftP99": 19.7,
-      "ftMax": 22.4,
-      "ftSamples": 386,
+      "ftAvg": 16.75,
+      "ftP95": 18.6,
+      "ftP99": 20.1,
+      "ftMax": 51.9,
+      "ftSamples": 380,
       "fpsAvg": 60,
-      "fpsMin": 60,
+      "fpsMin": 56,
       "stats": {
-        "drawCalls": 273,
-        "activeMeshes": 50,
-        "totalMeshes": 151,
-        "materials": 21,
+        "drawCalls": 287,
+        "activeMeshes": 49,
+        "totalMeshes": 161,
+        "materials": 23,
         "textures": 19,
         "particles": 0,
-        "heapMB": 49
+        "heapMB": 64
       }
     },
     {
@@ -63,21 +63,21 @@
       "label": "夜の広場",
       "judged": true,
       "hour": 21.3,
-      "ftAvg": 16.68,
-      "ftP95": 19.1,
-      "ftP99": 24.6,
-      "ftMax": 36.6,
-      "ftSamples": 385,
+      "ftAvg": 16.67,
+      "ftP95": 18.7,
+      "ftP99": 19.5,
+      "ftMax": 19.7,
+      "ftSamples": 383,
       "fpsAvg": 60,
       "fpsMin": 60,
       "stats": {
-        "drawCalls": 273,
-        "activeMeshes": 48,
-        "totalMeshes": 151,
-        "materials": 21,
+        "drawCalls": 289,
+        "activeMeshes": 49,
+        "totalMeshes": 161,
+        "materials": 23,
         "textures": 19,
         "particles": 0,
-        "heapMB": 61
+        "heapMB": 58
       }
     },
     {
@@ -85,21 +85,21 @@
       "label": "池(夜)",
       "judged": true,
       "hour": 21.6,
-      "ftAvg": 16.68,
-      "ftP95": 19.3,
-      "ftP99": 22.5,
-      "ftMax": 31,
-      "ftSamples": 387,
+      "ftAvg": 16.66,
+      "ftP95": 18.9,
+      "ftP99": 19.4,
+      "ftMax": 19.9,
+      "ftSamples": 379,
       "fpsAvg": 60,
       "fpsMin": 60,
       "stats": {
-        "drawCalls": 235,
-        "activeMeshes": 28,
-        "totalMeshes": 151,
-        "materials": 21,
+        "drawCalls": 253,
+        "activeMeshes": 31,
+        "totalMeshes": 161,
+        "materials": 23,
         "textures": 19,
         "particles": 0,
-        "heapMB": 61
+        "heapMB": 42
       }
     },
     {
@@ -108,20 +108,20 @@
       "judged": true,
       "hour": 21.9,
       "ftAvg": 16.66,
-      "ftP95": 18.7,
-      "ftP99": 19.9,
-      "ftMax": 28.6,
-      "ftSamples": 381,
+      "ftP95": 18.6,
+      "ftP99": 19.2,
+      "ftMax": 19.4,
+      "ftSamples": 380,
       "fpsAvg": 60,
       "fpsMin": 60,
       "stats": {
-        "drawCalls": 243,
-        "activeMeshes": 33,
-        "totalMeshes": 151,
-        "materials": 21,
+        "drawCalls": 271,
+        "activeMeshes": 41,
+        "totalMeshes": 161,
+        "materials": 23,
         "textures": 19,
         "particles": 0,
-        "heapMB": 59
+        "heapMB": 50
       }
     },
     {
@@ -129,21 +129,21 @@
       "label": "ランタン1個(夜)",
       "judged": true,
       "hour": 22.2,
-      "ftAvg": 16.66,
-      "ftP95": 18,
-      "ftP99": 18.5,
-      "ftMax": 23.1,
+      "ftAvg": 16.67,
+      "ftP95": 18.7,
+      "ftP99": 19.4,
+      "ftMax": 19.9,
       "ftSamples": 380,
       "fpsAvg": 60,
       "fpsMin": 60,
       "stats": {
-        "drawCalls": 267,
+        "drawCalls": 281,
         "activeMeshes": 44,
-        "totalMeshes": 154,
-        "materials": 19,
+        "totalMeshes": 164,
+        "materials": 23,
         "textures": 19,
         "particles": 0,
-        "heapMB": 53
+        "heapMB": 51
       }
     },
     {
@@ -151,21 +151,21 @@
       "label": "ランタン3個(夜)",
       "judged": true,
       "hour": 22.5,
-      "ftAvg": 16.66,
-      "ftP95": 18.5,
-      "ftP99": 19.7,
-      "ftMax": 21,
-      "ftSamples": 379,
+      "ftAvg": 16.67,
+      "ftP95": 18.7,
+      "ftP99": 19.4,
+      "ftMax": 19.5,
+      "ftSamples": 377,
       "fpsAvg": 60,
       "fpsMin": 60,
       "stats": {
-        "drawCalls": 287,
+        "drawCalls": 301,
         "activeMeshes": 50,
-        "totalMeshes": 160,
-        "materials": 19,
+        "totalMeshes": 170,
+        "materials": 23,
         "textures": 19,
         "particles": 0,
-        "heapMB": 52
+        "heapMB": 64
       }
     },
     {
@@ -174,20 +174,20 @@
       "judged": true,
       "hour": 22.5,
       "ftAvg": 16.67,
-      "ftP95": 18.2,
-      "ftP99": 20,
-      "ftMax": 20.2,
-      "ftSamples": 380,
+      "ftP95": 18.7,
+      "ftP99": 19.7,
+      "ftMax": 21,
+      "ftSamples": 379,
       "fpsAvg": 60,
       "fpsMin": 60,
       "stats": {
-        "drawCalls": 334,
-        "activeMeshes": 71,
-        "totalMeshes": 160,
-        "materials": 19,
+        "drawCalls": 354,
+        "activeMeshes": 74,
+        "totalMeshes": 170,
+        "materials": 23,
         "textures": 19,
-        "particles": 50,
-        "heapMB": 47
+        "particles": 42,
+        "heapMB": 65
       }
     },
     {
@@ -196,44 +196,44 @@
       "judged": false,
       "hour": 6,
       "ftAvg": 16.67,
-      "ftP95": 18.7,
-      "ftP99": 19.5,
-      "ftMax": 20.1,
-      "ftSamples": 378,
+      "ftP95": 18.5,
+      "ftP99": 19.1,
+      "ftMax": 20.3,
+      "ftSamples": 379,
       "fpsAvg": 60,
       "fpsMin": 60,
       "stats": {
-        "drawCalls": 285,
-        "activeMeshes": 49,
-        "totalMeshes": 160,
-        "materials": 19,
+        "drawCalls": 301,
+        "activeMeshes": 50,
+        "totalMeshes": 170,
+        "materials": 23,
         "textures": 19,
         "particles": 0,
-        "heapMB": 39
+        "heapMB": 42
       }
     }
   ],
   "idle": {
     "sec": 180,
-    "heapBeforeMB": 47,
-    "heapAfterMB": 40,
-    "growth": 0.85,
+    "heapBeforeMB": 65,
+    "heapAfterMB": 41,
+    "growth": 0.63,
     "trend": [
       {
         "sec": 0,
-        "heapMB": 47
+        "heapMB": 65
       },
       {
         "sec": 30,
-        "heapMB": 66
+        "heapMB": 55
       },
       {
         "sec": 60,
-        "heapMB": 40
+        "heapMB": 41
       },
       {
         "sec": 90,
-        "heapMB": 38
+        "heapMB": 41
       },
       {
         "sec": 120,
@@ -245,7 +245,7 @@
       },
       {
         "sec": 180,
-        "heapMB": 40
+        "heapMB": 41
       }
     ]
   },
