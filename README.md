@@ -75,8 +75,8 @@ tools/
   chargen/         キャラクターGLB生成パイプライン(リグ・アニメ・テクスチャ)
   shot.mjs 等      ヘッドレスEdgeでのスクリーンショット検証ハーネス
 tests/
-  unit/            Vitest(51件: 状態・クラフト・依頼・目標・候補選択・時間・セーブ・採取)
-  e2e/             Playwright(9件: 基本フロー8+デバッグAPI不使用のオンボーディング1)
+  unit/            Vitest(100件: 状態・クラフト・依頼・目標・候補選択・時間・セーブ・採取・配置)
+  e2e/             Playwright(21件: 基本フロー・睡眠・夜釣り・モーダル停止・会話カメラ・オンボーディング)
 ```
 
 - ロジック(systems)はBabylon/DOM非依存でユニットテスト可能
@@ -85,13 +85,14 @@ tests/
 
 ## テスト・検証(3段階)
 
-- **A. ユニット** — `npm run verify` … typecheck + lint + Vitest 70件 + 同形異文字チェック
+- **A. ユニット** — `npm run verify` … typecheck + lint + Vitest 100件 + 同形異文字チェック
 - **B. 決定的リグレッション** — `npm run e2e`(Playwright 21件・システムのEdge)/
   `npm run test:regression`(実キー入力でタイトル→全依頼→開花を通しで実行。進行判断に
   内部状態の読み取りを使うため回帰試験であり、「子どもが遊べた証明」ではない)
 - **C. ブラックボックスUX** — `npm run test:ux` … 画面の目標文・距離・矢印・マーカー・
-  通常キーだけで遊ぶ(内部状態・デバッグAPI不使用)。範囲は最初の依頼の一巡。
-  子ども向けUXの最終判定は人間によるブラインドプレイテスト(`.logs/usability_test_report.md`)
+  通常キーだけで遊ぶ(内部状態・デバッグAPI不使用)。範囲はタイトル→初クラフト→初家具配置
+  (v4で273秒・エラー0の完走実績。`.logs/ux_result.json`)。
+  子ども向けUXの最終判定は人間によるブラインドプレイテスト(`.logs/usability_test_report.md`・未実施)
 - 性能 — `npm run test:performance`(結果: `.logs/performance_report.md`)
 - 実測記録: `.logs/playtest_report.md`(回帰ボット) / `.logs/ux_result.json`(UXボット)
 
