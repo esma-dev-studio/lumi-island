@@ -290,6 +290,11 @@ export class GameScene {
       if (p && !p.hidden) return { x: p.x, z: p.z, isNpc: true };
       return null;
     }
+    // 採取目標: エリア中心ではなく「最寄りの未採取ノード」を指す(採取済みを指し続けない)
+    if (o.gatherItem) {
+      const n = this.inter.nearestActiveNodeForItem(o.gatherItem, this.player.x, this.player.z);
+      if (n) return { x: n.x, z: n.z, isNpc: false };
+    }
     if (o.target.kind === 'poi' && o.target.id) {
       const poi = POIS[o.target.id];
       if (poi) return { x: poi.x, z: poi.z, isNpc: false };
@@ -538,6 +543,7 @@ export class GameScene {
   }
 
   dispose(): void {
+    this.inter.cancelAction(); // 採取中に破棄されても、あとから素材が入ったり破棄済みMeshを触ったりしない
     for (const h of this.keyHandlers) h();
   }
 }

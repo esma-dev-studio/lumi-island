@@ -20,6 +20,24 @@
 | 夜間FPS低下(32〜40台) | 光だまり共有化+DOM dirty更新+毎フレーム生成除去 → 夜間も平均・最低60FPS(performance_report) |
 | テストの過大評価 | 3段階化: Unit70 / 決定的回帰(E2E21+回帰ボット) / ブラックボックスUXボット+人間テスト(未実施はNOT TESTEDと明記) |
 
+## v4時点の補足(2026-07-31)— 上表の読み方の訂正
+
+上表は「v3で何を実装したか」の記録であり、**品質判定ではない**。
+判定は `.logs/dod_check.md` のv3表(Automated Test / Visual Review / Human Usability Test の
+3軸 × PASS / FAIL / NOT TESTED)が正。実測との差が出た点を明記する。
+
+- **睡眠(2・3行目)**: 状態機械化と多重実行防止は実装済み・テスト済みで有効。ただしv4では
+  睡眠を**補助機能**(自由探索・時間調整)と位置づけ、メイン進行の必須要素としない。
+  依頼中のNPCは questCritical で常に対応可能なため、v3最終回帰(11分34秒)は**睡眠0回**で完走した。
+  「ベッドでねよう」への切替は補助導線として維持する。
+- **UX(最終行)**: 3段階化は完了しているが、UXボットの実績は**「最初の依頼受注まで12〜29秒は
+  3走とも安定達成/木材採取は最良4/5で完走せず」**。UXが改善**済み**とは書かない(v4で導線改善中)。
+- **人間テスト**: v2・v3・v4とも**未実施(NOT TESTED)**。手順書のみ準備済み。
+- **種族判別・開花(下から3・6行目)**: スクリーンショットによる**自己評価PASS**であり第三者評価ではない。
+  v4で再判定予定。
+- **GameSceneの行数**: 下のv2表にある「全ファイル約400行以下」は現在**未達**。
+  `src/scenes/GameScene.ts` は **549行**(2026-07-31 `wc -l` 実測)。v4 P2-1で400行以下へ再分割予定。
+
 ---
 
 # レビュー用メモ(v2)
@@ -57,7 +75,7 @@ TypeScript + Vite + Babylon.js。キャラクター・環境・音はすべて�
 | 毎フレーム負荷 | 色は起動時パース+参照再利用、DayNight/遮蔽/風は12〜15Hz、DPR上限1.5 |
 | E2Eがデバッグ頼み | `tests/e2e/onboarding.spec.ts`(実キーのみ)+実プレイボット(`tools/playtest_bot.mjs`) |
 | (ボットが発見)ツリザオ材料の案内が飛ぶ | クサツルにはカマ(木2+石1)が必要だが目標が案内せず詰まる → ObjectiveSystemに「カマの材料→カマを作る」段階を追加+ユニットテスト |
-| 400行超ファイル | flora(593)→flora+deco / GameScene(565)→GameScene+SequenceDirector+InteractionRouting に分割(全ファイル約400行以下) |
+| 400行超ファイル | flora(593)→flora+deco / GameScene(565)→GameScene+SequenceDirector+InteractionRouting に分割(**当時**は全ファイル約400行以下。→ v3の追加実装で GameScene が再び549行に。上の「v4時点の補足」参照) |
 
 ## 構成の要点
 - `src/systems/` … 純ロジック(Objective/Tutorial/Resolver/Quest/Craft/Gather/Save 等。Vitest 51件)

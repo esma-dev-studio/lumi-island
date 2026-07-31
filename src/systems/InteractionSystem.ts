@@ -4,6 +4,8 @@ import type { IslandScene, GatherNodeRuntime } from '../scenes/IslandScene';
 import type { GameState } from '../game/GameState';
 import { invAdd } from '../game/GameState';
 import { GATHER_RULES, canGather, gatherAmount } from './GatherSystem';
+import type { ItemId } from '../data/items';
+import type { NodeKind } from '../data/island';
 import type { PlayerController } from './PlayerController';
 import type { CharacterView } from '../characters/CharacterView';
 import { toast } from '../ui/Toast';
@@ -29,6 +31,16 @@ interface Shake {
   t: number;
 }
 
+/** 進行中の採取動作。時間はupdate(dt)でのみ進む(タイマーは使わない) */
+interface GatherAction {
+  node: GatherNodeRuntime;
+  state: 'windup' | 'recovery'; // ヒット前/ヒット後
+  elapsed: number; // 秒。ポーズ・モーダル中はupdateが呼ばれないので自動で止まる
+  rewarded: boolean; // ヒット確定済み(素材付与は1回だけ)
+  hitAt: number; // ヒット確定の時刻
+  endAt: number; // 動作終了の時刻
+}
+
 export interface Hint {
   text: string;
   ok: boolean;
@@ -38,6 +50,9 @@ export class InteractionSystem {
   private nodeStates = new Map<string, NodeState>();
   private tweens: Tween[] = [];
   private shakes: Shake[] = [];
+  private action: GatherAction | null = null;
+  private activePlayer: PlayerController | null = null;
+  private activeView: CharacterView | null = null;
   currentNode: GatherNodeRuntime | null = null;
   hint: Hint | null = null;
   busy = false;
@@ -55,6 +70,17 @@ export class InteractionSystem {
   }
 
   update(dt: number, px: number, pz: number): void {
+    // 採取動作の進行。updateでしか進まないので、ポーズ・モーダル中・シーン破棄後には確定しない
+    if (this.action) {
+      const a = this.action;
+      a.elapsed += dt;
+      if (!a.rewarded && a.elapsed >= a.hitAt) {
+        a.rewarded = true;
+        a.state = 'recovery';
+        this.applyHit(a.node);
+      }
+      if (a.elapsed >= a.endAt) this.endAction();
+    }
     // リスポーン処理
     const now = this.absHour();
     for (const [id, st] of this.nodeStates) {
@@ -111,6 +137,34 @@ export class InteractionSystem {
     }
   }
 
+  /**
+   * 目的マーカー用: 指定素材が採れる「最寄りの未採取ノード」の位置。
+   * 全部枯れていればnull(呼び出し側はエリアPOIへフォールバック)。
+   * 矢印・距離が採取済みノードやエリア中心ではなく、次に採るべき実物を指すようにする。
+   */
+  nearestActiveNodeForItem(item: ItemId, px: number, pz: number): { x: number; z: number } | null {
+    let kind: NodeKind | null = null;
+    for (const [k, rule] of Object.entries(GATHER_RULES)) {
+      if (rule.item === item) {
+        kind = k as NodeKind;
+        break;
+      }
+    }
+    if (!kind) return null;
+    let best: GatherNodeRuntime | null = null;
+    let bestD = Infinity;
+    for (const node of this.island.nodes.values()) {
+      if (node.def.kind !== kind) continue;
+      if (this.nodeStates.get(node.def.id)?.depleted) continue;
+      const d = Math.hypot(px - node.def.x, pz - node.def.z);
+      if (d < bestD) {
+        bestD = d;
+        best = node;
+      }
+    }
+    return best ? { x: best.def.x, z: best.def.z } : null;
+  }
+
   /** Eキー: 採取を試みる。処理したらtrue */
   tryGather(player: PlayerController, view: CharacterView): boolean {
     const node = this.currentNode;
@@ -122,32 +176,56 @@ export class InteractionSystem {
     }
     const rule = GATHER_RULES[node.def.kind];
     this.busy = true;
+    this.activePlayer = player;
+    this.activeView = view;
+    // 確定・終了はupdate側で判定する(アニメのonEndやタイマーには任せない)
+    this.action = {
+      node,
+      state: 'windup',
+      elapsed: 0,
+      rewarded: false,
+      hitAt: rule.anim === 'interact' ? 0.48 : 0.62,
+      endAt: rule.anim === 'interact' ? 1.0 : 1.2,
+    };
     player.locked = true;
     player.face(node.def.x, node.def.z);
-    view.play(rule.anim, {
-      onEnd: () => {
-        this.busy = false;
-        player.locked = false;
-      },
-    });
-    // ヒットのタイミングで採取を確定
-    setTimeout(() => {
-      const kindSfx = { tree: 'chop', rock: 'mine', grass: 'sickle', berry: 'pickup', moss: 'pickup', ore: 'mine' } as const;
-      sfx(kindSfx[node.def.kind]);
-      // ヒット演出: 対象のゆれ+素材の粒+アイテムがプレイヤーへ飛ぶ
-      this.shakes.push({ mesh: node.root, t: 0 });
-      const hitY = node.y + (node.def.kind === 'tree' || node.def.kind === 'berry' ? 1.6 : 0.5);
-      burst(node.def.x, hitY, node.def.z, node.def.kind, node.def.kind === 'tree' ? 12 : 8);
-      flyItem(node.def.x, hitY - 0.3, node.def.z);
-      this.onHit?.();
-      const n = gatherAmount(node.def.kind, this.debug);
-      invAdd(this.state, rule.item, n);
-      toast(`+${n} ${ITEMS[rule.item].name}`, rule.item);
-      const st: NodeState = { depleted: true, respawnAt: this.absHour() + rule.respawnHours };
-      this.nodeStates.set(node.def.id, st);
-      this.depleteVisual(node);
-    }, rule.anim === 'interact' ? 480 : 620);
+    view.play(rule.anim);
     return true;
+  }
+
+  /** 採取を中断する(シーン破棄・タイトルへ戻るとき)。ヒット前なら素材は入らない */
+  cancelAction(): void {
+    if (!this.action) return;
+    this.endAction();
+  }
+
+  /** 動作を終えて操作を返す。素材付与はしない(付与はapplyHitのみ) */
+  private endAction(): void {
+    this.action = null;
+    this.busy = false;
+    if (this.activePlayer) this.activePlayer.locked = false;
+    this.activeView?.play('idle'); // walk/run への復帰はPlayerController.updateが行う
+    this.activePlayer = null;
+    this.activeView = null;
+  }
+
+  /** ヒット確定: 効果音・演出・素材付与・ノードを枯れさせる(1回のみ呼ばれる) */
+  private applyHit(node: GatherNodeRuntime): void {
+    const rule = GATHER_RULES[node.def.kind];
+    const kindSfx = { tree: 'chop', rock: 'mine', grass: 'sickle', berry: 'pickup', moss: 'pickup', ore: 'mine' } as const;
+    sfx(kindSfx[node.def.kind]);
+    // ヒット演出: 対象のゆれ+素材の粒+アイテムがプレイヤーへ飛ぶ
+    this.shakes.push({ mesh: node.root, t: 0 });
+    const hitY = node.y + (node.def.kind === 'tree' || node.def.kind === 'berry' ? 1.6 : 0.5);
+    burst(node.def.x, hitY, node.def.z, node.def.kind, node.def.kind === 'tree' ? 12 : 8);
+    flyItem(node.def.x, hitY - 0.3, node.def.z);
+    this.onHit?.();
+    const n = gatherAmount(node.def.kind, this.debug);
+    invAdd(this.state, rule.item, n);
+    toast(`+${n} ${ITEMS[rule.item].name}`, rule.item);
+    const st: NodeState = { depleted: true, respawnAt: this.absHour() + rule.respawnHours };
+    this.nodeStates.set(node.def.id, st);
+    this.depleteVisual(node);
   }
 
   private depleteVisual(node: GatherNodeRuntime): void {

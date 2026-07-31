@@ -37,14 +37,17 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
 
   const cands: InteractionCandidate[] = [];
   const px = gs.player.x, pz = gs.player.z;
-  // NPC(依頼が進むNPCは優先度を上げる)
+  // NPC: 受注できる/報告できるときだけ最優先。進行中(話しても進まない)は採取より下げる。
+  // ※これを最優先のままにすると、鉱石のそばに立つノクトが採取のEを毎回横取りして
+  //   依頼が進まない(実測399秒の主因)
   const npc = gs.npcs.nearest(px, pz);
   if (npc) {
     const rt = npc as unknown as { def: { id: string; name: string }; x: number; z: number };
-    const hasQuest = questFor(gs.state, rt.def.id) !== null;
+    const q = questFor(gs.state, rt.def.id);
+    const actionable = q !== null && (q.mode === 'offer' || q.mode === 'done');
     cands.push({
       id: `npc_${rt.def.id}`,
-      priority: hasQuest ? PRIORITY.npcQuest : PRIORITY.npc,
+      priority: actionable ? PRIORITY.npcQuest : PRIORITY.gather + 5,
       distance: Math.hypot(px - rt.x, pz - rt.z),
       enabled: true,
       hint: `<kbd>E</kbd>${rt.def.name}と はなす`,

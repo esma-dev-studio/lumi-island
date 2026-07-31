@@ -1,25 +1,262 @@
 {
-  "date": "2026-07-30T11:53:23.561Z",
+  "date": "2026-07-31T00:41:54.681Z",
   "resolution": "1280x720 (DPR上限1.5)",
-  "day": {
-    "avg": 59,
-    "min": 46,
-    "p5": 58
+  "note": "放置計測は3分(10分は実行時間の都合で短縮)。判定対象はc〜i。aのタイトルとjの放置後は参考値(判定外)。dで21時にしたあとは時刻を触らないので、各シナリオのhourに実測時刻を記録している。",
+  "load": {
+    "titleMs": 1349,
+    "gameStartMs": 477
   },
-  "night": {
-    "avg": 60,
-    "min": 60,
-    "p5": 60
+  "limits": {
+    "ftAvg": 18,
+    "ftP95": 25,
+    "ftP99": 35,
+    "bloomFtMax": 1000,
+    "heapGrowth": 1.15
   },
-  "nightAfter40s": {
-    "avg": 60,
-    "min": 60,
-    "p5": 60
+  "scenarios": [
+    {
+      "id": "a",
+      "label": "タイトル画面",
+      "judged": false,
+      "hour": null,
+      "ftAvg": 16.71,
+      "ftP95": 18.6,
+      "ftP99": 21.3,
+      "ftMax": 33.4,
+      "ftSamples": 380,
+      "fpsAvg": 60,
+      "fpsMin": 58,
+      "stats": {
+        "drawCalls": 329,
+        "activeMeshes": 79,
+        "totalMeshes": 141,
+        "materials": 15,
+        "textures": 10,
+        "particles": 0,
+        "heapMB": 37
+      }
+    },
+    {
+      "id": "c",
+      "label": "昼の広場(歩行)",
+      "judged": true,
+      "hour": 10.3,
+      "ftAvg": 16.66,
+      "ftP95": 18.5,
+      "ftP99": 19.7,
+      "ftMax": 22.4,
+      "ftSamples": 386,
+      "fpsAvg": 60,
+      "fpsMin": 60,
+      "stats": {
+        "drawCalls": 273,
+        "activeMeshes": 50,
+        "totalMeshes": 151,
+        "materials": 21,
+        "textures": 19,
+        "particles": 0,
+        "heapMB": 49
+      }
+    },
+    {
+      "id": "d",
+      "label": "夜の広場",
+      "judged": true,
+      "hour": 21.3,
+      "ftAvg": 16.68,
+      "ftP95": 19.1,
+      "ftP99": 24.6,
+      "ftMax": 36.6,
+      "ftSamples": 385,
+      "fpsAvg": 60,
+      "fpsMin": 60,
+      "stats": {
+        "drawCalls": 273,
+        "activeMeshes": 48,
+        "totalMeshes": 151,
+        "materials": 21,
+        "textures": 19,
+        "particles": 0,
+        "heapMB": 61
+      }
+    },
+    {
+      "id": "e",
+      "label": "池(夜)",
+      "judged": true,
+      "hour": 21.6,
+      "ftAvg": 16.68,
+      "ftP95": 19.3,
+      "ftP99": 22.5,
+      "ftMax": 31,
+      "ftSamples": 387,
+      "fpsAvg": 60,
+      "fpsMin": 60,
+      "stats": {
+        "drawCalls": 235,
+        "activeMeshes": 28,
+        "totalMeshes": 151,
+        "materials": 21,
+        "textures": 19,
+        "particles": 0,
+        "heapMB": 61
+      }
+    },
+    {
+      "id": "f",
+      "label": "高台(夜)",
+      "judged": true,
+      "hour": 21.9,
+      "ftAvg": 16.66,
+      "ftP95": 18.7,
+      "ftP99": 19.9,
+      "ftMax": 28.6,
+      "ftSamples": 381,
+      "fpsAvg": 60,
+      "fpsMin": 60,
+      "stats": {
+        "drawCalls": 243,
+        "activeMeshes": 33,
+        "totalMeshes": 151,
+        "materials": 21,
+        "textures": 19,
+        "particles": 0,
+        "heapMB": 59
+      }
+    },
+    {
+      "id": "g",
+      "label": "ランタン1個(夜)",
+      "judged": true,
+      "hour": 22.2,
+      "ftAvg": 16.66,
+      "ftP95": 18,
+      "ftP99": 18.5,
+      "ftMax": 23.1,
+      "ftSamples": 380,
+      "fpsAvg": 60,
+      "fpsMin": 60,
+      "stats": {
+        "drawCalls": 267,
+        "activeMeshes": 44,
+        "totalMeshes": 154,
+        "materials": 19,
+        "textures": 19,
+        "particles": 0,
+        "heapMB": 53
+      }
+    },
+    {
+      "id": "h",
+      "label": "ランタン3個(夜)",
+      "judged": true,
+      "hour": 22.5,
+      "ftAvg": 16.66,
+      "ftP95": 18.5,
+      "ftP99": 19.7,
+      "ftMax": 21,
+      "ftSamples": 379,
+      "fpsAvg": 60,
+      "fpsMin": 60,
+      "stats": {
+        "drawCalls": 287,
+        "activeMeshes": 50,
+        "totalMeshes": 160,
+        "materials": 19,
+        "textures": 19,
+        "particles": 0,
+        "heapMB": 52
+      }
+    },
+    {
+      "id": "i",
+      "label": "開花演出中",
+      "judged": true,
+      "hour": 22.5,
+      "ftAvg": 16.67,
+      "ftP95": 18.2,
+      "ftP99": 20,
+      "ftMax": 20.2,
+      "ftSamples": 380,
+      "fpsAvg": 60,
+      "fpsMin": 60,
+      "stats": {
+        "drawCalls": 334,
+        "activeMeshes": 71,
+        "totalMeshes": 160,
+        "materials": 19,
+        "textures": 19,
+        "particles": 50,
+        "heapMB": 47
+      }
+    },
+    {
+      "id": "j",
+      "label": "3分放置後",
+      "judged": false,
+      "hour": 6,
+      "ftAvg": 16.67,
+      "ftP95": 18.7,
+      "ftP99": 19.5,
+      "ftMax": 20.1,
+      "ftSamples": 378,
+      "fpsAvg": 60,
+      "fpsMin": 60,
+      "stats": {
+        "drawCalls": 285,
+        "activeMeshes": 49,
+        "totalMeshes": 160,
+        "materials": 19,
+        "textures": 19,
+        "particles": 0,
+        "heapMB": 39
+      }
+    }
+  ],
+  "idle": {
+    "sec": 180,
+    "heapBeforeMB": 47,
+    "heapAfterMB": 40,
+    "growth": 0.85,
+    "trend": [
+      {
+        "sec": 0,
+        "heapMB": 47
+      },
+      {
+        "sec": 30,
+        "heapMB": 66
+      },
+      {
+        "sec": 60,
+        "heapMB": 40
+      },
+      {
+        "sec": 90,
+        "heapMB": 38
+      },
+      {
+        "sec": 120,
+        "heapMB": 40
+      },
+      {
+        "sec": 150,
+        "heapMB": 39
+      },
+      {
+        "sec": 180,
+        "heapMB": 40
+      }
+    ]
   },
   "errors": 0,
-  "targets": {
-    "dayAvg": 55,
-    "nightMin": 45
+  "errorSamples": [],
+  "checks": {
+    "frameTime": true,
+    "failedScenarios": [],
+    "heap": true,
+    "bloomFtMax": true,
+    "noConsoleErrors": true
   },
   "pass": true
 }

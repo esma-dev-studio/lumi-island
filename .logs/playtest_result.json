@@ -1,33 +1,33 @@
 {
   "completed": true,
-  "totalSec": 694,
+  "totalSec": 329,
   "timeline": [
     {
-      "sec": 5,
+      "sec": 4,
       "label": "タイトル表示"
     },
     {
-      "sec": 6,
+      "sec": 4,
       "label": "ゲーム開始(新規)"
     },
     {
-      "sec": 7,
+      "sec": 5,
       "label": "目標: tut_move"
     },
     {
-      "sec": 8,
+      "sec": 7,
       "label": "目標: q_wood_offer"
     },
     {
-      "sec": 10,
+      "sec": 9,
       "label": "目標: q_wood_gather"
     },
     {
-      "sec": 19,
+      "sec": 18,
       "label": "はじめての採取"
     },
     {
-      "sec": 31,
+      "sec": 29,
       "label": "目標: q_wood_report"
     },
     {
@@ -35,132 +35,132 @@
       "label": "はじめての夜(発光を確認)"
     },
     {
-      "sec": 47,
+      "sec": 46,
       "label": "目標: q_fish_offer"
     },
     {
-      "sec": 61,
+      "sec": 58,
       "label": "目標: q_fish_mats_wood"
     },
     {
-      "sec": 87,
+      "sec": 63,
       "label": "目標: q_fish_mats_stone"
     },
     {
-      "sec": 91,
+      "sec": 68,
       "label": "目標: q_fish_craft_r_sickle"
     },
     {
-      "sec": 93,
+      "sec": 69,
       "label": "はじめてのクラフト"
     },
     {
-      "sec": 93,
+      "sec": 69,
       "label": "目標: q_fish_mats_wood"
     },
     {
-      "sec": 106,
+      "sec": 90,
       "label": "目標: q_fish_mats_fiber"
     },
     {
-      "sec": 115,
+      "sec": 98,
       "label": "目標: q_fish_craft_r_rod"
     },
     {
-      "sec": 116,
+      "sec": 100,
       "label": "目標: q_fish_fish"
     },
     {
-      "sec": 136,
+      "sec": 119,
       "label": "目標: q_fish_report"
     },
     {
-      "sec": 160,
+      "sec": 144,
       "label": "目標: q_ore_offer"
     },
     {
-      "sec": 175,
+      "sec": 157,
       "label": "目標: q_ore_gather"
     },
     {
-      "sec": 574,
+      "sec": 170,
       "label": "目標: q_ore_report"
     },
     {
-      "sec": 576,
+      "sec": 174,
       "label": "目標: q_lantern_offer"
     },
     {
-      "sec": 589,
+      "sec": 187,
       "label": "目標: q_lantern_mats_moss"
     },
     {
-      "sec": 603,
+      "sec": 206,
       "label": "目標: q_lantern_craft_r_lantern"
     },
     {
-      "sec": 605,
+      "sec": 207,
       "label": "目標: q_lantern_place"
     },
     {
-      "sec": 617,
+      "sec": 223,
       "label": "はじめての家具配置"
     },
     {
-      "sec": 617,
+      "sec": 223,
       "label": "目標: q_lantern_report"
     },
     {
-      "sec": 621,
+      "sec": 228,
       "label": "目標: q_lumi_offer"
     },
     {
-      "sec": 622,
+      "sec": 230,
       "label": "目標: q_lumi_mats_stone"
     },
     {
-      "sec": 630,
+      "sec": 242,
       "label": "目標: q_lumi_mats_ore"
     },
     {
-      "sec": 637,
+      "sec": 263,
       "label": "目標: q_lumi_craft_r_stonelamp"
     },
     {
-      "sec": 638,
+      "sec": 265,
       "label": "目標: q_lumi_place"
     },
     {
-      "sec": 651,
-      "label": "目標: q_lumi_mats_wood"
+      "sec": 288,
+      "label": "目標: q_lumi_mats_stone"
     },
     {
-      "sec": 660,
-      "label": "目標: q_lumi_mats_moss"
+      "sec": 298,
+      "label": "目標: q_lumi_mats_ore"
     },
     {
-      "sec": 676,
-      "label": "目標: q_lumi_craft_r_lantern"
+      "sec": 309,
+      "label": "目標: q_lumi_craft_r_stonelamp"
     },
     {
-      "sec": 677,
+      "sec": 310,
       "label": "目標: q_lumi_place"
     },
     {
-      "sec": 689,
+      "sec": 324,
       "label": "目標: q_lumi_report"
     },
     {
-      "sec": 694,
+      "sec": 329,
       "label": "目標: free"
     },
     {
-      "sec": 694,
+      "sec": 329,
       "label": "ルミの木 開花!"
     },
     {
-      "sec": 694,
-      "label": "終了(11分34秒)"
+      "sec": 329,
+      "label": "終了(5分29秒)"
     }
   ],
   "errors": 0,
@@ -168,49 +168,25 @@
   "fps": [
     60,
     60,
+    60,
+    60,
+    60,
+    60,
+    60,
+    60,
+    60,
+    60,
+    60,
+    60,
+    37,
+    38,
+    36,
+    38,
+    42,
+    32,
+    38,
     35,
-    28,
-    29,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60
+    38
   ],
   "quests": {
     "q_wood": "done",

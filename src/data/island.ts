@@ -24,6 +24,15 @@ export const POIS: Record<string, POI> = {
   bed: { id: 'bed', name: 'おうちのベッド', x: -30.9, z: 6.7 }, // ミオの家のドア前(ねる場所)
 };
 
+// 建物の入口(家具で塞げない)
+// 建物のPOI座標とrotY(向き)から求めたドア前の立ち位置。NPCの出入りと就寝導線を守るため配置禁止。
+export const ENTRANCES: { x: number; z: number }[] = [
+  { x: -30.9, z: 6.7 }, // ミオの家のドア前(POIS.bedと同じ)
+  { x: 29.7, z: 14.5 }, // ミナモの小屋のドア前
+  { x: 22.3, z: -33.1 }, // ノクトの家のドア前
+  { x: -4.6, z: 0.6 }, // ツムギ工房のカウンター前
+];
+
 // 道(ポリライン)。地形の頂点色と平滑化に使う
 export const PATHS: [number, number][][] = [
   [[0, 3], [0, 20], [-2, 32], [-4, 42], [4, 47]], // 広場→浜→桟橋
@@ -106,7 +115,8 @@ export const NPC_SPOTS: Record<string, Record<string, { x: number; z: number; ro
   },
   nokto: {
     home: { x: 22.3, z: -33.1, rotY: -0.5 }, // 家のドア前
-    hill: { x: 30, z: -26, rotY: -0.6 },
+    // 鉱石帯(32,-24 / 30,-21)から4m以上離す。近いと採取のEを会話が横取りする(399秒問題)
+    hill: { x: 26.2, z: -23.2, rotY: -0.6 },
     tree: { x: 1.5, z: -5.5 },
     forest: { x: -2, z: -30 },
   },
