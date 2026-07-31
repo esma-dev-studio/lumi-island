@@ -63,6 +63,7 @@ export function buildHair(rig, spec) {
 }
 
 // ---------- 丸耳(カワウソ) ----------
+// 頭頂に立てず、頭の横のやや下寄りに小さく丸い耳を貼る。
 export function buildRoundEars(rig, spec) {
   const H = rig.prop.height;
   const e = spec.ears; // {thetaDeg, phiDeg, r, tilt}
@@ -80,7 +81,8 @@ export function buildRoundEars(rig, spec) {
   });
   rotateMeshX(ear, d2r(-14));
   rotateMeshZ(ear, d2r(-(e.tilt ?? 38)));
-  translateMesh(ear, add(s.p, [e.r * 0.24, e.r * 0.32, 0]));
+  // 上ではなく外へ寄せる(頭の横に付いて見えるように)
+  translateMesh(ear, add(s.p, [e.r * 0.34, e.r * 0.1, 0]));
   const earR = mirrorX(ear, makeMirrorRemap(rig));
   return { earL: ear, earR, H };
 }
@@ -142,9 +144,19 @@ export function applyMuzzle(headMesh, rig, spec) {
   if (kind === 'human') {
     bump(headMesh, [0, c[1] - hs.rx * 0.1, front * 0.98], 0.03 * H, 0.009 * H, [0, 0.1, 1]);
   } else if (kind === 'otter') {
-    // カワウソ: 丸みのある大きめのマズル
-    bump(headMesh, [0, c[1] - hs.rx * 0.26, front * 0.94], 0.095 * H, 0.042 * H, [0, -0.1, 1]);
-    bump(headMesh, [0, c[1] - hs.rx * 0.08, front * 0.97], 0.036 * H, 0.013 * H, [0, 0.25, 1]); // 鼻
+    // カワウソ: 縦に尖らせず、横に広い平たいマズル。
+    // 左右に並べたふくらみを重ねて「幅のある鼻先」にする(単発の球バンプだと丸い口先になる)。
+    const mouthY = hs.yBottom + (hs.yTop - hs.yBottom) * (spec.face?.mouthT ?? 0.22);
+    const spread = hs.rx * 0.42;
+    for (const s of [-1, -0.5, 0, 0.5, 1]) {
+      const fall = 1 - 0.34 * s * s; // 端はひかえめにして角を作らない
+      bump(headMesh, [s * spread, mouthY + 0.016, front * 0.93], 0.072 * H, 0.031 * H * fall, [s * 0.6, -0.08, 1]);
+    }
+    // ほおのふくらみ(正面から見える明るい面を広げる)
+    for (const s of [-1, 1]) {
+      bump(headMesh, [s * hs.rx * 0.64, mouthY + 0.052, front * 0.7], 0.078 * H, 0.017 * H, [s * 0.92, -0.08, 0.42]);
+    }
+    bump(headMesh, [0, mouthY + 0.045, front * 0.965], 0.045 * H, 0.019 * H, [0, 0.15, 1]); // 大きめの丸い鼻
   } else if (kind === 'goat') {
     // ヤギ: 長めのマズル+鼻すじ
     bump(headMesh, [0, c[1] - hs.rx * 0.28, front * 0.92], 0.105 * H, 0.058 * H, [0, -0.28, 1]);
@@ -216,18 +228,21 @@ export function buildGoatHorns(rig, spec) {
 // ---------- 尻尾 ----------
 export function buildTailThick(rig, spec) {
   const t1 = rig.world.tail1;
-  const p = spec.tail; // {len, r}
+  const p = spec.tail; // {len, r, sway}
+  // sway: 横へのS字カーブ。胴の輪郭より外へふくらませて正面からも尾が見えるようにする
+  const sw = p.sway ?? 0;
   const path = [
     [t1[0], t1[1] + 0.01, t1[2] + 0.02],
-    [t1[0], t1[1] - 0.03, t1[2] - p.len * 0.4],
-    [t1[0], t1[1] - 0.045, t1[2] - p.len * 0.8],
-    [t1[0], t1[1] - 0.03, t1[2] - p.len * 1.05],
+    [t1[0] + sw * 0.42, t1[1] - 0.03, t1[2] - p.len * 0.4],
+    [t1[0] + sw, t1[1] - 0.045, t1[2] - p.len * 0.78],
+    [t1[0] + sw * 0.84, t1[1] - 0.012, t1[2] - p.len * 0.98],
   ];
   const t1i = rig.index.tail1, t2i = rig.index.tail2, hipsI = rig.index.hips;
   return tube({
     path, steps: 10, seg: 10,
-    radiusFn: (t) => p.r * keys([[0, 0.75], [0.25, 1], [0.6, 0.8], [1, 0.28]])(t),
-    ellipseFn: (t) => [1, 0.72 + 0.2 * (1 - t)], // 平たいカワウソ尾
+    // 根元を太いまま保ち、先へ向かってゆるく細る(カワウソの太い尾)
+    radiusFn: (t) => p.r * keys([[0, 1], [0.24, 1], [0.5, 0.88], [0.76, 0.64], [1, 0.32]])(t),
+    ellipseFn: (t) => [1, 0.8 + 0.15 * (1 - t)], // 少し平たいカワウソ尾
     uvRegion: REG.tail.tb,
     weightFn: (pp, t) => {
       if (t < 0.15) return duo(hipsI, t1i, 0.5);

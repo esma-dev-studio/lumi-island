@@ -71,6 +71,13 @@ export class WorldMarkerController {
 
   private proj = { sx: 0, sy: 0, behind: false };
 
+  /** 会話・達成バナー・見せ場の最中: 誘導(矢印・光の柱・頭上マーカー)をすべて消す */
+  hideAll(): void {
+    this.beacon.setEnabled(false);
+    this.arrowEl.classList.add('hidden');
+    for (const el of this.npcEls.values()) el.classList.add('hidden');
+  }
+
   update(
     targetPos: { x: number; z: number } | null,
     targetIsNpc: boolean,

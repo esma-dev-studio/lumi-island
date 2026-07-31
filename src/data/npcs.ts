@@ -101,7 +101,7 @@ export const NPCS: NpcDef[] = [
 export const NPC_BY_ID = Object.fromEntries(NPCS.map((n) => [n.id, n]));
 
 // ツムギの家=工房(homeスポットはshopと同じ建物の裏手)
-export function npcSpot(npcId: string, key: string): { x: number; z: number; rotY?: number } {
+export function npcSpot(npcId: string, key: string): { x: number; z: number; rotY?: number; wanderR?: number } {
   const spots = NPC_SPOTS[npcId];
   if (key === 'home' && !spots.home) return spots[Object.keys(spots)[0]];
   return spots[key] ?? spots[Object.keys(spots)[0]];

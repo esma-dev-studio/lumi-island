@@ -72,23 +72,39 @@ export function paintTexture(spec) {
     const [nx, ny] = headPx(spec, 0, mouthY + 0.02);
     tex.ellipse(nx, ny, 3, 2, shade(P.skin, 0.9), 0.5);
   } else if (sp === 'minamo') {
-    // クリーム色のマズル〜ほほ(カワウソらしい明るい口元)
-    const [cx0, cy0] = headPx(spec, 0, mouthY + 0.012);
-    tex.ellipse(cx0, cy0, 52, 36, P.furLight);
-    tex.ellipse(cx0 - 30, cy0 - 4, 16, 14, P.furLight, 0.85);
-    tex.ellipse(cx0 + 30, cy0 - 4, 16, 14, P.furLight, 0.85);
+    // 頭頂〜額は濃い毛色。境目の線が出ないようグラデーションで下の明るい面へつなぐ
+    tex.vgrad(hp.x, hp.y, hp.w, Math.round(hp.h * 0.34), shade(P.fur, 0.86), P.fur);
+    // クリーム色をマズルからほお・あごまで広げる(正面から見える明るい面を増やす)
+    const [cx0, cy0] = headPx(spec, 0, mouthY + 0.024);
+    tex.ellipse(cx0, cy0, 56, 40, P.furLight); // 口・鼻まわり
+    tex.ellipse(cx0, cy0 + 24, 42, 24, P.furLight); // あご〜のど
+    for (const sx of [-1, 1]) {
+      const [chx, chy] = headPx(spec, sx * 40, mouthY + 0.046);
+      tex.ellipse(chx, chy, 29, 27, P.furLight); // ほお
+      const [ohx, ohy] = headPx(spec, sx * 63, mouthY + 0.028);
+      tex.ellipse(ohx, ohy, 19, 21, P.furLight, 0.85); // ほおの外側(ぼかし)
+    }
+    // 目のまわりもクリーム色にして、目のクアッドの四角い継ぎ目を出さない
+    for (const sx of [-1, 1]) {
+      const [ex, ey] = headPx(spec, sx * spec.eye.thetaDeg, eyeY);
+      tex.ellipse(ex, ey, 27, 25, P.furLight);
+    }
+    // 鼻(大きめの丸)と口
     const [nx, ny] = headPx(spec, 0, mouthY + 0.045);
-    tex.ellipse(nx, ny, 9.5, 6.5, P.nose); // 大きめの鼻
-    tex.bezier(cx0 - 9, cy0 + 9, cx0, cy0 + 14, cx0 + 9, cy0 + 9, 2.2, shade(P.fur, 0.7)); // 口
+    tex.ellipse(nx, ny + 1.5, 13.5, 9.5, shade(P.fur, 0.7), 0.75); // 鼻の下の影
+    tex.ellipse(nx, ny, 12.5, 8.5, P.nose);
+    tex.ellipse(nx - 4.5, ny - 3, 3.6, 2.3, shade(P.nose, 1.6), 0.6); // 鼻のつや
+    tex.line(nx, ny + 7, nx, ny + 12, 1.6, shade(P.fur, 0.62)); // 人中
+    // 横に広い口(左右2つの弧。縦長のおちょぼ口にしない)
+    tex.bezier(nx - 15, ny + 15, nx - 7, ny + 22, nx, ny + 12, 2.2, shade(P.fur, 0.62));
+    tex.bezier(nx, ny + 12, nx + 7, ny + 22, nx + 15, ny + 15, 2.2, shade(P.fur, 0.62));
     for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) {
-      tex.px(cx0 + sx * (17 + i * 6), cy0 - 1 + (i % 2) * 4, shade(P.fur, 0.6), 0.8); // ひげのつけ根
+      tex.px(nx + sx * (18 + i * 6), ny + 5 + (i % 2) * 4, shade(P.fur, 0.6), 0.8); // ひげのつけ根
     }
     // ひげ線(カワウソの決め手。クマ・サルとの誤認を防ぐ)
     for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) {
-      tex.line(cx0 + sx * 15, cy0 - 3 + i * 4, cx0 + sx * (36 + i * 2), cy0 - 8 + i * 6, 1.1, shade(P.fur, 0.58), 0.55);
+      tex.line(nx + sx * 16, ny + 3 + i * 5, nx + sx * (44 + i * 3), ny - 2 + i * 9, 1.1, shade(P.fur, 0.58), 0.55);
     }
-    // 頭頂は少し濃い毛色
-    bandTop(tex, REG.head, 0.22, shade(P.fur, 0.94));
   } else if (sp === 'nokto') {
     // 顔盤(フェイシャルディスク): 輪郭リングで面を強調
     for (const s of [-1, 1]) {

@@ -44,6 +44,9 @@ export class SequenceDirector {
       toast('夜になると、島の光が めをさます。', 'moss');
     } else {
       sfx('bloom');
+      // 演出は「蕾」から始める(依頼完了時のapplyIslandLevel(2)が先に花へ切り替えているため戻す)
+      this.gs.island.lumiBuds.scaling.setAll(1.05);
+      this.gs.island.lumiFruits.scaling.setAll(0.001);
       // 開花に呼応させるヒカリゴケ(木に近い順に4つ)と、NPCの注目を準備
       this.npcReacted = false;
       this.mossQueue = [...this.gs.island.nodes.values()]
@@ -62,7 +65,11 @@ export class SequenceDirector {
   }
 
   private end(): void {
-    if (this.state === 'bloom') this.gs.island.lumiFruits.scaling.setAll(1.2);
+    if (this.state === 'bloom') {
+      // スキップ時も最終状態(蕾なし・花ひらく)へそろえる
+      this.gs.island.lumiFruits.scaling.setAll(1.2);
+      this.gs.island.lumiBuds.scaling.setAll(0.001);
+    }
     this.state = 'idle';
     this.gs.camCtl.endEvent();
   }
@@ -136,9 +143,17 @@ export class SequenceDirector {
         this.npcReacted = true;
         this.gs.npcs.reactToBloom(lp.x, lp.z, true); // よろこぶ
       }
-      // 実: 芽(3.2s〜)がゆっくりふくらみ、開花(4.6s〜)で大きくなる
-      const bud = t < 3.2 ? 0.55 : t < 4.6 ? 0.55 + ((t - 3.2) / 1.4) * 0.25 : 0.8 + Math.min(1, (t - 4.6) / 1.8) * 0.4;
-      gs.island.lumiFruits.scaling.setAll(bud);
+      // 蕾→花: 3.2s〜蕾がふくらみ、4.6s〜蕾がすぼみながら花びらがひらく(球の追加ではなく差し替え)
+      if (t < 3.2) {
+        gs.island.lumiBuds.scaling.setAll(1.05);
+      } else if (t < 4.6) {
+        gs.island.lumiBuds.scaling.setAll(1.05 + ((t - 3.2) / 1.4) * 0.3);
+      } else {
+        const k = Math.min(1, (t - 4.6) / 1.6);
+        const e = k * k * (3 - 2 * k);
+        gs.island.lumiBuds.scaling.setAll(Math.max(0.001, 1.35 * (1 - e)));
+        gs.island.lumiFruits.scaling.setAll(Math.max(0.001, 1.2 * e));
+      }
       if (t > 6.8) this.end();
     } else if (this.t > 2.8) {
       this.end();

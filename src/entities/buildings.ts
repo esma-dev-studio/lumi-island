@@ -113,14 +113,18 @@ export function buildHouse(scene: Scene, kind: string, w: number, d: number): Ho
   // 窓(壁ごと)+夜光る内側
   const G = A0();
   const winC = C_WOOD_D;
-  const addWindow = (wx: number, wy: number, wz: number, ww: number, wh: number, round: boolean, facing: 'front' | 'side-l' | 'side-r'): void => {
+  const addWindow = (wx: number, wy: number, wz: number, ww: number, wh: number, round: boolean, facing: 'front' | 'side-l' | 'side-r' | 'back'): void => {
     // 枠
     if (facing === 'front') box(A, wx, wy, wz - 0.03, ww + 0.14, wh + 0.14, 0.08, winC);
+    else if (facing === 'back') box(A, wx, wy, wz + 0.03, ww + 0.14, wh + 0.14, 0.08, winC);
     else box(A, wx - Math.sign(wx) * 0.03, wy, wz, 0.08, wh + 0.14, ww + 0.14, winC);
     // ガラス(発光面)
     const base = G.pos.length / 3;
     if (facing === 'front') {
       G.pos.push(wx - ww / 2, wy - wh / 2, wz + 0.02, wx + ww / 2, wy - wh / 2, wz + 0.02, wx + ww / 2, wy + wh / 2, wz + 0.02, wx - ww / 2, wy + wh / 2, wz + 0.02);
+    } else if (facing === 'back') {
+      // -Z面: 法線が外(-Z)を向くよう逆順
+      G.pos.push(wx + ww / 2, wy - wh / 2, wz - 0.02, wx - ww / 2, wy - wh / 2, wz - 0.02, wx - ww / 2, wy + wh / 2, wz - 0.02, wx + ww / 2, wy + wh / 2, wz - 0.02);
     } else {
       const s = facing === 'side-r' ? 1 : -1;
       const xg = wx + s * 0.02;
@@ -160,6 +164,23 @@ export function buildHouse(scene: Scene, kind: string, w: number, d: number): Ho
     appendTrunk(A, [[w / 4, ridgeH + 0.02, -0.2], [w / 4, ridgeH + 0.35, -0.2]], 0.05, 0.05, C_WOOD_D, 18);
     // 本の入った木箱
     box(A, -w / 2 - 0.5, y0 + 0.25, d / 4, 0.7, 0.5, 0.5, C_WOOD, 0.06);
+    // 裏(高台の坂道側)の壁: 星見の出窓+星図の板+まき積み。のっぺりした壁で迎えない
+    addWindow(w / 4 + 0.2, winY + 0.35, -d / 2 - 0.012, 0.85, 0.8, true, 'back');
+    box(A, -w / 4, y0 + 1.35, -d / 2 - 0.06, 1.05, 0.8, 0.07, C_WOOD_D); // 星図の板
+    quad(A, [
+      [-w / 4 + 0.44, y0 + 1.05, -d / 2 - 0.105], [-w / 4 - 0.44, y0 + 1.05, -d / 2 - 0.105],
+      [-w / 4 - 0.44, y0 + 1.66, -d / 2 - 0.105], [-w / 4 + 0.44, y0 + 1.66, -d / 2 - 0.105],
+    ], Color3.FromHexString('#2e3a52'), 0.02);
+    for (let i = 0; i < 6; i++) {
+      appendBlob(A, -w / 4 - 0.3 + (i % 3) * 0.3, y0 + 1.18 + Math.floor(i / 3) * 0.3, -d / 2 - 0.13, 0.028, 0.028, 0.02,
+        Color3.FromHexString('#e8e2c8'), { segs: 4, noise: 0 });
+    }
+    for (let i = 0; i < 6; i++) {
+      appendTrunk(A, [
+        [-0.95 + (i % 3) * 0.64, 0.12 + Math.floor(i / 3) * 0.24, -d / 2 - 0.42],
+        [-0.3 + (i % 3) * 0.64, 0.12 + Math.floor(i / 3) * 0.24, -d / 2 - 0.42],
+      ], 0.11, 0.1, jitterColor(C_WOOD, 60 + i, 0.06), 60 + i);
+    }
   } else if (kind === 'player') {
     // 花のプランター
     box(A, -w / 4 - 0.2, y0 + 0.72, dz + 0.16, 1.0, 0.2, 0.28, C_WOOD_D);

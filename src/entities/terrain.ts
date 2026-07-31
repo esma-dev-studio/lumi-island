@@ -28,6 +28,26 @@ export function vnoise(x: number, z: number): number {
 const g = (x: number, z: number, cx: number, cz: number, r: number) =>
   Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
 
+// 角度差(-π..π)
+const angDiff = (a: number, b: number): number => {
+  let d = a - b;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return d;
+};
+
+/**
+ * 池の岸半径(中心からの角度θごと)。地形のくぼみ・水面メッシュ・岸の植生は
+ * 必ずこれを共有する(別々に計算すると岸と水面に隙間や浮き縁ができる)。
+ * 北(θ≈-1.55)はミナモ小屋と道があるため岸を狭め、南東(θ≈2.0)に入り江を出す。
+ */
+export function pondShoreR(theta: number): number {
+  const pinch = Math.exp(-(angDiff(theta, -1.55) ** 2) / 0.45);
+  const bay = Math.exp(-(angDiff(theta, 2.0) ** 2) / 0.2);
+  const wob = (vnoise(Math.cos(theta) * 2.1 + 39, Math.sin(theta) * 2.1 + 21) - 0.5) * (1 - pinch * 0.7);
+  return 8.6 * (1 + wob * 0.28) + bay * 3.0 - pinch * 3.0;
+}
+
 // 道までの距離
 export function pathDist(x: number, z: number): number {
   let min = 1e9;
@@ -58,8 +78,24 @@ export function terrainHeight(x: number, z: number): number {
   h += (vnoise(x * 0.15 + 21, z * 0.15 + 9) - 0.5) * 0.3;
   // 北東の高台
   h += 4.6 * g(x, z, 29, -28, 14) + 1.4 * g(x, z, 20, -20, 9);
-  // 池のくぼみ
-  h -= 2.0 * g(x, z, POND.x, POND.z, POND.r * 0.85);
+  // 高台の観測スペース: 頂上を平らにならして「登る目的地」を作る(P1-4)
+  const pad = g(x, z, 28, -25.5, 4.2);
+  h = h * (1 - pad * 0.75) + 5.35 * pad * 0.75;
+  // 池: 岸半径pondShoreRに沿ったくぼみ。深場→浅瀬→水ぎわ→濡れた岸の断面を持ち、
+  // ノイズ地形とはtでブレンドして岸線の高さを制御する(水面メッシュと同じ岸線)
+  {
+    const pdx = x - POND.x, pdz = z - POND.z;
+    const pdist = Math.hypot(pdx, pdz);
+    if (pdist < 16.5) {
+      const sr = pondShoreR(Math.atan2(pdz, pdx));
+      const u = pdist / sr;
+      const pondH = u >= 1
+        ? POND.waterY + (u - 1) * sr * 0.42
+        : POND.waterY - 1.55 * sstep(Math.min(1, (1 - u) / 0.55));
+      const t = sstep(Math.max(0, Math.min(1, (1.45 - u) / 0.5)));
+      h = h * (1 - t) + pondH * t;
+    }
+  }
   // 広場は平らに
   const plaza = g(x, z, 0, -1, 11);
   h = h * (1 - plaza * 0.85) + 1.15 * plaza * 0.85;
@@ -84,7 +120,10 @@ export function terrainHeight(x: number, z: number): number {
 // 水面下かどうか(移動制限に使用)
 export function isWater(x: number, z: number): boolean {
   const h = terrainHeight(x, z);
-  if (Math.hypot(x - POND.x, z - POND.z) < POND.r + 1 && h < POND.waterY) return true;
+  const pdx = x - POND.x, pdz = z - POND.z;
+  const pdist = Math.hypot(pdx, pdz);
+  // 池の判定も岸線pondShoreRベース(入り江の分まで含める)
+  if (pdist < 16 && pdist < pondShoreR(Math.atan2(pdz, pdx)) + 1.5 && h < POND.waterY) return true;
   return h < 0.18;
 }
 
@@ -96,6 +135,8 @@ const C_PATH = new Color3(0.741, 0.647, 0.478);
 const C_SAND = new Color3(0.875, 0.796, 0.608);
 const C_ROCK = new Color3(0.58, 0.565, 0.51);
 const C_SEABED = new Color3(0.74, 0.68, 0.52);
+const C_WETSAND = new Color3(0.70, 0.63, 0.47); // 池の濡れた岸
+const C_PONDBED = new Color3(0.34, 0.42, 0.40); // 池の深場の底(暗い青緑)
 
 function terrainColor(x: number, z: number, h: number): Color3 {
   const n = vnoise(x * 0.24 + 3, z * 0.24 + 11);
@@ -104,6 +145,16 @@ function terrainColor(x: number, z: number, h: number): Color3 {
   else if (h < 0.62) c = Color3.Lerp(C_SAND, C_SEABED, Math.max(0, (0.45 - h) * 1.6));
   else if (h > 3.0) c = Color3.Lerp(C_GRASS2, C_ROCK, Math.min(1, (h - 3.0) / 1.8));
   else c = Color3.Lerp(C_GRASS, C_GRASS2, n);
+  // 池: 深場の底は暗い青緑、浅瀬〜水ぎわは濡れた砂の帯(水の透けで深さが読める)
+  {
+    const pdx = x - POND.x, pdz = z - POND.z;
+    const pdist = Math.hypot(pdx, pdz);
+    if (pdist < 16) {
+      const u = pdist / pondShoreR(Math.atan2(pdz, pdx));
+      if (u < 0.78) c = Color3.Lerp(c, C_PONDBED, 0.85 * sstep(Math.min(1, (0.78 - u) / 0.3)));
+      else if (u < 1.08) c = Color3.Lerp(c, C_WETSAND, 0.9 * sstep(Math.min(1, (1.08 - u) / 0.3)));
+    }
+  }
   // 道
   const pd = pathDist(x, z);
   if (pd < 1.5 && h > 0.55) {

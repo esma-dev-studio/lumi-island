@@ -7,6 +7,7 @@ import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { Scene } from '@babylonjs/core/scene';
 import { A0, appendBlob, appendTrunk, toMesh } from '../entities/flora';
 import { onPier, PIER, SEA_Y } from '../entities/water';
+import { pondShoreR } from '../entities/terrain';
 import { POND } from '../data/island';
 import type { GameState } from '../game/GameState';
 import { hasTool, invAdd } from '../game/GameState';
@@ -55,8 +56,11 @@ export class FishingSystem {
   /** その場所で釣りができるか */
   zoneAt(x: number, z: number): FishZone {
     if (onPier(x, z) && z > PIER.z1 - 5) return 'sea';
-    const d = Math.hypot(x - POND.x, z - POND.z);
-    if (d > POND.r - 2.4 && d < POND.r + 0.8) return 'pond';
+    // 池は岸線pondShoreRからの相対距離で判定(入り江の先端でも釣れる)
+    const dx = x - POND.x, dz = z - POND.z;
+    const d = Math.hypot(dx, dz);
+    const sr = pondShoreR(Math.atan2(dz, dx));
+    if (d > sr - 2.0 && d < sr + 1.0) return 'pond';
     return null;
   }
 

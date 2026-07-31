@@ -308,7 +308,9 @@ export class GameScene {
     for (const id of Object.keys(NPC_BY_ID)) {
       const p = this.npcs.positionOf(id);
       if (!p) continue;
-      if (!p.hidden) {
+      // 依頼相手はquestEntryが次のNPC更新で外へ出すため、不在扱いにしない
+      // (報告直後の一瞬「もうねているよ」と誤案内しない)
+      if (!p.hidden || questFor(this.state, id) !== null) {
         out[id] = { hidden: false };
         continue;
       }
@@ -340,7 +342,12 @@ export class GameScene {
       const p = this.npcs.positionOf(obj.target.id);
       if (p && !p.hidden) marks.push({ id: obj.target.id, x: p.x, y: p.y, z: p.z, kind: reportMode ? 'report' : 'target' });
     }
-    this.markers.update(tp, tp?.isNpc ?? false, this.player.x, this.player.z, marks, reportMode);
+    // 会話・達成バナー・見せ場の最中は誘導を消し、視線を演出に集める(P1-1)
+    if (this.modalOpen || this.seq.active) {
+      this.markers.hideAll();
+    } else {
+      this.markers.update(tp, tp?.isNpc ?? false, this.player.x, this.player.z, marks, reportMode);
+    }
     const progressKey = obj.progress ? `${obj.progress.cur}/${obj.progress.max}` : '';
     this.tutorial.update(dt, this.player.moving, obj, progressKey, dist);
   }

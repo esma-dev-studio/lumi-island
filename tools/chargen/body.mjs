@@ -19,12 +19,14 @@ export function makeMirrorRemap(rig) {
 }
 
 // ---------- 頭 ----------
-// spec.head = { rx, ry, rz, cheek, flat, jawForward, browY }
+// spec.head = { rx, ry, rz, cheek, flat, jawForward, browY, profile }
+// profile: 縦断面の半径プロファイル([t, 半径倍率]の配列)。省略時は丸いドーム頭。
+// 頭頂を平らにしたい種族(カワウソ等)は t=1 付近の値を大きくして扁平にする。
 export function buildHead(rig, spec) {
   const H = rig.prop.height;
   const hs = spec.head;
   const yBottom = hs.yBottom, yTop = hs.yTop;
-  const profile = keys([
+  const profile = keys(hs.profile ?? [
     [0, 0.42], [0.12, 0.66], [0.3, 0.88], [0.5, 1.0], [0.72, 0.985], [0.88, 0.82], [0.97, 0.45], [1, 0.12],
   ]);
   const rings = [];

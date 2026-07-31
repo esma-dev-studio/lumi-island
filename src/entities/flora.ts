@@ -300,7 +300,7 @@ export function makeMoss(scene: Scene, seed: number): Mesh {
 }
 
 // ---- ルミの木(島のシンボル・段階で光る) ----
-export function makeLumiTree(scene: Scene): { root: Mesh; fruits: Mesh } {
+export function makeLumiTree(scene: Scene): { root: Mesh; fruits: Mesh; buds: Mesh } {
   const A = A0();
   appendTrunk(
     A,
@@ -323,19 +323,56 @@ export function makeLumiTree(scene: Scene): { root: Mesh; fruits: Mesh } {
   appendBlob(A, 0.15, 5.75, 0.3, 1.1, 0.8, 1.1, jitterColor(leaf, 5, 0.1), { seed: 94, noise: 0.2 });
   const root = toMesh(scene, 'lumiTree', A);
 
-  const fruits = new Mesh('lumiFruits', scene);
-  const F = A0();
+  // 枝先の位置(蕾と花で共有)。「白い球の追加」に見せないため、
+  // 開花は球ではなく5弁の花びらロゼット、開花前は閉じた蕾として別メッシュで持つ。
+  const tips: [number, number, number][] = [];
   for (let i = 0; i < 14; i++) {
     const th = (i / 14) * Math.PI * 2;
     const rr = 1.2 + vnoise(i, 9) * 0.85;
     const fy = 4.1 + vnoise(i * 2, 5) * 1.7;
-    appendBlob(F, Math.cos(th) * rr, fy, Math.sin(th) * rr, 0.12, 0.145, 0.12, Color3.FromHexString('#cfe8da'), {
-      segs: 6, noise: 0.04, seed: i, bottomDark: 0,
-    });
+    tips.push([Math.cos(th) * rr, fy, Math.sin(th) * rr]);
+  }
+
+  // 花: 5枚の平たい花びら+あたたかい色の芯(上向きロゼット)
+  const fruits = new Mesh('lumiFruits', scene);
+  const F = A0();
+  const petal = Color3.FromHexString('#e6f2e9');
+  const heart = Color3.FromHexString('#ffe9b8');
+  for (let i = 0; i < tips.length; i++) {
+    const [tx, ty, tz] = tips[i];
+    const phi0 = vnoise(i, 77) * Math.PI * 2;
+    for (let k = 0; k < 5; k++) {
+      const phi = phi0 + (k / 5) * Math.PI * 2;
+      const px = Math.cos(phi), pz = Math.sin(phi);
+      appendBlob(
+        F, tx + px * 0.085, ty + 0.004, tz + pz * 0.085,
+        0.062 + Math.abs(px) * 0.05, 0.026, 0.062 + Math.abs(pz) * 0.05,
+        jitterColor(petal, i * 5 + k, 0.05), { segs: 5, noise: 0.05, seed: i * 7 + k, bottomDark: 0 }
+      );
+    }
+    appendBlob(F, tx, ty + 0.028, tz, 0.038, 0.045, 0.038, heart, { segs: 6, noise: 0.03, seed: i, bottomDark: 0 });
   }
   applyArrays(fruits, F);
   fruits.material = getGlowMats(scene).mint;
   fruits.parent = root;
   fruits.isPickable = false;
-  return { root, fruits };
+
+  // 蕾: 閉じたしずく形(開花前はこちらが見える。花とは差し替えで切り替える)
+  const buds = new Mesh('lumiBuds', scene);
+  const B = A0();
+  for (let i = 0; i < tips.length; i++) {
+    const [tx, ty, tz] = tips[i];
+    appendBlob(B, tx, ty, tz, 0.055, 0.095, 0.055, jitterColor(Color3.FromHexString('#a9cdb6'), i, 0.08), {
+      segs: 6, noise: 0.05, seed: 40 + i, bottomDark: 0.15,
+    });
+  }
+  applyArrays(buds, B);
+  const budMat = new StandardMaterial('lumiBudMat', scene);
+  budMat.diffuseColor = Color3.FromHexString('#7da58c');
+  budMat.emissiveColor = Color3.FromHexString('#243d31'); // 開花前のかすかな内光
+  budMat.specularColor = Color3.Black();
+  buds.material = budMat;
+  buds.parent = root;
+  buds.isPickable = false;
+  return { root, fruits, buds };
 }

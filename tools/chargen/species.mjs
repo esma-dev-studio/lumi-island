@@ -53,13 +53,19 @@ export function makeSpecs() {
       shoulderW: 0.115, hipsW: 0.062, armOut: 24, upperArm: 0.08, foreArm: 0.07,
       tail: { y: 0.25, z: -0.095, len: 0.17, droop: 0.05 },
     };
-    const hb = headBounds(prop);
+    const hb0 = headBounds(prop);
+    // 頭頂を低く: 上端だけ下げる(下端=首とのつなぎ目は動かさない)
+    const hb = { yBottom: hb0.yBottom, yTop: hb0.yTop - 0.046 };
     const H = prop.height;
     specs.minamo = {
       id: 'minamo', speciesId: 'minamo', prop,
-      head: { rx: 0.168, rz: 0.175, ...hb, cheek: 0.075, flat: 0.04, jawForward: 0.01 },
-      eye: { thetaDeg: 26, y: hb.yBottom + (hb.yTop - hb.yBottom) * 0.46, w: 0.042, h: 0.048 },
-      face: { mouthT: 0.2 },
+      head: {
+        rx: 0.186, rz: 0.170, ...hb, cheek: 0.1, flat: 0.05, jawForward: 0.012,
+        // 頭頂を平らに(丸いドームにしない)。t=1付近を大きく保ったまま切り落とす扁平プロファイル
+        profile: [[0, 0.5], [0.12, 0.76], [0.28, 0.95], [0.44, 1.0], [0.62, 0.985], [0.8, 0.93], [0.92, 0.82], [1, 0.5]],
+      },
+      eye: { thetaDeg: 27, y: hb.yBottom + (hb.yTop - hb.yBottom) * 0.58, w: 0.042, h: 0.048 },
+      face: { mouthT: 0.27 },
       neckR: 0.055,
       body: {
         yBottom: prop.legRatio * H - 0.045, yTop: prop.legRatio * H + prop.torsoRatio * H,
@@ -67,9 +73,9 @@ export function makeSpecs() {
       },
       arm: { thick: 1.05 },
       leg: { thick: 1.05, bootFlare: 1.0, bootLen: 0.055 },
-      ears: { thetaDeg: 88, phiDeg: 60, r: 0.031, tilt: 64 }, // 低め・横=クマに見えないように
+      ears: { thetaDeg: 94, phiDeg: 86, r: 0.0265, tilt: 76 }, // 小さく・頭の横のやや下寄り(頭頂に立てない)
       muzzle: { kind: 'otter' },
-      tailSpec: { len: 0.21, r: 0.05 }, // カワウソの太い尾
+      tailSpec: { len: 0.215, r: 0.058, sway: 0.19 }, // 根元が太く先へゆるく細るカワウソの尾。swayで正面からも少し見える
       outfit: { kind: 'overalls' },
       clipOpts: { earMode: 'perk', tailMode: 'thick' },
       palette: {

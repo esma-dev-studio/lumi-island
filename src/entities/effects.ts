@@ -1,6 +1,6 @@
 // 演出部品: 採取パーティクル・アイテム飛び・発光家具の光だまり(モジュールシングルトン)
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
-import { CreateDisc } from '@babylonjs/core/Meshes/Builders/discBuilder';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
@@ -9,6 +9,7 @@ import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { Scene } from '@babylonjs/core/scene';
 import { A0, appendBlob, toMesh } from './flora';
+import { terrainHeight } from './terrain';
 
 let scene: Scene | null = null;
 let ps: ParticleSystem | null = null;
@@ -142,15 +143,68 @@ function poolMat(tint: PoolTint): StandardMaterial {
   return mat;
 }
 
-/** 発光する光だまり(親メッシュに追従)。DayNightが明るさを制御する */
-export function attachLightPool(parent: Mesh, lx: number, ly: number, lz: number, radius: number, tint: PoolTint): void {
+// 光だまりの形状: 平面ディスクだと坂や起伏で地形に食い込み、縁が四角・三角の直線に切れる。
+// そのため中心+同心リングの扇形メッシュを地形の高さに沿わせて作る(頂点計算は生成時の1回だけ)。
+const POOL_SEGS = 32; // 放射方向の分割数
+const POOL_BAND = 0.9; // リングの間隔の目安(m)。広い光だまりほどリングを増やして地形とのズレを抑える
+const POOL_LIFT = 0.07; // 地面からの浮かせ量(m)。小さいとz-fight、大きいと浮いて見える
+
+/**
+ * 発光する光だまり(地形に沿う扇形メッシュ)。DayNightが明るさ(共有マテリアルのalpha)を制御する。
+ * lx/lzは親メッシュのローカル位置。親にparentすると親の回転・位置で地形追従がずれるため、
+ * ワールド座標で組んで親には付けず、親が消えるときに一緒に消す。
+ */
+export function attachLightPool(parent: Mesh, lx: number, lz: number, radius: number, tint: PoolTint): void {
   if (!scene) return;
-  const disc = CreateDisc(`pool_${tint}`, { radius, tessellation: 24 }, scene);
-  disc.rotation.x = Math.PI / 2;
-  disc.parent = parent;
-  disc.position.set(lx, ly, lz);
-  disc.isPickable = false;
-  disc.material = poolMat(tint);
+  const w = Vector3.TransformCoordinates(new Vector3(lx, 0, lz), parent.computeWorldMatrix(true));
+  const pool = buildPoolMesh(scene, w.x, w.z, radius, tint);
+  parent.onDisposeObservable.add(() => {
+    if (!pool.isDisposed()) pool.dispose(); // 共有マテリアル・テクスチャは消さない
+  });
+}
+
+/** 地形に沿う光だまり1枚(中心+同心リング)。UVは中心(0.5,0.5)から半径方向へ張る */
+function buildPoolMesh(s: Scene, wx: number, wz: number, radius: number, tint: PoolTint): Mesh {
+  const rings = Math.max(3, Math.ceil(radius / POOL_BAND));
+  const baseY = terrainHeight(wx, wz);
+  const positions: number[] = [0, POOL_LIFT, 0];
+  const normals: number[] = [0, 1, 0];
+  const uvs: number[] = [0.5, 0.5];
+  for (let r = 1; r <= rings; r++) {
+    const f = r / rings;
+    for (let i = 0; i < POOL_SEGS; i++) {
+      const a = (i / POOL_SEGS) * Math.PI * 2;
+      const cos = Math.cos(a), sin = Math.sin(a);
+      const dx = cos * radius * f, dz = sin * radius * f;
+      positions.push(dx, terrainHeight(wx + dx, wz + dz) + POOL_LIFT - baseY, dz);
+      normals.push(0, 1, 0);
+      uvs.push(0.5 + 0.5 * f * cos, 0.5 + 0.5 * f * sin);
+    }
+  }
+  // 面の向きは地形メッシュと同じ巻き方(上向きが表)にそろえる
+  const indices: number[] = [];
+  for (let i = 0; i < POOL_SEGS; i++) {
+    indices.push(0, 1 + i, 1 + ((i + 1) % POOL_SEGS));
+  }
+  for (let r = 0; r < rings - 1; r++) {
+    const inner = 1 + r * POOL_SEGS;
+    const outer = inner + POOL_SEGS;
+    for (let i = 0; i < POOL_SEGS; i++) {
+      const j = (i + 1) % POOL_SEGS;
+      indices.push(inner + i, outer + i, inner + j, outer + i, outer + j, inner + j);
+    }
+  }
+  const vd = new VertexData();
+  vd.positions = positions;
+  vd.indices = indices;
+  vd.normals = normals;
+  vd.uvs = uvs;
+  const mesh = new Mesh(`pool_${tint}`, s);
+  vd.applyToMesh(mesh);
+  mesh.position.set(wx, baseY, wz);
+  mesh.isPickable = false;
+  mesh.material = poolMat(tint);
+  return mesh;
 }
 
 /** 夜のプレイヤー近傍ライトの対象になる発光位置 */

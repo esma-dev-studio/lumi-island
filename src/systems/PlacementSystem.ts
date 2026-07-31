@@ -164,7 +164,8 @@ export class PlacementSystem {
 
   /** セーブデータから復元 */
   restore(): void {
-    for (const p of this.placed.values()) p.mesh.dispose(false, true);
+    // 注意: 家具のマテリアルは島全体で共有(flora)。第2引数trueで消すと発光や木の実まで壊れる
+    for (const p of this.placed.values()) p.mesh.dispose();
     this.placed.clear();
     for (const f of this.state.furniture) this.spawn(f);
     this.rebuildColliders();
@@ -178,7 +179,7 @@ export class PlacementSystem {
     this.island.shadows.addShadowCaster(fm.root, true);
     fm.root.receiveShadows = true;
     if (ITEMS[f.item].glow) {
-      attachLightPool(fm.root, 0, 0.05, 0, 1.6, f.item === 'f_stonelamp' ? 'blue' : 'amber');
+      attachLightPool(fm.root, 0, 0, 1.6, f.item === 'f_stonelamp' ? 'blue' : 'amber');
       registerGlowSource(f.x, y + 0.9, f.z);
     }
     this.placed.set(f.id, { data: f, mesh: fm.root, colliderR: fm.colliderR });
@@ -203,7 +204,7 @@ export class PlacementSystem {
   }
 
   cancel(): void {
-    if (this.ghost) this.ghost.dispose(false, true);
+    if (this.ghost) this.ghost.dispose(); // 共有マテリアルを道連れにしない
     this.ghost = null;
     this.active = null;
     this.valid = false;
@@ -300,7 +301,7 @@ export class PlacementSystem {
     if (ITEMS[p.data.item].glow) unregisterGlowSource(p.data.x, p.data.z);
     this.placed.delete(p.data.id);
     this.state.furniture = this.state.furniture.filter((f) => f.id !== p.data.id);
-    p.mesh.dispose(false, true);
+    p.mesh.dispose(); // 共有マテリアルを道連れにしない
     invAdd(this.state, p.data.item, 1);
     this.rebuildColliders();
     toast(`${ITEMS[p.data.item].name}を もちかえった`, p.data.item);

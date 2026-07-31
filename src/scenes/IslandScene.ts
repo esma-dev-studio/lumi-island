@@ -4,7 +4,7 @@ import type { Engine } from '@babylonjs/core/Engines/engine';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { CascadedShadowGenerator } from '@babylonjs/core/Lights/Shadows/cascadedShadowGenerator';
 import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
-import { buildTerrain, terrainHeight, type Terrain } from '../entities/terrain';
+import { buildTerrain, terrainHeight, pondShoreR, type Terrain } from '../entities/terrain';
 import { initEffects, attachLightPool, registerGlowSource } from '../entities/effects';
 import { buildWater, onPier, PIER, type WaterRefs } from '../entities/water';
 import {
@@ -46,7 +46,9 @@ export class IslandScene {
   circles: CircleCollider[] = [];
   rects: RectCollider[] = [];
   nodes = new Map<string, GatherNodeRuntime>();
-  lumiFruits!: Mesh;
+  lumiFruits!: Mesh; // 開花後の花びらロゼット
+  lumiBuds!: Mesh; // 開花前の閉じた蕾(花と差し替えで切り替える)
+  private waterT = 0;
   occludables: Mesh[] = []; // カメラとプレイヤーの間に入ったら半透明にする対象
 
   constructor(public engine: Engine) {
@@ -102,7 +104,11 @@ export class IslandScene {
           const o = makeOreNode(s, hashId(def.id));
           root = o.rock;
           fruitMesh = o.crystals;
-          this.circles.push({ x: def.x, z: def.z, r: 0.9 });
+          // 露頭ごとに大きさ・向きを変える(同じ形の敷きつめに見せない)
+          const os = 0.85 + (hashId(def.id) % 40) / 100;
+          root.scaling.setAll(os);
+          root.rotation.y = (hashId(def.id) % 628) / 100;
+          this.circles.push({ x: def.x, z: def.z, r: 0.9 * os });
           break;
         }
         case 'grass': {
@@ -145,14 +151,15 @@ export class IslandScene {
       bench.position.set(bx, terrainHeight(bx, bz) - 0.02, bz);
       caster(bench);
     }
-    const lampDefs: [number, number][] = [[5.5, 1.5], [-5.5, -4], [1.5, 7.5], [-2, -11.5]];
+    // 高台の坂道(23.2,-25.6 / 26.1,-24.3)にも灯りを置き、夜の登り道を導く(P1-4)
+    const lampDefs: [number, number][] = [[5.5, 1.5], [-5.5, -4], [1.5, 7.5], [-2, -11.5], [23.2, -25.6], [26.1, -24.3]];
     for (const [lx, lz] of lampDefs) {
       const lamp = makeLamp(s);
       const ly = terrainHeight(lx, lz) - 0.02;
       lamp.mesh.position.set(lx, ly, lz);
       lamp.mesh.rotation.y = Math.atan2(-lx, -lz); // ランタンを広場中心へ向ける
       caster(lamp.mesh);
-      attachLightPool(lamp.mesh, 0, 0.06, 0.3, 1.7, 'amber');
+      attachLightPool(lamp.mesh, 0, 0.3, 1.7, 'amber');
       registerGlowSource(lx, ly + 1.77, lz);
     }
     const lumi = makeLumiTree(s);
@@ -162,10 +169,11 @@ export class IslandScene {
     const ring = makeStoneRing(s);
     ring.position.set(lp.x, terrainHeight(lp.x, lp.z) - 0.02, lp.z);
     this.lumiFruits = lumi.fruits;
-    attachLightPool(lumi.root, 0, 0.06, 0, 3.4, 'mint');
+    this.lumiBuds = lumi.buds;
+    attachLightPool(lumi.root, 0, 0, 3.4, 'mint');
     registerGlowSource(lp.x, terrainHeight(lp.x, lp.z) + 4.5, lp.z);
     this.circles.push({ x: lp.x, z: lp.z, r: 1.7 });
-    this.circles.push({ x: 5.5, z: 1.5, r: 0.2 }, { x: -5.5, z: -4, r: 0.2 }, { x: 1.5, z: 7.5, r: 0.2 }, { x: -2, z: -11.5, r: 0.2 });
+    for (const [lx, lz] of lampDefs) this.circles.push({ x: lx, z: lz, r: 0.2 });
 
     // ---- エリアの性格づけ小物 ----
     const putProp = (mesh: Mesh, x: number, z: number, rotY: number, colliderR: number): void => {
@@ -176,8 +184,10 @@ export class IslandScene {
     };
     putProp(makeLogPile(s), -7.0, -5.2, 0.4, 0.6); // 工房よこ
     putProp(makeCrate(s), -5.6, -3.4, 0.2, 0.4);
-    putProp(makeBucketRod(s), 30.6, 15.6, -0.8, 0.3); // ミナモの釣り場
-    putProp(makeTelescope(s), 30.4, -24.6, -0.6, 0.35); // ノクトの観測場所
+    putProp(makeBucketRod(s), 22.9, 13.8, 0.85, 0.3); // ミナモの釣り場(池の西岸。旧30.6,15.6は新しい岸線で水没)
+    putProp(makeTelescope(s), 30.4, -24.6, -0.6, 0.35); // ノクトの観測場所(観測デッキ東縁)
+    putProp(makeCrate(s), 29.4, -25.9, 0.4, 0.4); // 観測の記録箱
+    putProp(makeStump(s, 11), 28.4, -26.6, 1.2, 0.3); // 観測の腰かけ
     putProp(makeDriftwood(s, 1), -11.5, 39.0, 0.5, 0.7); // 浜辺の流木
     putProp(makeDriftwood(s, 5), 13.5, 37.0, 2.4, 0.7);
     putProp(makeStump(s, 1), -10.5, -30.5, 0, 0.3); // 林の切りかぶ
@@ -202,7 +212,10 @@ export class IslandScene {
     if (onPier(x, z)) return true;
     const h = terrainHeight(x, z);
     if (h < 0.45) return false;
-    if (Math.hypot(x - POND.x, z - POND.z) < POND.r - 0.6 && h < POND.waterY + 0.15) return false;
+    // 池は岸線pondShoreRで判定(入り江へも歩き込めない。岸ぎわの浅瀬は少しだけ入れる)
+    const pdx = x - POND.x, pdz = z - POND.z;
+    const pdist = Math.hypot(pdx, pdz);
+    if (pdist < 16 && pdist < pondShoreR(Math.atan2(pdz, pdx)) - 0.6 && h < POND.waterY + 0.15) return false;
     return true;
   }
 
@@ -238,13 +251,17 @@ export class IslandScene {
 
   update(dtSec: number): void {
     this.time.advance(dtSec);
+    // 池のごく弱い上下動(±1.2cm)。深層・スイレンは子メッシュなので一緒にゆれる
+    this.waterT += dtSec;
+    this.water.pond.position.y = POND.waterY + Math.sin(this.waterT * 0.9) * 0.012;
   }
 
-  /** ルミの木の段階(0=ねむり 1=めばえ 2=かいか)を見た目へ反映 */
+  /** ルミの木の段階(0=ねむり 1=めばえ 2=かいか)を見た目へ反映(蕾⇄花の差し替え) */
   applyIslandLevel(level: number): void {
-    const scale = [0.55, 0.85, 1.2][Math.max(0, Math.min(2, level))];
-    this.lumiFruits.scaling.setAll(scale);
-    this.dayNight.lumiBoost = [1, 1.18, 1.65][Math.max(0, Math.min(2, level))];
+    const lv = Math.max(0, Math.min(2, level));
+    this.lumiBuds.scaling.setAll([0.75, 1.05, 0.001][lv]);
+    this.lumiFruits.scaling.setAll([0.001, 0.001, 1.2][lv]);
+    this.dayNight.lumiBoost = [1, 1.18, 1.65][lv];
   }
 }
 

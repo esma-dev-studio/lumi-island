@@ -167,7 +167,7 @@ export class NPCSystem {
           // idle / watch / stroll: ときどき歩きまわる
           rt.subTimer -= dt;
           if (rt.subTimer <= 0) {
-            const radius = entry.activity === 'stroll' ? 4 : 2.2;
+            const radius = entry.activity === 'stroll' ? 4 : (spot.wanderR ?? 2.2);
             rt.subTimer = entry.activity === 'stroll' ? 4 + Math.random() * 4 : 6 + Math.random() * 5;
             const a = Math.random() * Math.PI * 2;
             const tx = spot.x + Math.cos(a) * radius * (0.4 + Math.random() * 0.6);
