@@ -3,6 +3,7 @@ import type { GameState } from '../game/GameState';
 import { activeQuests } from '../systems/QuestSystem';
 import { NPC_BY_ID } from '../data/npcs';
 import { QUESTS } from '../data/quests';
+import { byInput } from './inputMode';
 
 export class QuestLogUI {
   private el: HTMLElement;
@@ -39,7 +40,7 @@ export class QuestLogUI {
       })
       .join('');
     this.el.innerHTML = `
-      <div class="panel-title">島のおねがい <span class="panel-close" data-close>とじる(Q)</span></div>
+      <div class="panel-title">島のおねがい <span class="panel-close" data-close>${byInput('とじる(Q)', 'とじる')}</span></div>
       <div class="craft-list">${rows || '<div class="inv-empty">いまは おねがいがない。島のみんなと話してみよう!</div>'}</div>
       <div class="panel-sub">たっせい: ${doneCount} / ${QUESTS.length}</div>
     `;

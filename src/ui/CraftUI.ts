@@ -3,6 +3,7 @@ import type { GameState } from '../game/GameState';
 import { knownRecipes, canCraft, craft } from '../systems/CraftingSystem';
 import { ITEMS, TOOLS, type ItemId, type ToolId } from '../data/items';
 import { icon } from './icons';
+import { byInput } from './inputMode';
 import { sfx } from '../audio/AudioSystem';
 
 export class CraftUI {
@@ -63,7 +64,7 @@ export class CraftUI {
       })
       .join('');
     this.el.innerHTML = `
-      <div class="panel-title">クラフト <span class="panel-close" data-close>とじる(C)</span></div>
+      <div class="panel-title">クラフト <span class="panel-close" data-close>${byInput('とじる(C)', 'とじる')}</span></div>
       <div class="craft-list">${rows || '<div class="inv-empty">まだレシピを知らない。島のみんなに聞いてみよう!</div>'}</div>
     `;
     this.el.querySelector('[data-close]')?.addEventListener('click', () => this.close());

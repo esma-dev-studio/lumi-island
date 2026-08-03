@@ -2,6 +2,28 @@
 import { hasSave, clearSave, loadOpts, saveOpts } from '../save/SaveSystem';
 import { setSoundEnabled } from '../audio/AudioSystem';
 import { sfx } from '../audio/AudioSystem';
+import { byInput } from './inputMode';
+
+/** そうさほうほうの一覧(左=なにをするか / 右=どうなるか)。PauseMenuと同じ並び */
+const HELP_KEYBOARD = `
+            <span><kbd>W A S D</kbd>/<kbd>矢印</kbd></span><span>あるく</span>
+            <span><kbd>Shift</kbd></span><span>はしる</span>
+            <span><kbd>E</kbd>/<kbd>Space</kbd></span><span>しらべる・とる・はなす</span>
+            <span><kbd>Tab</kbd>/<kbd>I</kbd></span><span>もちもの</span>
+            <span><kbd>C</kbd></span><span>クラフト</span>
+            <span><kbd>Q</kbd></span><span>おねがい</span>
+            <span><kbd>R</kbd></span><span>(はいち中)まわす</span>
+            <span><kbd>Esc</kbd></span><span>とじる・メニュー</span>`;
+
+const HELP_TOUCH = `
+            <span>左下を ゆびで うごかす</span><span>あるく</span>
+            <span>おおきく うごかす</span><span>はしる</span>
+            <span>右下の 大きいボタン</span><span>しらべる・とる・はなす</span>
+            <span>右上の「もちもの」</span><span>もちもの</span>
+            <span>右上の「クラフト」</span><span>クラフト</span>
+            <span>右上の「おねがい」</span><span>おねがい</span>
+            <span>「まわす」ボタン</span><span>(はいち中)まわす</span>
+            <span>右上の「メニュー」</span><span>とじる・メニュー</span>`;
 
 export class TitleScreen {
   private el: HTMLElement;
@@ -35,15 +57,7 @@ export class TitleScreen {
           <div class="tx-row"><span>セーブデータ</span><button class="title-btn danger" data-act="wipe" ${saved ? '' : 'disabled'}>けす</button></div>
         </div>
         <div class="title-extra hidden" data-panel="help">
-          <div class="help-grid">
-            <span><kbd>W A S D</kbd>/<kbd>矢印</kbd></span><span>あるく</span>
-            <span><kbd>Shift</kbd></span><span>はしる</span>
-            <span><kbd>E</kbd>/<kbd>Space</kbd></span><span>しらべる・とる・はなす</span>
-            <span><kbd>Tab</kbd>/<kbd>I</kbd></span><span>もちもの</span>
-            <span><kbd>C</kbd></span><span>クラフト</span>
-            <span><kbd>Q</kbd></span><span>おねがい</span>
-            <span><kbd>R</kbd></span><span>(はいち中)まわす</span>
-            <span><kbd>Esc</kbd></span><span>とじる・メニュー</span>
+          <div class="help-grid">${byInput(HELP_KEYBOARD, HELP_TOUCH)}
           </div>
         </div>
         <div class="title-credit">オリジナル作品 / 3Dモデル・音はすべてプログラム生成</div>

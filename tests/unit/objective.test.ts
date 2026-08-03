@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { newGameState, invAdd, giveTool } from '../../src/game/GameState';
-import { currentObjective, type NpcAvailability } from '../../src/systems/ObjectiveSystem';
+import {
+  currentObjective, objectiveActionContext, type NpcAvailability,
+} from '../../src/systems/ObjectiveSystem';
 import { acceptQuest } from '../../src/systems/QuestSystem';
+import { TutorialSystem } from '../../src/systems/TutorialSystem';
 import { QUEST_BY_ID } from '../../src/data/quests';
 
 describe('ObjectiveSystem(いまやること)', () => {
@@ -151,5 +154,101 @@ describe('ObjectiveSystem(いまやること)', () => {
     const s = newGameState();
     s.quests = { q_wood: 'done', q_fish: 'done', q_ore: 'done', q_lantern: 'done', q_lumi: 'done' };
     expect(currentObjective(s).id).toBe('free');
+  });
+});
+
+// ---- 目的→「Eでやってよいこと」(v5 P0-1) ----
+describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
+  it('採取段階: その素材の採取だけを対象にする', () => {
+    const s = newGameState();
+    acceptQuest(s, QUEST_BY_ID.q_wood);
+    const ctx = objectiveActionContext(currentObjective(s));
+    expect(ctx.guided).toBe(true);
+    expect(ctx.preferredKinds).toContain('gather');
+    expect(ctx.preferredKinds).not.toContain('shop');
+    expect(ctx.targetItemIds).toEqual(['wood']);
+  });
+  it('採取段階でも「ねる」は許可する(夜に行きづまらせない)', () => {
+    const s = newGameState();
+    acceptQuest(s, QUEST_BY_ID.q_wood);
+    expect(objectiveActionContext(currentObjective(s)).preferredKinds).toContain('sleep');
+  });
+  it('釣り段階: 釣りだけを対象にし、夜魚も達成アイテムに含む', () => {
+    const s = newGameState();
+    s.quests.q_wood = 'done';
+    s.quests.q_fish = 'open';
+    acceptQuest(s, QUEST_BY_ID.q_fish);
+    giveTool(s, 'rod');
+    const o = currentObjective(s);
+    expect(o.id).toBe('q_fish_fish');
+    const ctx = objectiveActionContext(o);
+    expect(ctx.guided).toBe(true);
+    expect(ctx.preferredKinds).toContain('fish');
+    expect(ctx.preferredKinds).not.toContain('gather');
+    expect(ctx.targetItemIds).toEqual(['fish', 'nightfish']);
+  });
+  it('報告段階: その相手との会話だけを対象にする', () => {
+    const s = newGameState();
+    acceptQuest(s, QUEST_BY_ID.q_wood);
+    invAdd(s, 'wood', 5);
+    const ctx = objectiveActionContext(currentObjective(s));
+    expect(ctx.guided).toBe(true);
+    expect(ctx.preferredKinds).toContain('talk');
+    expect(ctx.preferredKinds).not.toContain('gather');
+    expect(ctx.targetNpcId).toBe('tsumugi');
+  });
+  it('未受注の「話を聞こう」はまだ自由(採取も店も従来どおり)', () => {
+    const s = newGameState();
+    const o = currentObjective(s);
+    expect(o.id).toBe('q_wood_offer');
+    expect(objectiveActionContext(o).guided).toBe(false);
+  });
+  it('移動チュートリアル中も自由(はじめての採取をさまたげない)', () => {
+    const o = new TutorialSystem(newGameState()).overrideObjective();
+    expect(o?.id).toBe('tut_move');
+    expect(objectiveActionContext(o).guided).toBe(false);
+  });
+  it('NPC不在のベッド誘導中は「ねる」だけ', () => {
+    const s = newGameState();
+    acceptQuest(s, QUEST_BY_ID.q_wood);
+    invAdd(s, 'wood', 5);
+    const o = currentObjective(s, 'tsumugi', { tsumugi: { hidden: true } });
+    const ctx = objectiveActionContext(o);
+    expect(ctx.guided).toBe(true);
+    expect(ctx.preferredKinds).toEqual(['sleep']);
+    expect(ctx.targetPoiId).toBe('bed');
+  });
+  it('クラフト段階はE候補を対象にしない(targetItemIdsが空)', () => {
+    const s = newGameState();
+    s.quests.q_wood = 'done';
+    s.quests.q_fish = 'open';
+    acceptQuest(s, QUEST_BY_ID.q_fish);
+    giveTool(s, 'sickle');
+    invAdd(s, 'wood', 2);
+    invAdd(s, 'fiber', 2);
+    const o = currentObjective(s);
+    expect(o.craftRecipe).toBe('r_rod');
+    const ctx = objectiveActionContext(o);
+    expect(ctx.guided).toBe(true);
+    expect(ctx.targetItemIds).toEqual([]);
+  });
+  it('配置段階もE候補を対象にしない', () => {
+    const s = newGameState();
+    s.quests.q_wood = 'done';
+    s.quests.q_fish = 'done';
+    s.quests.q_ore = 'done';
+    s.quests.q_lantern = 'open';
+    acceptQuest(s, QUEST_BY_ID.q_lantern);
+    invAdd(s, 'f_lantern', 1);
+    const o = currentObjective(s);
+    expect(o.id).toBe('q_lantern_place');
+    expect(o.placeFurniture).toBe(true);
+    expect(objectiveActionContext(o).targetItemIds).toEqual([]);
+  });
+  it('全クリア後と目的未計算(null)は自由探索あつかい', () => {
+    const s = newGameState();
+    s.quests = { q_wood: 'done', q_fish: 'done', q_ore: 'done', q_lantern: 'done', q_lumi: 'done' };
+    expect(objectiveActionContext(currentObjective(s)).guided).toBe(false);
+    expect(objectiveActionContext(null).guided).toBe(false);
   });
 });

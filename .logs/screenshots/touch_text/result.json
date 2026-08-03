@@ -1,0 +1,46 @@
+{
+  "touch": {
+    "mode": "touch",
+    "errors": [],
+    "touchUiVisible": true,
+    "objective": {
+      "text": "がめん左下を ゆびで うごかして あるいてみよう",
+      "html": "がめん左下を ゆびで うごかして あるいてみよう"
+    },
+    "toastInventory": {
+      "text": "右上の「もちもの」ボタンで 見られるよ",
+      "html": "<span class=\"t-ico\"><svg viewBox=\"0 0 24 24\" width=\"1em\" height=\"1em\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 8 L15 8 L19 12 L19 16 L9 16 L5 12 Z\" fill=\"#b98d5f\" stroke=\"#7a5a3d\"></path><ellipse cx=\"7.5\" cy=\"10\" rx=\"2.5\" ry=\"3.4\" fill=\"#e2cfa0\" stroke=\"#7a5a3d\"></ellipse><ellipse cx=\"7.5\" cy=\"10\" rx=\"1\" ry=\"1.5\" fill=\"none\" stroke=\"#a8845c\"></ellipse></svg></span><span>右上の「もちもの」ボタンで 見られるよ</span>"
+    },
+    "pauseHelp": {
+      "text": "左下を ゆびで うごかすあるく おおきく うごかすはしる 右下の 大きいボタンしらべる・とる・はなす 右上の「もちもの」もちもの 右上の「クラフト」クラフト 右上の「おねがい」おねがい 「まわす」ボタン(はいち中)まわす",
+      "html": "<span>左下を ゆびで うごかす</span><span>あるく</span>\n          <span>おおきく うごかす</span><span>はしる</span>\n          <span>右下の 大きいボタン</span><span>しらべる・とる・はなす</span>\n          <span>右上の「もちもの」</span><span>もちもの</span>\n          <span>右上の「クラフト」</span><span>クラフト</span>\n          <span>右上の「おねがい」</span><span>おねがい</span>\n          <span>「まわす」ボタン</span><span>(はいち中)まわす</span>"
+    },
+    "placeBegan": true,
+    "hudHint": {
+      "text": "おく",
+      "html": "おく"
+    }
+  },
+  "pc": {
+    "mode": "pc",
+    "errors": [],
+    "touchUiVisible": false,
+    "objective": {
+      "text": "WASDか矢印キーで あるいてみよう",
+      "html": "<kbd>WASD</kbd>か<kbd>矢印キー</kbd>で あるいてみよう"
+    },
+    "toastInventory": {
+      "text": "Tabで「もちもの」が見られるよ",
+      "html": "<span class=\"t-ico\"><svg viewBox=\"0 0 24 24\" width=\"1em\" height=\"1em\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 8 L15 8 L19 12 L19 16 L9 16 L5 12 Z\" fill=\"#b98d5f\" stroke=\"#7a5a3d\"></path><ellipse cx=\"7.5\" cy=\"10\" rx=\"2.5\" ry=\"3.4\" fill=\"#e2cfa0\" stroke=\"#7a5a3d\"></ellipse><ellipse cx=\"7.5\" cy=\"10\" rx=\"1\" ry=\"1.5\" fill=\"none\" stroke=\"#a8845c\"></ellipse></svg></span><span><kbd>Tab</kbd>で「もちもの」が見られるよ</span>"
+    },
+    "pauseHelp": {
+      "text": "W A S Dあるく Shiftはしる Eしらべる・とる・はなす Tabもちもの Cクラフト Qおねがい R(はいち中)まわす",
+      "html": "<span><kbd>W A S D</kbd></span><span>あるく</span>\n          <span><kbd>Shift</kbd></span><span>はしる</span>\n          <span><kbd>E</kbd></span><span>しらべる・とる・はなす</span>\n          <span><kbd>Tab</kbd></span><span>もちもの</span>\n          <span><kbd>C</kbd></span><span>クラフト</span>\n          <span><kbd>Q</kbd></span><span>おねがい</span>\n          <span><kbd>R</kbd></span><span>(はいち中)まわす</span>"
+    },
+    "placeBegan": true,
+    "hudHint": {
+      "text": "Eおく Rまわす Escやめる",
+      "html": "<kbd>E</kbd>おく <kbd>R</kbd>まわす <kbd>Esc</kbd>やめる"
+    }
+  }
+}

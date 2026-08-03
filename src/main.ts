@@ -5,9 +5,117 @@ import { newGameState } from './game/GameState';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const engine = new Engine(canvas, true, { antialias: true, adaptToDeviceRatio: false });
-// 高DPI画面で描画解像度が過剰にならないよう上限を設ける(見た目の劣化が出ない範囲)
-engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio || 1, 1.5));
-window.addEventListener('resize', () => engine.resize());
+
+// ---- 描画解像度の上限 ----
+// iPadは devicePixelRatio が2〜3。素直に描くとGPU負荷が3〜9倍になるため実効1.5倍で頭打ちにする。
+// PC(dpr=1)では 1/1 のままなので描画品質は従来と同じ。
+const MAX_RENDER_SCALE = 1.5;
+let renderScale = Math.min(window.devicePixelRatio || 1, MAX_RENDER_SCALE);
+engine.setHardwareScalingLevel(1 / renderScale);
+
+// ---- 画面サイズ(iOS Safariのアドレスバーで100vhが狂う対策) ----
+// 見えている領域(visualViewport)の実寸をCSS変数に入れ、キャンバスとUIの高さをそれで決める。
+function applyViewportVars(): void {
+  const vv = window.visualViewport;
+  const w = Math.round(vv?.width ?? window.innerWidth);
+  const h = Math.round(vv?.height ?? window.innerHeight);
+  const root = document.documentElement.style;
+  root.setProperty('--app-w', `${w}px`);
+  root.setProperty('--app-h', `${h}px`);
+  root.setProperty('--vh', `${h / 100}px`);
+}
+let resizeRaf = 0;
+function onViewportChange(): void {
+  if (resizeRaf) cancelAnimationFrame(resizeRaf);
+  resizeRaf = requestAnimationFrame(() => {
+    resizeRaf = 0;
+    applyViewportVars();
+    engine.resize();
+  });
+}
+applyViewportVars();
+window.addEventListener('resize', onViewportChange);
+window.addEventListener('orientationchange', onViewportChange);
+window.visualViewport?.addEventListener('resize', onViewportChange);
+window.visualViewport?.addEventListener('scroll', onViewportChange);
+
+// ---- タッチ端末の判定(iPadOSはUAがMacintoshになるためタッチ点数も見る) ----
+function isTouchDevice(): boolean {
+  const ua = navigator.userAgent || '';
+  const points = navigator.maxTouchPoints || 0;
+  const iOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && points > 1);
+  const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+  return iOS || coarse;
+}
+const touchDevice = isTouchDevice();
+document.documentElement.classList.toggle('touch-ui', touchDevice);
+
+// ---- iOSでページが拡大・スクロールしないようにする ----
+// (touch-action / overscroll-behavior はCSS側。ここはSafari独自のジェスチャの保険)
+function preventBrowserZoom(): void {
+  const stop = (e: Event): void => e.preventDefault();
+  document.addEventListener('gesturestart', stop, { passive: false });
+  document.addEventListener('gesturechange', stop, { passive: false });
+  document.addEventListener('gestureend', stop, { passive: false });
+  document.addEventListener('dblclick', stop, { passive: false }); // ダブルタップ拡大
+  // 2本指以上のスワイプ(ページ拡大・ラバーバンド)。UI内の1本指スクロールは残す
+  document.addEventListener(
+    'touchmove',
+    (e: TouchEvent) => {
+      if (e.touches.length > 1) e.preventDefault();
+    },
+    { passive: false }
+  );
+  // 何かの拍子にページがずれたら戻す
+  window.addEventListener('scroll', () => window.scrollTo(0, 0), { passive: true });
+}
+preventBrowserZoom();
+
+// ---- たてむきの案内(よこむき推奨。数秒で消え、タップでも消せる) ----
+// 読み込み画面の裏で時間切れにならないよう、起動が終わってから出す。
+function setupOrientationHint(): () => void {
+  if (!touchDevice) return () => {};
+  const el = document.createElement('div');
+  el.className = 'rotate-hint hidden';
+  el.textContent = 'よこむきに すると あそびやすいよ';
+  el.addEventListener('click', () => el.classList.add('hidden'));
+  document.body.appendChild(el);
+  let timer = 0;
+  const check = (): void => {
+    window.clearTimeout(timer);
+    if (window.innerHeight > window.innerWidth) {
+      el.classList.remove('hidden');
+      timer = window.setTimeout(() => el.classList.add('hidden'), 5000);
+    } else {
+      el.classList.add('hidden');
+    }
+  };
+  window.addEventListener('resize', check);
+  window.addEventListener('orientationchange', check);
+  return check;
+}
+const showOrientationHint = setupOrientationHint();
+
+// ---- 低fpsの安全弁(高dpr端末だけ。PCの描画品質は変えない) ----
+// 3秒続けて48fpsを下回ったら実効解像度を1段下げる(1.5 → 1.25 → 1.0)。上げ直しはしない。
+function setupAdaptiveResolution(): void {
+  if ((window.devicePixelRatio || 1) <= 1.05) return;
+  let slowSec = 0;
+  const timer = window.setInterval(() => {
+    if (document.hidden) return;
+    const fps = engine.getFps();
+    if (!isFinite(fps) || fps <= 0) return;
+    slowSec = fps < 48 ? slowSec + 1 : 0;
+    if (slowSec >= 3 && renderScale > 1) {
+      renderScale = Math.max(1, Math.round((renderScale - 0.25) * 100) / 100);
+      engine.setHardwareScalingLevel(1 / renderScale);
+      console.log('[lumi] fpsが低いため描画解像度を下げました:', renderScale);
+      slowSec = 0;
+      if (renderScale <= 1) window.clearInterval(timer);
+    }
+  }, 1000);
+}
+setupAdaptiveResolution();
 
 const params = new URLSearchParams(location.search);
 const sceneName = params.get('scene') ?? 'title';
@@ -26,7 +134,13 @@ async function bootGame(state = newGameState()): Promise<void> {
 }
 
 async function boot(): Promise<void> {
-  const lumi: Record<string, unknown> = { engine, ready: false, debug };
+  const lumi: Record<string, unknown> = {
+    engine,
+    ready: false,
+    debug,
+    touchDevice,
+    renderScale: () => renderScale,
+  };
   (window as unknown as Record<string, unknown>).__lumi = lumi;
 
   if (sceneName === 'showcase') {
@@ -71,6 +185,7 @@ async function boot(): Promise<void> {
     };
   }
   document.getElementById('boot-screen')?.remove();
+  showOrientationHint();
   console.log('[lumi] boot ok:', sceneName);
 }
 

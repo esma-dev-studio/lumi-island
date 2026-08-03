@@ -17,7 +17,12 @@
     "verify": "npm run typecheck && npm run lint && npm test && npm run check:chars",
     "test:regression": "node tools/playtest_bot.mjs",
     "test:ux": "node tools/ux_bot.mjs",
-    "test:performance": "node tools/perf_probe.mjs"
+    "test:performance": "node tools/perf_probe.mjs",
+    "test:endurance": "node tools/perf_probe.mjs --endurance",
+    "test:endurance:smoke": "node tools/perf_probe.mjs --smoke",
+    "test:unit:json": "vitest run --reporter=json --outputFile=.logs/unit_result.json",
+    "report": "node tools/generate_reports.mjs",
+    "report:check": "node tools/generate_reports.mjs --check"
   },
   "dependencies": {
     "@babylonjs/core": "^8.0.0",

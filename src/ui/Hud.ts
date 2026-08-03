@@ -1,4 +1,6 @@
 // 常時表示HUD: 時計・ルミナ・操作ヒント(最小限に保つ)
+import { isTouchMode, hintWithoutKeys } from './inputMode';
+
 export class Hud {
   private clockEl: HTMLElement;
   private luminaEl: HTMLElement;
@@ -38,11 +40,17 @@ export class Hud {
     }
   }
   private lastHint = '';
+  private lastTouch = false;
   setHint(html: string): void {
-    if (this.lastHint !== html) {
+    // タッチのときはキーの表示を出さない(押す場所は画面のボタンなので)。
+    // 入力手段は毎回見る: 途中で指に切り替わっても次の更新で入れ替わる。
+    const touch = isTouchMode();
+    if (this.lastHint !== html || this.lastTouch !== touch) {
       this.lastHint = html;
-      this.hintEl.innerHTML = html;
-      this.hintEl.classList.toggle('show', !!html);
+      this.lastTouch = touch;
+      const shown = touch ? hintWithoutKeys(html) : html;
+      this.hintEl.innerHTML = shown;
+      this.hintEl.classList.toggle('show', !!shown);
     }
   }
 }

@@ -1,262 +1,439 @@
 {
-  "date": "2026-07-31T03:52:29.495Z",
+  "runId": "pf-20260803T1326-13282857",
+  "commit": "d676573",
+  "date": "2026-08-03T04:26:04.666Z",
+  "mode": "endurance",
+  "smoke": true,
+  "note": "smoke(短縮)走行。動作確認専用で、10分耐久の合否には使わない(pass は null)。",
+  "browser": "Microsoft Edge ヘッドレス(実GPU d3d11)",
   "resolution": "1280x720 (DPR上限1.5)",
-  "note": "放置計測は3分(10分は実行時間の都合で短縮)。判定対象はc〜i。aのタイトルとjの放置後は参考値(判定外)。dで21時にしたあとは時刻を触らないので、各シナリオのhourに実測時刻を記録している。",
-  "load": {
-    "titleMs": 1539,
-    "gameStartMs": 707
+  "url": "http://localhost:5183/?scene=game&debug=1",
+  "targetSec": 60,
+  "durationSec": 62,
+  "warmup": {
+    "sec": 14,
+    "frames": 422,
+    "maxFtMs": 2268,
+    "note": "昼/夜/配置プレビュー/UIの初回コンパイルを済ませる区間。計測対象外だが最大値は残す。"
   },
-  "limits": {
-    "ftAvg": 18,
-    "ftP95": 25,
-    "ftP99": 35,
-    "bloomFtMax": 1000,
-    "heapGrowth": 1.15
+  "cycles": 3,
+  "frameCount": 1706,
+  "ft": {
+    "p50": 21.4,
+    "p95": 104.7,
+    "p99": 163,
+    "max": 219.1
   },
-  "scenarios": [
-    {
-      "id": "a",
-      "label": "タイトル画面",
-      "judged": false,
-      "hour": null,
-      "ftAvg": 16.66,
-      "ftP95": 19,
-      "ftP99": 22.3,
-      "ftMax": 27.2,
-      "ftSamples": 377,
-      "fpsAvg": 60,
-      "fpsMin": 60,
-      "stats": {
-        "drawCalls": 359,
-        "activeMeshes": 87,
-        "totalMeshes": 151,
-        "materials": 17,
-        "textures": 10,
-        "particles": 0,
-        "heapMB": 45
-      }
-    },
-    {
-      "id": "c",
-      "label": "昼の広場(歩行)",
-      "judged": true,
-      "hour": 10.3,
-      "ftAvg": 16.75,
-      "ftP95": 18.6,
-      "ftP99": 20.1,
-      "ftMax": 51.9,
-      "ftSamples": 380,
-      "fpsAvg": 60,
-      "fpsMin": 56,
-      "stats": {
-        "drawCalls": 287,
-        "activeMeshes": 49,
-        "totalMeshes": 161,
-        "materials": 23,
-        "textures": 19,
-        "particles": 0,
-        "heapMB": 64
-      }
-    },
-    {
-      "id": "d",
-      "label": "夜の広場",
-      "judged": true,
-      "hour": 21.3,
-      "ftAvg": 16.67,
-      "ftP95": 18.7,
-      "ftP99": 19.5,
-      "ftMax": 19.7,
-      "ftSamples": 383,
-      "fpsAvg": 60,
-      "fpsMin": 60,
-      "stats": {
-        "drawCalls": 289,
-        "activeMeshes": 49,
-        "totalMeshes": 161,
-        "materials": 23,
-        "textures": 19,
-        "particles": 0,
-        "heapMB": 58
-      }
-    },
-    {
-      "id": "e",
-      "label": "池(夜)",
-      "judged": true,
-      "hour": 21.6,
-      "ftAvg": 16.66,
-      "ftP95": 18.9,
-      "ftP99": 19.4,
-      "ftMax": 19.9,
-      "ftSamples": 379,
-      "fpsAvg": 60,
-      "fpsMin": 60,
-      "stats": {
-        "drawCalls": 253,
-        "activeMeshes": 31,
-        "totalMeshes": 161,
-        "materials": 23,
-        "textures": 19,
-        "particles": 0,
-        "heapMB": 42
-      }
-    },
-    {
-      "id": "f",
-      "label": "高台(夜)",
-      "judged": true,
-      "hour": 21.9,
-      "ftAvg": 16.66,
-      "ftP95": 18.6,
-      "ftP99": 19.2,
-      "ftMax": 19.4,
-      "ftSamples": 380,
-      "fpsAvg": 60,
-      "fpsMin": 60,
-      "stats": {
-        "drawCalls": 271,
-        "activeMeshes": 41,
-        "totalMeshes": 161,
-        "materials": 23,
-        "textures": 19,
-        "particles": 0,
-        "heapMB": 50
-      }
-    },
-    {
-      "id": "g",
-      "label": "ランタン1個(夜)",
-      "judged": true,
-      "hour": 22.2,
-      "ftAvg": 16.67,
-      "ftP95": 18.7,
-      "ftP99": 19.4,
-      "ftMax": 19.9,
-      "ftSamples": 380,
-      "fpsAvg": 60,
-      "fpsMin": 60,
-      "stats": {
-        "drawCalls": 281,
-        "activeMeshes": 44,
-        "totalMeshes": 164,
-        "materials": 23,
-        "textures": 19,
-        "particles": 0,
-        "heapMB": 51
-      }
-    },
-    {
-      "id": "h",
-      "label": "ランタン3個(夜)",
-      "judged": true,
-      "hour": 22.5,
-      "ftAvg": 16.67,
-      "ftP95": 18.7,
-      "ftP99": 19.4,
-      "ftMax": 19.5,
-      "ftSamples": 377,
-      "fpsAvg": 60,
-      "fpsMin": 60,
-      "stats": {
-        "drawCalls": 301,
-        "activeMeshes": 50,
-        "totalMeshes": 170,
-        "materials": 23,
-        "textures": 19,
-        "particles": 0,
-        "heapMB": 64
-      }
-    },
-    {
-      "id": "i",
-      "label": "開花演出中",
-      "judged": true,
-      "hour": 22.5,
-      "ftAvg": 16.67,
-      "ftP95": 18.7,
-      "ftP99": 19.7,
-      "ftMax": 21,
-      "ftSamples": 379,
-      "fpsAvg": 60,
-      "fpsMin": 60,
-      "stats": {
-        "drawCalls": 354,
-        "activeMeshes": 74,
-        "totalMeshes": 170,
-        "materials": 23,
-        "textures": 19,
-        "particles": 42,
-        "heapMB": 65
-      }
-    },
-    {
-      "id": "j",
-      "label": "3分放置後",
-      "judged": false,
-      "hour": 6,
-      "ftAvg": 16.67,
-      "ftP95": 18.5,
-      "ftP99": 19.1,
-      "ftMax": 20.3,
-      "ftSamples": 379,
-      "fpsAvg": 60,
-      "fpsMin": 60,
-      "stats": {
-        "drawCalls": 301,
-        "activeMeshes": 50,
-        "totalMeshes": 170,
-        "materials": 23,
-        "textures": 19,
-        "particles": 0,
-        "heapMB": 42
-      }
-    }
-  ],
-  "idle": {
-    "sec": 180,
-    "heapBeforeMB": 65,
-    "heapAfterMB": 41,
-    "growth": 0.63,
-    "trend": [
+  "freezeCount": 0,
+  "freezes": [],
+  "heapMB": {
+    "start": 48,
+    "end": 49,
+    "samples": [
       {
-        "sec": 0,
-        "heapMB": 65
+        "sec": 1,
+        "heapMB": 48
       },
       {
         "sec": 30,
-        "heapMB": 55
+        "heapMB": 53
       },
       {
         "sec": 60,
-        "heapMB": 41
-      },
-      {
-        "sec": 90,
-        "heapMB": 41
-      },
-      {
-        "sec": 120,
-        "heapMB": 40
-      },
-      {
-        "sec": 150,
-        "heapMB": 39
-      },
-      {
-        "sec": 180,
-        "heapMB": 41
+        "heapMB": 62
       }
     ]
+  },
+  "phases": [
+    {
+      "cycle": 1,
+      "id": "day_walk",
+      "label": "昼の広場を歩く",
+      "startSec": 0,
+      "durationSec": 3,
+      "ft": {
+        "p50": 19.7,
+        "p95": 100.5,
+        "p99": 115.6,
+        "max": 115.6
+      },
+      "frameCount": 95,
+      "freezeCount": 0,
+      "heapMB": 45,
+      "error": null
+    },
+    {
+      "cycle": 1,
+      "id": "dusk_to_night",
+      "label": "昼→夜の遷移(setHour)",
+      "startSec": 3,
+      "durationSec": 3,
+      "ft": {
+        "p50": 18,
+        "p95": 96.9,
+        "p99": 138.5,
+        "max": 138.5
+      },
+      "frameCount": 72,
+      "freezeCount": 0,
+      "heapMB": 40,
+      "error": null
+    },
+    {
+      "cycle": 1,
+      "id": "gather",
+      "label": "採取の反復(6種を巡回)",
+      "startSec": 6,
+      "durationSec": 3,
+      "ft": {
+        "p50": 21.1,
+        "p95": 92.9,
+        "p99": 137.8,
+        "max": 160.9
+      },
+      "frameCount": 122,
+      "freezeCount": 0,
+      "heapMB": 50,
+      "error": null
+    },
+    {
+      "cycle": 1,
+      "id": "lantern",
+      "label": "ランタン3個を設置",
+      "startSec": 9,
+      "durationSec": 3,
+      "ft": {
+        "p50": 31.1,
+        "p95": 105.4,
+        "p99": 113.7,
+        "max": 113.7
+      },
+      "frameCount": 54,
+      "freezeCount": 0,
+      "heapMB": 53,
+      "error": null
+    },
+    {
+      "cycle": 1,
+      "id": "talk",
+      "label": "NPC会話(3人)",
+      "startSec": 12,
+      "durationSec": 2,
+      "ft": {
+        "p50": 18.4,
+        "p95": 97.7,
+        "p99": 183.7,
+        "max": 183.7
+      },
+      "frameCount": 78,
+      "freezeCount": 0,
+      "heapMB": 46,
+      "error": null
+    },
+    {
+      "cycle": 1,
+      "id": "fish",
+      "label": "釣りの反復(桟橋)",
+      "startSec": 14,
+      "durationSec": 3,
+      "ft": {
+        "p50": 22.3,
+        "p95": 96.3,
+        "p99": 145.5,
+        "max": 158.9
+      },
+      "frameCount": 101,
+      "freezeCount": 0,
+      "heapMB": 50,
+      "error": null
+    },
+    {
+      "cycle": 1,
+      "id": "ui",
+      "label": "UI開閉(もちもの/クラフト/依頼)",
+      "startSec": 17,
+      "durationSec": 2,
+      "ft": {
+        "p50": 18.4,
+        "p95": 75.3,
+        "p99": 144.7,
+        "max": 144.7
+      },
+      "frameCount": 81,
+      "freezeCount": 0,
+      "heapMB": 43,
+      "error": null
+    },
+    {
+      "cycle": 1,
+      "id": "bloom",
+      "label": "開花シーケンス",
+      "startSec": 19,
+      "durationSec": 3,
+      "ft": {
+        "p50": 25.8,
+        "p95": 104.7,
+        "p99": 168.4,
+        "max": 168.4
+      },
+      "frameCount": 58,
+      "freezeCount": 0,
+      "heapMB": 49,
+      "error": null
+    },
+    {
+      "cycle": 2,
+      "id": "day_walk",
+      "label": "昼の広場を歩く",
+      "startSec": 22,
+      "durationSec": 3,
+      "ft": {
+        "p50": 23,
+        "p95": 98.6,
+        "p99": 143.9,
+        "max": 143.9
+      },
+      "frameCount": 91,
+      "freezeCount": 0,
+      "heapMB": 50,
+      "error": null
+    },
+    {
+      "cycle": 2,
+      "id": "dusk_to_night",
+      "label": "昼→夜の遷移(setHour)",
+      "startSec": 25,
+      "durationSec": 3,
+      "ft": {
+        "p50": 21.8,
+        "p95": 99.7,
+        "p99": 133,
+        "max": 133
+      },
+      "frameCount": 72,
+      "freezeCount": 0,
+      "heapMB": 52,
+      "error": null
+    },
+    {
+      "cycle": 2,
+      "id": "gather",
+      "label": "採取の反復(6種を巡回)",
+      "startSec": 28,
+      "durationSec": 3,
+      "ft": {
+        "p50": 27.6,
+        "p95": 98.5,
+        "p99": 107,
+        "max": 114.3
+      },
+      "frameCount": 109,
+      "freezeCount": 0,
+      "heapMB": 51,
+      "error": null
+    },
+    {
+      "cycle": 2,
+      "id": "lantern",
+      "label": "ランタン3個を設置",
+      "startSec": 31,
+      "durationSec": 3,
+      "ft": {
+        "p50": 19.9,
+        "p95": 91.4,
+        "p99": 127.1,
+        "max": 127.1
+      },
+      "frameCount": 77,
+      "freezeCount": 0,
+      "heapMB": 46,
+      "error": null
+    },
+    {
+      "cycle": 2,
+      "id": "talk",
+      "label": "NPC会話(3人)",
+      "startSec": 34,
+      "durationSec": 2,
+      "ft": {
+        "p50": 18.4,
+        "p95": 175,
+        "p99": 203.6,
+        "max": 203.6
+      },
+      "frameCount": 57,
+      "freezeCount": 0,
+      "heapMB": 51,
+      "error": null
+    },
+    {
+      "cycle": 2,
+      "id": "fish",
+      "label": "釣りの反復(桟橋)",
+      "startSec": 36,
+      "durationSec": 4,
+      "ft": {
+        "p50": 24.1,
+        "p95": 125.8,
+        "p99": 198.4,
+        "max": 198.4
+      },
+      "frameCount": 95,
+      "freezeCount": 0,
+      "heapMB": 50,
+      "error": null
+    },
+    {
+      "cycle": 2,
+      "id": "ui",
+      "label": "UI開閉(もちもの/クラフト/依頼)",
+      "startSec": 40,
+      "durationSec": 2,
+      "ft": {
+        "p50": 51.2,
+        "p95": 152.8,
+        "p99": 159.9,
+        "max": 159.9
+      },
+      "frameCount": 40,
+      "freezeCount": 0,
+      "heapMB": 48,
+      "error": null
+    },
+    {
+      "cycle": 2,
+      "id": "bloom",
+      "label": "開花シーケンス",
+      "startSec": 42,
+      "durationSec": 2,
+      "ft": {
+        "p50": 20.6,
+        "p95": 115.4,
+        "p99": 216.4,
+        "max": 216.4
+      },
+      "frameCount": 58,
+      "freezeCount": 0,
+      "heapMB": 51,
+      "error": null
+    },
+    {
+      "cycle": 3,
+      "id": "day_walk",
+      "label": "昼の広場を歩く",
+      "startSec": 44,
+      "durationSec": 4,
+      "ft": {
+        "p50": 20.7,
+        "p95": 108.5,
+        "p99": 191,
+        "max": 191
+      },
+      "frameCount": 88,
+      "freezeCount": 0,
+      "heapMB": 52,
+      "error": null
+    },
+    {
+      "cycle": 3,
+      "id": "dusk_to_night",
+      "label": "昼→夜の遷移(setHour)",
+      "startSec": 48,
+      "durationSec": 2,
+      "ft": {
+        "p50": 22.6,
+        "p95": 130.8,
+        "p99": 201.6,
+        "max": 201.6
+      },
+      "frameCount": 58,
+      "freezeCount": 0,
+      "heapMB": 69,
+      "error": null
+    },
+    {
+      "cycle": 3,
+      "id": "gather",
+      "label": "採取の反復(6種を巡回)",
+      "startSec": 50,
+      "durationSec": 3,
+      "ft": {
+        "p50": 23.9,
+        "p95": 107.6,
+        "p99": 169.1,
+        "max": 169.1
+      },
+      "frameCount": 84,
+      "freezeCount": 0,
+      "heapMB": 67,
+      "error": null
+    },
+    {
+      "cycle": 3,
+      "id": "lantern",
+      "label": "ランタン3個を設置",
+      "startSec": 53,
+      "durationSec": 3,
+      "ft": {
+        "p50": 21.3,
+        "p95": 192.1,
+        "p99": 219.1,
+        "max": 219.1
+      },
+      "frameCount": 45,
+      "freezeCount": 0,
+      "heapMB": 54,
+      "error": null
+    },
+    {
+      "cycle": 3,
+      "id": "talk",
+      "label": "NPC会話(3人)",
+      "startSec": 56,
+      "durationSec": 2,
+      "ft": {
+        "p50": 22.2,
+        "p95": 106.1,
+        "p99": 203.9,
+        "max": 203.9
+      },
+      "frameCount": 68,
+      "freezeCount": 0,
+      "heapMB": 47,
+      "error": null
+    },
+    {
+      "cycle": 3,
+      "id": "fish",
+      "label": "釣りの反復(桟橋)",
+      "startSec": 58,
+      "durationSec": 4,
+      "ft": {
+        "p50": 23.7,
+        "p95": 102.3,
+        "p99": 144,
+        "max": 192.4
+      },
+      "frameCount": 103,
+      "freezeCount": 0,
+      "heapMB": 49,
+      "error": null
+    }
+  ],
+  "limits": {
+    "ftP95": 25,
+    "ftP99": 35,
+    "freezeCount": 0,
+    "minDurationSec": 600
   },
   "errors": 0,
   "errorSamples": [],
   "checks": {
-    "frameTime": true,
-    "failedScenarios": [],
-    "heap": true,
-    "bloomFtMax": true,
+    "duration": true,
+    "ftP95": false,
+    "ftP99": false,
+    "freeze": true,
     "noConsoleErrors": true
   },
-  "pass": true
+  "pass": null
 }

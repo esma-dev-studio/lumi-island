@@ -1,12 +1,21 @@
 // インタラクション候補の選択(純ロジック)。距離補正のマジックナンバーを使わず、
 // 優先度(小さいほど強い)と距離を別々に扱う。
+import type { ItemId } from '../data/items';
+
+/** 候補の意味(いまの目的と一致するかの判定に使う) */
+export type InteractionKind = 'talk' | 'gather' | 'shop' | 'fish' | 'place' | 'pickup' | 'sleep';
+
 export interface InteractionCandidate {
   id: string;
+  kind: InteractionKind;
   priority: number;
   distance: number;
   enabled: boolean;
   hint: string;
   run: () => void;
+  targetId?: string; // NPC id / POI id / ノードid など
+  itemId?: ItemId; // 採取・持ち帰りで手に入るアイテム
+  questActionable?: boolean; // そのNPCが依頼を受注(offer)・報告(done)できる状態か
 }
 
 // 優先度の定義(候補を作る側はこれを使う)

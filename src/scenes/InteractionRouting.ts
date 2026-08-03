@@ -1,8 +1,12 @@
-// E入力のルーティング: その場で実行できる候補を集め、優先度と距離の解決はInteractionResolverが担う
+// E入力のルーティング: その場で実行できる候補を集め、
+// いまの目的との突き合わせ(ObjectiveInteractionPolicy)→優先度・距離(InteractionResolver)で1つに決める。
 import { POIS } from '../data/island';
 import { ITEMS } from '../data/items';
 import { questFor } from '../systems/QuestSystem';
-import { resolveCandidate, PRIORITY, type InteractionCandidate } from '../systems/InteractionResolver';
+import { GATHER_RULES } from '../systems/GatherSystem';
+import { PRIORITY, type InteractionCandidate } from '../systems/InteractionResolver';
+import { objectiveActionContext } from '../systems/ObjectiveSystem';
+import { selectInteraction } from '../systems/ObjectiveInteractionPolicy';
 import type { GameScene } from './GameScene';
 
 export const SHOP_POINT = { x: POIS.shop.x + 4.6, z: POIS.shop.z }; // 店カウンター(工房の正面)
@@ -29,7 +33,8 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     if (want) gs.placement.place();
     return gs.placement.hint;
   }
-  if (gs.fishing.state !== 'idle') {
+  // クールダウン中は動けるので通常の候補解決へ流す(canFishがfalseなので再釣り候補は出ない)
+  if (gs.fishing.locksPlayer) {
     if (want) gs.fishing.action(gs.player, gs.playerView);
     return gs.fishing.hint ?? '';
   }
@@ -47,6 +52,9 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     const actionable = q !== null && (q.mode === 'offer' || q.mode === 'done');
     cands.push({
       id: `npc_${rt.def.id}`,
+      kind: 'talk',
+      targetId: rt.def.id,
+      questActionable: actionable,
       priority: actionable ? PRIORITY.npcQuest : PRIORITY.gather + 5,
       distance: Math.hypot(px - rt.x, pz - rt.z),
       enabled: true,
@@ -57,8 +65,12 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
   // 採取ノード
   if (gs.inter.currentNode && gs.inter.hint) {
     const n = gs.inter.currentNode;
+    const nodeItem = GATHER_RULES[n.def.kind].item; // このノードから採れる素材(目的との一致判定に使う)
     cands.push({
       id: `node_${n.def.id}`,
+      kind: 'gather',
+      targetId: n.def.id,
+      itemId: nodeItem,
       priority: PRIORITY.gather,
       distance: Math.hypot(px - n.def.x, pz - n.def.z),
       enabled: gs.inter.hint.ok,
@@ -68,7 +80,8 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     if (!gs.inter.hint.ok) {
       // 道具不足の理由も候補として表示だけする(実行不可)
       cands.push({
-        id: `node_reason`, priority: PRIORITY.gather + 5,
+        id: `node_reason`, kind: 'gather', targetId: n.def.id, itemId: nodeItem,
+        priority: PRIORITY.gather + 5,
         distance: Math.hypot(px - n.def.x, pz - n.def.z),
         enabled: true, hint: gs.inter.hint.text, run: () => {},
       });
@@ -78,7 +91,8 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
   const shopD = Math.hypot(px - SHOP_POINT.x, pz - SHOP_POINT.z);
   if (shopD < 2.0) {
     cands.push({
-      id: 'shop', priority: PRIORITY.shop, distance: shopD, enabled: true,
+      id: 'shop', kind: 'shop', targetId: 'shop',
+      priority: PRIORITY.shop, distance: shopD, enabled: true,
       hint: '<kbd>E</kbd>お店をみる(うる・かう)',
       run: () => gs.shopUI.show(),
     });
@@ -87,19 +101,25 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
   const fish = gs.fishing.canFish(px, pz);
   if (fish.zone) {
     cands.push({
-      id: 'fishing', priority: PRIORITY.fishing, distance: 1.0, enabled: fish.ok,
+      id: 'fishing', kind: 'fish', targetId: fish.zone,
+      priority: PRIORITY.fishing, distance: 1.0, enabled: fish.ok,
       hint: fish.ok ? '<kbd>E</kbd>つりをする' : `つりには ${fish.reason}`,
       run: () => gs.fishing.start(gs.player, gs.playerView),
     });
     if (!fish.ok) {
-      cands.push({ id: 'fishing_reason', priority: PRIORITY.fishing + 5, distance: 1.0, enabled: true, hint: `つりには ${fish.reason}`, run: () => {} });
+      cands.push({
+        id: 'fishing_reason', kind: 'fish', targetId: fish.zone,
+        priority: PRIORITY.fishing + 5, distance: 1.0, enabled: true,
+        hint: `つりには ${fish.reason}`, run: () => {},
+      });
     }
   }
   // ねる(自宅のドア)
   const sleepD = Math.hypot(px - SLEEP_POINT.x, pz - SLEEP_POINT.z);
   if (sleepD < 2.0) {
     cands.push({
-      id: 'sleep', priority: PRIORITY.shop, distance: sleepD, enabled: true,
+      id: 'sleep', kind: 'sleep', targetId: 'bed',
+      priority: PRIORITY.shop, distance: sleepD, enabled: true,
       hint: '<kbd>E</kbd>ねる(あさまで)',
       run: () => gs.seq.sleep(),
     });
@@ -108,13 +128,16 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
   const near = gs.placement.nearest(px, pz);
   if (near) {
     cands.push({
-      id: `furn_${near.data.id}`, priority: PRIORITY.furniture,
+      id: `furn_${near.data.id}`, kind: 'pickup',
+      targetId: String(near.data.id), itemId: near.data.item,
+      priority: PRIORITY.furniture,
       distance: Math.hypot(px - near.data.x, pz - near.data.z), enabled: true,
       hint: `<kbd>E</kbd>${ITEMS[near.data.item].name}を もちかえる`,
       run: () => gs.placement.pickUp(near),
     });
   }
-  const best = resolveCandidate(cands);
+  // いまの目的(前フレームに確定したもの)と突き合わせて、表示=実行の1つに絞る
+  const best = selectInteraction(cands, objectiveActionContext(gs.lastObjective));
   if (!best) return '';
   if (want) best.run();
   return best.hint;

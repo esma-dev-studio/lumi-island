@@ -1,6 +1,26 @@
 // ポーズメニュー(Esc): つづける/おと/そうさ/タイトルへ
 import { loadOpts, saveOpts } from '../save/SaveSystem';
 import { setSoundEnabled, sfx } from '../audio/AudioSystem';
+import { byInput } from './inputMode';
+
+/** そうさほうほうの一覧(左=なにをするか / 右=どうなるか) */
+const HELP_KEYBOARD = `
+          <span><kbd>W A S D</kbd></span><span>あるく</span>
+          <span><kbd>Shift</kbd></span><span>はしる</span>
+          <span><kbd>E</kbd></span><span>しらべる・とる・はなす</span>
+          <span><kbd>Tab</kbd></span><span>もちもの</span>
+          <span><kbd>C</kbd></span><span>クラフト</span>
+          <span><kbd>Q</kbd></span><span>おねがい</span>
+          <span><kbd>R</kbd></span><span>(はいち中)まわす</span>`;
+
+const HELP_TOUCH = `
+          <span>左下を ゆびで うごかす</span><span>あるく</span>
+          <span>おおきく うごかす</span><span>はしる</span>
+          <span>右下の 大きいボタン</span><span>しらべる・とる・はなす</span>
+          <span>右上の「もちもの」</span><span>もちもの</span>
+          <span>右上の「クラフト」</span><span>クラフト</span>
+          <span>右上の「おねがい」</span><span>おねがい</span>
+          <span>「まわす」ボタン</span><span>(はいち中)まわす</span>`;
 
 export class PauseMenu {
   private el: HTMLElement;
@@ -34,14 +54,7 @@ export class PauseMenu {
         <button class="title-btn sub" data-act="title">セーブしてタイトルへ</button>
       </div>
       <div class="title-extra hidden" data-panel="help">
-        <div class="help-grid">
-          <span><kbd>W A S D</kbd></span><span>あるく</span>
-          <span><kbd>Shift</kbd></span><span>はしる</span>
-          <span><kbd>E</kbd></span><span>しらべる・とる・はなす</span>
-          <span><kbd>Tab</kbd></span><span>もちもの</span>
-          <span><kbd>C</kbd></span><span>クラフト</span>
-          <span><kbd>Q</kbd></span><span>おねがい</span>
-          <span><kbd>R</kbd></span><span>(はいち中)まわす</span>
+        <div class="help-grid">${byInput(HELP_KEYBOARD, HELP_TOUCH)}
         </div>
       </div>
     `;

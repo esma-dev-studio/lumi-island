@@ -1,4 +1,4 @@
-// 釣り: 桟橋の先・池のほとりで、E→待つ→「!」→Eでキャッチ
+// 釣り: 桟橋の先・池のほとりで、E→投げる→待つ→「!」→Eでキャッチ→巻き上げ→クールダウン
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { CreateLines } from '@babylonjs/core/Meshes/Builders/linesBuilder';
 import type { LinesMesh } from '@babylonjs/core/Meshes/linesMesh';
@@ -18,12 +18,39 @@ import { sfx } from '../audio/AudioSystem';
 import { ITEMS, type ItemId } from '../data/items';
 
 export type FishZone = 'sea' | 'pond' | null;
-type FState = 'idle' | 'waiting' | 'bite' | 'done';
+
+/**
+ * 釣りの状態(明示的な状態機械)。演出が終わるまで次の釣りを始めさせないための区別を持つ。
+ *   idle → casting →(着水)→ waiting →(ヒット)→ bite →(E)→ reeling →(アニメ終了)→ cooldown → idle
+ *                                                   └(時間切れ:にげられた)→ idle
+ *   Esc(cancel)はどの状態からでも片付けて idle に戻す。
+ */
+export type FishingState = 'idle' | 'casting' | 'waiting' | 'bite' | 'reeling' | 'cooldown';
+
+// 演出の長さ(秒)。アニメクリップの長さは tools/chargen/anim.mjs のクリップ定義に合わせている
+const CAST_SPLASH_RATIO = 0.42; // fish_cast(1.1秒)のうち、竿を振り抜いてウキが着水するまでの割合
+const CAST_SPLASH_DEBUG = 0.25; // デバッグ時は短縮(waitTと同じ方針。自動テストの決定性のため)
+const CAST_FALLBACK = 1.1; // fish_castの長さ(アニメから取れないときの既定値)
+const REEL_FALLBACK = 1.1; // fish_reelの長さ(同上)
+const REEL_MARGIN = 0.15; // onEndが来ない場合でも必ず先へ進むための安全網
+const COOLDOWN_S = 1.2; // 釣り上げたあと、次の釣りを始められるようになるまで
+const COOLDOWN_LEAVE_D = 1.5; // 釣り場からこれだけ離れたらクールダウンを打ち切る
+const BITE_S = 1.25; // 「!」が出てからにげられるまで
+const REEL_PULL = 0.75; // 巻き上げ中にウキを竿先へ手繰り寄せる割合
 
 export class FishingSystem {
-  state: FState = 'idle';
+  state: FishingState = 'idle';
   private waitT = 0;
   private biteT = 0;
+  private castT = 0;
+  private reelT = 0;
+  private reelDur = 0;
+  private coolT = 0;
+  /** 釣り1回ぶんの通し番号。遅れて届くアニメのonEndが古い回のものかを見分ける */
+  private seq = 0;
+  /** 釣りを始めた場所(クールダウンの離脱判定に使う) */
+  private spotX = 0;
+  private spotZ = 0;
   private bobber: Mesh;
   private rod: Mesh;
   private line: LinesMesh | null = null;
@@ -34,6 +61,7 @@ export class FishingSystem {
   // 毎フレーム再利用(newしない)
   private rodTipLocal = new Vector3(0, 1.0, 0.38);
   private linePts = [new Vector3(), new Vector3()];
+  private reelFrom = new Vector3();
 
   constructor(
     scene: Scene,
@@ -68,14 +96,23 @@ export class FishingSystem {
     const zone = this.zoneAt(x, z);
     if (!zone) return { zone: null, ok: false };
     if (!hasTool(this.game, 'rod')) return { zone, ok: false, reason: 'ツリザオが ひつよう' };
+    // 釣りの最中・巻き上げ演出中・クールダウン中は始められない(Eの連打で2回目が始まらないように)
+    if (this.state !== 'idle') return { zone, ok: false, reason: 'すこし まってから' };
     return { zone, ok: true };
   }
 
+  /** 演出中でプレイヤー操作を止めるべきか(クールダウン中は動いてよい) */
+  get locksPlayer(): boolean {
+    return this.state !== 'idle' && this.state !== 'cooldown';
+  }
+
   start(player: PlayerController, view: CharacterView): void {
-    const check = this.canFish(player.x, player.z);
-    if (!check.ok || this.state !== 'idle') return;
+    const check = this.canFish(player.x, player.z); // idle以外はここでok:falseになる
+    if (!check.ok) return;
     this.zone = check.zone;
     player.locked = true;
+    this.spotX = player.x;
+    this.spotZ = player.z;
     // 水面へ向く
     let tx: number, tz: number, wy: number;
     if (this.zone === 'sea') {
@@ -90,13 +127,9 @@ export class FishingSystem {
       wy = POND.waterY;
     }
     player.face(tx, tz);
-    if (view.groups.has('fish_cast')) {
-      view.play('fish_cast', { onEnd: () => view.play('fish_idle') });
-    } else {
-      view.play('fish_idle');
-    }
+    // ウキの落下地点だけ決めて、着水するまでは見せない
     this.bobber.position.set(tx, wy + 0.02, tz);
-    this.bobber.setEnabled(true);
+    this.bobber.setEnabled(false);
     // 竿を右手に
     const hand = view.getJoint('handR');
     if (hand) {
@@ -105,40 +138,62 @@ export class FishingSystem {
       this.rod.rotation.set(-0.5, 0, 0);
       this.rod.setEnabled(true);
     }
-    sfx('splash');
-    this.state = 'waiting';
-    this.waitT = this.debug ? 1.0 : 2.2 + Math.random() * 3.2;
     this.bobTime = 0;
-  }
-
-  /** E押下(bite中はキャッチ、待機中は何もしない) */
-  action(player: PlayerController, view: CharacterView): void {
-    if (this.state === 'bite') {
-      const item = this.pickFish();
-      sfx('catch');
-      invAdd(this.game, item, 1);
-      // 夜魚はすこし特別に(依頼はどちらの魚でも進む)
-      toast(item === 'nightfish' ? `+1 ${ITEMS[item].name}! よるにしか つれない魚だ` : `+1 ${ITEMS[item].name}`, item);
-      this.onCatch?.(item);
-      const finishAnim = view.groups.has('fish_reel') ? 'fish_reel' : 'happy';
-      view.play(finishAnim, {
+    const cast = this.castTime(view);
+    const s = ++this.seq;
+    if (cast > 0) {
+      this.state = 'casting';
+      this.castT = cast;
+      // 投げ終わったら待ちの構えへ。中断済み(Escなど)なら構え直さない
+      view.play('fish_cast', {
         onEnd: () => {
-          player.locked = false;
+          if (this.seq === s && (this.state === 'casting' || this.state === 'waiting')) view.play('fish_idle');
         },
       });
-      this.finish();
+    } else {
+      // 投げアニメが無い個体はその場で着水(従来どおりの見え方)
+      view.play('fish_idle');
+      this.splashDown();
     }
+  }
+
+  /** E押下(bite中はキャッチ、それ以外は何もしない=演出中・クールダウン中の連打は捨てる) */
+  action(player: PlayerController, view: CharacterView): void {
+    if (this.state !== 'bite') return;
+    const item = this.pickFish();
+    sfx('catch');
+    // 取得はこの1回だけ(以降はreelingが終わるまでbiteに戻らないので二重取得しない)
+    invAdd(this.game, item, 1);
+    // 夜魚はすこし特別に(依頼はどちらの魚でも進む)
+    toast(item === 'nightfish' ? `+1 ${ITEMS[item].name}! よるにしか つれない魚だ` : `+1 ${ITEMS[item].name}`, item);
+    this.onCatch?.(item);
+    // 巻き上げ演出が終わるまで reeling を維持する(この間は動けない・次の釣りも始められない)
+    this.state = 'reeling';
+    this.reelFrom.copyFrom(this.bobber.position);
+    player.locked = true;
+    const finishAnim = view.groups.has('fish_reel') ? 'fish_reel' : 'happy';
+    this.reelDur = this.animLength(view, finishAnim, REEL_FALLBACK);
+    this.reelT = this.reelDur + REEL_MARGIN; // アニメのonEndが来なくても進むようにする安全網
+    const s = this.seq; // この釣り(回)の通し番号。中断後に届くonEndと区別する
+    view.play(finishAnim, {
+      onEnd: () => {
+        // 古い回のonEndが遅れて届いても、いまの状態を勝手に進めない
+        if (this.state === 'reeling' && this.seq === s) this.enterCooldown(player, view);
+      },
+    });
   }
 
   cancel(player: PlayerController, view: CharacterView): void {
     if (this.state === 'idle') return;
-    this.finish();
+    this.seq++; // 進行中の演出のonEndを無効化する(遅れて届いても何もしない)
+    this.teardown();
+    this.state = 'idle';
     player.locked = false;
     view.play('idle');
   }
 
-  private finish(): void {
-    this.state = 'idle';
+  /** 竿・糸・ウキを片付ける(表示を消す) */
+  private teardown(): void {
     this.bobber.setEnabled(false);
     this.rod.setEnabled(false);
     this.rod.parent = null;
@@ -146,6 +201,49 @@ export class FishingSystem {
       this.line.dispose();
       this.line = null;
     }
+  }
+
+  /** ウキが着水して当たりを待ちはじめる */
+  private splashDown(): void {
+    this.bobber.setEnabled(true);
+    sfx('splash');
+    this.state = 'waiting';
+    this.waitT = this.debug ? 1.0 : 2.2 + Math.random() * 3.2;
+  }
+
+  /** 巻き上げ完了。ここで初めて片付けとプレイヤーの操作解除を行う */
+  private enterCooldown(player: PlayerController, view: CharacterView): void {
+    this.seq++; // この回は終わり。以降に届くonEndは無視する
+    this.teardown();
+    this.state = 'cooldown';
+    this.coolT = COOLDOWN_S;
+    player.locked = false;
+    view.play('idle');
+  }
+
+  /** 演出を中断して待機に戻す(にげられた時) */
+  private missed(player: PlayerController, view: CharacterView): void {
+    this.seq++; // この回は終わり。以降に届くonEndは無視する
+    this.teardown();
+    this.state = 'idle';
+    player.locked = false;
+    toast('にげられた…', 'fish');
+    sfx('miss');
+    view.play('surprised');
+  }
+
+  /** アニメの長さ(秒)。取れないときは既定値 */
+  private animLength(view: CharacterView, name: string, fallback: number): number {
+    const g = view.groups.get(name);
+    const len = g?.getLength?.() ?? 0;
+    return len > 0.05 ? len : fallback;
+  }
+
+  /** 投げてからウキが着水するまでの時間。投げアニメが無ければ0(=即着水) */
+  private castTime(view: CharacterView): number {
+    if (!view.groups.has('fish_cast')) return 0;
+    if (this.debug) return CAST_SPLASH_DEBUG;
+    return this.animLength(view, 'fish_cast', CAST_FALLBACK) * CAST_SPLASH_RATIO;
   }
 
   private pickFish(): ItemId {
@@ -159,8 +257,47 @@ export class FishingSystem {
   update(dt: number, player: PlayerController, view: CharacterView): void {
     if (this.state === 'idle') return;
     this.bobTime += dt;
-    // 釣り糸(竿先→ウキ)。毎フレームのnew Vector3/配列生成を避けて再利用する
+    // クールダウン: 表示はもう無いので時間と距離だけ見る
+    if (this.state === 'cooldown') {
+      this.coolT -= dt;
+      const away = Math.hypot(player.x - this.spotX, player.z - this.spotZ) >= COOLDOWN_LEAVE_D;
+      if (this.coolT <= 0 || away) this.state = 'idle';
+      return;
+    }
+    // 投げている間はまだ糸もウキも出さない
+    if (this.state === 'casting') {
+      this.castT -= dt;
+      if (this.castT <= 0) this.splashDown();
+      return;
+    }
+    // 竿先(ワールド座標)。毎フレームのnew Vector3/配列生成を避けて再利用する
     Vector3.TransformCoordinatesToRef(this.rodTipLocal, this.rod.getWorldMatrix(), this.linePts[0]);
+    if (this.state === 'waiting') {
+      this.bobber.position.y += Math.sin(this.bobTime * 3) * 0.0006;
+      this.waitT -= dt;
+      if (this.waitT <= 0) {
+        this.state = 'bite';
+        sfx('bite');
+        this.biteT = BITE_S;
+        this.bobber.position.y -= 0.055; // ぐっと沈む
+      }
+    } else if (this.state === 'bite') {
+      this.biteT -= dt;
+      if (this.biteT <= 0) {
+        this.missed(player, view);
+        return;
+      }
+    } else if (this.state === 'reeling') {
+      this.reelT -= dt;
+      // ウキを竿先へ手繰り寄せる(糸が止まって見えないように)
+      const p = this.reelDur > 0 ? 1 - Math.max(0, Math.min(1, this.reelT / this.reelDur)) : 1;
+      Vector3.LerpToRef(this.reelFrom, this.linePts[0], p * REEL_PULL, this.bobber.position);
+      if (this.reelT <= 0) {
+        this.enterCooldown(player, view); // アニメのonEndが来なかったときの保険
+        return;
+      }
+    }
+    // 釣り糸(竿先→ウキ)
     this.linePts[1].copyFrom(this.bobber.position);
     if (!this.line) {
       this.line = CreateLines('fline', { points: this.linePts, updatable: true }, this.scene);
@@ -170,30 +307,12 @@ export class FishingSystem {
     } else {
       CreateLines('fline', { points: this.linePts, instance: this.line });
     }
-    if (this.state === 'waiting') {
-      this.bobber.position.y += Math.sin(this.bobTime * 3) * 0.0006;
-      this.waitT -= dt;
-      if (this.waitT <= 0) {
-        this.state = 'bite';
-        sfx('bite');
-        this.biteT = 1.25;
-        this.bobber.position.y -= 0.055; // ぐっと沈む
-      }
-    } else if (this.state === 'bite') {
-      this.biteT -= dt;
-      if (this.biteT <= 0) {
-        toast('にげられた…', 'fish');
-        sfx('miss');
-        this.finish();
-        player.locked = false;
-        view.play('surprised');
-      }
-    }
   }
 
   get hint(): string | null {
-    if (this.state === 'waiting') return 'まってる… <kbd>Esc</kbd>やめる';
+    if (this.state === 'casting' || this.state === 'waiting') return 'まってる… <kbd>Esc</kbd>やめる';
     if (this.state === 'bite') return '<b class="bite">!!</b> <kbd>E</kbd>つりあげる';
+    if (this.state === 'reeling') return 'つりあげてる…';
     return null;
   }
 }

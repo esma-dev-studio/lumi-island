@@ -1,14 +1,19 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { resolveCandidate, PRIORITY, type InteractionCandidate } from '../../src/systems/InteractionResolver';
+import { selectInteraction } from '../../src/systems/ObjectiveInteractionPolicy';
 import { InteractionSystem } from '../../src/systems/InteractionSystem';
-import { newGameState } from '../../src/game/GameState';
+import { currentObjective, objectiveActionContext } from '../../src/systems/ObjectiveSystem';
+import { acceptQuest } from '../../src/systems/QuestSystem';
+import { QUEST_BY_ID } from '../../src/data/quests';
+import { newGameState, invAdd, giveTool, type GameState } from '../../src/game/GameState';
 import type { IslandScene, GatherNodeRuntime } from '../../src/scenes/IslandScene';
 import type { PlayerController } from '../../src/systems/PlayerController';
 import type { CharacterView } from '../../src/characters/CharacterView';
+import type { ItemId } from '../../src/data/items';
 
 const cand = (over: Partial<InteractionCandidate>): InteractionCandidate => ({
-  id: 'x', priority: 50, distance: 1, enabled: true, hint: '', run: () => {}, ...over,
+  id: 'x', kind: 'gather', priority: 50, distance: 1, enabled: true, hint: '', run: () => {}, ...over,
 });
 
 describe('InteractionResolver', () => {
@@ -34,9 +39,142 @@ describe('InteractionResolver', () => {
     expect(resolveCandidate([shop, npc])?.id).toBe('tsumugi');
   });
   it('通常NPCより採取が優先されることはない(NPC優先)', () => {
-    const npc = cand({ id: 'npc', priority: PRIORITY.npc, distance: 1.6 });
+    const npc = cand({ id: 'npc', kind: 'talk', priority: PRIORITY.npc, distance: 1.6 });
     const tree = cand({ id: 'tree', priority: PRIORITY.gather, distance: 0.5 });
     expect(resolveCandidate([npc, tree])?.id).toBe('npc');
+  });
+});
+
+// ---- 目的連動のインタラクション選別(v5 P0-1)----
+// 目的と食いちがうホットヒント(木材あつめ中に「お店をみる」等)を出さず、Eでも動かさない。
+describe('ObjectiveInteractionPolicy(目的に合う候補だけを出す)', () => {
+  // 候補ビルダー(InteractionRoutingが作る形に合わせる)
+  const node = (id: string, item: ItemId, distance = 1.0, enabled = true) =>
+    cand({ id: `node_${id}`, kind: 'gather', targetId: id, itemId: item, priority: PRIORITY.gather, distance, enabled });
+  const talk = (id: string, actionable: boolean, distance = 1.2) =>
+    cand({
+      id: `npc_${id}`, kind: 'talk', targetId: id, questActionable: actionable,
+      priority: actionable ? PRIORITY.npcQuest : PRIORITY.gather + 5, distance,
+    });
+  const shop = (distance = 0.5) =>
+    cand({ id: 'shop', kind: 'shop', targetId: 'shop', priority: PRIORITY.shop, distance });
+  const fishing = (distance = 1.0) =>
+    cand({ id: 'fishing', kind: 'fish', targetId: 'sea', priority: PRIORITY.fishing, distance });
+  const bed = () =>
+    cand({ id: 'sleep', kind: 'sleep', targetId: 'bed', priority: PRIORITY.shop, distance: 0.5 });
+
+  const ctxOf = (s: GameState) => objectiveActionContext(currentObjective(s));
+  // 木材あつめ中
+  const woodCtx = () => {
+    const s = newGameState();
+    acceptQuest(s, QUEST_BY_ID.q_wood);
+    return ctxOf(s);
+  };
+  // こうせきほり中
+  const oreCtx = () => {
+    const s = newGameState();
+    s.quests.q_wood = 'done';
+    s.quests.q_ore = 'open';
+    giveTool(s, 'pickaxe');
+    acceptQuest(s, QUEST_BY_ID.q_ore);
+    return ctxOf(s);
+  };
+  // ヒカリゴケあつめ中(ランタンの材料)
+  const mossCtx = () => {
+    const s = newGameState();
+    s.quests.q_wood = 'done';
+    s.quests.q_fish = 'done';
+    s.quests.q_ore = 'done';
+    s.quests.q_lantern = 'open';
+    acceptQuest(s, QUEST_BY_ID.q_lantern);
+    invAdd(s, 'wood', 1);
+    return ctxOf(s);
+  };
+  // 報告待ち(ツムギに ほうこくしよう)
+  const reportCtx = () => {
+    const s = newGameState();
+    acceptQuest(s, QUEST_BY_ID.q_wood);
+    invAdd(s, 'wood', 5);
+    return ctxOf(s);
+  };
+  const freeCtx = () => {
+    const s = newGameState();
+    s.quests = { q_wood: 'done', q_fish: 'done', q_ore: 'done', q_lantern: 'done', q_lumi: 'done' };
+    return ctxOf(s);
+  };
+
+  it('木材あつめ中: 店が近くても木が主ヒントになる', () => {
+    expect(selectInteraction([shop(0.3), node('tree1', 'wood', 1.7)], woodCtx())?.id).toBe('node_tree1');
+  });
+  it('木材あつめ中: 店だけが近いときは主ヒントなし(Eも無効)', () => {
+    const spy = vi.fn();
+    const s = { ...shop(0.3), run: spy };
+    expect(selectInteraction([s], woodCtx())).toBeNull(); // 表示されない=実行もされない
+    expect(spy).not.toHaveBeenCalled();
+  });
+  it('こうせきほり中: コケのほうが近くても鉱石が主ヒントになる', () => {
+    expect(
+      selectInteraction([node('moss5', 'moss', 0.4), node('ore1', 'ore', 1.6)], oreCtx())?.id
+    ).toBe('node_ore1');
+  });
+  it('こうせきほり中: コケしかなければ主ヒントなし(「ヒカリゴケをとる」を出さない)', () => {
+    expect(selectInteraction([node('moss5', 'moss', 0.4)], oreCtx())).toBeNull();
+  });
+  it('ヒカリゴケあつめ中: 岩を主ヒントにしない', () => {
+    expect(selectInteraction([node('rock2', 'stone', 0.5)], mossCtx())).toBeNull();
+    expect(
+      selectInteraction([node('rock2', 'stone', 0.5), node('moss6', 'moss', 1.8)], mossCtx())?.id
+    ).toBe('node_moss6');
+  });
+  it('報告目的中: 採取物を主ヒントにせず、報告相手が優先される', () => {
+    expect(selectInteraction([node('tree1', 'wood', 0.3)], reportCtx())).toBeNull();
+    expect(
+      selectInteraction([node('tree1', 'wood', 0.3), talk('tsumugi', true, 1.7)], reportCtx())?.id
+    ).toBe('npc_tsumugi');
+  });
+  it('報告目的中: 別のNPCとの雑談は主ヒントにしない', () => {
+    expect(selectInteraction([talk('minamo', false, 0.4)], reportCtx())).toBeNull();
+  });
+  it('受注・報告できるNPCは目的に関係なく最優先', () => {
+    expect(
+      selectInteraction([node('ore1', 'ore', 0.2), talk('tsumugi', true, 1.7)], oreCtx())?.id
+    ).toBe('npc_tsumugi');
+    expect(
+      selectInteraction([shop(0.3), talk('tsumugi', true, 1.7)], woodCtx())?.id
+    ).toBe('npc_tsumugi');
+  });
+  it('進行中(話しても進まない)NPCは採取のEを横取りしない', () => {
+    expect(
+      selectInteraction([node('ore1', 'ore', 1.6), talk('nokto', false, 0.3)], oreCtx())?.id
+    ).toBe('node_ore1');
+  });
+  it('採取目的中でも「ねる」はできる(夜に行きづまらせない)', () => {
+    expect(selectInteraction([bed()], woodCtx())?.id).toBe('sleep');
+  });
+  it('採取目的中に釣り場へ行っても釣りは主ヒントにしない', () => {
+    expect(selectInteraction([fishing(1.0)], woodCtx())).toBeNull();
+  });
+  it('道具が足りない理由表示は、目的に合う対象なら残る', () => {
+    const reason = cand({
+      id: 'node_reason', kind: 'gather', targetId: 'ore1', itemId: 'ore',
+      priority: PRIORITY.gather + 5, distance: 1.0, hint: 'こうせきをほるには ツルハシが ひつよう',
+    });
+    const locked = node('ore1', 'ore', 1.0, false); // 実行不可の本体
+    expect(selectInteraction([locked, reason], oreCtx())?.hint).toContain('ツルハシ');
+  });
+  it('自由探索では店・釣り・採取が従来どおり選べる', () => {
+    const ctx = freeCtx();
+    expect(ctx.guided).toBe(false);
+    expect(selectInteraction([shop(0.4)], ctx)?.id).toBe('shop');
+    expect(selectInteraction([fishing()], ctx)?.id).toBe('fishing');
+    expect(selectInteraction([node('moss5', 'moss', 0.4)], ctx)?.id).toBe('node_moss5');
+    // 優先度の順序も従来どおり(採取 > 店)
+    expect(selectInteraction([shop(0.2), node('tree1', 'wood', 1.5)], ctx)?.id).toBe('node_tree1');
+  });
+  it('未受注(話を聞こう)のあいだは自由に採取・買い物できる', () => {
+    const ctx = objectiveActionContext(currentObjective(newGameState()));
+    expect(selectInteraction([node('tree1', 'wood', 0.5)], ctx)?.id).toBe('node_tree1');
+    expect(selectInteraction([shop(0.5)], ctx)?.id).toBe('shop');
   });
 });
 

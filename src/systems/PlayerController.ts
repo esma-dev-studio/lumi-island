@@ -3,10 +3,46 @@ import type { CharacterView } from '../characters/CharacterView';
 import { sfx } from '../audio/AudioSystem';
 import { onPier } from '../entities/water';
 import { terrainHeight } from '../entities/terrain';
+import { followCameraYaw } from '../scenes/CameraController';
 import type { IslandScene } from '../scenes/IslandScene';
 
 export interface InputState {
   up: boolean; down: boolean; left: boolean; right: boolean; run: boolean;
+  /** タッチの仮想スティック(-1..1)。左キーと同じ向き。未定義ならキーボード扱い */
+  ax?: number;
+  /** タッチの仮想スティック(-1..1)。下キーと同じ向き。未定義ならキーボード扱い */
+  az?: number;
+}
+
+/** アナログ入力でこの倒し量を超えたら走る(Shiftの代わり) */
+const ANALOG_RUN = 0.7;
+
+// 変換結果の置き場。毎フレームのnewを避けるため使い回す(呼んだ直後にその場で読むこと)
+const worldDir = { x: 0, z: 0 };
+
+/**
+ * 画面基準の入力(ix=画面の左向き量 / iz=画面の下向き量)をカメラのヨーで回してワールド方向にする。
+ *
+ * ヨー0のカメラは +z 側からプレイヤーを見るので「画面左=+x・画面下=+z」。
+ * つまりヨー0では変換は恒等式で、キーボード操作は従来のワールド固定のまま。
+ * ヨーy ではカメラが (sin y, cos y) の側へ回るので、同じ基底を y だけ回す。
+ *
+ * yaw===0 を先に返すのは速度目的ではなく保証のため:
+ * PCは指のカメラ操作が起きずヨーが常に0なので、cos/sinの丸め誤差すら通らず
+ * 変更前とビット単位で同一の移動ベクトルになる(キーボードのボット/E2Eを壊さない)。
+ * 回転は長さを変えないので、走り判定(倒し量)や加減速はそのままでよい。
+ */
+export function rotateInputByYaw(ix: number, iz: number, yaw: number): { x: number; z: number } {
+  if (yaw === 0) {
+    worldDir.x = ix;
+    worldDir.z = iz;
+    return worldDir;
+  }
+  const c = Math.cos(yaw);
+  const s = Math.sin(yaw);
+  worldDir.x = ix * c + iz * s;
+  worldDir.z = -ix * s + iz * c;
+  return worldDir;
 }
 
 export class PlayerController {
@@ -36,16 +72,25 @@ export class PlayerController {
 
   update(dt: number, input: InputState): void {
     const def = this.view.def;
-    // このカメラ(北向き固定)では+x(東)が画面左に映るため、
+    // 入力は「画面基準」。既定のカメラ(ヨー0)では+x(東)が画面左に映るため、
     // D(右キー)=画面右=西(-x)。ここを逆にすると左右反転操作になる(実バグだった)
-    let ix = (input.left ? 1 : 0) - (input.right ? 1 : 0);
-    let iz = (input.down ? 1 : 0) - (input.up ? 1 : 0);
+    // タッチのスティックは ax/az に同じ向きで入る。未定義のときは従来どおりキーで計算する。
+    const analog = input.ax !== undefined || input.az !== undefined;
+    let ix = analog ? (input.ax ?? 0) : (input.left ? 1 : 0) - (input.right ? 1 : 0);
+    let iz = analog ? (input.az ?? 0) : (input.down ? 1 : 0) - (input.up ? 1 : 0);
     if (this.locked) {
       ix = 0;
       iz = 0;
     }
+    // 画面基準 → ワールド。指で見回した向きに合わせて進むので、カメラを何度回しても
+    // 「上に倒す=画面の奥へ」が保たれる。PCではヨーが常に0なので恒等式(従来と同じ)。
+    const dir = rotateInputByYaw(ix, iz, followCameraYaw());
+    ix = dir.x;
+    iz = dir.z;
     const len = Math.hypot(ix, iz);
-    const target = len > 0 ? (input.run ? def.runSpeed : def.walkSpeed) : 0;
+    // アナログでは倒し量で歩き/走りを切り替える(booleanのrunはShift用のまま)
+    const running = input.run || (analog && len > ANALOG_RUN);
+    const target = len > 0 ? (running ? def.runSpeed : def.walkSpeed) : 0;
     const dirX = len > 0 ? ix / len : this.vx === 0 && this.vz === 0 ? 0 : this.vx / (Math.hypot(this.vx, this.vz) || 1);
     const dirZ = len > 0 ? iz / len : this.vz === 0 && this.vx === 0 ? 0 : this.vz / (Math.hypot(this.vx, this.vz) || 1);
 

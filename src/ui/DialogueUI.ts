@@ -1,5 +1,16 @@
 // 会話ボックス(画面下)。Eかクリックで進む。
 import { sfx } from '../audio/AudioSystem';
+import { byInput } from './inputMode';
+
+/**
+ * 「つぎへ/おわる」の案内。押す場所は入力手段で違うので、出すたびに選び直す。
+ * タッチではこのパネル自体のタップでも、右下の大きいボタン(「つぎへ」)でも進む。
+ */
+function nextLabel(last: boolean): string {
+  const word = last ? 'おわる' : 'つぎへ';
+  return byInput(`<kbd>E</kbd>${word}`, `タップで ${word}`);
+}
+
 export class DialogueUI {
   private el: HTMLElement;
   private lines: string[] = [];
@@ -14,7 +25,7 @@ export class DialogueUI {
     this.el.innerHTML = `
       <div class="dlg-name"></div>
       <div class="dlg-text"></div>
-      <div class="dlg-next"><kbd>E</kbd>つぎへ</div>
+      <div class="dlg-next">${nextLabel(false)}</div>
     `;
     document.getElementById('ui-root')!.appendChild(this.el);
     this.el.addEventListener('click', () => this.advance());
@@ -54,6 +65,6 @@ export class DialogueUI {
     (this.el.querySelector('.dlg-name') as HTMLElement).textContent = this.speaker;
     (this.el.querySelector('.dlg-text') as HTMLElement).textContent = this.lines[this.idx];
     (this.el.querySelector('.dlg-next') as HTMLElement).innerHTML =
-      this.idx >= this.lines.length - 1 ? '<kbd>E</kbd>おわる' : '<kbd>E</kbd>つぎへ';
+      nextLabel(this.idx >= this.lines.length - 1);
   }
 }

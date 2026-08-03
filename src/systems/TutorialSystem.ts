@@ -2,6 +2,7 @@
 import type { GameState } from '../game/GameState';
 import type { Objective } from './ObjectiveSystem';
 import { toast } from '../ui/Toast';
+import { byInput } from '../ui/inputMode';
 
 const HINT_COOLDOWN = 60; // 秒
 const STUCK_TIME = 60; // 進展なしでヒントを出すまで
@@ -25,7 +26,11 @@ export class TutorialSystem {
     if (!this.state.flags.tut_move) {
       return {
         id: 'tut_move', headline: 'いまやること',
-        label: '<kbd>WASD</kbd>か<kbd>矢印キー</kbd>で あるいてみよう',
+        // 案内は出すたびに入力手段で決める(タッチならキーの名前は出さない)
+        label: byInput(
+          '<kbd>WASD</kbd>か<kbd>矢印キー</kbd>で あるいてみよう',
+          'がめん左下を ゆびで うごかして あるいてみよう'
+        ),
         target: { kind: 'none' },
       };
     }
@@ -46,19 +51,28 @@ export class TutorialSystem {
   onFirstItem(): void {
     if (!this.state.flags.unlock_inv) {
       this.state.flags.unlock_inv = true;
-      toast('<kbd>Tab</kbd>で「もちもの」が見られるよ', 'wood');
+      toast(
+        byInput('<kbd>Tab</kbd>で「もちもの」が見られるよ', '右上の「もちもの」ボタンで 見られるよ'),
+        'wood'
+      );
     }
   }
   onQuestAccepted(): void {
     if (!this.state.flags.unlock_quest) {
       this.state.flags.unlock_quest = true;
-      toast('<kbd>Q</kbd>で おねがいを見られるよ', 'lumina');
+      toast(
+        byInput('<kbd>Q</kbd>で おねがいを見られるよ', '右上の「おねがい」ボタンで 見られるよ'),
+        'lumina'
+      );
     }
   }
   onCraftUnlocked(): void {
     if (!this.state.flags.unlock_craft) {
       this.state.flags.unlock_craft = true;
-      toast('<kbd>C</kbd>で クラフトができるよ', 'lumina');
+      toast(
+        byInput('<kbd>C</kbd>で クラフトができるよ', '右上の「クラフト」ボタンで クラフトができるよ'),
+        'lumina'
+      );
     }
   }
   onFirstFurniture(): void {

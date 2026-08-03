@@ -2,6 +2,7 @@
 import type { GameState } from '../game/GameState';
 import { ITEMS, TOOLS, type ItemId } from '../data/items';
 import { icon } from './icons';
+import { byInput } from './inputMode';
 
 export class InventoryUI {
   private el: HTMLElement;
@@ -43,7 +44,7 @@ export class InventoryUI {
       .map((t) => `<div class="inv-tool" title="${TOOLS[t].desc}"><span class="inv-ico">${icon(t)}</span><span>${TOOLS[t].name}</span></div>`)
       .join('');
     this.el.innerHTML = `
-      <div class="panel-title">もちもの <span class="panel-close" data-close>とじる(Tab)</span></div>
+      <div class="panel-title">もちもの <span class="panel-close" data-close>${byInput('とじる(Tab)', 'とじる')}</span></div>
       <div class="inv-grid">${slots || '<div class="inv-empty">まだ何ももっていない。島で木をきったり、実をつんだりしてみよう!</div>'}</div>
       <div class="panel-sub">どうぐ</div>
       <div class="inv-tools">${tools}</div>

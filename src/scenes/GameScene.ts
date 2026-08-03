@@ -34,6 +34,7 @@ import { DialogueUI } from '../ui/DialogueUI';
 import { QuestLogUI } from '../ui/QuestLogUI';
 import { QuestCompleteUI } from '../ui/QuestCompleteUI';
 import { PauseMenu } from '../ui/PauseMenu';
+import { TouchControls } from '../ui/TouchControls';
 import { save } from '../save/SaveSystem';
 import { sfx, setAmbient } from '../audio/AudioSystem';
 import { updateEffects } from '../entities/effects';
@@ -66,9 +67,11 @@ export class GameScene {
   questLog!: QuestLogUI;
   questComplete!: QuestCompleteUI;
   pauseMenu!: PauseMenu;
+  touch!: TouchControls;
   paused = false;
   wantInteract = false;
   input: InputState = { up: false, down: false, left: false, right: false, run: false };
+  private shownHint = ''; // HUDに出ている操作ヒント(タッチの行動ボタンが同じ内容を出す)
   private lastDay = 1;
   private saveTimer = 0;
   private hitstop = 0;
@@ -132,6 +135,17 @@ export class GameScene {
     this.npcAvail = new NpcAvailabilityService(this.npcs, this.state, this.island.time);
     this.worldPause = new WorldPauseController(this);
     this.inputRouter = new InputRouter(this);
+    // タッチUI(iPad)。押したときの処理はキーボードと同じ InputRouter のメソッドを呼ぶ。
+    this.touch = new TouchControls({
+      root: document.getElementById('ui-root')!,
+      input: this.input,
+      onInteract: () => this.inputRouter.interact(),
+      onInventory: () => this.inputRouter.toggleInventory(),
+      onCraft: () => this.inputRouter.toggleCraft(),
+      onQuest: () => this.inputRouter.toggleQuestLog(),
+      onMenu: () => this.inputRouter.escape(),
+      onRotate: () => this.inputRouter.rotatePlacement(),
+    });
     this.questDlg = new QuestDialogueController({
       state: this.state, npcs: this.npcs, dialogue: this.dialogue,
       questComplete: this.questComplete, tutorial: this.tutorial, player: this.player,
@@ -185,6 +199,7 @@ export class GameScene {
     window.addEventListener('beforeunload', () => save(this.state));
     for (const p of validateItemData()) console.warn('[data]', p);
     this.inputRouter.attach();
+    this.touch.attach();
     if (this.opts.debug) installLumiDebugApi(this); // 決定的テスト用のAPI(実プレイ検証はデバッグなしで行う)
   }
 
@@ -253,13 +268,14 @@ export class GameScene {
         const { uiOpen, frozen } = this.worldPause;
         this.worldPause.updateWorld(dt);
         // 世界が止まっていても、プレイヤーと演出の更新だけは走らせる
-        this.player.locked = frozen || this.inter.busy || this.fishing.state !== 'idle';
+        this.player.locked = frozen || this.inter.busy || this.fishing.locksPlayer;
         this.player.update(dt, this.input);
         this.placement.update(this.player);
         updateEffects(dt, this.player.x, this.player.y, this.player.z);
         this.seq.update(dt);
         const hint = routeInteraction(this, uiOpen);
-        this.hud.setHint(uiOpen || this.pauseMenu.open ? '' : hint);
+        this.shownHint = uiOpen || this.pauseMenu.open ? '' : hint;
+        this.hud.setHint(this.shownHint);
         this.updateObjective(dt);
         // 進行まわり
         if (this.island.time.day !== this.lastDay) {
@@ -286,11 +302,24 @@ export class GameScene {
         this.occlusion.update();
       }
     }
+    // タッチUIはポーズ中も更新する(メニューボタンで閉じられるように)
+    this.touch.sync({
+      hint: menuPaused ? '' : this.shownHint,
+      gates: this.tutorial.gates(),
+      placementActive: this.placement.active !== null,
+      dialogueOpen: this.dialogue.open,
+      questCompleteOpen: this.questComplete.open,
+      sequenceActive: this.seq.active,
+      panelOpen:
+        this.invUI.open || this.craftUI.open || this.shopUI.open ||
+        this.questLog.open || this.pauseMenu.open,
+    });
     this.scene.render();
   }
 
   dispose(): void {
     this.inter.cancelAction(); // 採取中に破棄されても、あとから素材が入ったり破棄済みMeshを触ったりしない
     this.inputRouter.detach();
+    this.touch.dispose();
   }
 }

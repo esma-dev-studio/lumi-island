@@ -8,6 +8,11 @@ import { questRemaining } from './QuestSystem';
 import { missingIngredients } from './CraftingSystem';
 import { RECIPES, ITEMS, type ItemId, type ToolId, type RecipeDef } from '../data/items';
 import { NPC_BY_ID } from '../data/npcs';
+import { byInput } from '../ui/inputMode';
+import type { InteractionKind } from './InteractionResolver';
+
+/** 報告待ちの見出し(この文字列で「報告段階」を判定する) */
+export const REPORT_HEADLINE = 'できた!';
 
 export interface ObjectiveTarget {
   kind: 'npc' | 'poi' | 'none';
@@ -21,10 +26,30 @@ export interface Objective {
   target: ObjectiveTarget;
   progress?: { cur: number; max: number };
   lostHint?: string;
-  // 回帰ボット用の構造情報(表示はlabelを使う)
+  // 回帰ボット・Eの候補選別用の構造情報(表示はlabelを使う)
   gatherItem?: ItemId;
   craftRecipe?: string;
+  fishItems?: ItemId[]; // 釣りで達成できるアイテム(釣り段階の目印)
+  placeFurniture?: boolean; // 家具を島に置く段階の目印
 }
+
+/**
+ * いまの目的からみた「Eでやってよいこと」。
+ * guided=true のあいだは、ここに合わない候補はホットヒントにも出さずEでも実行しない
+ * (表示と実行を必ず一致させる)。
+ * guided=false は自由探索あつかいで、preferredKindsは使わない。
+ */
+export interface ObjectiveActionContext {
+  preferredKinds: InteractionKind[];
+  targetNpcId?: string;
+  targetItemIds?: ItemId[];
+  targetPoiId?: string;
+  guided: boolean;
+}
+
+// 「ねる」はゲーム内時間を進めるだけで、どの目的とも衝突しない(夜に詰まらせない)
+const ALWAYS_ALLOWED: InteractionKind[] = ['sleep'];
+const FREE_CONTEXT = (): ObjectiveActionContext => ({ preferredKinds: [], guided: false });
 
 /** NPCの在/不在。GameSceneがNPCSystemから作って渡す。不在ならベッドへ誘導する */
 export interface NpcAvailability {
@@ -61,7 +86,12 @@ function craftStep(
   if (missing.length === 0) {
     return {
       ...base, id: `${qid}_craft_${recipe.id}`, headline: 'いまやること',
-      label: `ざいりょうが そろったよ! <kbd>C</kbd>で ${recipe.name}を作ろう`,
+      // 押す場所は入力手段で違う(キー=C / タッチ=右上の「クラフト」ボタン)。
+      // 出すたびに選び直す。前半の「ざいりょうが そろったよ!」は両方で同じ
+      label: byInput(
+        `ざいりょうが そろったよ! <kbd>C</kbd>で ${recipe.name}を作ろう`,
+        `ざいりょうが そろったよ! 右上の「クラフト」ボタンで ${recipe.name}を作ろう`
+      ),
       target: { kind: 'none' },
       craftRecipe: recipe.id,
     };
@@ -101,6 +131,7 @@ function inProgressObjective(state: GameState, q: QuestDef): Objective {
         label: '桟橋で サカナをつろう',
         target: { kind: 'poi', id: 'pier' },
         progress: { cur: q.count - rem, max: q.count },
+        fishItems: q.acceptedItems ?? (q.item ? [q.item] : []),
       };
     }
     case 'q_ore':
@@ -113,7 +144,7 @@ function inProgressObjective(state: GameState, q: QuestDef): Objective {
       };
     case 'q_lantern': {
       if (invCount(state, 'f_lantern') >= 1) {
-        return { ...base, id: 'q_lantern_place', headline: 'いまやること', label: 'ランタンを 島に置こう(もちもの→おく)', target: { kind: 'none' } };
+        return { ...base, id: 'q_lantern_place', headline: 'いまやること', label: 'ランタンを 島に置こう(もちもの→おく)', target: { kind: 'none' }, placeFurniture: true };
       }
       return craftStep(state, R_LANTERN, 'q_lantern', base);
     }
@@ -125,6 +156,7 @@ function inProgressObjective(state: GameState, q: QuestDef): Objective {
           label: '光る家具を 島に置こう',
           target: { kind: 'none' },
           progress: { cur: q.count - rem, max: q.count },
+          placeFurniture: true,
         };
       }
       // 作りやすいほう(不足が少ないほう)を選ぶ。同数ならランタン
@@ -149,7 +181,10 @@ function withAvailability(o: Objective, avail?: Record<string, NpcAvailability>)
     id: `${o.id}_wait`, headline: 'いまやること',
     label: a.waitLabel ?? `${npcName(o.target.id)}は いまは いないよ<br>ベッドで あさまで ねよう`,
     target: { kind: 'poi', id: 'bed' },
-    lostHint: 'じぶんの家の ドアの前で <kbd>E</kbd>を おすと ねむれるよ。',
+    lostHint: byInput(
+      'じぶんの家の ドアの前で <kbd>E</kbd>を おすと ねむれるよ。',
+      'じぶんの家の ドアの前で 右下の 大きいボタンを おすと ねむれるよ。'
+    ),
   };
 }
 
@@ -168,7 +203,7 @@ export function currentObjective(
     if (questRemaining(state, q) === 0) {
       const npc = q.npc === 'any' ? anyNpcFallback : q.npc;
       return withAvailability({
-        id: `${q.id}_report`, headline: 'できた!',
+        id: `${q.id}_report`, headline: REPORT_HEADLINE,
         label: `${npcName(npc)}に ほうこくしよう`,
         target: { kind: 'npc', id: npc },
         lostHint: `${npcName(npc)}を さがして 話しかけよう。矢印を追ってね。`,
@@ -188,7 +223,10 @@ export function currentObjective(
       id: `${q.id}_offer`, headline: 'いまやること',
       label: `${npcName(npc)}の はなしを聞こう`,
       target: { kind: 'npc', id: npc },
-      lostHint: `${npcName(npc)}に 近づいて <kbd>E</kbd>で話しかけよう。`,
+      lostHint: byInput(
+        `${npcName(npc)}に 近づいて <kbd>E</kbd>で話しかけよう。`,
+        `${npcName(npc)}に 近づいて 右下の 大きいボタンで話しかけよう。`
+      ),
     }, npcAvail);
   }
   // 4) 全部クリア
@@ -197,4 +235,35 @@ export function currentObjective(
     label: '島で じゆうに くらそう',
     target: { kind: 'none' },
   };
+}
+
+/**
+ * 目的から「Eでやってよいこと」を導く(依頼IDはハードコードせず、目的の形から判断する)。
+ * 誘導する(guided)のは、プレイヤーが依頼を引き受けたあとの具体的な作業段階だけ:
+ *   報告 / ベッドで待つ / 採取 / 釣り / クラフト・配置。
+ * 未受注の「話を聞こう」・移動チュートリアル・クリア後は自由あつかい(従来どおり全候補)。
+ * obj=null は最初のフレーム(目的未計算)なので自由あつかい。
+ */
+export function objectiveActionContext(obj: Objective | null): ObjectiveActionContext {
+  if (!obj) return FREE_CONTEXT();
+  if (obj.target.kind === 'npc' && obj.target.id) {
+    // 報告だけを誘導する。未受注のオファーはまだ何も引き受けていないので自由に遊べる
+    if (obj.headline !== REPORT_HEADLINE) return FREE_CONTEXT();
+    return { preferredKinds: ['talk', ...ALWAYS_ALLOWED], targetNpcId: obj.target.id, guided: true };
+  }
+  // NPC不在でベッドへ誘導中(withAvailabilityが作る目的)
+  if (obj.target.kind === 'poi' && obj.target.id === 'bed') {
+    return { preferredKinds: ['sleep'], targetPoiId: 'bed', guided: true };
+  }
+  if (obj.gatherItem) {
+    return { preferredKinds: ['gather', ...ALWAYS_ALLOWED], targetItemIds: [obj.gatherItem], guided: true };
+  }
+  if (obj.fishItems) {
+    return { preferredKinds: ['fish', ...ALWAYS_ALLOWED], targetItemIds: obj.fishItems, guided: true };
+  }
+  if (obj.craftRecipe || obj.placeFurniture) {
+    // クラフト・配置はCキー/もちものでする作業。Eの主ヒントは出さない(targetItemIdsが空=採取も対象外)
+    return { preferredKinds: ['gather', ...ALWAYS_ALLOWED], targetItemIds: [], guided: true };
+  }
+  return FREE_CONTEXT();
 }

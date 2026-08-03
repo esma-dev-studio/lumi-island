@@ -3,6 +3,7 @@ import type { GameState } from '../game/GameState';
 import { invRemove, invAdd, invCount } from '../game/GameState';
 import { ITEMS, SHOP_STOCK, type ItemId } from '../data/items';
 import { icon } from './icons';
+import { byInput } from './inputMode';
 import { toast } from './Toast';
 
 export class ShopUI {
@@ -61,7 +62,7 @@ export class ShopUI {
     this.el.innerHTML = `
       <div class="panel-title">ツムギ工房
         <span class="shop-lumina">${icon('lumina')}${s.lumina}</span>
-        <span class="panel-close" data-close>とじる(Esc)</span>
+        <span class="panel-close" data-close>${byInput('とじる(Esc)', 'とじる')}</span>
       </div>
       <div class="shop-tabs">
         <button class="shop-tab ${this.tab === 'sell' ? 'on' : ''}" data-tab="sell">うる</button>
