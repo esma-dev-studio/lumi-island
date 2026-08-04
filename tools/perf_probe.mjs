@@ -343,10 +343,20 @@ async function runEndurance(mode) {
       },
     },
     {
-      id: 'lantern', label: 'ランタン3個を設置', base: 20,
+      id: 'lantern', label: 'ランタン3個を設置(定常3灯)', base: 20,
       run: async () => {
         await ev('__lumiDebug.setHour(21); __lumiDebug.tp(0, 15)');
         await pumpLeft(400);
+        // 前の周回のランタンを持ち帰り、常に「3灯」の定常状態で測る。
+        // 撤去なしで積むと4周で12灯という非現実な状態になり、台数起因の劣化を
+        // 「時間経過の劣化」と誤読してしまう(実測: 9灯以降は昼でもp95が35ms前後に悪化)。
+        // 持ち帰り→置き直しを毎周回すので、配置・撤去のコードパス自体は周回ごとに動く。
+        await ev(`(() => {
+          const pl = window.__lumi.game.placement;
+          const olds = [...pl.placed.values()].filter((p) => p.data.item === 'f_lantern');
+          for (const p of olds) pl.pickUp(p);
+        })()`);
+        await pumpLeft(300);
         for (let i = 0; i < 3 && left() > 1600; i++) {
           await placeLantern(i % 2 === 0 ? 'd' : 'a');
           await pumpLeft(200);

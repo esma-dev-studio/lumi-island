@@ -1,0 +1,458 @@
+[
+  {
+    "name": "tsumugi_n",
+    "dir": "n",
+    "opened": true,
+    "start": {
+      "x": -3.8999999999999995,
+      "z": -1.6,
+      "r": 3,
+      "off": 0
+    },
+    "walkEnd": 1.28,
+    "player": {
+      "x": -2.4,
+      "z": 1,
+      "rotY": 2.19
+    },
+    "npc": {
+      "x": -3.9,
+      "z": 1.4,
+      "rotY": 3.94
+    },
+    "cam": {
+      "x": -4.64,
+      "y": 2.72,
+      "z": 4.37
+    },
+    "dist": 1.55,
+    "dialogueOpen": true,
+    "camInBuilding": false,
+    "faded": 0,
+    "waterPct": 0.8,
+    "wallPct": 8,
+    "cyanPct": 0,
+    "playerWaterMargin": 1.5,
+    "npcWaterMargin": 1.5,
+    "planMs": 16.42,
+    "errors": []
+  },
+  {
+    "name": "tsumugi_e",
+    "dir": "e",
+    "opened": true,
+    "start": {
+      "x": -0.8999999999999999,
+      "z": 1.4000000000000001,
+      "r": 3,
+      "off": 0
+    },
+    "walkEnd": 1.28,
+    "player": {
+      "x": -2.4,
+      "z": 1,
+      "rotY": 2.19
+    },
+    "npc": {
+      "x": -3.9,
+      "z": 1.4,
+      "rotY": 3.94
+    },
+    "cam": {
+      "x": -4.64,
+      "y": 2.72,
+      "z": 4.37
+    },
+    "dist": 1.55,
+    "dialogueOpen": true,
+    "camInBuilding": false,
+    "faded": 0,
+    "waterPct": 0.8,
+    "wallPct": 8,
+    "cyanPct": 0,
+    "playerWaterMargin": 1.5,
+    "npcWaterMargin": 1.5,
+    "planMs": 19.24,
+    "errors": []
+  },
+  {
+    "name": "tsumugi_s",
+    "dir": "s",
+    "opened": true,
+    "start": {
+      "x": -3.9,
+      "z": 4.4,
+      "r": 3,
+      "off": 0
+    },
+    "walkEnd": 1.33,
+    "player": {
+      "x": -2.4,
+      "z": 1,
+      "rotY": 2.19
+    },
+    "npc": {
+      "x": -3.9,
+      "z": 1.4,
+      "rotY": 3.94
+    },
+    "cam": {
+      "x": -4.64,
+      "y": 2.72,
+      "z": 4.37
+    },
+    "dist": 1.55,
+    "dialogueOpen": true,
+    "camInBuilding": false,
+    "faded": 0,
+    "waterPct": 0.8,
+    "wallPct": 8,
+    "cyanPct": 0,
+    "playerWaterMargin": 1.5,
+    "npcWaterMargin": 1.5,
+    "planMs": 17.44,
+    "errors": []
+  },
+  {
+    "name": "tsumugi_w",
+    "dir": "w",
+    "opened": true,
+    "start": {
+      "x": -5.260788364276731,
+      "z": 4.073622080184306,
+      "r": 3,
+      "off": 1.1
+    },
+    "walkEnd": 1.27,
+    "player": {
+      "x": -2.43,
+      "z": 0.91,
+      "rotY": 2.25
+    },
+    "npc": {
+      "x": -3.9,
+      "z": 1.4,
+      "rotY": 3.99
+    },
+    "cam": {
+      "x": -4.46,
+      "y": 2.72,
+      "z": 4.41
+    },
+    "dist": 1.55,
+    "dialogueOpen": true,
+    "camInBuilding": false,
+    "faded": 0,
+    "waterPct": 0.8,
+    "wallPct": 10.1,
+    "cyanPct": 0,
+    "playerWaterMargin": 1.5,
+    "npcWaterMargin": 1.5,
+    "planMs": 17.18,
+    "errors": []
+  },
+  {
+    "name": "minamo_n",
+    "dir": "n",
+    "opened": true,
+    "start": {
+      "x": 23.3,
+      "z": 9.7,
+      "r": 3,
+      "off": 0
+    },
+    "walkEnd": 1.28,
+    "player": {
+      "x": 23.3,
+      "z": 11.15,
+      "rotY": 3.8
+    },
+    "npc": {
+      "x": 23.3,
+      "z": 12.7,
+      "rotY": 5.63
+    },
+    "cam": {
+      "x": 26.2,
+      "y": 3.18,
+      "z": 11.93
+    },
+    "dist": 1.55,
+    "dialogueOpen": true,
+    "camInBuilding": false,
+    "faded": 0,
+    "waterPct": 2.3,
+    "wallPct": 2.9,
+    "cyanPct": 0,
+    "playerWaterMargin": 1.5,
+    "npcWaterMargin": 1.5,
+    "planMs": 22.78,
+    "errors": []
+  },
+  {
+    "name": "minamo_e",
+    "dir": "e",
+    "opened": true,
+    "start": {
+      "x": 26.3,
+      "z": 12.7,
+      "r": 3,
+      "off": 0
+    },
+    "walkEnd": 1.28,
+    "player": {
+      "x": 24.85,
+      "z": 12.7,
+      "rotY": 2.25
+    },
+    "npc": {
+      "x": 23.3,
+      "z": 12.7,
+      "rotY": 4.04
+    },
+    "cam": {
+      "x": 24.08,
+      "y": 2.83,
+      "z": 16.2
+    },
+    "dist": 1.55,
+    "dialogueOpen": true,
+    "camInBuilding": false,
+    "faded": 0,
+    "waterPct": 1,
+    "wallPct": 0.6,
+    "cyanPct": 0.1,
+    "playerWaterMargin": 1.4,
+    "npcWaterMargin": 1.5,
+    "planMs": 27.7,
+    "errors": []
+  },
+  {
+    "name": "minamo_s",
+    "dir": "s",
+    "opened": true,
+    "start": {
+      "x": 22.55778812223643,
+      "z": 15.606737265131933,
+      "r": 3,
+      "off": -0.25
+    },
+    "walkEnd": 1.3,
+    "player": {
+      "x": 23.95,
+      "z": 14.11,
+      "rotY": 6.04
+    },
+    "npc": {
+      "x": 23.3,
+      "z": 12.7,
+      "rotY": 4.25
+    },
+    "cam": {
+      "x": 26.8,
+      "y": 2.64,
+      "z": 11.93
+    },
+    "dist": 1.55,
+    "dialogueOpen": true,
+    "camInBuilding": false,
+    "faded": 0,
+    "waterPct": 16.2,
+    "wallPct": 0.7,
+    "cyanPct": 0,
+    "playerWaterMargin": 0.5,
+    "npcWaterMargin": 1.5,
+    "planMs": 21.4,
+    "errors": []
+  },
+  {
+    "name": "minamo_w",
+    "dir": "w",
+    "opened": true,
+    "start": {
+      "x": 20.3,
+      "z": 12.7,
+      "r": 3,
+      "off": 0
+    },
+    "walkEnd": 1.27,
+    "player": {
+      "x": 21.75,
+      "z": 12.7,
+      "rotY": 4.06
+    },
+    "npc": {
+      "x": 23.3,
+      "z": 12.7,
+      "rotY": 2.23
+    },
+    "cam": {
+      "x": 22.52,
+      "y": 3.23,
+      "z": 15.6
+    },
+    "dist": 1.55,
+    "dialogueOpen": true,
+    "camInBuilding": false,
+    "faded": 0,
+    "waterPct": 1.1,
+    "wallPct": 0.6,
+    "cyanPct": 0,
+    "playerWaterMargin": 1.5,
+    "npcWaterMargin": 1.5,
+    "planMs": 23.14,
+    "errors": []
+  },
+  {
+    "name": "nokto_n",
+    "dir": "n",
+    "opened": true,
+    "start": {
+      "x": 28.838276615812607,
+      "z": -27.632747685671116,
+      "r": 3,
+      "off": -0.5
+    },
+    "walkEnd": 2.67,
+    "player": {
+      "x": 27.24,
+      "z": -26.35,
+      "rotY": 4.11
+    },
+    "npc": {
+      "x": 27.13,
+      "z": -24.8,
+      "rotY": 5.86
+    },
+    "cam": {
+      "x": 30,
+      "y": 7.49,
+      "z": -27.65
+    },
+    "dist": 1.55,
+    "dialogueOpen": true,
+    "camInBuilding": false,
+    "faded": 0,
+    "waterPct": 4.5,
+    "wallPct": 14.6,
+    "cyanPct": 25.6,
+    "playerWaterMargin": 1.5,
+    "npcWaterMargin": 1.5,
+    "planMs": 15.42,
+    "errors": []
+  },
+  {
+    "name": "nokto_e",
+    "dir": "e",
+    "opened": true,
+    "start": {
+      "x": 30.032747685671115,
+      "z": -23.561723384187392,
+      "r": 3,
+      "off": -0.5
+    },
+    "walkEnd": 1.34,
+    "player": {
+      "x": 28.51,
+      "z": -24.41,
+      "rotY": 0.55
+    },
+    "npc": {
+      "x": 27.4,
+      "z": -25.03,
+      "rotY": 5.06
+    },
+    "cam": {
+      "x": 28.41,
+      "y": 7.49,
+      "z": -27.58
+    },
+    "dist": 1.26,
+    "dialogueOpen": true,
+    "camInBuilding": false,
+    "faded": 0,
+    "waterPct": 9.7,
+    "wallPct": 0.4,
+    "cyanPct": 24.7,
+    "playerWaterMargin": 1.5,
+    "npcWaterMargin": 1.5,
+    "planMs": 19.54,
+    "errors": []
+  },
+  {
+    "name": "nokto_s",
+    "dir": "s",
+    "opened": true,
+    "start": {
+      "x": 28.838276615812607,
+      "z": -22.36725231432888,
+      "r": 3,
+      "off": 0.5
+    },
+    "walkEnd": 1.32,
+    "player": {
+      "x": 28.39,
+      "z": -23.21,
+      "rotY": 0.13
+    },
+    "npc": {
+      "x": 27.67,
+      "z": -24.58,
+      "rotY": 4.64
+    },
+    "cam": {
+      "x": 29.13,
+      "y": 7.49,
+      "z": -26.58
+    },
+    "dist": 1.55,
+    "dialogueOpen": true,
+    "camInBuilding": false,
+    "faded": 0,
+    "waterPct": 7.8,
+    "wallPct": 2.1,
+    "cyanPct": 24.7,
+    "playerWaterMargin": 1.5,
+    "npcWaterMargin": 1.5,
+    "planMs": 20.74,
+    "errors": []
+  },
+  {
+    "name": "nokto_w",
+    "dir": "w",
+    "opened": true,
+    "start": {
+      "x": 24.4,
+      "z": -25,
+      "r": 3,
+      "off": 0
+    },
+    "walkEnd": 1.31,
+    "player": {
+      "x": 25.88,
+      "z": -25.29,
+      "rotY": 5.05
+    },
+    "npc": {
+      "x": 27.34,
+      "z": -24.78,
+      "rotY": 0.56
+    },
+    "cam": {
+      "x": 27.78,
+      "y": 7.49,
+      "z": -28.34
+    },
+    "dist": 1.55,
+    "dialogueOpen": true,
+    "camInBuilding": false,
+    "faded": 0,
+    "waterPct": 7.4,
+    "wallPct": 1.7,
+    "cyanPct": 29.1,
+    "playerWaterMargin": 1.5,
+    "npcWaterMargin": 1.5,
+    "planMs": 17.82,
+    "errors": []
+  }
+]

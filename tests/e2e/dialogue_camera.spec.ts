@@ -62,9 +62,13 @@ for (const c of CASES) {
     })()`)) as string) as { playerFaceErr: number; npcFaceErr: number; talking: boolean; faded: number; camInBuilding: boolean };
 
     expect(info.talking).toBe(true);
-    // 互いを向きつつ、顔が写るようカメラ側へ約45度まで開くことを許容
-    expect(info.playerFaceErr).toBeLessThan(1.0);
-    expect(info.npcFaceErr).toBeLessThan(1.0);
+    // 互いを向きつつ、顔が写るようカメラ側へ開くことを許容。
+    // v5-P1の新プランナーは「立ち位置スナップ→横カメラ→リーン」のため、対面からの開きは
+    // 最大66度程度になる(実測: tsumugi 59.5度)。顔の可視性そのものは
+    // .logs/screenshots/review_v5_dialogue/ の12枚(3NPC×4方向)で機械+目視検証済み。
+    // ここは「背中を向けて話さない」ことの下限ガードとして1.15radを維持する。
+    expect(info.playerFaceErr).toBeLessThan(1.15);
+    expect(info.npcFaceErr).toBeLessThan(1.15);
     expect(info.faded).toBe(0); // 半透明のまま残っているメッシュがない
     expect(info.camInBuilding).toBe(false); // カメラが建物の中に入らない
 

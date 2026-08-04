@@ -55,6 +55,15 @@ export const BUILDINGS = [
   { id: 'shop', w: 8.2, d: 6.8, kind: 'shop' },
 ] as const;
 
+// 会話カメラが背景に入れたい「見どころ」(yは地面からの高さ、rは見た目の大きさの目安)。
+// 候補の採点で、これが二人の向こうに入る構図を優先する。
+export const DIALOGUE_BACKDROPS: { x: number; y: number; z: number; r: number }[] = [
+  { x: 30.4, y: 1.0, z: -24.6, r: 1.0 }, // ノクトの望遠鏡(高台の観測スペース)
+  { x: 32, y: 0.8, z: -24, r: 1.2 }, // 高台の水晶(鉱石の露頭)
+  { x: 30, y: 0.8, z: -21, r: 1.2 },
+  { x: 0, y: 3.2, z: -7, r: 2.6 }, // ルミの木(広場での会話の背景)
+];
+
 // 採取ノード(リスポーンあり)
 export type NodeKind = 'tree' | 'berry' | 'rock' | 'ore' | 'grass' | 'moss';
 export interface GatherNodeDef {
@@ -110,8 +119,10 @@ export const SPAWN = { x: -3, z: 6, rotY: Math.PI };
 export const NPC_SPOTS: Record<string, Record<string, { x: number; z: number; rotY?: number; wanderR?: number }>> = {
   minamo: {
     home: { x: 29.7, z: 14.5, rotY: 1.6 }, // 小屋のドア前(西向きの入口)
-    // 西岸の水ぎわ(旧26.5,17.5は水中だった)。会話も乾いた岸で成立する
-    pond: { x: 23.6, z: 14.6, rotY: -2.27 },
+    // 西岸の乾いた岸(旧26.5,17.5は水中、旧23.6,14.6は水ぎわ0.4mで会話の足元が水に入った)。
+    // 水ぎわから約2m内側・釣り道具(22.9,13.8)のとなりに立ち、池のほうを向く。
+    // wanderRを絞って、うろうろで水ぎわへ寄らないようにする
+    pond: { x: 23.3, z: 12.7, rotY: -2.4, wanderR: 1.0 },
     pier: { x: 4, z: 49.5, rotY: Math.PI },
     plaza: { x: 3, z: 2 },
   },

@@ -1,0 +1,133 @@
+{
+ "generatedAt": "2026-08-04T04:41:52.024Z",
+ "viewport": {
+  "width": 1280,
+  "height": 720
+ },
+ "url": "http://localhost:5183/?scene=game&debug=1",
+ "groups": [
+  "hill"
+ ],
+ "bloomCameraIdentical": null,
+ "bloomCamera": null,
+ "minamoAngles": null,
+ "consoleErrors": [],
+ "shots": [
+  {
+   "name": "11_hill_from_below",
+   "day": 1,
+   "hour": 11.06,
+   "clock": "ひる 11:03",
+   "night": false,
+   "camera": {
+    "name": "shotCam_v5",
+    "pos": [
+     7,
+     3.1,
+     -15.5
+    ],
+    "target": [
+     24.5,
+     6.2,
+     -26.5
+    ],
+    "fov": 0.8
+   },
+   "playerXZ": [
+    4.5,
+    -13.5
+   ],
+   "note": "昼・スロープ下(坂の始まり 10,-12 y1.81)の目線から高台を見上げ",
+   "uiVisible": true,
+   "markersHidden": true,
+   "errorsDuringShot": 0
+  },
+  {
+   "name": "12_hill_ramp",
+   "day": 1,
+   "hour": 11.06,
+   "clock": "ひる 11:03",
+   "night": false,
+   "camera": {
+    "name": "shotCam_v5",
+    "pos": [
+     17.4,
+     5.6,
+     -23.6
+    ],
+    "target": [
+     20.6,
+     4.9,
+     -28.4
+    ],
+    "fov": 0.8
+   },
+   "playerXZ": [
+    20,
+    -21
+   ],
+   "note": "昼・坂道わき(高台の南西のへり)。崖の段(積み重なった岩のレッジ 19.5,-27.2 と 21.4,-29.6)を見上げる位置。奥にノクトの家と高台の稜線。※構図の代替2案(低位置=地形内でNG、南振り=家が残り海が支配)を試した上で初版構図が最良と判断。壁の写り込みは判定側で正直に記録する",
+   "uiVisible": true,
+   "markersHidden": true,
+   "errorsDuringShot": 0
+  },
+  {
+   "name": "13_observation_deck",
+   "day": 1,
+   "hour": 11.06,
+   "clock": "ひる 11:03",
+   "night": false,
+   "camera": {
+    "name": "shotCam_v5",
+    "pos": [
+     25.6,
+     8.4,
+     -22.6
+    ],
+    "target": [
+     29.2,
+     6,
+     -25.9
+    ],
+    "fov": 0.8
+   },
+   "playerXZ": [
+    23.2,
+    -20.2
+   ],
+   "note": "昼・デッキ上(床y5.94)。望遠鏡(30.4,-24.6)・記録箱・切り株・ランタンの観測コーナー",
+   "uiVisible": true,
+   "markersHidden": true,
+   "errorsDuringShot": 0
+  },
+  {
+   "name": "14_hill_night_view",
+   "day": 1,
+   "hour": 22.06,
+   "clock": "よる 22:03",
+   "night": true,
+   "camera": {
+    "name": "shotCam_v5",
+    "pos": [
+     25.92,
+     7.54,
+     -25.55
+    ],
+    "target": [
+     0,
+     3.6,
+     -7
+    ],
+    "fov": 0.8
+   },
+   "playerXZ": [
+    29.5,
+    -28
+   ],
+   "note": "夜・デッキ(床y5.94)から南西の島の眺望。手前に手すり、奥にルミの木・広場の街灯・工房の灯り",
+   "uiVisible": true,
+   "markersHidden": true,
+   "errorsDuringShot": 0
+  }
+ ]
+}

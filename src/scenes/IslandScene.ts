@@ -6,11 +6,14 @@ import { CascadedShadowGenerator } from '@babylonjs/core/Lights/Shadows/cascaded
 import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
 import { buildTerrain, terrainHeight, pondShoreR, type Terrain } from '../entities/terrain';
 import { initEffects, attachLightPool, registerGlowSource } from '../entities/effects';
-import { buildWater, onPier, PIER, type WaterRefs } from '../entities/water';
+import { buildWater, onPier, updatePond, PIER, type WaterRefs } from '../entities/water';
 import {
   makeTree, makeBerryTree, makeRock, makeOreNode, makeGrassNode, makeMoss, makeLumiTree, getGlowMats,
 } from '../entities/flora';
-import { scatterDeco } from '../entities/deco';
+import {
+  scatterDeco, buildPondShore, buildHillDeck, hillDeckRails, deckGroundY, HILL_DECK,
+  makeRockLedge, makeOutcrop, makeFlagstones, makeLowFence,
+} from '../entities/deco';
 import { buildHouse, makeBench, makeLamp, makeStoneRing } from '../entities/buildings';
 import { makeLogPile, makeCrate, makeBucketRod, makeTelescope, makeDriftwood, makeStump } from '../entities/props';
 import { GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, type GatherNodeDef } from '../data/island';
@@ -61,6 +64,9 @@ export class IslandScene {
     this.terrain = buildTerrain(s);
     this.water = buildWater(s);
     this.dayNight = new DayNight(s, this.water);
+    // 水面は空映りのごく弱い自己発光を持つが、発光レイヤーの対象にはしない
+    // (池ぜんたいがグローに焼かれると重くなり、ふちもにじむ)
+    this.dayNight.glow.addExcludedMesh(this.water.pond);
     this.shadows = new CascadedShadowGenerator(1024, this.dayNight.sun);
     this.shadows.numCascades = 2;
     this.shadows.lambda = 0.92;
@@ -76,6 +82,14 @@ export class IslandScene {
       m.receiveShadows = receive; // 葉群は自己シャドウのアクネが出るため受けない
       this.occludables.push(m);
     };
+
+    // ---- 高台の観測デッキ(先に建てる。ランプ・小物の足もとがgroundYでデッキの上になる) ----
+    // 遮蔽フェード(occludables)には入れない: プレイヤーが乗る床なので、
+    // 追従カメラとプレイヤーの間に必ず入り、常に半透明になってしまう
+    const deck = buildHillDeck(s);
+    this.shadows.addShadowCaster(deck, true);
+    deck.receiveShadows = true;
+    for (const r of hillDeckRails()) this.rects.push(r);
 
     // ---- 採取ノード ----
     for (const def of GATHER_NODES) {
@@ -109,6 +123,12 @@ export class IslandScene {
           root.scaling.setAll(os);
           root.rotation.y = (hashId(def.id) % 628) / 100;
           this.circles.push({ x: def.x, z: def.z, r: 0.9 * os });
+          // 岩肌(露頭)を下に敷き、鉱石が地面に浮いて見えないようにする
+          const oc = makeOutcrop(s, hashId(def.id), 1 + (hashId(def.id) % 30) / 100);
+          oc.position.set(def.x, terrainHeight(def.x, def.z) - 0.2, def.z);
+          oc.rotation.y = (hashId(def.id) % 314) / 100;
+          oc.receiveShadows = true;
+          oc.isPickable = false;
           break;
         }
         case 'grass': {
@@ -151,11 +171,13 @@ export class IslandScene {
       bench.position.set(bx, terrainHeight(bx, bz) - 0.02, bz);
       caster(bench);
     }
-    // 高台の坂道(23.2,-25.6 / 26.1,-24.3)にも灯りを置き、夜の登り道を導く(P1-4)
-    const lampDefs: [number, number][] = [[5.5, 1.5], [-5.5, -4], [1.5, 7.5], [-2, -11.5], [23.2, -25.6], [26.1, -24.3]];
+    // 高台の坂道(23.2,-25.6)と観測デッキの奥すみ(27.17,-27.62)に灯りを置き、夜の登り道と
+    // 観測コーナーを照らす(旧26.1,-24.3はデッキのまん中に来るうえ、ノクトのうろうろ範囲と
+    // 接していたのでデッキの奥の角へ移した。前すみに置くと南東からの導線をふさぐ。P1-4の「夜の登り道を導く」意図は保つ)
+    const lampDefs: [number, number][] = [[5.5, 1.5], [-5.5, -4], [1.5, 7.5], [-2, -11.5], [23.2, -25.6], [27.17, -27.62]];
     for (const [lx, lz] of lampDefs) {
       const lamp = makeLamp(s);
-      const ly = terrainHeight(lx, lz) - 0.02;
+      const ly = this.groundY(lx, lz) - 0.02;
       lamp.mesh.position.set(lx, ly, lz);
       lamp.mesh.rotation.y = Math.atan2(-lx, -lz); // ランタンを広場中心へ向ける
       caster(lamp.mesh);
@@ -177,7 +199,7 @@ export class IslandScene {
 
     // ---- エリアの性格づけ小物 ----
     const putProp = (mesh: Mesh, x: number, z: number, rotY: number, colliderR: number): void => {
-      mesh.position.set(x, terrainHeight(x, z) - 0.02, z);
+      mesh.position.set(x, this.groundY(x, z) - 0.02, z); // デッキ・桟橋の上ならその床に置く
       mesh.rotation.y = rotY;
       caster(mesh);
       if (colliderR > 0) this.circles.push({ x, z, r: colliderR });
@@ -185,14 +207,74 @@ export class IslandScene {
     putProp(makeLogPile(s), -7.0, -5.2, 0.4, 0.6); // 工房よこ
     putProp(makeCrate(s), -5.6, -3.4, 0.2, 0.4);
     putProp(makeBucketRod(s), 22.9, 13.8, 0.85, 0.3); // ミナモの釣り場(池の西岸。旧30.6,15.6は新しい岸線で水没)
-    putProp(makeTelescope(s), 30.4, -24.6, -0.6, 0.35); // ノクトの観測場所(観測デッキ東縁)
-    putProp(makeCrate(s), 29.4, -25.9, 0.4, 0.4); // 観測の記録箱
-    putProp(makeStump(s, 11), 28.4, -26.6, 1.2, 0.3); // 観測の腰かけ
     putProp(makeDriftwood(s, 1), -11.5, 39.0, 0.5, 0.7); // 浜辺の流木
     putProp(makeDriftwood(s, 5), 13.5, 37.0, 2.4, 0.7);
     putProp(makeStump(s, 1), -10.5, -30.5, 0, 0.3); // 林の切りかぶ
     putProp(makeStump(s, 3), 5.5, -35.5, 0.7, 0.3);
     putProp(makeStump(s, 7), -1.5, -27.5, 1.9, 0.3);
+
+    // ---- 観測コーナー(デッキの右奥にひとかたまり。ばらまかない) ----
+    // 座標は据え置き(会話カメラの見どころ DIALOGUE_BACKDROPS が望遠鏡の位置を参照している)。
+    // 3つともデッキの上に載るので、putPropのgroundYでデッキ床に立つ。
+    // ノクトの立ち位置(27.4,-25.0)からはいずれも1.5m以上あり、うろうろ(wanderR 1.2)と当たらない。
+    const deckYaw = Math.atan2(HILL_DECK.fx, HILL_DECK.fz);
+    putProp(makeTelescope(s), 30.4, -24.6, deckYaw - 2.87, 0.35); // 筒を眺望方向(島の広場側)へ向ける
+    putProp(makeCrate(s), 29.4, -25.9, deckYaw + 0.35, 0.4); // 観測の記録箱
+    putProp(makeStump(s, 11), 28.4, -26.6, 1.2, 0.3); // 観測の腰かけ
+
+    // ---- 高台のしつらえ: 崖の段・縁の岩と柵・敷石 ----
+    // 崖の段(岩の層): 坂道から見上げたときに高低差が読めるよう、斜面の側面へ点在させる。
+    // デッキから広場を見る視線(南西へ約-0.82,+0.58)の上には置かない(眺望をふさぐため)。
+    const ledges: [number, number, number, number][] = [
+      // [x, z, 幅, 段数]
+      [21.4, -29.6, 1.1, 3], [19.6, -27.4, 0.9, 3], [24.0, -33.0, 1.0, 2],
+      [16.9, -23.6, 0.85, 3], [34.6, -21.8, 1.1, 3], [32.4, -30.4, 1.0, 3],
+      [30.6, -18.4, 0.95, 2], [35.6, -27.4, 0.9, 2],
+    ];
+    for (let i = 0; i < ledges.length; i++) {
+      const [lx, lz, lw, ln] = ledges[i];
+      const m = makeRockLedge(s, 200 + i * 7, lw, ln);
+      m.position.set(lx, terrainHeight(lx, lz) - 0.14, lz);
+      m.rotation.y = (i * 1.37) % (Math.PI * 2);
+      m.receiveShadows = true; // 小さい地物は影マップに入れない(発行数を増やさない)
+      m.isPickable = false;
+      this.circles.push({ x: lx, z: lz, r: lw * 0.6 }); // 見た目より小さめ(登り口をふさがない)
+    }
+    // 縁の岩(高台の落ちぎわ)
+    const edgeRocks: [number, number, number][] = [
+      [31.6, -21.9, 1.0], [33.8, -28.4, 0.85], [30.2, -31.0, 1.1], [24.4, -28.8, 0.9], [25.0, -21.8, 0.8],
+    ];
+    for (let i = 0; i < edgeRocks.length; i++) {
+      const [rx, rz, rs] = edgeRocks[i];
+      const m = makeRock(s, 400 + i * 13, rs);
+      m.position.set(rx, terrainHeight(rx, rz) - 0.05, rz);
+      m.rotation.y = i * 0.9;
+      caster(m);
+      this.circles.push({ x: rx, z: rz, r: 0.55 * rs });
+    }
+    // 低い柵(落ちぎわに転落防止に見える程度)
+    const fences: [number, number, number, number][] = [
+      [33.0, -29.6, 2.6, 0.6], [35.2, -23.4, 2.2, 1.9], [31.6, -32.2, 2.4, -0.3],
+    ];
+    for (let i = 0; i < fences.length; i++) {
+      const [fx, fz, fl, fr] = fences[i];
+      const m = makeLowFence(s, 500 + i * 5, fl);
+      m.position.set(fx, terrainHeight(fx, fz) - 0.05, fz);
+      m.rotation.y = fr;
+      m.receiveShadows = true;
+      m.isPickable = false;
+      this.rects.push({ x: fx, z: fz, w: fl, d: 0.16, rot: fr });
+    }
+    // 敷石(階段の足もとと坂道の上がりぎわ。灰色の平面を割る)
+    for (const [gx, gz, gn, gsp] of [[23.3, -27.4, 8, 1.5], [24.6, -23.9, 6, 1.2]] as [number, number, number, number][]) {
+      const m = makeFlagstones(s, 600 + gx, gn, gsp);
+      m.position.set(gx, terrainHeight(gx, gz) - 0.02, gz);
+      m.receiveShadows = true; // 地面すれすれの平物は影を落とす側にしない(影マップの無駄)
+      m.isPickable = false;
+    }
+
+    // ---- 池の岸辺(クラスタ配置の小物) ----
+    for (const c of buildPondShore(s)) this.circles.push(c);
 
     // ---- 散布デコ ----
     scatterDeco(s);
@@ -201,9 +283,11 @@ export class IslandScene {
     this.dayNight.update(this.time.hour);
   }
 
-  /** 歩ける高さ(桟橋の上はデッキ高さ) */
+  /** 歩ける高さ(桟橋・高台の観測デッキの上はその床の高さ) */
   groundY(x: number, z: number): number {
     if (onPier(x, z)) return PIER.y;
+    const deck = deckGroundY(x, z);
+    if (deck !== null) return deck;
     return terrainHeight(x, z);
   }
 
@@ -251,9 +335,11 @@ export class IslandScene {
 
   update(dtSec: number): void {
     this.time.advance(dtSec);
-    // 池のごく弱い上下動(±1.2cm)。深層・スイレンは子メッシュなので一緒にゆれる
+    // 池のごく弱い上下動(±1.2cm)。スイレンは子メッシュなので一緒にゆれる
     this.waterT += dtSec;
     this.water.pond.position.y = POND.waterY + Math.sin(this.waterT * 0.9) * 0.012;
+    // 水面のさざ波(表面のゆらぎ)と時刻の色。中身は15Hzに間引かれる
+    updatePond(this.water, dtSec);
   }
 
   /** ルミの木の段階(0=ねむり 1=めばえ 2=かいか)を見た目へ反映(蕾⇄花の差し替え) */

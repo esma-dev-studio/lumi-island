@@ -29,12 +29,19 @@ test('ベッドでEを10回連打しても日付は1日だけ進む', async ({ p
   await ev(page, '__lumiDebug.state().flags.tut_move = true; __lumiDebug.state().flags.intro_done = true; __lumiDebug.setHour(21); __lumiDebug.tp(-30.9, 6.9)');
   await page.waitForTimeout(400);
   const dayBefore = (await ev(page, '__lumiDebug.state().time.day')) as number;
-  for (let i = 0; i < 10; i++) {
+  // 1回目のEで就寝が始まったことを状態で確認してから、残り9回を連打する。
+  // (固定45ms×10の壁時計待ちだと、マシン負荷で連打完了前に睡眠が終わり
+  //  「sleepingであること」の断言がフレークしていた。断言内容は変えていない)
+  await page.keyboard.press('e');
+  await page.waitForFunction("window.__lumi.game.seq.current === 'sleeping'", undefined, { timeout: 5000 });
+  expect(await ev(page, 'window.__lumi.game.seq.current')).toBe('sleeping');
+  for (let i = 0; i < 9; i++) {
     await page.keyboard.press('e');
     await page.waitForTimeout(45);
   }
-  expect(await ev(page, 'window.__lumi.game.seq.current')).toBe('sleeping');
-  await page.waitForTimeout(1500); // 起床まで待つ
+  // 起床(睡眠シーケンス終了)も壁時計でなく状態で待つ
+  await page.waitForFunction("window.__lumi.game.seq.current !== 'sleeping'", undefined, { timeout: 15000 });
+  await page.waitForTimeout(200);
   const t = (await ev(page, 'JSON.stringify(__lumiDebug.state().time)')) as string;
   const time = JSON.parse(t) as { day: number; hour: number };
   expect(time.day).toBe(dayBefore + 1);

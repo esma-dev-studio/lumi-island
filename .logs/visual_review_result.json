@@ -1,0 +1,53 @@
+{
+  "pass": true,
+  "passCount": 5,
+  "total": 6,
+  "judge": "指揮エージェント(Fable 5)による目視判定。各領域を v5 指示書の Visual Review FAILルールに照らして判定",
+  "evidenceDir": ".logs/screenshots/review_v5/",
+  "evidenceCount": 28,
+  "cameraProof": "開花5枚は view/projection 行列の完全一致をハーネスが機械検証(shots_meta.json)。ミナモ4枚は向きベクトルとカメラ視線の内積で角度を機械証明(正面=内積-1.000)",
+  "areas": [
+    {
+      "area": "会話",
+      "verdict": "PASS",
+      "evidence": ["01_tsumugi_north.png", "02_tsumugi_south.png", "03_minamo_west.png", "04_minamo_south.png", "05_nokto_north.png", "06_nokto_south.png"],
+      "rulesCleared": ["ベンチ・家具の身体貫通なし", "足の水没なし(ミナモは両者とも乾いた岸・水面約35-40%<50%)", "壁の占有はツムギ約10%・ノクト0-15%(<20%)", "両者の顔が見える", "マーカー残存なし"],
+      "notes": ["ツムギは接近方向によらず同一構図に収束(設計どおり)。手前にベンチの前景が入る", "ノクト南はプレイヤーが横顔(プロフィール)でぎりぎり可", "機械計測は水面・建物メッシュをマスク色に差し替えた実ピクセル数(metrics.json)"]
+    },
+    {
+      "area": "池",
+      "verdict": "PASS",
+      "evidence": ["07_pond_wide_day.png", "08_pond_water_close.png", "09_pond_shore_detail.png", "10_pond_night.png"],
+      "rulesCleared": ["シアン平面ではない(昼の平均彩度0.390→0.174・シアン率97.4%→0%)", "深場は不定形(楕円ディスク削除)", "岸は泥→濡れ砂→草の連続遷移", "水草・アシはクラスタ配置(等間隔でない)", "水面に頂点波の陰影変化あり"],
+      "notes": ["夜は月光下で青寄りの色相のまま(彩度は26%減)。シーン全体が青い月光のため水面だけ外すと浮くという実装判断を支持", "背後の海の彩度は池と対照的に高い(海は今回のスコープ外)"]
+    },
+    {
+      "area": "高台",
+      "verdict": "PASS",
+      "evidence": ["11_hill_from_below.png", "12_hill_ramp.png", "13_observation_deck.png", "14_hill_night_view.png"],
+      "rulesCleared": ["灰色平面は解消(緑・道・岩・柵・敷石)", "デッキ(板張り)と地面の区別が明確", "シルエットと眺望で高低差が読める", "建物裏が主役ではない(デッキ・望遠鏡・星図・水晶の観測コーナーが主役)", "観測場所と判断できる"],
+      "notes": ["崖の段(岩レッジ)は見上げ構図では目立たない(担当エージェントの自己申告どおり)。12は構図代替2案(低位置=地形内でNG・南振り=家が残存)を検討の上、初版構図を採用しており、ノクトの家の壁が画面の約3割に入る", "スロープ下→デッキ実歩行14.6秒(30秒以内)・4方向到達OKの実測記録あり"]
+    },
+    {
+      "area": "開花",
+      "verdict": "PASS",
+      "evidence": ["15_bloom_before.png", "16_bloom_root_light.png", "17_bloom_buds.png", "18_bloom_opening.png", "19_bloom_after.png"],
+      "rulesCleared": ["5枚ともカメラ行列が完全一致(機械証明)", "樹冠・幹・根元がすべて画面内", "開花後の花が明確に残存", "花は花弁形ロゼット(球の追加に見えない)", "前後差は明白(淡い蕾→発光する花約12輪)"],
+      "notes": ["樹冠上端の花が枝先にあり、輪郭からやや浮いて見える箇所がある", "16の根元の光は粒が小さく遠景では読み取りにくい(撮影担当の申告どおり)"]
+    },
+    {
+      "area": "ミナモ",
+      "verdict": "NOT TESTED",
+      "evidence": ["20_minamo_front_no_label.png", "21_minamo_45_no_label.png", "22_minamo_side_no_label.png", "23_minamo_back_no_label.png"],
+      "rulesCleared": ["正面は内積-1.000で機械証明(正面画像が正面でない、に非該当)", "種族名・UI・マーカーの写り込みなし", "全身69.8%で4枚とも同一ポーズ"],
+      "notes": ["FAILルール「人間の判別結果がないのにPASS」に従い、第三者3人の動物当てテスト(選択肢なし・2/3がカワウソと答えること)が未実施のため NOT TESTED。証跡4枚は実施可能な状態で準備済み"]
+    },
+    {
+      "area": "ランタン",
+      "verdict": "PASS",
+      "evidence": ["24_lantern_one_night.png", "25_lantern_three_night.png", "26_lantern_one_day.png", "27_lantern_slope.png", "28_lantern_overlap.png"],
+      "rulesCleared": ["置き家具のランタン(f_lantern)で撮影(固定街灯から21m以上の草原、shots_meta.jsonに記録)", "光だまりに形状境界(円盤のフチ)が見えない", "3灯近接(1.3-1.4m)でも白飛びなし・草の質感が残る", "昼に光の面が出ない(同一個体・同一カメラで確認)", "斜面では光が地形に沿って水際まで折れる"],
+      "notes": []
+    }
+  ]
+}

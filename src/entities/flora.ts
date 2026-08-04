@@ -55,6 +55,37 @@ export function appendBlob(
   }
 }
 
+// 直方体(板・柱・敷石)。Y回転つき。巻き順はComputeNormalsで外向きになる向き
+export function appendBox(
+  A: Arrays, cx: number, cy: number, cz: number, w: number, h: number, d: number,
+  color: Color3, rotY = 0, seed = 1
+): void {
+  const co = Math.cos(rotY), si = Math.sin(rotY);
+  const hw = w / 2, hh = h / 2, hd = d / 2;
+  const p = (sx: number, sy: number, sz: number): [number, number, number] => [
+    cx + sx * hw * co - sz * hd * si, cy + sy * hh, cz + sx * hw * si + sz * hd * co,
+  ];
+  const v = [
+    p(-1, -1, 1), p(1, -1, 1), p(1, 1, 1), p(-1, 1, 1),
+    p(1, -1, -1), p(-1, -1, -1), p(-1, 1, -1), p(1, 1, -1),
+  ];
+  const quad = (a: number, b: number, c: number, dd: number, shade: number): void => {
+    const base = A.pos.length / 3;
+    for (const i of [a, b, c, dd]) {
+      A.pos.push(v[i][0], v[i][1], v[i][2]);
+      const f = shade * (0.95 + vnoise(v[i][0] * 4.1 + seed, v[i][2] * 4.1 + v[i][1]) * 0.1);
+      A.col.push(color.r * f, color.g * f, color.b * f, 1);
+    }
+    A.idx.push(base, base + 2, base + 1, base, base + 3, base + 2);
+  };
+  quad(0, 1, 2, 3, 0.94); // +z
+  quad(4, 5, 6, 7, 0.88); // -z
+  quad(1, 4, 7, 2, 0.92); // +x
+  quad(5, 0, 3, 6, 0.9); // -x
+  quad(3, 2, 7, 6, 1.06); // 上
+  quad(5, 4, 1, 0, 0.7); // 下
+}
+
 // 先細りの幹・枝
 export function appendTrunk(
   A: Arrays, pts: [number, number, number][], r0: number, r1: number, color: Color3, seed = 1
@@ -96,25 +127,38 @@ export function getFloraMat(scene: Scene): StandardMaterial {
   return floraMat;
 }
 
-export function toMesh(scene: Scene, name: string, A: Arrays): Mesh {
+/**
+ * 法線の向きの決め方。
+ * - auto: 重心から見て内向きが多数なら反転(ひとかたまりの形にだけ有効)
+ * - flip: 必ず反転(appendBlobだけで作った形。ComputeNormalsだと内向きになる)
+ * - keep: そのまま(appendTrunk/appendBoxだけで作った形。すでに外向き)
+ * 別々の場所に置いた部品をひとつのMeshにまとめる場合、重心の判定は当てにならないので
+ * 部品の作り方に合わせてflip/keepを指定する。
+ */
+export type Orient = 'auto' | 'flip' | 'keep';
+
+export function toMesh(scene: Scene, name: string, A: Arrays, orient: Orient = 'auto'): Mesh {
   const normals: number[] = [];
   VertexData.ComputeNormals(A.pos, A.idx, normals);
-  // 法線が内向き多数なら反転(閉じた塊メッシュの巻き順とComputeNormalsの前提差を吸収)
-  let cx = 0, cy = 0, cz = 0;
-  const n = A.pos.length / 3;
-  for (let i = 0; i < A.pos.length; i += 3) {
-    cx += A.pos[i];
-    cy += A.pos[i + 1];
-    cz += A.pos[i + 2];
+  let flip = orient === 'flip';
+  if (orient === 'auto') {
+    let cx = 0, cy = 0, cz = 0;
+    const n = A.pos.length / 3;
+    for (let i = 0; i < A.pos.length; i += 3) {
+      cx += A.pos[i];
+      cy += A.pos[i + 1];
+      cz += A.pos[i + 2];
+    }
+    cx /= n; cy /= n; cz /= n;
+    let outward = 0, inward = 0;
+    for (let i = 0; i < A.pos.length; i += 33) {
+      const d = (A.pos[i] - cx) * normals[i] + (A.pos[i + 1] - cy) * normals[i + 1] + (A.pos[i + 2] - cz) * normals[i + 2];
+      if (d > 0) outward++;
+      else inward++;
+    }
+    flip = inward > outward;
   }
-  cx /= n; cy /= n; cz /= n;
-  let outward = 0, inward = 0;
-  for (let i = 0; i < A.pos.length; i += 33) {
-    const d = (A.pos[i] - cx) * normals[i] + (A.pos[i + 1] - cy) * normals[i + 1] + (A.pos[i + 2] - cz) * normals[i + 2];
-    if (d > 0) outward++;
-    else inward++;
-  }
-  if (inward > outward) {
+  if (flip) {
     for (let i = 0; i < normals.length; i++) normals[i] = -normals[i];
   }
   const vd = new VertexData();

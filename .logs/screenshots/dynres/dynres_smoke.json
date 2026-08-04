@@ -1,0 +1,318 @@
+{
+  "hookKeys": [
+    "state",
+    "step",
+    "scale",
+    "events",
+    "hardwareScalingLevel",
+    "feed"
+  ],
+  "initial": {
+    "step": 0,
+    "maxStep": 3,
+    "baseScale": 1,
+    "scale": 1,
+    "thresholdMs": 28,
+    "windowP95": -1,
+    "windowFrames": 0,
+    "windowBuckets": 0,
+    "badBuckets": 0,
+    "lastBucketP95": -1,
+    "overStreak": 0,
+    "cooldownLeftMs": 0,
+    "warmupLeftMs": 3610,
+    "elapsedMs": 1390,
+    "frames": 0,
+    "ignored": 0,
+    "events": []
+  },
+  "healthy": {
+    "step": 3,
+    "windowP95": 51.75,
+    "frames": 2669,
+    "events": 3,
+    "fps": 47,
+    "engineScale": 1.45,
+    "canvas": {
+      "w": 882,
+      "h": 496,
+      "cssW": 1280,
+      "cssH": 720
+    }
+  },
+  "stages": [
+    {
+      "injected": 700,
+      "step": 3,
+      "ctrlScale": 1.45,
+      "engineScale": 1.45,
+      "p95": 35,
+      "badBuckets": 10,
+      "canvas": "882x496"
+    },
+    {
+      "injected": 700,
+      "step": 3,
+      "ctrlScale": 1.45,
+      "engineScale": 1.45,
+      "p95": 35,
+      "badBuckets": 10,
+      "canvas": "882x496"
+    },
+    {
+      "injected": 700,
+      "step": 3,
+      "ctrlScale": 1.45,
+      "engineScale": 1.45,
+      "p95": 35,
+      "badBuckets": 10,
+      "canvas": "882x496"
+    }
+  ],
+  "forced": {
+    "step": 3,
+    "scale": 1.45,
+    "engineScale": 1.45,
+    "canvas": {
+      "w": 882,
+      "h": 496,
+      "cssW": 1280,
+      "cssH": 720
+    },
+    "events": [
+      {
+        "step": 1,
+        "fromScale": 1,
+        "toScale": 1.15,
+        "windowP95": 39.5,
+        "badBuckets": 10,
+        "windowFrames": 527,
+        "atMs": 17055
+      },
+      {
+        "step": 2,
+        "fromScale": 1.15,
+        "toScale": 1.3,
+        "windowP95": 46,
+        "badBuckets": 10,
+        "windowFrames": 498,
+        "atMs": 34324
+      },
+      {
+        "step": 3,
+        "fromScale": 1.3,
+        "toScale": 1.45,
+        "windowP95": 48.5,
+        "badBuckets": 10,
+        "windowFrames": 489,
+        "atMs": 51568
+      }
+    ]
+  },
+  "dynLines": [
+    "[dynres] step 1/3 scale 1 -> 1.15 applied=1.15 p95=39.50ms bad=10/10 frames=527 t=17s",
+    "[dynres] step 2/3 scale 1.15 -> 1.3 applied=1.3 p95=46.00ms bad=10/10 frames=498 t=34s",
+    "[dynres] step 3/3 scale 1.3 -> 1.45 applied=1.45 p95=48.50ms bad=10/10 frames=489 t=52s"
+  ],
+  "errors": [],
+  "runBPlay": {
+    "step": 2,
+    "events": 2,
+    "windowP95": 22,
+    "badBuckets": 0,
+    "frames": 2948,
+    "measured": {
+      "p50": 17.1,
+      "p95": 37.6,
+      "p99": 81,
+      "max": 3144.3,
+      "n": 2919
+    },
+    "engineScale": 1.3,
+    "fps": 60
+  },
+  "runB": {
+    "scene": "game",
+    "bootSec": 21,
+    "before": {
+      "step": 0,
+      "engineScale": 1,
+      "canvas": {
+        "w": 1280,
+        "h": 720,
+        "cssW": 1280,
+        "cssH": 720
+      }
+    },
+    "stages": [
+      {
+        "injectedFrames": 700,
+        "step": 3,
+        "ctrlScale": 1.45,
+        "engineScale": 1.45,
+        "p95": 35,
+        "badBuckets": 10,
+        "canvas": {
+          "w": 882,
+          "h": 496,
+          "cssW": 1280,
+          "cssH": 720
+        },
+        "realFramesAfter": {
+          "p50": 16.7,
+          "p95": 21.9,
+          "p99": 26.8,
+          "max": 30.9,
+          "n": 104
+        }
+      },
+      {
+        "injectedFrames": 700,
+        "step": 3,
+        "ctrlScale": 1.45,
+        "engineScale": 1.45,
+        "p95": 35,
+        "badBuckets": 10,
+        "canvas": {
+          "w": 882,
+          "h": 496,
+          "cssW": 1280,
+          "cssH": 720
+        },
+        "realFramesAfter": {
+          "p50": 17,
+          "p95": 21.6,
+          "p99": 24.2,
+          "max": 24.2,
+          "n": 92
+        }
+      },
+      {
+        "injectedFrames": 700,
+        "step": 3,
+        "ctrlScale": 1.45,
+        "engineScale": 1.45,
+        "p95": 35,
+        "badBuckets": 10,
+        "canvas": {
+          "w": 882,
+          "h": 496,
+          "cssW": 1280,
+          "cssH": 720
+        },
+        "realFramesAfter": {
+          "p50": 16.5,
+          "p95": 22.5,
+          "p99": 25.2,
+          "max": 25.2,
+          "n": 92
+        }
+      }
+    ],
+    "after": {
+      "step": 3,
+      "scale": 1.45,
+      "engineScale": 1.45,
+      "canvas": {
+        "w": 882,
+        "h": 496,
+        "cssW": 1280,
+        "cssH": 720
+      },
+      "events": [
+        {
+          "step": 1,
+          "fromScale": 1,
+          "toScale": 1.15,
+          "windowP95": 58,
+          "badBuckets": 10,
+          "windowFrames": 384,
+          "atMs": 17442
+        },
+        {
+          "step": 2,
+          "fromScale": 1.15,
+          "toScale": 1.3,
+          "windowP95": 45.5,
+          "badBuckets": 10,
+          "windowFrames": 491,
+          "atMs": 34647
+        },
+        {
+          "step": 3,
+          "fromScale": 1.3,
+          "toScale": 1.45,
+          "windowP95": 35,
+          "badBuckets": 8,
+          "windowFrames": 372,
+          "atMs": 71007
+        }
+      ]
+    },
+    "errors": [],
+    "dynLines": [
+      "[dynres] step 1/3 scale 1 -> 1.15 applied=1.15 p95=58.00ms bad=10/10 frames=384 t=17s",
+      "[dynres] step 2/3 scale 1.15 -> 1.3 applied=1.3 p95=45.50ms bad=10/10 frames=491 t=35s",
+      "[dynres] step 3/3 scale 1.3 -> 1.45 applied=1.45 p95=35.00ms bad=8/10 frames=372 t=71s"
+    ]
+  },
+  "runA": {
+    "scene": "title(背景3D)",
+    "bootSec": 2,
+    "hookKeys": [
+      "state",
+      "step",
+      "scale",
+      "events",
+      "hardwareScalingLevel",
+      "feed"
+    ],
+    "step": 0,
+    "events": 0,
+    "windowP95": 21.75,
+    "badBuckets": 0,
+    "frames": 3381,
+    "elapsedMs": 61448,
+    "measured": {
+      "p50": 16.6,
+      "p95": 22.5,
+      "p99": 28.4,
+      "max": 72.1,
+      "n": 3592
+    },
+    "engineScale": 1,
+    "canvas": {
+      "w": 1280,
+      "h": 720,
+      "cssW": 1280,
+      "cssH": 720
+    },
+    "errors": [],
+    "dynLines": []
+  },
+  "runC": {
+    "step0": {
+      "step": 0,
+      "engineScale": 1.45,
+      "canvasAtShot": {
+        "note": "段0のスクショ時は1280x720(等倍)"
+      }
+    },
+    "afterInject": {
+      "step": 3,
+      "scale": 1.45,
+      "canvas": {
+        "w": 882,
+        "h": 496,
+        "cssW": 1280,
+        "cssH": 720
+      }
+    },
+    "errors": [],
+    "dynLines": [
+      "[dynres] step 1/3 scale 1 -> 1.15 applied=1.15 p95=35.00ms bad=10/10 frames=312 t=17s",
+      "[dynres] step 2/3 scale 1.15 -> 1.3 applied=1.3 p95=35.00ms bad=10/10 frames=290 t=34s",
+      "[dynres] step 3/3 scale 1.3 -> 1.45 applied=1.45 p95=35.00ms bad=10/10 frames=290 t=52s"
+    ]
+  }
+}

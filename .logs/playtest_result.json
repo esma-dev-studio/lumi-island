@@ -1,170 +1,166 @@
 {
   "completed": true,
-  "totalSec": 300,
+  "totalSec": 307,
   "timeline": [
     {
-      "sec": 8,
+      "sec": 7,
       "label": "タイトル表示"
     },
     {
-      "sec": 9,
+      "sec": 7,
       "label": "ゲーム開始(新規)"
     },
     {
-      "sec": 10,
+      "sec": 8,
       "label": "目標: tut_move"
     },
     {
-      "sec": 12,
+      "sec": 9,
       "label": "目標: q_wood_offer"
     },
     {
-      "sec": 14,
+      "sec": 11,
       "label": "目標: q_wood_gather"
     },
     {
-      "sec": 22,
+      "sec": 20,
       "label": "はじめての採取"
+    },
+    {
+      "sec": 32,
+      "label": "目標: q_wood_report"
     },
     {
       "sec": 49,
       "label": "はじめての夜(発光を確認)"
     },
     {
-      "sec": 50,
-      "label": "目標: q_wood_report"
-    },
-    {
-      "sec": 64,
+      "sec": 49,
       "label": "目標: q_fish_offer"
     },
     {
-      "sec": 77,
+      "sec": 59,
       "label": "目標: q_fish_mats_wood"
     },
     {
-      "sec": 82,
+      "sec": 80,
       "label": "目標: q_fish_mats_stone"
     },
     {
-      "sec": 87,
+      "sec": 83,
       "label": "目標: q_fish_craft_r_sickle"
     },
     {
-      "sec": 88,
+      "sec": 85,
       "label": "はじめてのクラフト"
     },
     {
-      "sec": 88,
+      "sec": 85,
       "label": "目標: q_fish_mats_wood"
     },
     {
-      "sec": 102,
+      "sec": 96,
       "label": "目標: q_fish_mats_fiber"
     },
     {
-      "sec": 105,
+      "sec": 99,
       "label": "目標: q_fish_craft_r_rod"
     },
     {
-      "sec": 107,
+      "sec": 101,
       "label": "目標: q_fish_fish"
     },
     {
-      "sec": 127,
+      "sec": 122,
       "label": "目標: q_fish_report"
     },
     {
-      "sec": 155,
+      "sec": 153,
       "label": "目標: q_ore_offer"
     },
     {
-      "sec": 168,
+      "sec": 166,
       "label": "目標: q_ore_gather"
     },
     {
-      "sec": 176,
+      "sec": 174,
       "label": "目標: q_ore_report"
     },
     {
-      "sec": 180,
+      "sec": 178,
       "label": "目標: q_lantern_offer"
     },
     {
-      "sec": 193,
-      "label": "目標: q_lantern_mats_wood"
-    },
-    {
-      "sec": 202,
+      "sec": 192,
       "label": "目標: q_lantern_mats_moss"
     },
     {
-      "sec": 213,
+      "sec": 207,
       "label": "目標: q_lantern_craft_r_lantern"
     },
     {
-      "sec": 214,
+      "sec": 208,
       "label": "目標: q_lantern_place"
     },
     {
-      "sec": 227,
+      "sec": 222,
       "label": "はじめての家具配置"
     },
     {
-      "sec": 227,
+      "sec": 222,
       "label": "目標: q_lantern_report"
     },
     {
-      "sec": 230,
+      "sec": 226,
       "label": "目標: q_lumi_offer"
     },
     {
-      "sec": 231,
-      "label": "目標: q_lumi_mats_stone"
+      "sec": 227,
+      "label": "目標: q_lumi_mats_wood"
     },
     {
-      "sec": 239,
-      "label": "目標: q_lumi_mats_ore"
+      "sec": 235,
+      "label": "目標: q_lumi_mats_moss"
     },
     {
-      "sec": 246,
-      "label": "目標: q_lumi_craft_r_stonelamp"
+      "sec": 245,
+      "label": "目標: q_lumi_craft_r_lantern"
     },
     {
-      "sec": 248,
+      "sec": 247,
       "label": "目標: q_lumi_place"
     },
     {
-      "sec": 261,
-      "label": "目標: q_lumi_mats_stone"
+      "sec": 259,
+      "label": "目標: q_lumi_mats_wood"
     },
     {
-      "sec": 270,
-      "label": "目標: q_lumi_mats_ore"
+      "sec": 268,
+      "label": "目標: q_lumi_mats_moss"
     },
     {
-      "sec": 280,
-      "label": "目標: q_lumi_craft_r_stonelamp"
+      "sec": 289,
+      "label": "目標: q_lumi_craft_r_lantern"
     },
     {
-      "sec": 282,
+      "sec": 291,
       "label": "目標: q_lumi_place"
     },
     {
-      "sec": 295,
+      "sec": 302,
       "label": "目標: q_lumi_report"
     },
     {
-      "sec": 300,
+      "sec": 307,
       "label": "目標: free"
     },
     {
-      "sec": 300,
+      "sec": 307,
       "label": "ルミの木 開花!"
     },
     {
-      "sec": 300,
-      "label": "終了(5分0秒)"
+      "sec": 307,
+      "label": "終了(5分7秒)"
     }
   ],
   "errors": 0,
@@ -172,10 +168,10 @@
   "fps": [
     60,
     60,
-    61,
     60,
     60,
-    56,
+    60,
+    60,
     60,
     60,
     60,

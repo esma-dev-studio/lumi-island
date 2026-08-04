@@ -5,6 +5,7 @@ import { CHARACTERS } from '../data/characters';
 import { NPCS, npcSpot, scheduleEntryAt, nextOutdoorEntry, type NpcDef, type ScheduleEntry } from '../data/npcs';
 import type { IslandScene } from '../scenes/IslandScene';
 import { vnoise } from '../entities/terrain';
+import { findDryStand, waterClearance, SHORE_CLEAR } from '../scenes/DialogueCameraPlanner';
 
 interface NpcRuntime {
   def: NpcDef;
@@ -73,6 +74,14 @@ export class NPCSystem {
     if (!rt) return;
     rt.talking = on;
     if (on) {
+      // 会話中に足が水に浸からないよう、水ぎわに立っていたら乾いた地面へ寄せる
+      // (カメラの切り替わりと同時なので見た目には出ない。会話中はupdateが止まるのでそのまま保たれる)
+      if (waterClearance(rt.x, rt.z, SHORE_CLEAR) < SHORE_CLEAR) {
+        const dry = findDryStand(this.island, rt.x, rt.z);
+        rt.x = dry.x;
+        rt.z = dry.z;
+        rt.y = this.island.groundY(rt.x, rt.z);
+      }
       if (facePx !== undefined && facePz !== undefined) {
         rt.rotY = Math.atan2(facePx - rt.x, facePz - rt.z) + Math.PI; // 顔を相手へ
       }
@@ -172,7 +181,10 @@ export class NPCSystem {
             const a = Math.random() * Math.PI * 2;
             const tx = spot.x + Math.cos(a) * radius * (0.4 + Math.random() * 0.6);
             const tz = spot.z + Math.sin(a) * radius * (0.4 + Math.random() * 0.6);
-            if (this.island.walkable(tx, tz)) rt.subTarget = { x: tx, z: tz };
+            // 水ぎわへは寄らない(話しかけられたときに足が水に浸からないように)
+            if (this.island.walkable(tx, tz) && waterClearance(tx, tz, SHORE_CLEAR) >= SHORE_CLEAR) {
+              rt.subTarget = { x: tx, z: tz };
+            }
           }
           if (entry.activity === 'watch' && spot.rotY !== undefined && !rt.subTarget) rt.rotY = spot.rotY;
         }
