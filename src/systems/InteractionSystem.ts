@@ -2,7 +2,7 @@
 // NPC会話・店・釣り・配置はそれぞれのシステムが候補を追加する。
 import type { IslandScene, GatherNodeRuntime } from '../scenes/IslandScene';
 import type { GameState } from '../game/GameState';
-import { invAdd } from '../game/GameState';
+import { invAddRecorded } from '../game/GameState';
 import { GATHER_RULES, canGather, gatherAmount } from './GatherSystem';
 import type { ItemId } from '../data/items';
 import type { NodeKind } from '../data/island';
@@ -221,7 +221,7 @@ export class InteractionSystem {
     flyItem(node.def.x, hitY - 0.3, node.def.z);
     this.onHit?.();
     const n = gatherAmount(node.def.kind, this.debug);
-    invAdd(this.state, rule.item, n);
+    invAddRecorded(this.state, rule.item, n); // 採取はずかんに記録する
     toast(`+${n} ${ITEMS[rule.item].name}`, rule.item);
     const st: NodeState = { depleted: true, respawnAt: this.absHour() + rule.respawnHours };
     this.nodeStates.set(node.def.id, st);

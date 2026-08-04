@@ -11,6 +11,7 @@ const HELP_KEYBOARD = `
           <span><kbd>Tab</kbd></span><span>もちもの</span>
           <span><kbd>C</kbd></span><span>クラフト</span>
           <span><kbd>Q</kbd></span><span>おねがい</span>
+          <span><kbd>Z</kbd></span><span>ずかん</span>
           <span><kbd>R</kbd></span><span>(はいち中)まわす</span>`;
 
 const HELP_TOUCH = `
@@ -20,6 +21,7 @@ const HELP_TOUCH = `
           <span>右上の「もちもの」</span><span>もちもの</span>
           <span>右上の「クラフト」</span><span>クラフト</span>
           <span>右上の「おねがい」</span><span>おねがい</span>
+          <span>右上の「ずかん」</span><span>ずかん</span>
           <span>「まわす」ボタン</span><span>(はいち中)まわす</span>`;
 
 export class PauseMenu {

@@ -12,6 +12,9 @@ const VALID_RECIPES = new Set(RECIPES.map((r) => r.id));
 const VALID_QUESTS = new Set(QUESTS.map((q) => q.id));
 const VALID_QSTATE = new Set(['locked', 'open', 'done']);
 const PLACEABLE = new Set(Object.values(ITEMS).filter((i) => i.kind === 'furniture').map((i) => i.id));
+/** 実績カウンタのキー(英数字と_のみ)。壊れたキーや長すぎるキーは捨てる */
+const STAT_KEY_RE = /^[A-Za-z0-9_]{1,40}$/;
+const COUNT_MAX = 9_999_999;
 
 export function hasSave(): boolean {
   try {
@@ -138,6 +141,31 @@ export function load(): GameState | null {
     );
 
     s.islandLevel = intIn(raw.islandLevel, 0, 2, 0);
+
+    // ずかん(種類ごとの累計入手数): 実在ItemID・0以上の整数のみ。
+    // 項目が無い旧セーブは空({})のまま=ずかんは何も登録されていない状態で始まる。
+    s.codex = {};
+    if (typeof raw.codex === 'object' && raw.codex !== null && !Array.isArray(raw.codex)) {
+      for (const [k, v] of Object.entries(raw.codex as Record<string, unknown>)) {
+        if (VALID_ITEMS.has(k) && finite(v) && Number.isInteger(v) && v >= 0 && v <= COUNT_MAX) {
+          s.codex[k as ItemId] = v;
+        }
+      }
+    }
+
+    // 実績カウンタ: キーは英数字と_のみ・値は0以上の整数のみ(達成の記録 ach_◯◯ もここに入る)
+    s.stats = {};
+    if (typeof raw.stats === 'object' && raw.stats !== null && !Array.isArray(raw.stats)) {
+      for (const [k, v] of Object.entries(raw.stats as Record<string, unknown>)) {
+        if (STAT_KEY_RE.test(k) && finite(v) && Number.isInteger(v) && v >= 0 && v <= COUNT_MAX) {
+          s.stats[k] = v;
+        }
+      }
+    }
+    // 遡及移行: 実績機能より前のセーブでも、達成済みのおねがいの数だけは依頼状態から引き継ぐ
+    // (codexは履歴が残っていないため引き継がない。カウンタが既にあれば大きい方を採用)
+    const doneQuests = Object.values(s.quests).filter((q) => q === 'done').length;
+    s.stats.quest_done = Math.max(s.stats.quest_done ?? 0, doneQuests);
 
     // フラグ(booleanのみ)
     s.flags = {};

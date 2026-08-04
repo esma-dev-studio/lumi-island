@@ -1,6 +1,6 @@
 // ツムギの店: うる/かう
 import type { GameState } from '../game/GameState';
-import { invRemove, invAdd, invCount } from '../game/GameState';
+import { invRemove, invAddRecorded, invCount } from '../game/GameState';
 import { ITEMS, SHOP_STOCK, type ItemId } from '../data/items';
 import { icon } from './icons';
 import { byInput } from './inputMode';
@@ -106,7 +106,7 @@ export class ShopUI {
         const price = Number(b.dataset.price);
         if (s.lumina >= price) {
           s.lumina -= price;
-          invAdd(s, id, 1);
+          invAddRecorded(s, id, 1); // 買ったものもずかんに記録する(売却は記録しない)
           toast(`${ITEMS[id].name}を かった!`, id);
           this.onTrade?.();
           this.render();

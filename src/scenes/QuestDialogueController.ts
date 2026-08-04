@@ -1,5 +1,6 @@
 // NPC会話と依頼進行のオーケストレーション(GameSceneから分離)
 import type { GameState } from '../game/GameState';
+import { statAdd } from '../game/GameState';
 import { questFor, acceptQuest, completeQuest } from '../systems/QuestSystem';
 import { currentObjective } from '../systems/ObjectiveSystem';
 import { NPC_BY_ID } from '../data/npcs';
@@ -49,6 +50,7 @@ export class QuestDialogueController {
       lines = q.def.done;
       after = () => {
         const summary = completeQuest(d.state, q.def);
+        statAdd(d.state, 'quest_done'); // じっせき用のカウンタ
         rtNpc.friendship += 3;
         sfx('quest');
         const next = currentObjective(d.state);

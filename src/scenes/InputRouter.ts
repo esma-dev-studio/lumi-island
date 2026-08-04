@@ -1,4 +1,4 @@
-// 入力のルーティング: 移動キー・E/Tab/C/Q/R のショートカットと、
+// 入力のルーティング: 移動キー・E/Tab/C/Q/Z/R のショートカットと、
 // Escの優先順位(演出中は無効 → 開いているUIを閉じる → ポーズ)をここに集約する。
 // 各操作は public メソッドに切り出してあり、タッチUI(TouchControls)も同じものを呼ぶ。
 import type { InputState } from '../systems/PlayerController';
@@ -31,6 +31,7 @@ export class InputRouter {
     if (!gs.tutorial.gates().inventory) return; // 未解放(混乱する画面を出さない)
     gs.craftUI.close();
     gs.shopUI.close();
+    gs.codexUI.close();
     gs.invUI.toggle();
   }
 
@@ -41,6 +42,7 @@ export class InputRouter {
     gs.invUI.close();
     gs.shopUI.close();
     gs.questLog.close();
+    gs.codexUI.close();
     gs.craftUI.toggle();
   }
 
@@ -51,7 +53,19 @@ export class InputRouter {
     gs.invUI.close();
     gs.craftUI.close();
     gs.shopUI.close();
+    gs.codexUI.close();
     gs.questLog.toggle();
+  }
+
+  /** Z・ずかんボタン(解放ゲートは「もちもの」と同じ) */
+  toggleCodex(): void {
+    const gs = this.gs;
+    if (!gs.tutorial.gates().inventory) return;
+    gs.invUI.close();
+    gs.craftUI.close();
+    gs.shopUI.close();
+    gs.questLog.close();
+    gs.codexUI.toggle();
   }
 
   /** R・まわすボタン(配置中のみ) */
@@ -66,12 +80,13 @@ export class InputRouter {
     if (gs.seq.active) return; // 就寝・見せ場の途中で中断やポーズをさせない(状態破壊防止)
     const wasOpen =
       gs.invUI.open || gs.craftUI.open || gs.shopUI.open || gs.questLog.open ||
-      gs.dialogue.open || gs.pauseMenu.open || gs.questComplete.open ||
+      gs.codexUI.open || gs.dialogue.open || gs.pauseMenu.open || gs.questComplete.open ||
       gs.placement.active || gs.fishing.state !== 'idle';
     gs.invUI.close();
     gs.craftUI.close();
     gs.shopUI.close();
     gs.questLog.close();
+    gs.codexUI.close();
     gs.dialogue.close();
     gs.questComplete.hide();
     gs.pauseMenu.close();
@@ -100,6 +115,10 @@ export class InputRouter {
       }
       if (e.code === 'KeyQ') {
         this.toggleQuestLog();
+        return;
+      }
+      if (e.code === 'KeyZ') {
+        this.toggleCodex();
         return;
       }
       if (e.code === 'KeyR') {

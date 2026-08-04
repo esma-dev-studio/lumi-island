@@ -307,6 +307,31 @@ body { font-family: var(--font); color: var(--ink); }
 .q-new { color: var(--amber); font-weight: 700; }
 .q-done { color: #4f7a50; font-weight: 700; }
 
+/* ---- ずかん(あつめたもの・じっせき) ---- */
+.panel-sub.first { margin-top: 0; padding-top: 0; border-top: none; }
+.panel-sub small { font-weight: 900; color: var(--amber); margin-left: 6px; }
+.codex-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.codex-cell {
+  display: flex; align-items: center; gap: 5px; background: #fff;
+  border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; font-size: 0.8rem;
+}
+.codex-cell.unknown { background: #ece5d6; color: var(--ink-soft); }
+.codex-cell.unknown .inv-ico { filter: grayscale(1) brightness(0.4); opacity: 0.4; }
+.codex-name { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.codex-cell.unknown .codex-name { font-weight: 900; letter-spacing: 0.06em; }
+.codex-n { font-weight: 900; color: var(--amber); }
+.ach-list { display: flex; flex-direction: column; gap: 6px; }
+.ach-row {
+  display: flex; align-items: center; gap: 8px; background: #fff;
+  border: 1px solid var(--line); border-radius: 5px; padding: 7px 10px; font-size: 0.84rem;
+}
+.ach-row.done { background: #f1faf3; border-color: #a9d8bd; }
+.ach-name { flex: 1; font-weight: 700; line-height: 1.4; }
+.ach-name small { display: block; font-weight: 500; font-size: 0.74rem; color: var(--ink-soft); }
+.ach-row.done .ach-name { color: #3f7a50; }
+.ach-state { font-weight: 900; color: var(--ink-soft); white-space: nowrap; }
+.ach-state.done { display: inline-flex; align-items: center; gap: 4px; color: #4f9a78; }
+
 /* ---- トースト ---- */
 /* 「いまやること」の下に積む(上に重ねると両方読めなくなる) */
 .toast-box {
@@ -366,6 +391,7 @@ html.touch-ui .craft-name { font-size: 0.9rem; }
 html.touch-ui .inv-empty { font-size: 0.9rem; }
 html.touch-ui .q-title { font-size: 0.92rem; }
 html.touch-ui .q-status { font-size: 0.84rem; }
+html.touch-ui .codex-cell, html.touch-ui .ach-row { min-height: 52px; font-size: 0.86rem; }
 
 /* --- タイトル --- */
 html.touch-ui .title-inner { max-width: 520px; }
@@ -380,6 +406,7 @@ html.touch-ui .tc-btns .title-btn { width: 150px; padding: 12px 0; }
   html.touch-ui .dialogue { width: min(640px, 90vw); }
   html.touch-ui .panel { min-width: min(560px, 92vw); }
   html.touch-ui .inv-grid { grid-template-columns: repeat(2, 1fr); }
+  html.touch-ui .codex-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* たてむきの案内(数秒で消える・タップでも消せる) */

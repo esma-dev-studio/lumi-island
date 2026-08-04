@@ -55,6 +55,11 @@ export class TutorialSystem {
         byInput('<kbd>Tab</kbd>で「もちもの」が見られるよ', '右上の「もちもの」ボタンで 見られるよ'),
         'wood'
       );
+      // ずかんは「もちもの」と同じ解放。案内はこの1回だけ(トーストの並びで下に積まれる)
+      toast(
+        byInput('<kbd>Z</kbd>で ずかんが 見られるよ', '右上の「ずかん」ボタンで 見られるよ'),
+        'moss'
+      );
     }
   }
   onQuestAccepted(): void {

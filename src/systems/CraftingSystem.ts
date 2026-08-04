@@ -1,6 +1,6 @@
 // クラフト(純ロジック)
 import type { GameState } from '../game/GameState';
-import { invCount, invRemove, invAdd, giveTool, hasTool } from '../game/GameState';
+import { invCount, invRemove, invAddRecorded, giveTool, hasTool } from '../game/GameState';
 import { RECIPES, type RecipeDef, type ItemId, type ToolId } from '../data/items';
 
 export interface CraftCheck {
@@ -47,6 +47,6 @@ export function craft(state: GameState, recipe: RecipeDef): boolean {
     invRemove(state, item, need);
   }
   if (recipe.outKind === 'tool') giveTool(state, recipe.out as ToolId);
-  else invAdd(state, recipe.out as ItemId, 1);
+  else invAddRecorded(state, recipe.out as ItemId, 1); // 完成品はずかんに記録する
   return true;
 }

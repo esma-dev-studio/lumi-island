@@ -5,7 +5,7 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { IslandScene } from '../scenes/IslandScene';
 import type { GameState, PlacedFurniture } from '../game/GameState';
-import { invAdd, invRemove } from '../game/GameState';
+import { invAdd, invRemove, statAdd } from '../game/GameState';
 import { makeFurnitureMesh } from '../entities/furniture';
 import { ITEMS, type ItemId } from '../data/items';
 import type { PlayerController } from './PlayerController';
@@ -274,6 +274,9 @@ export class PlacementSystem {
       rotY: this.rot,
     };
     this.state.furniture.push(f);
+    // じっせき用のカウンタ(置いた数は累計。持ち帰っても減らさない)
+    statAdd(this.state, 'place_total');
+    if (ITEMS[item].glow) statAdd(this.state, 'place_glow');
     this.spawn(f);
     this.rebuildColliders();
     this.cancel();

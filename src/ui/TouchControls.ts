@@ -85,6 +85,8 @@ export interface TouchControlsOptions {
   onQuest: () => void;
   onMenu: () => void;
   onRotate: () => void;
+  /** ずかん。渡されないときはボタン自体を出さない(機能のないボタンは置かない) */
+  onCodex?: () => void;
 }
 
 const SVG = (body: string): string =>
@@ -94,6 +96,8 @@ const GLYPH = {
   bag: SVG('<path d="M5 8h14l-1.2 12H6.2Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>'),
   craft: SVG('<path d="M14 4l6 6-3 3-6-6Z"/><path d="M11 7L4 14v6h6l7-7"/>'),
   quest: SVG('<path d="M6 3h9l4 4v14H6Z"/><path d="M9 9h7M9 13h7M9 17h4"/>'),
+  // ずかん: ひらいた本
+  codex: SVG('<path d="M12 6.6C10.5 5.1 8 4.6 4 4.9v13c4-.3 6.5.2 8 1.7 1.5-1.5 4-2 8-1.7v-13c-4-.3-6.5.2-8 1.7Z"/><path d="M12 6.6v13"/>'),
   menu: SVG('<path d="M4 7h16M4 12h16M4 17h16"/>'),
   rotate: SVG('<path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/>'),
   cancel: SVG('<path d="M6 6l12 12M18 6L6 18"/>'),
@@ -132,6 +136,7 @@ export class TouchControls {
   private btnInv: HTMLElement;
   private btnCraft: HTMLElement;
   private btnQuest: HTMLElement;
+  private btnCodex: HTMLElement;
   private placeBar: HTMLElement;
   private detachFns: Array<() => void> = [];
   private stickId: number | null = null;
@@ -152,6 +157,7 @@ export class TouchControls {
         <button class="touch-btn hidden" data-el="inv" type="button">${GLYPH.bag}<span>もちもの</span></button>
         <button class="touch-btn hidden" data-el="craft" type="button">${GLYPH.craft}<span>クラフト</span></button>
         <button class="touch-btn hidden" data-el="quest" type="button">${GLYPH.quest}<span>おねがい</span></button>
+        <button class="touch-btn hidden" data-el="codex" type="button">${GLYPH.codex}<span>ずかん</span></button>
         <button class="touch-btn" data-el="menu" type="button">${GLYPH.menu}<span>メニュー</span></button>
       </div>
       <div class="touch-place hidden" data-el="place">
@@ -169,6 +175,7 @@ export class TouchControls {
     this.btnInv = pick('inv');
     this.btnCraft = pick('craft');
     this.btnQuest = pick('quest');
+    this.btnCodex = pick('codex');
     this.placeBar = pick('place');
     opts.root.appendChild(el);
   }
@@ -179,6 +186,7 @@ export class TouchControls {
     this.detachFns.push(...pressable(this.btnInv, () => o.onInventory()));
     this.detachFns.push(...pressable(this.btnCraft, () => o.onCraft()));
     this.detachFns.push(...pressable(this.btnQuest, () => o.onQuest()));
+    if (o.onCodex) this.detachFns.push(...pressable(this.btnCodex, () => o.onCodex!()));
     this.detachFns.push(...pressable(this.el.querySelector('[data-el="menu"]') as HTMLElement, () => o.onMenu()));
     this.detachFns.push(...pressable(this.el.querySelector('[data-el="rotate"]') as HTMLElement, () => o.onRotate()));
     this.detachFns.push(...pressable(this.el.querySelector('[data-el="cancel"]') as HTMLElement, () => o.onMenu()));
@@ -311,6 +319,8 @@ export class TouchControls {
     this.btnInv.classList.toggle('hidden', !f.gates.inventory);
     this.btnCraft.classList.toggle('hidden', !f.gates.craft);
     this.btnQuest.classList.toggle('hidden', !f.gates.quest);
+    // ずかんは「もちもの」と同じ解放ゲート
+    this.btnCodex.classList.toggle('hidden', !f.gates.inventory || !this.opts.onCodex);
     this.placeBar.classList.toggle('hidden', !f.placementActive || hideWorld);
   }
 

@@ -10,7 +10,7 @@ import { onPier, PIER, SEA_Y } from '../entities/water';
 import { pondShoreR } from '../entities/terrain';
 import { POND } from '../data/island';
 import type { GameState } from '../game/GameState';
-import { hasTool, invAdd } from '../game/GameState';
+import { hasTool, invAddRecorded } from '../game/GameState';
 import type { PlayerController } from './PlayerController';
 import type { CharacterView } from '../characters/CharacterView';
 import { toast } from '../ui/Toast';
@@ -163,7 +163,7 @@ export class FishingSystem {
     const item = this.pickFish();
     sfx('catch');
     // 取得はこの1回だけ(以降はreelingが終わるまでbiteに戻らないので二重取得しない)
-    invAdd(this.game, item, 1);
+    invAddRecorded(this.game, item, 1); // 釣り上げはずかんに記録する
     // 夜魚はすこし特別に(依頼はどちらの魚でも進む)
     toast(item === 'nightfish' ? `+1 ${ITEMS[item].name}! よるにしか つれない魚だ` : `+1 ${ITEMS[item].name}`, item);
     this.onCatch?.(item);

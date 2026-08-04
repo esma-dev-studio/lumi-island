@@ -12,6 +12,7 @@ const HELP_KEYBOARD = `
             <span><kbd>Tab</kbd>/<kbd>I</kbd></span><span>もちもの</span>
             <span><kbd>C</kbd></span><span>クラフト</span>
             <span><kbd>Q</kbd></span><span>おねがい</span>
+            <span><kbd>Z</kbd></span><span>ずかん</span>
             <span><kbd>R</kbd></span><span>(はいち中)まわす</span>
             <span><kbd>Esc</kbd></span><span>とじる・メニュー</span>`;
 
@@ -22,6 +23,7 @@ const HELP_TOUCH = `
             <span>右上の「もちもの」</span><span>もちもの</span>
             <span>右上の「クラフト」</span><span>クラフト</span>
             <span>右上の「おねがい」</span><span>おねがい</span>
+            <span>右上の「ずかん」</span><span>ずかん</span>
             <span>「まわす」ボタン</span><span>(はいち中)まわす</span>
             <span>右上の「メニュー」</span><span>とじる・メニュー</span>`;
 
@@ -60,7 +62,7 @@ export class TitleScreen {
           <div class="help-grid">${byInput(HELP_KEYBOARD, HELP_TOUCH)}
           </div>
         </div>
-        <div class="title-credit">オリジナル作品 / 3Dモデル・音はすべてプログラム生成 <span class="title-ver">v5.1</span></div>
+        <div class="title-credit">オリジナル作品 / 3Dモデル・音はすべてプログラム生成 <span class="title-ver">v5.2</span></div>
       </div>
     `;
     this.el.querySelectorAll<HTMLButtonElement>('[data-act]').forEach((b) => {

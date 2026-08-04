@@ -23,6 +23,20 @@ import { TimeSystem } from '../systems/TimeSystem';
 export interface CircleCollider { x: number; z: number; r: number }
 export interface RectCollider { x: number; z: number; w: number; d: number; rot: number }
 
+// ---- 歩ける範囲のしきい値 ----
+// 見た目の水ぎわより手前に「見えない壁」を作らないための値。ゆるめすぎると水に立てるので、
+// どちらも「水面のすぐ上」で止める(海面SEA_Y=0.3 / 池POND.waterY=0.42)。
+/** 海: この高さより低い地面は歩けない(海面+3cm)。以前は0.45で、波うちぎわの1.2〜3.5m手前で止まっていた */
+const SEA_WALK_Y = 0.33;
+/** 池: 水面よりこのぶん高ければ歩ける(+5cm)。以前は+0.15で、水面より15cm高い泥の岸まで歩けなかった。
+ * この値なら「水面より低い地面」には決して立てず(実測: 水面下の歩行可セル0)、
+ * 見た目の水ぎわの15〜25cm手前で止まる */
+const POND_WALK_MARGIN = 0.05;
+/** 池の判定を効かせる範囲(岸線から外側へこのぶん)。その外は海・浜の規則にまかせる */
+const POND_EDGE_PAD = 1.2;
+/** 建物コライダーの余白(片側)。壁の見た目+これだけ内側に近づける(軒・屋根は入れない) */
+const HOUSE_PAD = 0.125;
+
 export interface GatherNodeRuntime {
   def: GatherNodeDef;
   root: Mesh;
@@ -97,21 +111,24 @@ export class IslandScene {
       let root: Mesh;
       let fruitMesh: Mesh | undefined;
       switch (def.kind) {
+        // コライダーは「見た目の底面」に合わせる(幹・岩のふもと)。葉群や浮いた余白は入れない。
         case 'tree': {
-          root = makeTree(s, hashId(def.id), 0.95 + (hashId(def.id) % 5) * 0.06);
-          this.circles.push({ x: def.x, z: def.z, r: 0.55 });
+          const ts = 0.95 + (hashId(def.id) % 5) * 0.06;
+          root = makeTree(s, hashId(def.id), ts);
+          this.circles.push({ x: def.x, z: def.z, r: 0.32 * ts }); // 幹の根もと0.24*ts+わずか
           break;
         }
         case 'berry': {
           const b = makeBerryTree(s, hashId(def.id));
           root = b.tree;
           fruitMesh = b.berries;
-          this.circles.push({ x: def.x, z: def.z, r: 0.5 });
+          this.circles.push({ x: def.x, z: def.z, r: 0.32 * 0.82 }); // makeBerryTreeは幹スケール0.82
           break;
         }
         case 'rock': {
-          root = makeRock(s, hashId(def.id), 1 + (hashId(def.id) % 4) * 0.12);
-          this.circles.push({ x: def.x, z: def.z, r: 0.85 });
+          const rs = 1 + (hashId(def.id) % 4) * 0.12;
+          root = makeRock(s, hashId(def.id), rs);
+          this.circles.push({ x: def.x, z: def.z, r: 0.62 * rs }); // 岩の塊は0.62〜0.7*rs
           break;
         }
         case 'ore': {
@@ -122,7 +139,7 @@ export class IslandScene {
           const os = 0.85 + (hashId(def.id) % 40) / 100;
           root.scaling.setAll(os);
           root.rotation.y = (hashId(def.id) % 628) / 100;
-          this.circles.push({ x: def.x, z: def.z, r: 0.9 * os });
+          this.circles.push({ x: def.x, z: def.z, r: 0.68 * os }); // 露頭の岩は makeRock(1.1) * os
           // 岩肌(露頭)を下に敷き、鉱石が地面に浮いて見えないようにする
           const oc = makeOutcrop(s, hashId(def.id), 1 + (hashId(def.id) % 30) / 100);
           oc.position.set(def.x, terrainHeight(def.x, def.z) - 0.2, def.z);
@@ -151,7 +168,7 @@ export class IslandScene {
       const t = makeTree(s, 1000 + i, sc);
       t.position.set(x, terrainHeight(x, z) - 0.03, z);
       caster(t, false);
-      this.circles.push({ x, z, r: 0.5 * sc });
+      this.circles.push({ x, z, r: 0.32 * sc }); // 幹の根もとぶんだけ(葉群は通り抜けてよい)
     }
 
     // ---- 建物 ----
@@ -161,7 +178,8 @@ export class IslandScene {
       mesh.position.set(p.x, terrainHeight(p.x, p.z) - 0.05, p.z);
       mesh.rotation.y = p.rotY ?? 0;
       caster(mesh);
-      this.rects.push({ x: p.x, z: p.z, w: b.w + 0.5, d: b.d + 0.5, rot: p.rotY ?? 0 });
+      // 壁の見た目(b.w × b.d)+HOUSE_PADまで。軒の出(0.55m)は判定に入れない
+      this.rects.push({ x: p.x, z: p.z, w: b.w + HOUSE_PAD * 2, d: b.d + HOUSE_PAD * 2, rot: p.rotY ?? 0 });
     }
 
     // ---- 広場・ルミの木 ----
@@ -194,8 +212,8 @@ export class IslandScene {
     this.lumiBuds = lumi.buds;
     attachLightPool(lumi.root, 0, 0, 3.4, 'mint');
     registerGlowSource(lp.x, terrainHeight(lp.x, lp.z) + 4.5, lp.z);
-    this.circles.push({ x: lp.x, z: lp.z, r: 1.7 });
-    for (const [lx, lz] of lampDefs) this.circles.push({ x: lx, z: lz, r: 0.2 });
+    this.circles.push({ x: lp.x, z: lp.z, r: 1.2 }); // 幹0.55+根の張り出し0.95まで(石の輪2.6は通れる)
+    for (const [lx, lz] of lampDefs) this.circles.push({ x: lx, z: lz, r: 0.16 }); // 柱は半径0.075
 
     // ---- エリアの性格づけ小物 ----
     const putProp = (mesh: Mesh, x: number, z: number, rotY: number, colliderR: number): void => {
@@ -204,23 +222,24 @@ export class IslandScene {
       caster(mesh);
       if (colliderR > 0) this.circles.push({ x, z, r: colliderR });
     };
-    putProp(makeLogPile(s), -7.0, -5.2, 0.4, 0.6); // 工房よこ
-    putProp(makeCrate(s), -5.6, -3.4, 0.2, 0.4);
-    putProp(makeBucketRod(s), 22.9, 13.8, 0.85, 0.3); // ミナモの釣り場(池の西岸。旧30.6,15.6は新しい岸線で水没)
-    putProp(makeDriftwood(s, 1), -11.5, 39.0, 0.5, 0.7); // 浜辺の流木
-    putProp(makeDriftwood(s, 5), 13.5, 37.0, 2.4, 0.7);
-    putProp(makeStump(s, 1), -10.5, -30.5, 0, 0.3); // 林の切りかぶ
-    putProp(makeStump(s, 3), 5.5, -35.5, 0.7, 0.3);
-    putProp(makeStump(s, 7), -1.5, -27.5, 1.9, 0.3);
+    // 判定は見た目の底面ぶんだけ。ひざ下の小物(バケツ・竿・流木)はまたげるので判定を付けない
+    putProp(makeLogPile(s), -7.0, -5.2, 0.4, 0.45); // 工房よこ(丸太は長さ1.15×幅0.45)
+    putProp(makeCrate(s), -5.6, -3.4, 0.2, 0.32); // 木箱は0.56角
+    putProp(makeBucketRod(s), 22.9, 13.8, 0.85, 0); // ミナモの釣り場(池の西岸)
+    putProp(makeDriftwood(s, 1), -11.5, 39.0, 0.5, 0); // 浜辺の流木(高さ0.2m)
+    putProp(makeDriftwood(s, 5), 13.5, 37.0, 2.4, 0);
+    putProp(makeStump(s, 1), -10.5, -30.5, 0, 0.22); // 林の切りかぶ(幹半径0.2)
+    putProp(makeStump(s, 3), 5.5, -35.5, 0.7, 0.22);
+    putProp(makeStump(s, 7), -1.5, -27.5, 1.9, 0.22);
 
     // ---- 観測コーナー(デッキの右奥にひとかたまり。ばらまかない) ----
     // 座標は据え置き(会話カメラの見どころ DIALOGUE_BACKDROPS が望遠鏡の位置を参照している)。
     // 3つともデッキの上に載るので、putPropのgroundYでデッキ床に立つ。
     // ノクトの立ち位置(27.4,-25.0)からはいずれも1.5m以上あり、うろうろ(wanderR 1.2)と当たらない。
     const deckYaw = Math.atan2(HILL_DECK.fx, HILL_DECK.fz);
-    putProp(makeTelescope(s), 30.4, -24.6, deckYaw - 2.87, 0.35); // 筒を眺望方向(島の広場側)へ向ける
-    putProp(makeCrate(s), 29.4, -25.9, deckYaw + 0.35, 0.4); // 観測の記録箱
-    putProp(makeStump(s, 11), 28.4, -26.6, 1.2, 0.3); // 観測の腰かけ
+    putProp(makeTelescope(s), 30.4, -24.6, deckYaw - 2.87, 0.3); // 筒を眺望方向(島の広場側)へ向ける(三脚半径0.3)
+    putProp(makeCrate(s), 29.4, -25.9, deckYaw + 0.35, 0.32); // 観測の記録箱
+    putProp(makeStump(s, 11), 28.4, -26.6, 1.2, 0.22); // 観測の腰かけ
 
     // ---- 高台のしつらえ: 崖の段・縁の岩と柵・敷石 ----
     // 崖の段(岩の層): 坂道から見上げたときに高低差が読めるよう、斜面の側面へ点在させる。
@@ -238,7 +257,7 @@ export class IslandScene {
       m.rotation.y = (i * 1.37) % (Math.PI * 2);
       m.receiveShadows = true; // 小さい地物は影マップに入れない(発行数を増やさない)
       m.isPickable = false;
-      this.circles.push({ x: lx, z: lz, r: lw * 0.6 }); // 見た目より小さめ(登り口をふさがない)
+      this.circles.push({ x: lx, z: lz, r: lw * 0.5 }); // 見た目より小さめ(登り口をふさがない)
     }
     // 縁の岩(高台の落ちぎわ)
     const edgeRocks: [number, number, number][] = [
@@ -295,11 +314,16 @@ export class IslandScene {
   walkable(x: number, z: number): boolean {
     if (onPier(x, z)) return true;
     const h = terrainHeight(x, z);
-    if (h < 0.45) return false;
-    // 池は岸線pondShoreRで判定(入り江へも歩き込めない。岸ぎわの浅瀬は少しだけ入れる)
+    if (h < SEA_WALK_Y) return false;
+    // 池: 「水面より低い地面は水の中」で判定する。
+    // 旧: 岸線pondShoreR-0.6mの内側かつ水面+15cm以下 → 水面より高い泥の岸まで歩けず、
+    //     ミナモの小屋の南に「出口のない帯」ができていた(池と家のコライダーが両端でくっつく)。
+    // 岸線は「池の判定を効かせる範囲」を決めるためだけに使い、入り江も同じ規則で扱う。
     const pdx = x - POND.x, pdz = z - POND.z;
     const pdist = Math.hypot(pdx, pdz);
-    if (pdist < 16 && pdist < pondShoreR(Math.atan2(pdz, pdx)) - 0.6 && h < POND.waterY + 0.15) return false;
+    if (pdist < 16 && h < POND.waterY + POND_WALK_MARGIN) {
+      if (pdist < pondShoreR(Math.atan2(pdz, pdx)) + POND_EDGE_PAD) return false;
+    }
     return true;
   }
 

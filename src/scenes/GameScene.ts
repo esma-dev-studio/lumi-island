@@ -22,6 +22,7 @@ import { FishingSystem } from '../systems/FishingSystem';
 import { PlacementSystem } from '../systems/PlacementSystem';
 import { NPCSystem } from '../systems/NPCSystem';
 import { TutorialSystem } from '../systems/TutorialSystem';
+import { evaluate as evaluateAchievements } from '../systems/AchievementSystem';
 import { currentObjective, type Objective } from '../systems/ObjectiveSystem';
 import { questFor } from '../systems/QuestSystem';
 import { NpcAvailabilityService } from '../systems/NpcAvailabilityService';
@@ -32,10 +33,12 @@ import { CraftUI } from '../ui/CraftUI';
 import { ShopUI } from '../ui/ShopUI';
 import { DialogueUI } from '../ui/DialogueUI';
 import { QuestLogUI } from '../ui/QuestLogUI';
+import { CodexUI } from '../ui/CodexUI';
 import { QuestCompleteUI } from '../ui/QuestCompleteUI';
 import { PauseMenu } from '../ui/PauseMenu';
 import { TouchControls } from '../ui/TouchControls';
 import { save } from '../save/SaveSystem';
+import { toast } from '../ui/Toast';
 import { sfx, setAmbient } from '../audio/AudioSystem';
 import { updateEffects } from '../entities/effects';
 import { installLumiDebugApi } from '../debug/LumiDebugApi';
@@ -65,6 +68,7 @@ export class GameScene {
   shopUI!: ShopUI;
   dialogue!: DialogueUI;
   questLog!: QuestLogUI;
+  codexUI!: CodexUI;
   questComplete!: QuestCompleteUI;
   pauseMenu!: PauseMenu;
   touch!: TouchControls;
@@ -77,6 +81,7 @@ export class GameScene {
   private hitstop = 0;
   seq!: SequenceDirector;
   private occAcc = 0;
+  private achAcc = 0; // じっせき判定のスロットル(1秒に1回)
   lastObjective: Objective | null = null; // 回帰ボット・デバッグAPIが読む
 
   constructor(
@@ -95,7 +100,7 @@ export class GameScene {
   get modalOpen(): boolean {
     return (
       this.invUI.open || this.craftUI.open || this.shopUI.open ||
-      this.questLog.open || this.dialogue.open || this.questComplete.open
+      this.questLog.open || this.codexUI.open || this.dialogue.open || this.questComplete.open
     );
   }
 
@@ -118,6 +123,7 @@ export class GameScene {
     this.shopUI = new ShopUI(() => this.state);
     this.dialogue = new DialogueUI();
     this.questLog = new QuestLogUI(() => this.state);
+    this.codexUI = new CodexUI(() => this.state);
     this.questComplete = new QuestCompleteUI();
     this.pauseMenu = new PauseMenu();
     this.tutorial = new TutorialSystem(this.state);
@@ -143,6 +149,7 @@ export class GameScene {
       onInventory: () => this.inputRouter.toggleInventory(),
       onCraft: () => this.inputRouter.toggleCraft(),
       onQuest: () => this.inputRouter.toggleQuestLog(),
+      onCodex: () => this.inputRouter.toggleCodex(),
       onMenu: () => this.inputRouter.escape(),
       onRotate: () => this.inputRouter.rotatePlacement(),
     });
@@ -249,6 +256,22 @@ export class GameScene {
     this.tutorial.update(dt, this.player.moving, obj, progressKey, dist);
   }
 
+  // ---------- じっせき ----------
+  /**
+   * 達成判定(1秒に1回)。達成の瞬間だけ、小さくお祝いする
+   * (トースト+効果音。同時に複数達成しても音は1回)。
+   */
+  private updateAchievements(dt: number): void {
+    this.achAcc += dt;
+    if (this.achAcc < 1) return;
+    this.achAcc = 0;
+    const unlocked = evaluateAchievements(this.state);
+    if (unlocked.length === 0) return;
+    for (const a of unlocked) toast(`じっせき たっせい! ${a.name}`, a.icon);
+    sfx('quest');
+    save(this.state); // 達成の記録を取りこぼさない
+  }
+
   // ---------- カメラ遮蔽 ----------
   /** 透明化中・回復途中のメッシュを即座に全復元する(会話・イベントカメラ開始前に呼ぶ) */
   restoreAllOcclusionImmediately(): void {
@@ -283,6 +306,7 @@ export class GameScene {
           for (const n of Object.values(this.state.npcs)) n.talkedToday = false;
         }
         if (Object.keys(this.state.inventory).length > 0) this.tutorial.onFirstItem();
+        this.updateAchievements(dt);
         this.saveTimer += dt;
         if (this.saveTimer > 20) {
           this.saveTimer = 0;
@@ -312,7 +336,7 @@ export class GameScene {
       sequenceActive: this.seq.active,
       panelOpen:
         this.invUI.open || this.craftUI.open || this.shopUI.open ||
-        this.questLog.open || this.pauseMenu.open,
+        this.questLog.open || this.codexUI.open || this.pauseMenu.open,
     });
     this.scene.render();
   }

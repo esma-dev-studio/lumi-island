@@ -18,6 +18,82 @@ export interface InputState {
  * iPad実機で「走れる」ことに気づき・届きやすいよう55%にする(TouchControlsの表示切替と同値) */
 const ANALOG_RUN = 0.55;
 
+/** 体の当たり判定の半径(m)。押し出し・脱出の判定でこの値を共有する */
+export const PLAYER_R = 0.32;
+
+// ---- スタック(はまり)からの自動脱出 ----
+// 地形やコライダーの隙間・セーブの復帰位置で「どちらへも動けない」状態になったとき、
+// 子どもが自力で抜け出せないままゲームが進まなくなるのを防ぐ最後の保険。
+/** 入力しているのに動けていない時間がこの秒数を超えたら脱出する */
+export const STUCK_SECONDS = 2;
+/** 1フレームでこれ未満しか動けていなければ「動けていない」とみなす(1cm) */
+export const STUCK_MOVE_EPS = 0.01;
+/** 脱出先を探す渦巻きの刻み(m) */
+export const ESCAPE_STEP = 0.3;
+/** 脱出先を探す最大の半径(m) */
+export const ESCAPE_MAX_R = 3;
+/** 「四方ふさがり」を判定する試し距離(m)。体半径より少し外を見る */
+export const BOXED_PROBE = 0.34;
+
+/** そこに立てるか(歩ける+コライダーに押し出されない)を返す関数 */
+export type CanStand = (x: number, z: number) => boolean;
+
+/**
+ * 四方(8方向)どこへも出られない=完全に囲まれているか。
+ * 壁に向かって歩き続けているだけのとき(後ろへは戻れる)に誤発動しないための条件。
+ */
+export function isBoxedIn(x: number, z: number, canStand: CanStand, probe = BOXED_PROBE): boolean {
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    if (canStand(x + Math.cos(a) * probe, z + Math.sin(a) * probe)) return false;
+  }
+  return true;
+}
+
+/**
+ * 現在位置のまわりを渦巻き状(内側の輪から順)に探し、最寄りの「立てる点」を返す。
+ * 同じ輪の上はどれも同じ距離なので、見つかった最初の点を返せば最短の移動になる。
+ */
+export function findEscapePoint(
+  x: number, z: number, canStand: CanStand,
+  step = ESCAPE_STEP, maxR = ESCAPE_MAX_R
+): { x: number; z: number } | null {
+  for (let r = step; r <= maxR + 1e-6; r += step) {
+    const n = Math.max(8, Math.round((2 * Math.PI * r) / step)); // 弧長がstepになる分割数
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const px = x + Math.cos(a) * r;
+      const pz = z + Math.sin(a) * r;
+      if (canStand(px, pz)) return { x: px, z: pz };
+    }
+  }
+  return null;
+}
+
+/** セーブから戻った位置が詰んでいるか(そこに立てない、または四方ふさがり) */
+export function needsLoadEscape(x: number, z: number, canStand: CanStand): boolean {
+  return !canStand(x, z) || isBoxedIn(x, z, canStand);
+}
+
+/** 入力しているのに動けていない時間を積み、しきい値を超えたら脱出を要求する(純ロジック) */
+export class StuckWatch {
+  seconds = 0;
+  /** @returns 脱出すべきならtrue(返した時点でカウンタは0に戻る) */
+  tick(dt: number, hasInput: boolean, movedDist: number): boolean {
+    if (!hasInput || movedDist >= STUCK_MOVE_EPS) {
+      this.seconds = 0;
+      return false;
+    }
+    this.seconds += dt;
+    if (this.seconds < STUCK_SECONDS) return false;
+    this.seconds = 0;
+    return true;
+  }
+  reset(): void {
+    this.seconds = 0;
+  }
+}
+
 // 変換結果の置き場。毎フレームのnewを避けるため使い回す(呼んだ直後にその場で読むこと)
 const worldDir = { x: 0, z: 0 };
 
@@ -57,6 +133,9 @@ export class PlayerController {
   private vx = 0;
   private vz = 0;
   private stepAcc = 0;
+  private stuck = new StuckWatch();
+  /** 直近に自動脱出した位置(検証用) */
+  lastEscape: { x: number; z: number } | null = null;
 
   constructor(
     private view: CharacterView,
@@ -66,9 +145,33 @@ export class PlayerController {
     this.x = spawn.x;
     this.z = spawn.z;
     this.rotY = spawn.rotY;
+    // セーブ復帰時の保険: 前のバージョンで詰まった位置に保存されていても動き出せるようにする
+    if (needsLoadEscape(this.x, this.z, this.canStand)) this.escape();
     this.y = island.groundY(this.x, this.z);
     this.apply();
     view.play('idle');
+  }
+
+  /** そこに立てるか(歩ける+コライダーに押し出されない) */
+  private canStand = (x: number, z: number): boolean => {
+    if (!this.island.walkable(x, z)) return false;
+    const [rx, rz] = this.island.resolveCollision(x, z, PLAYER_R);
+    return Math.hypot(rx - x, rz - z) < 1e-3;
+  };
+
+  /** はまりから最寄りの立てる点へ抜ける(見つからなければ何もしない) */
+  private escape(): boolean {
+    const p = findEscapePoint(this.x, this.z, this.canStand);
+    if (!p) return false;
+    this.x = p.x;
+    this.z = p.z;
+    this.y = this.island.groundY(p.x, p.z);
+    this.speed = 0;
+    this.vx = 0;
+    this.vz = 0;
+    this.lastEscape = { x: p.x, z: p.z };
+    this.apply();
+    return true;
   }
 
   update(dt: number, input: InputState): void {
@@ -79,6 +182,10 @@ export class PlayerController {
     const analog = input.ax !== undefined || input.az !== undefined;
     let ix = analog ? (input.ax ?? 0) : (input.left ? 1 : 0) - (input.right ? 1 : 0);
     let iz = analog ? (input.az ?? 0) : (input.down ? 1 : 0) - (input.up ? 1 : 0);
+    // 自動脱出の判定用: 会話・演出でないのに「動かそうとしている」か
+    const wantsMove = !this.locked && Math.hypot(ix, iz) > 1e-3;
+    const fromX = this.x;
+    const fromZ = this.z;
     if (this.locked) {
       ix = 0;
       iz = 0;
@@ -127,7 +234,14 @@ export class PlayerController {
       } else {
         this.speed = 0;
       }
-      [this.x, this.z] = this.island.resolveCollision(this.x, this.z, 0.32);
+      [this.x, this.z] = this.island.resolveCollision(this.x, this.z, PLAYER_R);
+    }
+
+    // ---- はまりからの自動脱出 ----
+    // 「動かそうとしているのに2秒ぜんぜん進めない」かつ「四方どこへも出られない」ときだけ発動する。
+    // 壁に向かって歩き続けているだけ(後ろへ戻れる)では発動しない。
+    if (this.stuck.tick(dt, wantsMove, Math.hypot(this.x - fromX, this.z - fromZ))) {
+      if (!this.canStand(this.x, this.z) || isBoxedIn(this.x, this.z, this.canStand)) this.escape();
     }
 
     // 高さ追従(段差はなめらかに)
@@ -176,6 +290,7 @@ export class PlayerController {
     if (rotY !== undefined) this.rotY = rotY;
     this.y = this.island.groundY(x, z);
     this.speed = 0;
+    this.stuck.reset(); // 移動させた直後から詰まり時間を数えなおす
     this.apply();
   }
 }

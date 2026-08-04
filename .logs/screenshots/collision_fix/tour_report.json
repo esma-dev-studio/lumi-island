@@ -1,0 +1,134 @@
+{
+ "report": [
+  {
+   "route": "(a) 池の外周1周",
+   "n": 24,
+   "failed": 3,
+   "stalls": 24,
+   "escape": null,
+   "legs": [
+    {
+     "to": [
+      36.24,
+      13.1
+     ],
+     "ok": false,
+     "sec": 16,
+     "at": [
+      30.05,
+      13.1
+     ],
+     "stalls": 8
+    },
+    {
+     "to": [
+      36.33,
+      13.67
+     ],
+     "ok": false,
+     "sec": 16.1,
+     "at": [
+      29.98,
+      13.61
+     ],
+     "stalls": 8
+    },
+    {
+     "to": [
+      38.25,
+      15.24
+     ],
+     "ok": false,
+     "sec": 16.2,
+     "at": [
+      29.79,
+      14.93
+     ],
+     "stalls": 8
+    }
+   ]
+  },
+  {
+   "route": "(b) ミナモの家の周囲1周",
+   "n": 16,
+   "failed": 0,
+   "stalls": 0,
+   "escape": null,
+   "legs": []
+  },
+  {
+   "route": "(c) ツムギ工房の周囲1周",
+   "n": 14,
+   "failed": 0,
+   "stalls": 0,
+   "escape": null,
+   "legs": []
+  },
+  {
+   "route": "(d) 海岸線に沿って島を半周",
+   "n": 24,
+   "failed": 0,
+   "stalls": 10,
+   "escape": null,
+   "legs": [
+    {
+     "to": [
+      -25.1,
+      33.3
+     ],
+     "ok": true,
+     "sec": 13,
+     "at": [
+      -24.57,
+      33.42
+     ],
+     "stalls": 8
+    },
+    {
+     "to": [
+      -43.14,
+      -2.26
+     ],
+     "ok": true,
+     "sec": 4.2,
+     "at": [
+      -42.92,
+      -1.49
+     ],
+     "stalls": 2
+    }
+   ]
+  },
+  {
+   "route": "(e) 高台スロープ→デッキ",
+   "n": 5,
+   "failed": 0,
+   "stalls": 0,
+   "escape": null,
+   "legs": []
+  },
+  {
+   "route": "(f) 広場→浜→桟橋",
+   "n": 8,
+   "failed": 0,
+   "stalls": 4,
+   "escape": null,
+   "legs": [
+    {
+     "to": [
+      4,
+      40
+     ],
+     "ok": true,
+     "sec": 6.3,
+     "at": [
+      3.75,
+      38.99
+     ],
+     "stalls": 4
+    }
+   ]
+  }
+ ],
+ "errors": []
+}

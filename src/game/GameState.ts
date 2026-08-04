@@ -34,6 +34,10 @@ export interface GameState {
   npcs: Record<string, NpcState>;
   islandLevel: number; // ルミの木 0=ねむり 1=めばえ 2=かいか
   flags: Record<string, boolean>;
+  /** ずかん: これまでに手に入れた種類ごとの累計(所持数ではない)。初取得=図鑑登録 */
+  codex: Partial<Record<ItemId, number>>;
+  /** 実績などが読む累計カウンタ(例: place_total, place_glow, quest_done)。採取・釣りはcodexを使う */
+  stats: Record<string, number>;
 }
 
 export function newGameState(): GameState {
@@ -55,7 +59,19 @@ export function newGameState(): GameState {
     },
     islandLevel: 0,
     flags: {},
+    codex: {},
+    stats: {},
   };
+}
+
+/** ずかん・実績用の記録つき入手。手に入れる経路(採取・釣り・クラフト・購入)はこちらを使う */
+export function invAddRecorded(s: GameState, item: ItemId, n = 1): void {
+  invAdd(s, item, n);
+  s.codex[item] = (s.codex[item] ?? 0) + n;
+}
+
+export function statAdd(s: GameState, key: string, n = 1): void {
+  s.stats[key] = (s.stats[key] ?? 0) + n;
 }
 
 // ---- インベントリ操作(純関数) ----

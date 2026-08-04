@@ -365,7 +365,7 @@ export function buildPondShore(scene: Scene): { x: number; z: number; r: number 
           appendBlob(Ab, x, y + st * 0.55, z, st * 1.25, st, st * 1.1, jitterColor(C_WETROCK, seed, 0.14), {
             segs: 7, noise: 0.3, seed, flatBottom: true, bottomDark: 0.35,
           });
-          if (st > 0.42) colliders.push({ x, z, r: st * 1.05 });
+          if (st > 0.42) colliders.push({ x, z, r: st * 0.9 }); // 見た目(st*1.1〜1.25)の内側で止める
           break;
         }
         case 'reed': { // アシ(背が高い。数本ずつまとめて生える)
@@ -413,7 +413,7 @@ export function buildPondShore(scene: Scene): { x: number; z: number; r: number 
             [x + dx * 0.3 * s, y + 0.12, z + dz * 0.3 * s],
             [x + dx * 0.55 * s, y + 0.4, z + dz * 0.55 * s - 0.18],
           ], 0.045 * s, 0.02 * s, c, seed + 2);
-          colliders.push({ x, z, r: 0.55 * s });
+          // 枝は高さ0.2〜0.4mでまたげる。当たり判定は付けない(岸で引っかかる価値がない)
           break;
         }
       }

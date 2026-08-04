@@ -14,7 +14,8 @@ export class WorldPauseController {
   evaluate(): void {
     const gs = this.gs;
     this.uiOpen =
-      gs.invUI.open || gs.craftUI.open || gs.shopUI.open || gs.questLog.open || gs.dialogue.open;
+      gs.invUI.open || gs.craftUI.open || gs.shopUI.open || gs.questLog.open ||
+      gs.codexUI.open || gs.dialogue.open;
     // 会話・モーダルUI・見せ場・就寝中はゲーム内時間とNPCを完全に止める(P0-5)
     this.frozen = this.uiOpen || gs.questComplete.open || gs.seq.active;
   }
