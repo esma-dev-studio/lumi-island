@@ -18,7 +18,9 @@ export const POIS: Record<string, POI> = {
   pier: { id: 'pier', name: 'さんばし', x: 4, z: 48 },
   pond: { id: 'pond', name: '池', x: 30, z: 20 },
   hill: { id: 'hill', name: '高台', x: 28, z: -27 },
-  beach: { id: 'beach', name: '浜べ', x: -6, z: 42 },
+  // 旧(-6,42)は地形h=0.10で海の中だった(歩行しきい値0.33未満)。
+  // 実測して乾いた砂へ移動: h=0.478(かいがらの群れとさんばしの中間)
+  beach: { id: 'beach', name: '浜べ', x: -6, z: 34.5 },
   meadow: { id: 'meadow', name: '草原', x: -22, z: 10 },
   forest: { id: 'forest', name: '林', x: -2, z: -32 },
   bed: { id: 'bed', name: 'おうちのベッド', x: -30.9, z: 6.7 }, // ミオの家のドア前(ねる場所)
@@ -35,7 +37,9 @@ export const ENTRANCES: { x: number; z: number }[] = [
 
 // 道(ポリライン)。地形の頂点色と平滑化に使う
 export const PATHS: [number, number][][] = [
-  [[0, 3], [0, 20], [-2, 32], [-4, 42], [4, 47]], // 広場→浜→桟橋
+  // 節点[-4,42]は地形h=0.22で海の中だった(道の色と平滑化が波打ちぎわの外へ出ていた)。
+  // 乾いた砂の上[-4,36.5](実測h=0.449)へ引き上げ、そこから桟橋の上へつなぐ
+  [[0, 3], [0, 20], [-2, 32], [-4, 36.5], [4, 47]], // 広場→浜→桟橋
   [[-4, 1], [-14, 3], [-24, 5], [-32, 6]], // 広場→ミオ家
   [[3, 1], [14, 6], [24, 10], [30, 13]], // 広場→池・ミナモ小屋
   [[2, -4], [10, -12], [17, -20], [22, -26], [25.4, -25.7], [27.6, -25.3]], // 広場→高台・ノクト家→観測スペースへの坂道
@@ -65,7 +69,8 @@ export const DIALOGUE_BACKDROPS: { x: number; y: number; z: number; r: number }[
 ];
 
 // 採取ノード(リスポーンあり)
-export type NodeKind = 'tree' | 'berry' | 'rock' | 'ore' | 'grass' | 'moss';
+// flower/mushroom/shell は道具のいらない「拾いもの」。starshard は夜だけ動的に出る(GATHER_NODESには載せない)
+export type NodeKind = 'tree' | 'berry' | 'rock' | 'ore' | 'grass' | 'moss' | 'flower' | 'mushroom' | 'shell' | 'starshard';
 export interface GatherNodeDef {
   id: string;
   kind: NodeKind;
@@ -96,6 +101,30 @@ export const GATHER_NODES: GatherNodeDef[] = [
   // ヒカリゴケ(林・岩かげ、夜に光る)
   N('moss', -6, -35, 1), N('moss', 6, -33, 2), N('moss', -14, -29, 3), N('moss', 10, -28, 4),
   N('moss', 25, -31, 5), N('moss', -20, -22, 6), N('moss', 33, -27, 7), N('moss', -2, -24, 8),
+  // のばな(草原の群生。1ノード=3株のかたまり)。既存ノードから3.5m以上はなす(Eの取り合いを避ける)
+  N('flower', -18, 20, 1), N('flower', 13, 10, 2), N('flower', -32, 18, 3), N('flower', 4, 12, 4),
+  // きのこ(林の木もと。1ノード=2〜3本)。装飾の木の根もと2〜3.5mに寄せる
+  N('mushroom', -9.5, -36.5, 1), N('mushroom', 1.5, -35.5, 2), N('mushroom', -17, -33, 3),
+  // かいがら(浜べの乾いた砂。1ノード=2枚)
+  N('shell', -8, 34.5, 1), N('shell', 8, 35.5, 2),
+];
+
+/**
+ * ほしのかけらが夜に出る候補地点(建物・水・既存ノードから離した歩ける場所)。
+ * 実測: すべて terrainHeight > 0.7 で walkable、最寄りの採取ノードまで4.5m以上。
+ * 同時に出るのは最大2個(src/systems/StarShardSystem.ts)。
+ */
+export const STAR_SPOTS: { x: number; z: number }[] = [
+  { x: -18, z: 4 }, // 西の道ぞい
+  { x: -6, z: 12 }, // 広場の南
+  { x: -2, z: 16 }, // 浜へ下りる道のわき
+  { x: 10, z: -6 }, // 東の草地
+  { x: 16, z: 4 }, // 池へ向かう道の南
+  { x: 20, z: 20 }, // 池の南西
+  { x: 6, z: 24 }, // 南の草地
+  { x: -10, z: 30 }, // 浜べの手前
+  { x: 24, z: -12 }, // 高台の登り口
+  { x: 2, z: -18 }, // 林の入口
 ];
 
 // 装飾の木・やぶ(採取不可のにぎやかし)

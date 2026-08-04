@@ -1,0 +1,29 @@
+{
+  "touchUI": {
+    "cls": "touch-ui",
+    "touchDevice": true
+  },
+  "labels": {
+    "flower": {
+      "text": "のばなをつむ",
+      "dim": false,
+      "visible": true
+    },
+    "mushroom": {
+      "text": "きのこをとる",
+      "dim": false,
+      "visible": true
+    },
+    "shell": {
+      "text": "かいがらをひろう",
+      "dim": false,
+      "visible": true
+    },
+    "starshard": {
+      "text": "ほしのかけらをひろう",
+      "dim": false,
+      "visible": true
+    }
+  },
+  "errors": []
+}

@@ -1,8 +1,11 @@
 // アイテム・道具・レシピ・店の品ぞろえ(データ駆動)
 export type ItemId =
-  | 'wood' | 'stone' | 'fiber' | 'berry' | 'moss' | 'ore' | 'fish' | 'nightfish' | 'jam'
+  | 'wood' | 'stone' | 'fiber' | 'berry' | 'moss' | 'ore'
+  | 'flower' | 'mushroom' | 'shell' | 'starshard'
+  | 'fish' | 'nightfish' | 'jam'
   | 'f_bench' | 'f_lantern' | 'f_stonelamp' | 'f_table' | 'f_planter'
-  | 'f_chair' | 'f_shelf' | 'f_rug' | 'f_pot' | 'f_sign';
+  | 'f_chair' | 'f_shelf' | 'f_rug' | 'f_pot' | 'f_sign'
+  | 'f_flowerbed' | 'f_mushlamp' | 'f_shelldeco' | 'f_starlantern';
 
 export type ToolId = 'axe' | 'pickaxe' | 'rod' | 'sickle';
 
@@ -22,6 +25,10 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   berry: { id: 'berry', name: 'ルミベリー', sell: 10, kind: 'food', desc: 'あまい実。夜はほんのり光る' },
   moss: { id: 'moss', name: 'ヒカリゴケ', sell: 14, kind: 'material', desc: '夜に光るコケ。ランタンの材料' },
   ore: { id: 'ore', name: 'ルミナこうせき', sell: 25, kind: 'material', desc: '高台でとれる光る石' },
+  flower: { id: 'flower', name: 'のばな', sell: 4, kind: 'material', desc: '草原に かたまってさく小さな花。手でつめる' },
+  mushroom: { id: 'mushroom', name: 'きのこ', sell: 5, kind: 'material', desc: '林の木の根もと、日かげに生える' },
+  shell: { id: 'shell', name: 'かいがら', sell: 6, kind: 'material', desc: '浜べの砂の上でひろえる、おうぎの形' },
+  starshard: { id: 'starshard', name: 'ほしのかけら', sell: 18, kind: 'material', desc: '夜だけ 地面できらめく、まれな かけら' },
   fish: { id: 'fish', name: 'サカナ', sell: 18, kind: 'food', desc: '昼の海や池でつれる' },
   nightfish: { id: 'nightfish', name: 'ヨザカナ', sell: 35, kind: 'food', desc: '夜だけつれる、光る魚' },
   jam: { id: 'jam', name: 'ベリージャム', sell: 45, kind: 'food', desc: 'ルミベリーをにつめた。みんな大すき' },
@@ -35,6 +42,10 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   f_rug: { id: 'f_rug', name: 'ラグ', sell: 30, kind: 'furniture', desc: 'ふかふかのしきもの' },
   f_pot: { id: 'f_pot', name: 'うえきばち', sell: 18, kind: 'furniture', desc: 'みどりのうえきばち' },
   f_sign: { id: 'f_sign', name: 'かんばん', sell: 15, kind: 'furniture', desc: 'メッセージをかける立てふだ' },
+  f_flowerbed: { id: 'f_flowerbed', name: 'はなだん', sell: 26, kind: 'furniture', desc: '木わくに土を入れて のばなをうえた花だん' },
+  f_mushlamp: { id: 'f_mushlamp', name: 'きのこランプ', sell: 38, kind: 'furniture', desc: 'かさが黄みどりに光る きのこの明かり', glow: true },
+  f_shelldeco: { id: 'f_shelldeco', name: 'かいがらのかざり', sell: 24, kind: 'furniture', desc: '流木にかいがらをならべた 小さなおきもの' },
+  f_starlantern: { id: 'f_starlantern', name: 'ほしのランタン', sell: 60, kind: 'furniture', desc: 'ほしのかけらの あお白い光', glow: true },
 };
 
 export const TOOLS: Record<ToolId, { id: ToolId; name: string; desc: string }> = {
@@ -61,10 +72,16 @@ export const RECIPES: RecipeDef[] = [
   { id: 'r_table', name: '木のテーブル', out: 'f_table', outKind: 'item', cost: { wood: 3, stone: 1 } },
   { id: 'r_planter', name: '花のプランター', out: 'f_planter', outKind: 'item', cost: { wood: 1, fiber: 1, berry: 1 } },
   { id: 'r_jam', name: 'ベリージャム', out: 'jam', outKind: 'item', cost: { berry: 3 } },
+  { id: 'r_flowerbed', name: 'はなだん', out: 'f_flowerbed', outKind: 'item', cost: { flower: 3, wood: 2 } },
+  { id: 'r_mushlamp', name: 'きのこランプ', out: 'f_mushlamp', outKind: 'item', cost: { mushroom: 2, moss: 2 } },
+  { id: 'r_shelldeco', name: 'かいがらのかざり', out: 'f_shelldeco', outKind: 'item', cost: { shell: 3 } },
+  { id: 'r_starlantern', name: 'ほしのランタン', out: 'f_starlantern', outKind: 'item', cost: { starshard: 1, stone: 2 } },
 ];
 
-// 最初から知っているレシピ
-export const INITIAL_RECIPES = ['r_sickle', 'r_rod'];
+// 最初から知っているレシピ。
+// はなだん・かいがらのかざりは「拾える素材が増えた」ことに気づいてもらう入口なので最初から見せる。
+// きのこランプ・ほしのランタンは素材の初回入手でひらめく(src/systems/DiscoverySystem.ts)。
+export const INITIAL_RECIPES = ['r_sickle', 'r_rod', 'r_flowerbed', 'r_shelldeco'];
 
 // ツムギの店で買える家具
 export const SHOP_STOCK: { item: ItemId; price: number }[] = [

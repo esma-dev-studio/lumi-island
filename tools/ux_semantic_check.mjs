@@ -15,6 +15,8 @@
 /** 目的・ヒントの共通カテゴリ(素材別に分けるのは「別の素材のEが出ている」を検出するため) */
 export const GATHER_CATEGORIES = [
   'gatherWood', 'gatherStone', 'gatherFiber', 'gatherMoss', 'gatherOre', 'gatherBerry',
+  // v6で増えた「拾いもの」。道具が要らないので blocked(理由表示)にはならず、必ず動詞のヒントが出る
+  'gatherFlower', 'gatherMushroom', 'gatherShell', 'gatherStar',
 ];
 const GATHER = new Set(GATHER_CATEGORIES);
 /**
@@ -64,6 +66,12 @@ export const OBJ_RULES = [
   { cat: 'gatherFiber', re: /クサツル.*あつめよう/, src: 'ObjectiveSystem craftStep: クサツルを あつめよう(ITEMS.fiber.name)' },
   { cat: 'gatherMoss', re: /ヒカリゴケ.*あつめよう/, src: 'ObjectiveSystem craftStep: ヒカリゴケを あつめよう(ITEMS.moss.name)' },
   { cat: 'gatherBerry', re: /ベリー.*あつめよう/, src: 'ObjectiveSystem craftStep: ルミベリーを あつめよう(ITEMS.berry.name)' },
+  // v6の素材。いまの依頼はこれらを要求しないので実走行では出ないが、
+  // レシピ駆動のcraftStepが将来これらを案内したときに unknown にならないよう先に登録しておく
+  { cat: 'gatherFlower', re: /のばな.*あつめよう/, src: 'ObjectiveSystem craftStep: のばなを あつめよう(ITEMS.flower.name)' },
+  { cat: 'gatherMushroom', re: /きのこ.*あつめよう/, src: 'ObjectiveSystem craftStep: きのこを あつめよう(ITEMS.mushroom.name)' },
+  { cat: 'gatherShell', re: /かいがら.*あつめよう/, src: 'ObjectiveSystem craftStep: かいがらを あつめよう(ITEMS.shell.name)' },
+  { cat: 'gatherStar', re: /ほしのかけら.*(あつめよう|見つけよう)/, src: 'ObjectiveSystem craftStep: ほしのかけらを あつめよう(ITEMS.starshard.name)' },
 ];
 
 // ---- ホットヒント(.hud-hint)のカテゴリ表。上から順に最初に当たったものを採用 ----
@@ -82,6 +90,11 @@ export const HINT_RULES = [
   { cat: 'gatherMoss', re: /ヒカリゴケをとる/, src: 'GatherSystem verb: ヒカリゴケをとる(moss)' },
   { cat: 'gatherOre', re: /こうせきをほる/, src: 'GatherSystem verb: こうせきをほる(ore)' },
   { cat: 'gatherBerry', re: /ベリーをつむ/, src: 'GatherSystem verb: ベリーをつむ(berry)' },
+  // v6の拾いもの。「ベリーをつむ」より後ろでよい(文言が重ならない)
+  { cat: 'gatherFlower', re: /のばなをつむ/, src: 'GatherSystem verb: のばなをつむ(flower)' },
+  { cat: 'gatherMushroom', re: /きのこをとる/, src: 'GatherSystem verb: きのこをとる(mushroom)' },
+  { cat: 'gatherShell', re: /かいがらをひろう/, src: 'GatherSystem verb: かいがらをひろう(shell)' },
+  { cat: 'gatherStar', re: /ほしのかけらをひろう/, src: 'GatherSystem verb: ほしのかけらをひろう(starshard)' },
   { cat: 'carry', re: /もちかえる/, src: 'InteractionRouting: <kbd>E</kbd>◯◯を もちかえる' },
   { cat: 'talk', re: /と はなす/, src: 'InteractionRouting: <kbd>E</kbd>◯◯と はなす' },
 ];

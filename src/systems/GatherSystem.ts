@@ -21,6 +21,13 @@ export const GATHER_RULES: Record<NodeKind, GatherRule> = {
   berry: { tool: null, item: 'berry', count: [1, 2], respawnHours: 2.2, anim: 'pickup', verb: 'ベリーをつむ' },
   moss: { tool: null, item: 'moss', count: [1, 1], respawnHours: 3, anim: 'pickup', verb: 'ヒカリゴケをとる' },
   ore: { tool: 'pickaxe', item: 'ore', count: [1, 1], respawnHours: 2.5, anim: 'interact', verb: 'こうせきをほる' },
+  // v6の「拾えるもの」4種。どれも道具なしで手にとれる(見つけたその場で拾える楽しさを優先)
+  flower: { tool: null, item: 'flower', count: [1, 2], respawnHours: 1.6, anim: 'pickup', verb: 'のばなをつむ' },
+  mushroom: { tool: null, item: 'mushroom', count: [1, 2], respawnHours: 2.2, anim: 'pickup', verb: 'きのこをとる' },
+  shell: { tool: null, item: 'shell', count: [1, 2], respawnHours: 2.4, anim: 'pickup', verb: 'かいがらをひろう' },
+  // ほしのかけらは夜だけ出るスポーン制(src/systems/StarShardSystem.ts)。
+  // ノードそのものが消えるので respawnHours は使われない(transientノード)。
+  starshard: { tool: null, item: 'starshard', count: [1, 1], respawnHours: 0, anim: 'pickup', verb: 'ほしのかけらをひろう', nightOnly: true },
 };
 
 export interface GatherCheck {

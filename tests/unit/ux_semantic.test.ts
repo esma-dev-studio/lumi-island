@@ -9,7 +9,9 @@ import {
   annotateRow,
   summarizeTrace,
   uxVerdictOf,
+  GATHER_CATEGORIES,
 } from '../../tools/ux_semantic_check.mjs';
+import { GATHER_RULES } from '../../src/systems/GatherSystem';
 
 describe('categorizeObjective(いまやること)', () => {
   it('採取の目的を素材ごとに分ける', () => {
@@ -344,6 +346,66 @@ describe('v5走行で誤検出した2件(較正で解消する)', () => {
     expect(row.hintCategory).toBe('gatherFiber');
     expect(row.semanticMatch).toBe(true);
     expect(summarizeTrace([row]).semanticMismatchCount).toBe(0);
+  });
+});
+
+// v6で増えた拾いもの(のばな・きのこ・かいがら・ほしのかけら)。
+// 判定器の表に載せておかないと unknownHints に落ちて「未知ヒント」のまま気づけなくなる。
+describe('v6の新しい採取ヒント(4種)', () => {
+  it('GatherSystemのverbが素材ごとのカテゴリになる', () => {
+    expect(categorizeHint('<kbd>E</kbd>のばなをつむ')).toBe('gatherFlower');
+    expect(categorizeHint('Eのばなをつむ')).toBe('gatherFlower');
+    expect(categorizeHint('Eきのこをとる')).toBe('gatherMushroom');
+    expect(categorizeHint('Eかいがらをひろう')).toBe('gatherShell');
+    expect(categorizeHint('Eほしのかけらをひろう')).toBe('gatherStar');
+  });
+  it('4種とも unknown にならない(未知ヒント扱いのままにしない)', () => {
+    const hints = ['Eのばなをつむ', 'Eきのこをとる', 'Eかいがらをひろう', 'Eほしのかけらをひろう'];
+    for (const h of hints) expect(categorizeHint(h)).not.toBe('unknown');
+    expect(summarizeTrace(hints.map((hint, i) => ({ sec: i, obj: '', hint }))).unknownHints).toEqual([]);
+  });
+  it('GATHER_RULESのverbと表がずれていない(srcを直したら気づける)', () => {
+    // GatherSystem側の文言を変えたのに判定表を直し忘れる、を機械で防ぐ
+    const expected: Record<string, string> = {
+      flower: 'gatherFlower', mushroom: 'gatherMushroom', shell: 'gatherShell', starshard: 'gatherStar',
+      tree: 'gatherWood', rock: 'gatherStone', grass: 'gatherFiber',
+      moss: 'gatherMoss', ore: 'gatherOre', berry: 'gatherBerry',
+    };
+    for (const [kind, cat] of Object.entries(expected)) {
+      expect(categorizeHint(`<kbd>E</kbd>${GATHER_RULES[kind as keyof typeof GATHER_RULES].verb}`)).toBe(cat);
+    }
+  });
+  it('目的の文言も素材ごとに分かれる(レシピ駆動の案内が出たとき用)', () => {
+    expect(categorizeObjective('のばなを あつめよう')).toBe('gatherFlower');
+    expect(categorizeObjective('きのこを あつめよう')).toBe('gatherMushroom');
+    expect(categorizeObjective('かいがらを あつめよう')).toBe('gatherShell');
+    expect(categorizeObjective('ほしのかけらを あつめよう')).toBe('gatherStar');
+  });
+  it('別素材どうしは矛盾・同じ素材は一致・craft/place中の採取は許す', () => {
+    expect(isSemanticMatch('gatherFlower', 'gatherFlower')).toBe(true);
+    expect(isSemanticMatch('gatherFlower', 'gatherMushroom')).toBe(false);
+    expect(isSemanticMatch('gatherShell', 'gatherStar')).toBe(false);
+    expect(isSemanticMatch('gatherMoss', 'gatherShell')).toBe(false);
+    expect(isSemanticMatch('report', 'gatherFlower')).toBe(false);
+    expect(isSemanticMatch('craft', 'gatherShell')).toBe(true);
+    expect(isSemanticMatch('place', 'gatherStar')).toBe(true);
+    expect(isSemanticMatch('free', 'gatherStar')).toBe(true);
+    expect(isSemanticMatch('talk', 'gatherFlower')).toBe(true); // 未受注は自由行動あつかい
+  });
+  it('GATHER_CATEGORIESに4種が入っている(craft/placeの許可がこの集合で決まる)', () => {
+    expect(GATHER_CATEGORIES).toContain('gatherFlower');
+    expect(GATHER_CATEGORIES).toContain('gatherMushroom');
+    expect(GATHER_CATEGORIES).toContain('gatherShell');
+    expect(GATHER_CATEGORIES).toContain('gatherStar');
+    expect(GATHER_CATEGORIES.length).toBe(10);
+  });
+  it('既存の文言の判定は変わらない(新ルールが古いヒントを横取りしない)', () => {
+    expect(categorizeHint('Eベリーをつむ')).toBe('gatherBerry');
+    expect(categorizeHint('Eヒカリゴケをとる')).toBe('gatherMoss');
+    expect(categorizeHint('Eこうせきをほる')).toBe('gatherOre');
+    expect(categorizeObjective('ルミベリーを あつめよう')).toBe('gatherBerry');
+    expect(categorizeObjective('ヒカリゴケを あつめよう')).toBe('gatherMoss');
+    expect(categorizeObjective('ルミナこうせきを あつめよう')).toBe('gatherOre');
   });
 });
 

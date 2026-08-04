@@ -1,0 +1,156 @@
+{
+  "steps": [
+    {
+      "step": "gather_day",
+      "hints": {
+        "flower": "Eのばなをつむ",
+        "mushroom": "Eきのこをとる",
+        "shell": "Eかいがらをひろう"
+      },
+      "codex": {
+        "flower": 2,
+        "mushroom": 2,
+        "shell": 2
+      }
+    },
+    {
+      "step": "policy",
+      "guidedObj": "もくざいを あつめよう",
+      "guidedHint": "",
+      "freeHint": "Eのばなをつむ"
+    },
+    {
+      "step": "star",
+      "spawned": {
+        "count": 2,
+        "list": [
+          {
+            "id": "starshard4",
+            "x": 10,
+            "z": -6
+          },
+          {
+            "id": "starshard8",
+            "x": -10,
+            "z": 30
+          }
+        ],
+        "hour": 21.3173119999981
+      },
+      "starHint": "Eほしのかけらをひろう",
+      "afterTake": 1,
+      "codexStar": 1,
+      "reappear": {
+        "ids": [
+          "starshard8",
+          "starshard2"
+        ],
+        "count": 2
+      },
+      "taken": "starshard4"
+    },
+    {
+      "step": "craft_place",
+      "crafted": {
+        "はなだん": "ok",
+        "かいがらのかざり": "ok",
+        "きのこランプ": "ok",
+        "ほしのランタン": "ok"
+      },
+      "placed": {
+        "f_flowerbed": true,
+        "f_shelldeco": true,
+        "f_mushlamp": true,
+        "f_starlantern": true
+      },
+      "placeGlowBefore": 0,
+      "placeGlowAfter": 2,
+      "poolCount": 11,
+      "glowCount": 2
+    },
+    {
+      "step": "despawn",
+      "morning": 0,
+      "afterSleep": {
+        "c": 0,
+        "h": 6.087319999999993
+      }
+    }
+  ],
+  "errors": [],
+  "ok": true,
+  "consoleErrors": [],
+  "finalCodex": {
+    "flower": 10,
+    "mushroom": 4,
+    "shell": 4,
+    "starshard": 1,
+    "f_flowerbed": 1,
+    "f_shelldeco": 1,
+    "f_mushlamp": 1,
+    "f_starlantern": 1
+  },
+  "finalStats": {
+    "ach_a_flower10": 1,
+    "ach_a_star1": 1,
+    "place_total": 4,
+    "place_glow": 2
+  },
+  "finalRecipes": [
+    "r_sickle",
+    "r_rod",
+    "r_flowerbed",
+    "r_shelldeco",
+    "r_mushlamp",
+    "r_starlantern"
+  ],
+  "log": [
+    "起動OK",
+    "\n[1] 昼の採取",
+    "  shot node_flower_day.png",
+    "  shot node_mushroom_day.png",
+    "  shot node_shell_day.png",
+    "  ヒント: 花「Eのばなをつむ」 きのこ「Eきのこをとる」 かい「Eかいがらをひろう」",
+    "  codex: flower=2 mushroom=2 shell=2",
+    "  ひらめき(きのこランプ): レシピを ひらめいた! きのこランプ",
+    "  採取後 codex: flower=8 shell=4 mushroom=4",
+    "\n[2] 誘導中のヒント抑制",
+    "  flower1 リスポーン: {\"enabled\":true,\"scale\":1}",
+    "  誘導中: 目標「もくざいを あつめよう」 ヒント「」",
+    "  shot policy_guided_no_hint.png",
+    "  自由時: ヒント「Eのばなをつむ」",
+    "\n[3] 夜のほしのかけら",
+    "  codex.flower=10 ach_a_flower10=0",
+    "  実績トースト: じっせき たっせい! おはなばたけ",
+    "  出現数=2 位置=[{\"id\":\"starshard4\",\"x\":10,\"z\":-6},{\"id\":\"starshard8\",\"x\":-10,\"z\":30}] hour=21.32",
+    "  shot star_shard_night.png",
+    "  かけらのヒント「Eほしのかけらをひろう」",
+    "  codex.starshard=1 実績=じっせき たっせい! よふかしのたからもの ひらめき=レシピを ひらめいた! ほしのランタン",
+    "  拾った直後の残り=1",
+    "  補充後: {\"ids\":[\"starshard8\",\"starshard2\"],\"count\":2} (拾ったのは starshard4)",
+    "\n[4] クラフトと設置",
+    "  クラフト はなだん: ok",
+    "  クラフト かいがらのかざり: ok",
+    "  クラフト きのこランプ: ok",
+    "  クラフト ほしのランタン: ok",
+    "  shot craft_panel_after.png",
+    "  設置 f_flowerbed: OK",
+    "  設置 f_shelldeco: OK",
+    "  設置 f_mushlamp: OK",
+    "  設置 f_starlantern: OK",
+    "  place_glow 0 -> 2 / 光る家具の設置数=2",
+    "  光だまりメッシュ数(島ぜんたい)=11",
+    "  q_lumi判定の光る家具数=2",
+    "  shot furniture_night_glow.png",
+    "  shot furniture_day.png",
+    "\n[5] ずかん",
+    "  shot codex_after_gather.png",
+    "\n[6] 朝と睡眠での消滅",
+    "  夜の出現数=2",
+    "  朝5時の残り=0",
+    "  睡眠前の出現数=1",
+    "  睡眠あけ hour=6.04",
+    "  睡眠スキップ後の残り=0 hour=6.09",
+    "\nconsoleエラー数=0"
+  ]
+}

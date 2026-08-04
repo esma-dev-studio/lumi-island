@@ -343,6 +343,174 @@ export function makeMoss(scene: Scene, seed: number): Mesh {
   return moss;
 }
 
+// ---- のばな(草原の採取ノード): 茎+5弁の花を3株まとめて ----
+// 花の色は3種を株ごとに変え、「同じ形の使い回し」に見せない。
+const C_STEM = Color3.FromHexString('#6f9a58');
+const FLOWER_HEADS = ['#e8d9a0', '#d98a9a', '#e0a0ae'];
+export function makeFlowerNode(scene: Scene, seed: number): Mesh {
+  const A = A0();
+  for (let i = 0; i < 3; i++) {
+    const th = (i / 3) * Math.PI * 2 + seed * 1.7;
+    const r = 0.15 + vnoise(i, seed) * 0.17;
+    const cx = Math.cos(th) * r, cz = Math.sin(th) * r;
+    const h = 0.27 + vnoise(i * 3, seed) * 0.16;
+    const lean = 0.03 + vnoise(seed, i) * 0.05;
+    const lx = Math.cos(th * 1.7 + seed) * lean, lz = Math.sin(th * 1.7 + seed) * lean;
+    const stem = jitterColor(C_STEM, seed + i, 0.14);
+    // 茎は2段に分けてわずかにしならせる(まっすぐな棒に見せない)
+    appendBlob(A, cx + lx * 0.25, h * 0.28, cz + lz * 0.25, 0.016, h * 0.3, 0.016, stem, {
+      segs: 4, noise: 0.06, seed: seed + i, bottomDark: 0.32,
+    });
+    appendBlob(A, cx + lx * 0.85, h * 0.74, cz + lz * 0.85, 0.014, h * 0.34, 0.014, stem, {
+      segs: 4, noise: 0.06, seed: seed + i * 3 + 1, bottomDark: 0.2,
+    });
+    // 根もとの細い葉。平たい塊は暗いと「板きれ」に見えるので、小さく・明るめ・影を弱くする
+    const la = th + 1.1 + vnoise(i, seed * 2) * 1.4;
+    appendBlob(A, cx + Math.cos(la) * 0.04, h * 0.24, cz + Math.sin(la) * 0.04, 0.038, 0.011, 0.021,
+      jitterColor(Color3.FromHexString('#84b567'), seed + i + 7, 0.12), { segs: 4, noise: 0.1, seed: seed + i + 11, bottomDark: 0.06 });
+    // 花: 5枚の花びら+あたたかい芯(上向き)
+    const head = Color3.FromHexString(FLOWER_HEADS[(i + seed) % 3]);
+    const hx = cx + lx * 1.15, hy = h + 0.015, hz = cz + lz * 1.15;
+    const phi0 = vnoise(i, seed * 3) * Math.PI * 2;
+    for (let k = 0; k < 5; k++) {
+      const phi = phi0 + (k / 5) * Math.PI * 2;
+      appendBlob(A, hx + Math.cos(phi) * 0.042, hy, hz + Math.sin(phi) * 0.042, 0.036, 0.014, 0.036,
+        jitterColor(head, i * 5 + k, 0.07), { segs: 5, noise: 0.07, seed: i * 7 + k + seed, bottomDark: 0.14 });
+    }
+    appendBlob(A, hx, hy + 0.013, hz, 0.021, 0.019, 0.021, Color3.FromHexString('#f2e2a8'), {
+      segs: 5, noise: 0.05, seed: seed + i, bottomDark: 0,
+    });
+  }
+  // appendBlobだけで組んだ形なので法線はflip(auto判定は部品が散っていると当てにならない)
+  return toMesh(scene, `flowernode_${seed}`, A, 'flip');
+}
+
+// ---- きのこ(林の木もとの採取ノード): かさ+じくを2〜3本 ----
+const C_MUSH_STEM = Color3.FromHexString('#e6d4ac');
+const C_MUSH_CAP = Color3.FromHexString('#b0704f');
+const C_MUSH_CAP2 = Color3.FromHexString('#96754c');
+export function makeMushroomNode(scene: Scene, seed: number): Mesh {
+  const A = A0();
+  // 根もとの落ち葉だまり(配置時に地面へ3cm沈めるので、その分だけ持ち上げておく)。
+  // ノイズを強くすると地面から三角の板が突き出て見えるので控えめにする
+  appendBlob(A, 0, 0.04, 0, 0.34, 0.02, 0.28, Color3.FromHexString('#57703f'), {
+    segs: 8, noise: 0.18, seed, bottomDark: 0.1,
+  });
+  const n = 2 + Math.floor(vnoise(seed, 7) * 1.99); // 2〜3本
+  for (let i = 0; i < n; i++) {
+    const th = (i / n) * Math.PI * 2 + seed * 2.3;
+    const r = 0.1 + vnoise(i, seed) * 0.13;
+    const cx = Math.cos(th) * r, cz = Math.sin(th) * r;
+    const sh = 0.11 + vnoise(i * 5, seed) * 0.1; // じくの高さ
+    const cr = 0.07 + vnoise(i * 2, seed) * 0.04; // かさの半径(平たい円盤にしない)
+    appendBlob(A, cx, sh * 0.52, cz, 0.026, sh * 0.58, 0.026, jitterColor(C_MUSH_STEM, seed + i, 0.1), {
+      segs: 5, noise: 0.09, seed: seed + i, bottomDark: 0.3,
+    });
+    // かさ: 上へすぼまる山型(まるいドームに白い点を置くと「顔」に見えてしまうので点は打たない。
+    // 質感は appendBlob の面ごとの明暗ゆらぎと、下に重ねるひだの色差で出す)
+    const cap = jitterColor(i % 2 ? C_MUSH_CAP2 : C_MUSH_CAP, seed + i, 0.13);
+    appendBlob(A, cx, sh + cr * 0.1, cz, cr * 1.02, cr * 0.42, cr * 1.02, // ひだ(かさのふち・明るい)
+      jitterColor(Color3.FromHexString('#e0cba6'), seed + i * 7, 0.1),
+      { segs: 7, noise: 0.08, seed: seed + i * 7, flatBottom: true, bottomDark: 0.28 });
+    appendBlob(A, cx, sh + cr * 0.3, cz, cr, cr * 0.66, cr, cap, {
+      segs: 7, noise: 0.13, seed: seed + i * 3, flatBottom: true, bottomDark: 0.34,
+    });
+    appendBlob(A, cx, sh + cr * 0.72, cz, cr * 0.5, cr * 0.4, cr * 0.5, jitterColor(cap, seed + i + 4, 0.14), {
+      segs: 6, noise: 0.14, seed: seed + i * 11, bottomDark: 0.2,
+    });
+  }
+  return toMesh(scene, `mushnode_${seed}`, A, 'flip');
+}
+
+// ---- かいがら(浜べの採取ノード): ホタテ形の扇を2枚 ----
+// 巻き順を自分で決める形なので toMesh は 'keep'(地形メッシュ・光だまりと同じ「上向きが表」)。
+const C_SHELL = Color3.FromHexString('#e6d6ae');
+const C_SHELL2 = Color3.FromHexString('#efe3c8');
+export function appendShellFan(
+  A: Arrays, cx: number, cy: number, cz: number, radius: number, rotY: number,
+  dome: number, up: boolean, color: Color3, seed: number
+): void {
+  const SEG = 14, RING = 3, HALF = 1.15;
+  const base = A.pos.length / 3;
+  const c0 = jitterColor(color, seed, 0.08);
+  A.pos.push(cx, cy, cz); // ちょうつがい
+  A.col.push(c0.r * 0.78, c0.g * 0.78, c0.b * 0.78, 1);
+  for (let j = 1; j <= RING; j++) {
+    const f = j / RING;
+    for (let i = 0; i <= SEG; i++) {
+      const t = i / SEG;
+      const a = rotY - HALF + HALF * 2 * t;
+      const wob = j === RING ? 1 + Math.cos(t * Math.PI * 7) * 0.05 : 1; // ふちのなみ
+      const rr = radius * f * wob;
+      const rib = (i % 2 === 0 ? 1 : -1) * 0.055 * radius * f; // 放射状のみぞ
+      const y = cy + (dome * Math.sin(f * Math.PI * 0.9) + rib) * (up ? 1 : -0.25);
+      A.pos.push(cx + Math.cos(a) * rr, y, cz + Math.sin(a) * rr);
+      const shade = 0.9 + 0.18 * (1 - f) + (i % 2 === 0 ? 0.05 : -0.05);
+      const c = jitterColor(color, seed + i + j * 3, 0.06);
+      A.col.push(c.r * shade, c.g * shade, c.b * shade, 1);
+    }
+  }
+  const row = (j: number, i: number): number => base + 1 + (j - 1) * (SEG + 1) + i;
+  const tri = (a: number, b: number, c: number): void => {
+    if (up) A.idx.push(a, b, c);
+    else A.idx.push(a, c, b);
+  };
+  for (let i = 0; i < SEG; i++) tri(base, row(1, i), row(1, i + 1));
+  for (let j = 1; j < RING; j++) {
+    for (let i = 0; i < SEG; i++) {
+      tri(row(j, i), row(j + 1, i), row(j, i + 1));
+      tri(row(j + 1, i), row(j + 1, i + 1), row(j, i + 1));
+    }
+  }
+}
+export function makeShellNode(scene: Scene, seed: number): Mesh {
+  const A = A0();
+  for (let i = 0; i < 2; i++) {
+    const th = seed * 1.3 + i * 2.4;
+    const d = 0.13 + vnoise(i, seed) * 0.1;
+    const cx = Math.cos(th) * d, cz = Math.sin(th) * d;
+    const radius = 0.17 + vnoise(i * 3, seed) * 0.07;
+    const rot = vnoise(seed, i * 5) * Math.PI * 2;
+    const col = i % 2 ? C_SHELL2 : C_SHELL;
+    // 配置時に地面へ3cm沈むので、砂の上に乗って見える高さから始める
+    appendShellFan(A, cx, 0.045, cz, radius, rot, 0.062, true, col, seed + i * 9);
+    appendShellFan(A, cx, 0.045, cz, radius, rot, 0.062, false, col, seed + i * 9);
+  }
+  return toMesh(scene, `shellnode_${seed}`, A, 'keep');
+}
+
+// ---- ほしのかけら(夜だけ現れるレア素材): 小さな結晶。淡い青白に発光する ----
+export function makeStarShard(scene: Scene, seed: number): Mesh {
+  const mesh = new Mesh(`starshard_${seed}`, scene);
+  const A = A0();
+  const spike = (ox: number, oz: number, r: number, up: number, down: number, tilt: number): void => {
+    const SEG = 6;
+    const base = A.pos.length / 3;
+    for (let s = 0; s < SEG; s++) {
+      const a = (s / SEG) * Math.PI * 2 + seed;
+      A.pos.push(ox + Math.cos(a) * r, down, oz + Math.sin(a) * r);
+      A.col.push(0.76, 0.85, 1.0, 1);
+    }
+    const top = base + SEG, bot = base + SEG + 1;
+    A.pos.push(ox + tilt, down + up, oz + tilt * 0.5);
+    A.col.push(0.96, 0.99, 1.0, 1);
+    A.pos.push(ox, 0, oz);
+    A.col.push(0.58, 0.7, 0.94, 1);
+    for (let s = 0; s < SEG; s++) {
+      const i0 = base + s, i1 = base + ((s + 1) % SEG);
+      A.idx.push(i0, i1, top);
+      A.idx.push(i1, i0, bot);
+    }
+  };
+  spike(0, 0, 0.085, 0.28, 0.075, (vnoise(seed, 3) - 0.5) * 0.05);
+  spike(0.1, 0.05, 0.042, 0.13, 0.04, 0.03);
+  spike(-0.07, -0.08, 0.036, 0.1, 0.035, -0.025);
+  applyArrays(mesh, A);
+  mesh.material = getGlowMats(scene).blue;
+  mesh.isPickable = false;
+  return mesh;
+}
+
 // ---- ルミの木(島のシンボル・段階で光る) ----
 export function makeLumiTree(scene: Scene): { root: Mesh; fruits: Mesh; buds: Mesh } {
   const A = A0();

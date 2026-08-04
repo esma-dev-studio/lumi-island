@@ -68,6 +68,18 @@ for (const spots of Object.values(NPC_SPOTS)) {
   }
 }
 
+/**
+ * 光る家具の光だまりの色。ITEMS[item].glow が true の家具だけが対象で、
+ * 表にない光る家具は amber(あたたかい灯り)にする。
+ * ここに載せた家具は place_glow の集計・q_lumiの「光る家具」判定にもそのまま乗る
+ * (判定はITEMSのglowフラグ側なので、色の表を増やしても数え方は変わらない)。
+ */
+const GLOW_TINT: Partial<Record<ItemId, 'amber' | 'mint' | 'blue'>> = {
+  f_stonelamp: 'blue',
+  f_starlantern: 'blue',
+  f_mushlamp: 'mint',
+};
+
 const ng = (reason: string): PlacementCheck => ({ ok: false, reason });
 const near = (x: number, z: number, p: { x: number; z: number }, r: number): boolean =>
   Math.hypot(x - p.x, z - p.z) < r;
@@ -179,7 +191,7 @@ export class PlacementSystem {
     this.island.shadows.addShadowCaster(fm.root, true);
     fm.root.receiveShadows = true;
     if (ITEMS[f.item].glow) {
-      attachLightPool(fm.root, 0, 0, 1.6, f.item === 'f_stonelamp' ? 'blue' : 'amber');
+      attachLightPool(fm.root, 0, 0, 1.6, GLOW_TINT[f.item] ?? 'amber');
       registerGlowSource(f.x, y + 0.9, f.z);
     }
     this.placed.set(f.id, { data: f, mesh: fm.root, colliderR: fm.colliderR });

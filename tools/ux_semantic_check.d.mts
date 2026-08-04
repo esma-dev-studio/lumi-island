@@ -2,14 +2,19 @@
 // tsconfigのincludeにtests/unitが入っているため、テストからimportするには型が要る
 // (tools/はJSのままにしたいので、実装は.mjs・型だけここに置く)。
 
+/** 素材別の採取カテゴリ(GATHER_CATEGORIES と同じ並び) */
+export type GatherCategory =
+  | 'gatherWood' | 'gatherStone' | 'gatherFiber' | 'gatherMoss' | 'gatherOre' | 'gatherBerry'
+  | 'gatherFlower' | 'gatherMushroom' | 'gatherShell' | 'gatherStar';
+
 export type ObjectiveCategory =
   | 'talk' | 'report'
-  | 'gatherWood' | 'gatherStone' | 'gatherFiber' | 'gatherMoss' | 'gatherOre' | 'gatherBerry'
+  | GatherCategory
   | 'fish' | 'craft' | 'place' | 'sleep' | 'free' | 'tutorial' | 'unknown';
 
 export type HintCategory =
   | 'talk'
-  | 'gatherWood' | 'gatherStone' | 'gatherFiber' | 'gatherMoss' | 'gatherOre' | 'gatherBerry'
+  | GatherCategory
   | 'fish' | 'place' | 'sleep' | 'shop' | 'carry' | 'dialogue' | 'blocked' | 'none' | 'unknown';
 
 export interface CategoryRule {

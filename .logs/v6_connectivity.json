@@ -1,0 +1,51 @@
+{
+  "grid": 501,
+  "step": 0.2,
+  "walkableCells": 164509,
+  "components": 5,
+  "top": [
+    {
+      "cells": 164505,
+      "areaM2": 6580,
+      "sample": [
+        -48.2,
+        -26.4
+      ]
+    },
+    {
+      "cells": 1,
+      "areaM2": 0,
+      "sample": [
+        26.8,
+        -28
+      ]
+    },
+    {
+      "cells": 1,
+      "areaM2": 0,
+      "sample": [
+        28.8,
+        -26.2
+      ]
+    },
+    {
+      "cells": 1,
+      "areaM2": 0,
+      "sample": [
+        34.2,
+        -29.4
+      ]
+    },
+    {
+      "cells": 1,
+      "areaM2": 0,
+      "sample": [
+        34.4,
+        -29.2
+      ]
+    }
+  ],
+  "nodeCount": 59,
+  "circleColliders": 92,
+  "rectColliders": 9
+}

@@ -5,10 +5,11 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { CascadedShadowGenerator } from '@babylonjs/core/Lights/Shadows/cascadedShadowGenerator';
 import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
 import { buildTerrain, terrainHeight, pondShoreR, type Terrain } from '../entities/terrain';
-import { initEffects, attachLightPool, registerGlowSource } from '../entities/effects';
+import { initEffects, attachLightPool, registerGlowSource, unregisterGlowSource, burst } from '../entities/effects';
 import { buildWater, onPier, updatePond, PIER, type WaterRefs } from '../entities/water';
 import {
   makeTree, makeBerryTree, makeRock, makeOreNode, makeGrassNode, makeMoss, makeLumiTree, getGlowMats,
+  makeFlowerNode, makeMushroomNode, makeShellNode, makeStarShard,
 } from '../entities/flora';
 import {
   scatterDeco, buildPondShore, buildHillDeck, hillDeckRails, deckGroundY, HILL_DECK,
@@ -16,9 +17,10 @@ import {
 } from '../entities/deco';
 import { buildHouse, makeBench, makeLamp, makeStoneRing } from '../entities/buildings';
 import { makeLogPile, makeCrate, makeBucketRod, makeTelescope, makeDriftwood, makeStump } from '../entities/props';
-import { GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, type GatherNodeDef } from '../data/island';
+import { GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, STAR_SPOTS, type GatherNodeDef } from '../data/island';
 import { DayNight } from './DayNight';
 import { TimeSystem } from '../systems/TimeSystem';
+import { StarShardScheduler } from '../systems/StarShardSystem';
 
 export interface CircleCollider { x: number; z: number; r: number }
 export interface RectCollider { x: number; z: number; w: number; d: number; rot: number }
@@ -42,6 +44,11 @@ export interface GatherNodeRuntime {
   root: Mesh;
   fruitMesh?: Mesh; // ベリー・鉱石クリスタルなど「採ると消える」部分
   y: number;
+  /**
+   * 一時ノード(ほしのかけら)。採ったらその場から消え、同じ場所には復活しない。
+   * InteractionSystemはこれを見て「枯れ→リスポーン」ではなく removeNode を呼ぶ。
+   */
+  transient?: boolean;
 }
 
 export class IslandScene {
@@ -67,6 +74,12 @@ export class IslandScene {
   lumiBuds!: Mesh; // 開花前の閉じた蕾(花と差し替えで切り替える)
   private waterT = 0;
   occludables: Mesh[] = []; // カメラとプレイヤーの間に入ったら半透明にする対象
+  // ---- 夜のほしのかけら(出現の判断は純ロジック、見た目だけここが持つ) ----
+  private stars = new StarShardScheduler(STAR_SPOTS.length);
+  private starNodeOfSpot = new Map<number, string>();
+  private starSpotOfNode = new Map<string, number>();
+  private starSparkleT = 0;
+  private starSparkleI = 0;
 
   constructor(public engine: Engine) {
     this.scene = new Scene(engine);
@@ -154,6 +167,24 @@ export class IslandScene {
         }
         case 'moss': {
           root = makeMoss(s, hashId(def.id));
+          break;
+        }
+        // v6の拾いもの3種。見た目と採取判定だけで、当たり判定は付けない(踏み越えられる)
+        case 'flower': {
+          root = makeFlowerNode(s, hashId(def.id));
+          break;
+        }
+        case 'mushroom': {
+          root = makeMushroomNode(s, hashId(def.id));
+          break;
+        }
+        case 'shell': {
+          root = makeShellNode(s, hashId(def.id));
+          break;
+        }
+        // 通常はGATHER_NODESに入らない(夜のスポナーが動的に作る)。念のため同じ道を通せるようにしておく
+        case 'starshard': {
+          root = makeStarShard(s, hashId(def.id));
           break;
         }
       }
@@ -359,11 +390,74 @@ export class IslandScene {
 
   update(dtSec: number): void {
     this.time.advance(dtSec);
+    // ほしのかけら: この関数はWorldPauseControllerが「凍っていないフレーム」だけ呼ぶので、
+    // ポーズ・会話・見せ場のあいだは進まない。睡眠で朝6時へ飛んだ場合も「夜が終わった」として消える
+    this.updateStars(dtSec);
     // 池のごく弱い上下動(±1.2cm)。スイレンは子メッシュなので一緒にゆれる
     this.waterT += dtSec;
     this.water.pond.position.y = POND.waterY + Math.sin(this.waterT * 0.9) * 0.012;
     // 水面のさざ波(表面のゆらぎ)と時刻の色。中身は15Hzに間引かれる
     updatePond(this.water, dtSec);
+  }
+
+  // ---------- 夜のほしのかけら ----------
+  /** いま地面に出ているほしのかけらの数(検証・デバッグ用) */
+  get starShardCount(): number {
+    return this.starNodeOfSpot.size;
+  }
+
+  private updateStars(dt: number): void {
+    const plan = this.stars.update(dt, this.time.day, this.time.hour);
+    for (const spot of plan.despawn) this.despawnStar(spot);
+    for (const spot of plan.spawn) this.spawnStar(spot);
+    if (this.starNodeOfSpot.size === 0) return;
+    // きらめき: 1.2秒ごとに1個ぶんだけ。共有パーティクルなので同じフレームに複数出さない
+    this.starSparkleT += dt;
+    if (this.starSparkleT < 1.2) return;
+    this.starSparkleT = 0;
+    const spots = [...this.starNodeOfSpot.keys()];
+    const spot = spots[this.starSparkleI++ % spots.length];
+    const p = STAR_SPOTS[spot];
+    burst(p.x, this.groundY(p.x, p.z) + 0.32, p.z, 'ore', 4);
+  }
+
+  private spawnStar(spot: number): void {
+    const p = STAR_SPOTS[spot];
+    const id = `starshard${spot + 1}`;
+    if (this.nodes.has(id)) return;
+    const y = this.groundY(p.x, p.z);
+    const root = makeStarShard(this.scene, spot * 17 + 3);
+    root.position.set(p.x, y - 0.02, p.z);
+    root.rotation.y = spot * 1.31;
+    attachLightPool(root, 0, 0, 1.5, 'blue'); // 遠くからでも気づける淡い星色の光だまり
+    registerGlowSource(p.x, y + 0.3, p.z);
+    this.nodes.set(id, { def: { id, kind: 'starshard', x: p.x, z: p.z }, root, y, transient: true });
+    this.starNodeOfSpot.set(spot, id);
+    this.starSpotOfNode.set(id, spot);
+    burst(p.x, y + 0.3, p.z, 'ore', 10); // 出現の合図
+  }
+
+  private despawnStar(spot: number): void {
+    const id = this.starNodeOfSpot.get(spot);
+    if (id === undefined) return;
+    this.starNodeOfSpot.delete(spot);
+    this.starSpotOfNode.delete(id);
+    const node = this.nodes.get(id);
+    if (!node) return;
+    unregisterGlowSource(node.def.x, node.def.z);
+    node.root.dispose(); // 共有マテリアルは道連れにしない。光だまりはonDisposeで一緒に消える
+    this.nodes.delete(id);
+  }
+
+  /**
+   * 一時ノード(ほしのかけら)を採ったときに InteractionSystem が呼ぶ。
+   * 見た目を消し、その場所はその夜のあいだ もう出さない。
+   */
+  removeNode(id: string): void {
+    const spot = this.starSpotOfNode.get(id);
+    if (spot === undefined) return;
+    this.stars.markTaken(spot);
+    this.despawnStar(spot);
   }
 
   /** ルミの木の段階(0=ねむり 1=めばえ 2=かいか)を見た目へ反映(蕾⇄花の差し替え) */

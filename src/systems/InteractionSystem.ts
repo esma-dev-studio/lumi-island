@@ -12,6 +12,23 @@ import { toast } from '../ui/Toast';
 import { sfx } from '../audio/AudioSystem';
 import { burst, flyItem } from '../entities/effects';
 import { ITEMS } from '../data/items';
+import { discoverRecipe } from './DiscoverySystem';
+
+/** 採取時の効果音(ノード種ごと)。素手で拾うものはすべて pickup */
+const KIND_SFX: Record<NodeKind, 'chop' | 'mine' | 'sickle' | 'pickup'> = {
+  tree: 'chop', rock: 'mine', grass: 'sickle', berry: 'pickup', moss: 'pickup', ore: 'mine',
+  flower: 'pickup', mushroom: 'pickup', shell: 'pickup', starshard: 'pickup',
+};
+/**
+ * 粒バーストの色キー(src/entities/effects.ts の BURST_COLORS)。
+ * 新しいノード種は、いちばん近い色みの既存キーを使い回す(演出だけのために色表を増やさない)。
+ */
+const KIND_BURST: Partial<Record<NodeKind, string>> = {
+  flower: 'berry', // 花びらのピンク
+  mushroom: 'tree', // 土と葉の茶みどり
+  shell: 'craft', // 砂のあたたかい色
+  starshard: 'ore', // 淡い青白
+};
 
 interface NodeState {
   depleted: boolean;
@@ -85,8 +102,13 @@ export class InteractionSystem {
     const now = this.absHour();
     for (const [id, st] of this.nodeStates) {
       if (st.depleted && now >= st.respawnAt) {
+        const node = this.island.nodes.get(id);
+        // 一時ノード(ほしのかけら)などで実体が消えていたら記録ごと捨てる(破棄済みMeshに触らない)
+        if (!node) {
+          this.nodeStates.delete(id);
+          continue;
+        }
         st.depleted = false;
-        const node = this.island.nodes.get(id)!;
         this.restoreVisual(node);
       }
     }
@@ -212,20 +234,42 @@ export class InteractionSystem {
   /** ヒット確定: 効果音・演出・素材付与・ノードを枯れさせる(1回のみ呼ばれる) */
   private applyHit(node: GatherNodeRuntime): void {
     const rule = GATHER_RULES[node.def.kind];
-    const kindSfx = { tree: 'chop', rock: 'mine', grass: 'sickle', berry: 'pickup', moss: 'pickup', ore: 'mine' } as const;
-    sfx(kindSfx[node.def.kind]);
+    sfx(KIND_SFX[node.def.kind]);
     // ヒット演出: 対象のゆれ+素材の粒+アイテムがプレイヤーへ飛ぶ
     this.shakes.push({ mesh: node.root, t: 0 });
     const hitY = node.y + (node.def.kind === 'tree' || node.def.kind === 'berry' ? 1.6 : 0.5);
-    burst(node.def.x, hitY, node.def.z, node.def.kind, node.def.kind === 'tree' ? 12 : 8);
+    burst(node.def.x, hitY, node.def.z, KIND_BURST[node.def.kind] ?? node.def.kind, node.def.kind === 'tree' ? 12 : 8);
     flyItem(node.def.x, hitY - 0.3, node.def.z);
     this.onHit?.();
     const n = gatherAmount(node.def.kind, this.debug);
     invAddRecorded(this.state, rule.item, n); // 採取はずかんに記録する
     toast(`+${n} ${ITEMS[rule.item].name}`, rule.item);
+    // 初めて手に入れた素材なら、それを使うレシピをひらめく(2回目以降は何も起きない)
+    const learned = discoverRecipe(this.state, rule.item);
+    if (learned) {
+      sfx('quest');
+      toast(`レシピを ひらめいた! ${learned.name}`, learned.out);
+    }
+    if (node.transient) {
+      // ほしのかけら: 枯れて復活するのではなく、その場から消える(次の夜まで同じ場所に出ない)。
+      // ゆれ・ちぢみの演出は破棄済みMeshを触ってしまうので、ここで取り下げる
+      this.forgetVisuals(node.root);
+      this.island.removeNode(node.def.id);
+      return;
+    }
     const st: NodeState = { depleted: true, respawnAt: this.absHour() + rule.respawnHours };
     this.nodeStates.set(node.def.id, st);
     this.depleteVisual(node);
+  }
+
+  /** そのメッシュに対する進行中の演出を取り消す(メッシュを破棄する直前に呼ぶ) */
+  private forgetVisuals(mesh: GatherNodeRuntime['root']): void {
+    for (let i = this.shakes.length - 1; i >= 0; i--) {
+      if (this.shakes[i].mesh === mesh) this.shakes.splice(i, 1);
+    }
+    for (let i = this.tweens.length - 1; i >= 0; i--) {
+      if (this.tweens[i].mesh === mesh) this.tweens.splice(i, 1);
+    }
   }
 
   private depleteVisual(node: GatherNodeRuntime): void {
