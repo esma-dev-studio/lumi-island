@@ -14,8 +14,9 @@ export interface InputState {
   az?: number;
 }
 
-/** アナログ入力でこの倒し量を超えたら走る(Shiftの代わり) */
-const ANALOG_RUN = 0.7;
+/** アナログ入力でこの倒し量を超えたら走る(Shiftの代わり)。
+ * iPad実機で「走れる」ことに気づき・届きやすいよう55%にする(TouchControlsの表示切替と同値) */
+const ANALOG_RUN = 0.55;
 
 // 変換結果の置き場。毎フレームのnewを避けるため使い回す(呼んだ直後にその場で読むこと)
 const worldDir = { x: 0, z: 0 };

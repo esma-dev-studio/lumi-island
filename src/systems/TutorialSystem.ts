@@ -29,7 +29,7 @@ export class TutorialSystem {
         // 案内は出すたびに入力手段で決める(タッチならキーの名前は出さない)
         label: byInput(
           '<kbd>WASD</kbd>か<kbd>矢印キー</kbd>で あるいてみよう',
-          'がめん左下を ゆびで うごかして あるいてみよう'
+          'がめん左下を ゆびで うごかして あるいてみよう。おおきく たおすと はしれるよ'
         ),
         target: { kind: 'none' },
       };

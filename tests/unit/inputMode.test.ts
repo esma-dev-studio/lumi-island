@@ -165,7 +165,7 @@ describe('TutorialSystem(移動チュートリアルと解放の案内)', () => 
     enterTouch();
     const t = new TutorialSystem(newGameState());
     const label = t.overrideObjective()!.label;
-    expect(label).toBe('がめん左下を ゆびで うごかして あるいてみよう');
+    expect(label).toBe('がめん左下を ゆびで うごかして あるいてみよう。おおきく たおすと はしれるよ');
     expect(label).not.toContain('kbd');
     t.onFirstItem();
     t.onQuestAccepted();
@@ -183,7 +183,7 @@ describe('TutorialSystem(移動チュートリアルと解放の案内)', () => 
     const t = new TutorialSystem(newGameState());
     expect(t.overrideObjective()?.label).toContain('<kbd>WASD</kbd>');
     enterTouch();
-    expect(t.overrideObjective()?.label).toBe('がめん左下を ゆびで うごかして あるいてみよう');
+    expect(t.overrideObjective()?.label).toBe('がめん左下を ゆびで うごかして あるいてみよう。おおきく たおすと はしれるよ');
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
     expect(t.overrideObjective()?.label).toContain('<kbd>WASD</kbd>');
   });

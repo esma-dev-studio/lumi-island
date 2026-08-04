@@ -60,7 +60,7 @@ export class TitleScreen {
           <div class="help-grid">${byInput(HELP_KEYBOARD, HELP_TOUCH)}
           </div>
         </div>
-        <div class="title-credit">オリジナル作品 / 3Dモデル・音はすべてプログラム生成</div>
+        <div class="title-credit">オリジナル作品 / 3Dモデル・音はすべてプログラム生成 <span class="title-ver">v5.1</span></div>
       </div>
     `;
     this.el.querySelectorAll<HTMLButtonElement>('[data-act]').forEach((b) => {

@@ -64,6 +64,9 @@
 .touch-stick.run .touch-knob {
   background: var(--amber);
   border-color: var(--amber);
+  transform: scale(1.14);
+  transition: transform 0.1s, background 0.1s;
+  box-shadow: 0 2px 14px rgba(214, 138, 46, 0.55);
 }
 
 /* ---- 行動ボタン(右下・位置は常に固定) ---- */

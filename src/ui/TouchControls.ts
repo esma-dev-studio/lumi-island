@@ -202,10 +202,14 @@ export class TouchControls {
       if (e.pointerType === 'touch') this.setVisible(true);
     };
     const key = (): void => this.setVisible(false);
+    // 実機Safariでpointer eventsの配送が想定と違っても表示だけは出るように、touchstartでも保険をかける
+    const touchReveal = (): void => this.setVisible(true);
     window.addEventListener('pointerdown', sniff, true);
+    window.addEventListener('touchstart', touchReveal, { capture: true, passive: true });
     window.addEventListener('keydown', key);
     this.detachFns.push(
       () => window.removeEventListener('pointerdown', sniff, true),
+      () => window.removeEventListener('touchstart', touchReveal, true),
       () => window.removeEventListener('keydown', key)
     );
 
@@ -245,7 +249,8 @@ export class TouchControls {
     if (this.stickId !== e.pointerId) return;
     const v = stickVector(e.clientX - this.origin.x, e.clientY - this.origin.y);
     this.knob.style.transform = `translate(${v.kx}px, ${v.ky}px)`;
-    this.stick.classList.toggle('run', v.mag > 0.7);
+    this.stick.classList.toggle('run', v.mag > 0.55); // PlayerControllerのANALOG_RUNと同じ値
+
     this.opts.input.ax = v.ax;
     this.opts.input.az = v.az;
     e.preventDefault();
