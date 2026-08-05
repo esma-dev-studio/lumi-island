@@ -71,9 +71,10 @@ export const DIALOGUE_BACKDROPS: { x: number; y: number; z: number; r: number }[
 // 採取ノード(リスポーンあり)
 // flower/mushroom/shell は道具のいらない「拾いもの」。starshard は夜だけ動的に出る(GATHER_NODESには載せない)
 // v8: twig/cutgrass/clay も道具のいらない拾いもの。glassfloat は朝の浜に動的に出る(GATHER_NODESには載せない)
+// v9: tallgrass(背の高い草)はカマが要る採取ノード。既存の草むら(grass=クサツル)とは別物
 export type NodeKind =
   | 'tree' | 'berry' | 'rock' | 'ore' | 'grass' | 'moss' | 'flower' | 'mushroom' | 'shell' | 'starshard'
-  | 'twig' | 'cutgrass' | 'clay' | 'glassfloat';
+  | 'twig' | 'cutgrass' | 'clay' | 'glassfloat' | 'tallgrass';
 export interface GatherNodeDef {
   id: string;
   kind: NodeKind;
@@ -120,6 +121,57 @@ export const GATHER_NODES: GatherNodeDef[] = [
   // ねんど(池の南がわの岸。水ぎわから2.9m以上そとに置く=釣り場の帯(FishingSystem.zoneAt)と
   // 重ねない。採取は釣りより優先度が高いので、重ねると「つりをする」を横取りしてしまう)
   N('clay', 22, 31, 1), N('clay', 31.2, 31.5, 2),
+  // ---- v9 ----
+  // 背の高い草(カマで かると わら)。草原のはし(西・南・東・北)に4束。
+  // 既存ノード・道・NPCの立ち位置から3m以上はなしてある(tests/unit/content_v9.test.ts が固定)
+  N('tallgrass', -26.5, 24.5, 1), N('tallgrass', -28, 8, 2),
+  N('tallgrass', -14, 16, 3), N('tallgrass', -20, 0.5, 4),
+];
+
+/**
+ * 虫が出るスポット(v9)。kind はそこに来る虫の種類を決める:
+ *   flower=花のそば(チョウ) / grass=草むらのそば(テントウ・スズムシ)
+ *   tree  =林の木の みき(カブトムシ) / pond=池のまわり(ホタル)
+ * 実測: すべて歩ける地面で、採取ノード・入口・NPCの立ち位置・ほしのかけら/うきだまの
+ * 候補地点から3m以上、道から1.5m以上はなれている(捕獲の判定圏1.6mが他の判定帯に重ならない)。
+ * tree だけは例外で、装飾の木の みきに ぴったり寄せてある(木の幹にとまっている見た目のため)。
+ */
+export type BugSpotKind = 'flower' | 'grass' | 'tree' | 'pond';
+export const BUG_SPOTS: { x: number; z: number; kind: BugSpotKind }[] = [
+  { x: -17, z: 26, kind: 'flower' }, // のばな1(-18,20)の南
+  { x: 7, z: 16, kind: 'flower' }, // のばな4(4,12)の南東
+  { x: 16.5, z: 13, kind: 'flower' }, // のばな2(13,10)の南東
+  { x: -29, z: 16, kind: 'flower' }, // のばな3(-32,18)の東
+  { x: -3, z: 13, kind: 'grass' },
+  { x: -3.5, z: 19, kind: 'grass' },
+  { x: -17.5, z: -12, kind: 'grass' },
+  { x: 10, z: 0.5, kind: 'grass' },
+  { x: 26.5, z: 0, kind: 'grass' },
+  { x: 16, z: 23, kind: 'pond' }, // 池の西(釣り帯から3m以上そと)
+  { x: 17, z: 30, kind: 'pond' }, // 池の南西
+  { x: 30, z: 10, kind: 'pond' }, // 池の北
+  { x: -28, z: -25.78, kind: 'tree' }, // 装飾の木(-28,-26)の みき
+  { x: 8, z: -43.78, kind: 'tree' }, // 装飾の木(8,-44)の みき
+  { x: -14, z: -37.78, kind: 'tree' }, // 装飾の木(-14,-38)の みき
+];
+
+/**
+ * ほりだしものの候補地点(v9)。毎日この中から3〜4箇所が日付シードで選ばれる。
+ * BUG_SPOTS と同じ条件(歩ける・既存の判定帯から3m以上・道から1.5m以上)を満たす。
+ */
+export const DIG_SPOTS: { x: number; z: number }[] = [
+  { x: -13, z: -1.5 }, // 広場の西
+  { x: -8.5, z: -17.5 }, // 林の入口
+  { x: -27, z: -19 }, // 西の林ぎわ
+  { x: -34.5, z: -10.5 }, // 西のはし
+  { x: 2.5, z: 28.5 }, // 南の草地
+  { x: -15.5, z: 29.5 }, // 浜の手前(西)
+  { x: 11, z: 23 }, // 南東の草地
+  { x: 29.5, z: -7 }, // 東の草地
+  { x: 39, z: 13.5 }, // 東のはし
+  { x: 20.5, z: -13 }, // 高台の登り口
+  { x: 3, z: -24.5 }, // 林のまん中
+  { x: 16.5, z: -33.5 }, // 林の東
 ];
 
 /**

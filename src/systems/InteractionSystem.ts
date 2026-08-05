@@ -13,12 +13,16 @@ import { sfx } from '../audio/AudioSystem';
 import { burst, flyItem } from '../entities/effects';
 import { ITEMS } from '../data/items';
 import { discoverRecipes } from './DiscoverySystem';
+import { pickDigLoot, DIG_RARE } from './DigSystem';
+import { setCagedBug, pickCagedBug } from '../entities/bugs';
+import type { ActiveBug } from './BugSystem';
 
 /** 採取時の効果音(ノード種ごと)。素手で拾うものはすべて pickup */
 const KIND_SFX: Record<NodeKind, 'chop' | 'mine' | 'sickle' | 'pickup'> = {
   tree: 'chop', rock: 'mine', grass: 'sickle', berry: 'pickup', moss: 'pickup', ore: 'mine',
   flower: 'pickup', mushroom: 'pickup', shell: 'pickup', starshard: 'pickup',
   twig: 'pickup', cutgrass: 'pickup', clay: 'pickup', glassfloat: 'pickup',
+  tallgrass: 'sickle',
 };
 /**
  * 粒バーストの色キー(src/entities/effects.ts の BURST_COLORS)。
@@ -33,6 +37,7 @@ const KIND_BURST: Partial<Record<NodeKind, string>> = {
   cutgrass: 'grass', // 草の緑
   clay: 'tree', // 濡れた土の茶
   glassfloat: 'splash', // 波しぶきの青白
+  tallgrass: 'grass', // 草の緑(クサツルと同じ)
 };
 
 interface NodeState {
@@ -53,9 +58,20 @@ interface Shake {
   t: number;
 }
 
-/** 進行中の採取動作。時間はupdate(dt)でのみ進む(タイマーは使わない) */
-interface GatherAction {
-  node: GatherNodeRuntime;
+/**
+ * 進行中の動作(採取・虫とり・穴ほり)。時間はupdate(dt)でのみ進む(タイマーは使わない)。
+ * 3つとも「かまえる→ヒット→もどる」が同じなので、1つの仕組みに乗せて
+ * 「ポーズ中は確定しない」「シーン破棄で二重に入らない」保証を共有する。
+ */
+type ActionKind = 'gather' | 'catch' | 'dig';
+interface ActiveAction {
+  kind: ActionKind;
+  node: GatherNodeRuntime | null; // gatherのみ
+  bug: ActiveBug | null; // catchのみ
+  spot: number; // digのみ(ほりあとの番号)
+  x: number; // 演出(粒・アイテム飛び)の位置
+  y: number;
+  z: number;
   state: 'windup' | 'recovery'; // ヒット前/ヒット後
   elapsed: number; // 秒。ポーズ・モーダル中はupdateが呼ばれないので自動で止まる
   rewarded: boolean; // ヒット確定済み(素材付与は1回だけ)
@@ -72,7 +88,7 @@ export class InteractionSystem {
   private nodeStates = new Map<string, NodeState>();
   private tweens: Tween[] = [];
   private shakes: Shake[] = [];
-  private action: GatherAction | null = null;
+  private action: ActiveAction | null = null;
   private activePlayer: PlayerController | null = null;
   private activeView: CharacterView | null = null;
   currentNode: GatherNodeRuntime | null = null;
@@ -85,7 +101,11 @@ export class InteractionSystem {
     private island: IslandScene,
     private state: GameState,
     private debug: boolean
-  ) {}
+  ) {
+    // むしかごの中身は「いま持っている虫」から決める。PlacementSystem.restore()より
+    // 先に作られるので、セーブから復元した かごにも反映される(src/entities/bugs.ts)
+    setCagedBug(pickCagedBug(state.inventory));
+  }
 
   private absHour(): number {
     return this.island.time.day * 24 + this.island.time.hour;
@@ -99,7 +119,7 @@ export class InteractionSystem {
       if (!a.rewarded && a.elapsed >= a.hitAt) {
         a.rewarded = true;
         a.state = 'recovery';
-        this.applyHit(a.node);
+        this.applyHit(a);
       }
       if (a.elapsed >= a.endAt) this.endAction();
     }
@@ -202,22 +222,53 @@ export class InteractionSystem {
       return false;
     }
     const rule = GATHER_RULES[node.def.kind];
+    const hitY = node.y + (node.def.kind === 'tree' || node.def.kind === 'berry' ? 1.6 : 0.5);
+    this.begin(player, view, rule.anim, {
+      kind: 'gather', node, bug: null, spot: -1, x: node.def.x, y: hitY, z: node.def.z,
+    });
+    return true;
+  }
+
+  /**
+   * Eキー: 虫あみで つかまえる(虫あみを持っていることは呼び出し側が確認ずみ)。
+   * 動作の途中で虫が逃げても、ヒット時に IslandScene 側で消えているだけなので何も起きない。
+   */
+  tryCatchBug(player: PlayerController, view: CharacterView, bug: ActiveBug, x: number, z: number): boolean {
+    if (this.busy) return false;
+    this.begin(player, view, 'interact', {
+      kind: 'catch', node: null, bug, spot: -1, x, y: this.island.groundY(x, z) + 0.8, z,
+    });
+    return true;
+  }
+
+  /** Eキー: シャベルで ほる(シャベルを持っていることは呼び出し側が確認ずみ) */
+  tryDig(player: PlayerController, view: CharacterView, spot: number, x: number, z: number): boolean {
+    if (this.busy) return false;
+    this.begin(player, view, 'interact', {
+      kind: 'dig', node: null, bug: null, spot, x, y: this.island.groundY(x, z) + 0.25, z,
+    });
+    return true;
+  }
+
+  /** 動作の開始(3種で共通)。確定・終了はupdate側で判定する(アニメのonEndやタイマーには任せない) */
+  private begin(
+    player: PlayerController, view: CharacterView, anim: 'interact' | 'pickup',
+    a: Pick<ActiveAction, 'kind' | 'node' | 'bug' | 'spot' | 'x' | 'y' | 'z'>
+  ): void {
     this.busy = true;
     this.activePlayer = player;
     this.activeView = view;
-    // 確定・終了はupdate側で判定する(アニメのonEndやタイマーには任せない)
     this.action = {
-      node,
+      ...a,
       state: 'windup',
       elapsed: 0,
       rewarded: false,
-      hitAt: rule.anim === 'interact' ? 0.48 : 0.62,
-      endAt: rule.anim === 'interact' ? 1.0 : 1.2,
+      hitAt: anim === 'interact' ? 0.48 : 0.62,
+      endAt: anim === 'interact' ? 1.0 : 1.2,
     };
     player.locked = true;
-    player.face(node.def.x, node.def.z);
-    view.play(rule.anim);
-    return true;
+    player.face(a.x, a.z);
+    view.play(anim);
   }
 
   /** 採取を中断する(シーン破棄・タイトルへ戻るとき)。ヒット前なら素材は入らない */
@@ -236,8 +287,59 @@ export class InteractionSystem {
     this.activeView = null;
   }
 
-  /** ヒット確定: 効果音・演出・素材付与・ノードを枯れさせる(1回のみ呼ばれる) */
-  private applyHit(node: GatherNodeRuntime): void {
+  /** ヒット確定(1回のみ呼ばれる)。種類ごとの報酬へ振り分ける */
+  private applyHit(a: ActiveAction): void {
+    if (a.kind === 'gather' && a.node) this.applyGatherHit(a.node);
+    else if (a.kind === 'catch' && a.bug) this.applyCatchHit(a);
+    else if (a.kind === 'dig') this.applyDigHit(a);
+  }
+
+  /**
+   * 素材を1種類手に入れる(ずかん記録+トースト+ひらめき)。採取・虫とり・穴ほりで共通。
+   * 初めて手に入れた素材なら、それを使うレシピをひらめく(2回目以降は何も起きない)。
+   */
+  private award(item: ItemId, n: number, prefix = ''): void {
+    invAddRecorded(this.state, item, n);
+    toast(`${prefix}+${n} ${ITEMS[item].name}`, item);
+    const learned = discoverRecipes(this.state, item);
+    if (learned.length > 0) {
+      sfx('quest');
+      for (const r of learned) toast(`レシピを ひらめいた! ${r.name}`, r.out);
+    }
+  }
+
+  /** 虫とり: 虫を1匹もらって、その場から消す(むしかごの中身も入れかえる) */
+  private applyCatchHit(a: ActiveAction): void {
+    const bug = a.bug!;
+    sfx('catch');
+    burst(a.x, a.y, a.z, 'craft', 10);
+    flyItem(a.x, a.y - 0.2, a.z);
+    this.onHit?.();
+    this.island.catchBug(bug.key);
+    this.award(bug.bug as ItemId, 1);
+    setCagedBug(bug.bug); // つぎに置く むしかごには この虫が入る
+  }
+
+  /** 穴ほり: 重みつきで1つ出土する。きんのかけらだけ お祝いを少し足す */
+  private applyDigHit(a: ActiveAction): void {
+    sfx('mine');
+    burst(a.x, a.y, a.z, 'tree', 12); // 土の色
+    flyItem(a.x, a.y, a.z);
+    this.onHit?.();
+    this.island.markDug(a.spot);
+    // debug時も抽選はそのまま(進行に影響しないので、決定的にする必要がない)
+    const item = pickDigLoot();
+    if (item === DIG_RARE) {
+      burst(a.x, a.y + 0.3, a.z, 'craft', 16);
+      sfx('quest');
+      this.award(item, 1, 'キラリ! ');
+    } else {
+      this.award(item, 1);
+    }
+  }
+
+  /** 採取: 効果音・演出・素材付与・ノードを枯れさせる */
+  private applyGatherHit(node: GatherNodeRuntime): void {
     const rule = GATHER_RULES[node.def.kind];
     sfx(KIND_SFX[node.def.kind]);
     // ヒット演出: 対象のゆれ+素材の粒+アイテムがプレイヤーへ飛ぶ
@@ -247,15 +349,7 @@ export class InteractionSystem {
     flyItem(node.def.x, hitY - 0.3, node.def.z);
     this.onHit?.();
     const n = gatherAmount(node.def.kind, this.debug);
-    invAddRecorded(this.state, rule.item, n); // 採取はずかんに記録する
-    toast(`+${n} ${ITEMS[rule.item].name}`, rule.item);
-    // 初めて手に入れた素材なら、それを使うレシピをひらめく(2回目以降は何も起きない)。
-    // 1つの素材で2つひらめくこともある(こえだ=かざぐるま+とりのすばこ)
-    const learned = discoverRecipes(this.state, rule.item);
-    if (learned.length > 0) {
-      sfx('quest');
-      for (const r of learned) toast(`レシピを ひらめいた! ${r.name}`, r.out);
-    }
+    this.award(rule.item, n); // 採取はずかんに記録する
     if (node.transient) {
       // ほしのかけら: 枯れて復活するのではなく、その場から消える(次の夜まで同じ場所に出ない)。
       // ゆれ・ちぢみの演出は破棄済みMeshを触ってしまうので、ここで取り下げる

@@ -6,17 +6,20 @@
 export type GatherCategory =
   | 'gatherWood' | 'gatherStone' | 'gatherFiber' | 'gatherMoss' | 'gatherOre' | 'gatherBerry'
   | 'gatherFlower' | 'gatherMushroom' | 'gatherShell' | 'gatherStar'
-  | 'gatherTwig' | 'gatherCutgrass' | 'gatherClay' | 'gatherFloat';
+  | 'gatherTwig' | 'gatherCutgrass' | 'gatherClay' | 'gatherFloat'
+  | 'gatherSnail' | 'gatherStraw';
 
 export type ObjectiveCategory =
   | 'talk' | 'report'
   | GatherCategory
   | 'fish' | 'craft' | 'place' | 'sleep' | 'free' | 'tutorial' | 'unknown';
 
+/** v9: catch(虫あみ)・dig(シャベル)は依頼の目的にならないヒント専用のカテゴリ */
 export type HintCategory =
   | 'talk'
   | GatherCategory
-  | 'fish' | 'place' | 'sleep' | 'shop' | 'carry' | 'dialogue' | 'blocked' | 'none' | 'unknown';
+  | 'fish' | 'place' | 'sleep' | 'shop' | 'carry' | 'dialogue' | 'blocked' | 'none' | 'unknown'
+  | 'catch' | 'dig';
 
 export interface CategoryRule {
   cat: string;

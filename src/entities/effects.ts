@@ -1,4 +1,4 @@
-// 演出部品: 採取パーティクル・アイテム飛び・発光家具の光だまり(モジュールシングルトン)
+// 演出部品: 採取パーティクル・アイテム飛び・発光家具の光だまり・天気の見た目(モジュールシングルトン)
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
@@ -8,8 +8,9 @@ import { ParticleSystem } from '@babylonjs/core/Particles/particleSystem';
 import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { Scene } from '@babylonjs/core/scene';
-import { A0, appendBlob, toMesh } from './flora';
+import { A0, appendBlob, appendTrunk, jitterColor, toMesh } from './flora';
 import { terrainHeight } from './terrain';
+import { PUDDLE_SPOTS, SNAIL_SPOTS, snailPose, type WeatherNow } from '../systems/WeatherSystem';
 
 let scene: Scene | null = null;
 let ps: ParticleSystem | null = null;
@@ -80,6 +81,7 @@ export function initEffects(s: Scene): void {
   ps.direction2 = new Vector3(1, 2.2, 1);
   ps.blendMode = ParticleSystem.BLENDMODE_STANDARD;
   ps.start();
+  initWeatherFx(s);
 }
 
 /** 採取・クラフト等の粒バースト */
@@ -242,6 +244,390 @@ export function setPoolLevels(amber: number, mint: number, blue: number): void {
   const lv: Record<PoolTint, number> = { amber, mint, blue };
   for (const tint of Object.keys(poolMats) as PoolTint[]) {
     poolMats[tint]!.alpha = Math.min(0.62, lv[tint] * 0.62);
+  }
+}
+
+// ===========================================================================
+// 天気の見た目(雨脚・水たまり・虹・カタツムリ)
+// 出す/出さないの判断は src/systems/WeatherSystem.ts(純ロジック)が持ち、
+// ここは「渡された強さのとおりに描く」だけにする。
+// ===========================================================================
+
+/** 雨の粒の上限。1粒=1クアッドなので、増やすほど描画コストが上がる */
+const RAIN_CAP = 520;
+/** 本降りのときの発生数(粒/秒)。寿命0.9秒なので同時に約380粒 */
+const RAIN_RATE = 420;
+/** 雨を降らせる範囲(プレイヤーを中心とした一辺。外は霧で見えない) */
+const RAIN_BOX = 11;
+/** 水たまりを地面から浮かせる量(m)。光だまり(0.07)と高さを変えてZファイティングを避ける */
+const PUDDLE_LIFT = 0.035;
+const PUDDLE_SEGS = 24;
+const PUDDLE_RINGS = 3;
+/**
+ * 虹の位置(海の方角=+Z)と大きさ。
+ *
+ * 追従カメラは「プレイヤーを見おろす」構図なので、実測すると画面に入る空はごくわずかしかない
+ * (俯角: 既定31度 / いちばん低くして20度、たて画角46度 → 地平線より上は最大でも約3度)。
+ * そのため半径の大きい真円のアーチを空へ置くと、どこに立っても画面の外に出てしまう
+ * (実測: 頂点が画面の上へ1865px はみ出す)。
+ * そこで「遠くの低い虹」として、地平線ぎわに寝かせた横長の弧にしてある。
+ * たて2.6度・よこ32度に収めると、カメラを少し下げた状態(orbitPitch<=0.7)で弧の全体が見える。
+ * プレイヤーに追従させて、島のどこにいても同じ大きさで海の方角に見えるようにする。
+ */
+const RAINBOW_DIST = 140; // プレイヤーから海の方角(+Z)へこの距離に置く
+const RAINBOW_Y = 0.8; // 足もとが海面(0.3)に隠れない高さ
+const RAINBOW_RX = 40; // 横半径(見かけ16度)
+const RAINBOW_RY = 7.6; // たて半径(見かけ3.1度)
+const RAINBOW_BAND = 0.32; // 帯1本の幅(7本で約0.9度)
+/** 虹の7色(外=赤 → 内=むらさき) */
+const RAINBOW_COLORS = ['#e86a5a', '#e8975a', '#e8d15a', '#7cc46a', '#5aa8d8', '#5a78d8', '#9a6ad8'];
+
+let rainPs: ParticleSystem | null = null;
+let puddleMeshes: Mesh[] = [];
+let puddleMat: StandardMaterial | null = null;
+let rainbowMesh: Mesh | null = null;
+let rainbowMat: StandardMaterial | null = null;
+const snailMeshes = new Map<number, Mesh>();
+/** 空の色(DayNightが毎更新で書き込む)。水たまりの映りこみ・虹の明るさに使う */
+const skyTint = new Color3(0.66, 0.84, 0.93);
+let weatherScene: Scene | null = null;
+/** いまの雨脚(見た目側の値。実測・検証用に読み出せる) */
+let rainShown = 0;
+let rainbowShown = 0;
+
+/** 島シーンを作り直したときに呼ばれる(initEffectsの中から) */
+function initWeatherFx(s: Scene): void {
+  weatherScene = s;
+  rainPs = null;
+  puddleMeshes = [];
+  puddleMat = null;
+  rainbowMesh = null;
+  rainbowMat = null;
+  snailMeshes.clear();
+  rainShown = 0;
+  rainbowShown = 0;
+  buildRain(s);
+  buildPuddles(s);
+  buildRainbow(s);
+  for (let i = 0; i < SNAIL_SPOTS.length; i++) {
+    const m = makeSnail(s, i * 13 + 5);
+    m.setEnabled(false);
+    m.isPickable = false;
+    snailMeshes.set(i, m);
+  }
+}
+
+// ---- 雨脚 ----
+function buildRain(s: Scene): void {
+  // 縦にのびた一筋のテクスチャ。雨はほぼ真下に落ちるので、板を立てたまま使える
+  // (BILLBOARDMODE_STRETCHED は速度で長さが変わって暴れるため使わない)
+  const tex = new DynamicTexture('rainDrop', { width: 16, height: 64 }, s, false);
+  const ctx = tex.getContext() as CanvasRenderingContext2D;
+  const g = ctx.createLinearGradient(0, 0, 0, 64);
+  g.addColorStop(0, 'rgba(255,255,255,0)');
+  g.addColorStop(0.35, 'rgba(255,255,255,0.85)');
+  g.addColorStop(0.8, 'rgba(255,255,255,0.95)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.clearRect(0, 0, 16, 64);
+  ctx.fillStyle = g;
+  ctx.fillRect(5, 0, 6, 64);
+  tex.update();
+  tex.hasAlpha = true;
+
+  const p = new ParticleSystem('rain', RAIN_CAP, s);
+  p.particleTexture = tex as unknown as Texture;
+  p.emitter = new Vector3(0, -200, 0); // 毎フレーム プレイヤーの上へ移す
+  p.minEmitBox = new Vector3(-RAIN_BOX, 7, -RAIN_BOX);
+  p.maxEmitBox = new Vector3(RAIN_BOX, 10, RAIN_BOX);
+  // 白すぎると空に溶けるので、うすい水色に寄せて輪郭を残す。
+  // 実測(1280x720のスクショ)で細すぎて見えなかったため、太さと濃さを上げてある
+  p.color1 = new Color4(0.80, 0.88, 0.96, 0.62);
+  p.color2 = new Color4(0.92, 0.96, 1.0, 0.4);
+  p.colorDead = new Color4(0.88, 0.94, 1.0, 0);
+  p.minSize = 1;
+  p.maxSize = 1;
+  p.minScaleX = 0.05;
+  p.maxScaleX = 0.08;
+  p.minScaleY = 0.55;
+  p.maxScaleY = 1.0;
+  p.minLifeTime = 0.75;
+  p.maxLifeTime = 0.95;
+  p.emitRate = 0;
+  p.gravity = new Vector3(0, -9, 0);
+  // ほんの少し風にながす(まっすぐ落ちるだけだと書き割りに見える)
+  p.direction1 = new Vector3(-0.9, -8.4, -0.4);
+  p.direction2 = new Vector3(-0.45, -9.6, -0.15);
+  p.minEmitPower = 1;
+  p.maxEmitPower = 1;
+  p.blendMode = ParticleSystem.BLENDMODE_STANDARD;
+  p.start();
+  rainPs = p;
+}
+
+// ---- 水たまり ----
+/**
+ * 浅い楕円の水たまり(地形に沿う扇形メッシュ)。当たり判定は付けない(踏み越えられる)。
+ * ふちは頂点アルファで消して、切り取った板に見えないようにする。
+ */
+function buildPuddles(s: Scene): void {
+  // 水たまりは「明るく足す」のではなく「暗くしてから空を映す」。
+  // 明るい水色をうすく重ねると、草の上の淡いにじみにしか見えない(実測のスクショで確認した)。
+  // 地の色をぐっと暗くし、鏡面と ごく弱い空の照りかえしで「ぬれている」を出す。
+  const mat = new StandardMaterial('puddleMat', s);
+  mat.diffuseColor = Color3.FromHexString('#1e2830'); // ぬれた土の暗さ
+  mat.specularColor = new Color3(0.55, 0.58, 0.62); // 空の照りかえし(ぬれた面のつや)
+  mat.specularPower = 96;
+  mat.emissiveColor = skyTint.scale(0.16);
+  mat.alpha = 0;
+  mat.backFaceCulling = true;
+  puddleMat = mat;
+  for (let i = 0; i < PUDDLE_SPOTS.length; i++) {
+    const d = PUDDLE_SPOTS[i];
+    const m = buildPuddleMesh(s, i, d.x, d.z, d.rx, d.rz, d.rot);
+    m.material = mat;
+    m.isPickable = false;
+    m.setEnabled(false);
+    puddleMeshes.push(m);
+  }
+}
+
+function buildPuddleMesh(
+  s: Scene, i: number, wx: number, wz: number, rx: number, rz: number, rot: number
+): Mesh {
+  const baseY = terrainHeight(wx, wz);
+  const cosR = Math.cos(rot), sinR = Math.sin(rot);
+  const positions: number[] = [0, PUDDLE_LIFT, 0];
+  const normals: number[] = [0, 1, 0];
+  const colors: number[] = [1, 1, 1, 1];
+  for (let r = 1; r <= PUDDLE_RINGS; r++) {
+    const f = r / PUDDLE_RINGS;
+    for (let k = 0; k < PUDDLE_SEGS; k++) {
+      const a = (k / PUDDLE_SEGS) * Math.PI * 2;
+      // 円のままだと「置いた楕円」に見えるので、ふちを少しくずす
+      const wob = 1 + Math.sin(a * 3 + i * 1.7) * 0.09 + Math.sin(a * 5 - i * 2.3) * 0.05;
+      const lx = Math.cos(a) * rx * f * wob;
+      const lz = Math.sin(a) * rz * f * wob;
+      const dx = lx * cosR - lz * sinR;
+      const dz = lx * sinR + lz * cosR;
+      positions.push(dx, terrainHeight(wx + dx, wz + dz) + PUDDLE_LIFT - baseY, dz);
+      normals.push(0, 1, 0);
+      // 外へ行くほど薄く(いちばん外は完全に透明にしてふちの線を消す)。
+      // ふちだけ少し明るくして、水ぎわが光る感じ(表面張力のふち)を出す
+      const rim = 1 + f * 0.55;
+      colors.push(rim, rim, rim, f >= 1 ? 0 : 1 - f * 0.35);
+    }
+  }
+  const indices: number[] = [];
+  for (let k = 0; k < PUDDLE_SEGS; k++) indices.push(0, 1 + k, 1 + ((k + 1) % PUDDLE_SEGS));
+  for (let r = 0; r < PUDDLE_RINGS - 1; r++) {
+    const inner = 1 + r * PUDDLE_SEGS;
+    const outer = inner + PUDDLE_SEGS;
+    for (let k = 0; k < PUDDLE_SEGS; k++) {
+      const j = (k + 1) % PUDDLE_SEGS;
+      indices.push(inner + k, outer + k, inner + j, outer + k, outer + j, inner + j);
+    }
+  }
+  const vd = new VertexData();
+  vd.positions = positions;
+  vd.indices = indices;
+  vd.normals = normals;
+  vd.colors = colors;
+  const mesh = new Mesh(`puddle${i}`, s);
+  vd.applyToMesh(mesh);
+  mesh.hasVertexAlpha = true;
+  mesh.position.set(wx, baseY, wz);
+  return mesh;
+}
+
+// ---- 虹 ----
+/**
+ * 海の方角(+Z)に立つ半円アーチ。7色の帯をならべ、頂点アルファで帯のふちと足もとを消す。
+ * 遠景なので当たり判定・影・遮蔽フェードのどれにも入れない。
+ */
+function buildRainbow(s: Scene): void {
+  const SEG = 64;
+  const positions: number[] = [];
+  const colors: number[] = [];
+  const indices: number[] = [];
+  const cols = RAINBOW_COLORS.map((h) => Color3.FromHexString(h));
+  // 横につぶした弧なので、帯の幅は「半径を縮める」のではなく弧の法線方向へずらして作る
+  // (縮めるやり方だと、上では細く 横では太い、ゆがんだ帯になる)
+  for (let b = 0; b < cols.length; b++) {
+    const c = cols[b];
+    const base = positions.length / 3;
+    for (let i = 0; i <= SEG; i++) {
+      const th = (i / SEG) * Math.PI;
+      // 足もと(地平線ぎわ)はゆっくり消す。ぷつりと切れると「板」に見える
+      const foot = Math.min(1, Math.min(th, Math.PI - th) / 0.28);
+      const fade = foot * foot * (3 - 2 * foot);
+      const cs = Math.cos(th), sn = Math.sin(th);
+      const px = cs * RAINBOW_RX, py = sn * RAINBOW_RY;
+      // 楕円の外向き法線
+      let nx = cs / RAINBOW_RX, ny = sn / RAINBOW_RY;
+      const nl = Math.hypot(nx, ny) || 1;
+      nx /= nl;
+      ny /= nl;
+      const oOut = -b * RAINBOW_BAND;
+      const oIn = oOut - RAINBOW_BAND;
+      positions.push(px + nx * oOut, py + ny * oOut, 0);
+      colors.push(c.r, c.g, c.b, b === 0 ? 0 : fade); // いちばん外の帯だけ外ふちを透明に
+      positions.push(px + nx * oIn, py + ny * oIn, 0);
+      colors.push(c.r, c.g, c.b, b === cols.length - 1 ? 0 : fade); // いちばん内の帯だけ内ふちを透明に
+    }
+    for (let i = 0; i < SEG; i++) {
+      const a = base + i * 2;
+      indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+    }
+  }
+  const vd = new VertexData();
+  vd.positions = positions;
+  vd.indices = indices;
+  vd.colors = colors;
+  vd.normals = positions.map((_, i) => (i % 3 === 2 ? -1 : 0)); // 手前(-Z)向き
+  const mesh = new Mesh('rainbow', s);
+  vd.applyToMesh(mesh);
+  mesh.hasVertexAlpha = true;
+  mesh.position.set(0, RAINBOW_Y, RAINBOW_DIST);
+  mesh.isPickable = false;
+  // 半透明の描画順: 海(alpha 0.9・原点が近い)より あとに描く。
+  // 既定のままだと 海が虹の上に重なり、七色が海の色に沈んで灰色の弧に見える(実測のスクショで確認)。
+  // 虹は地平線ぎわの細い帯なので、手前の半透明物と画面上で重なることはほとんどない。
+  mesh.alphaIndex = 3;
+  const mat = new StandardMaterial('rainbowMat', s);
+  // 光のあたり方で色が変わらない「空にうかぶ光の帯」にする。
+  // disableLighting だけでは足りず、実測すると灰色の弧になった(面の法線が横を向いていて
+  // 太陽がかすめるだけになるため)。diffuse=黒 / emissive=白 にすると、
+  // 最終色 = clamp(diffuse*光 + emissive) × 頂点カラー = 頂点カラー になり、
+  // 光の当たり方によらず七色がそのまま出る。
+  mat.disableLighting = true;
+  mat.diffuseColor = Color3.Black();
+  mat.specularColor = Color3.Black();
+  mat.emissiveColor = new Color3(1, 1, 1);
+  mat.backFaceCulling = false;
+  mat.fogEnabled = false; // 140m先なので霧でほぼ灰色になる。虹は「物」ではなく光なので霧に沈めない
+  mat.alpha = 0;
+  mesh.material = mat;
+  mesh.setEnabled(false);
+  rainbowMesh = mesh;
+  rainbowMat = mat;
+}
+
+// ---- カタツムリ ----
+const C_SNAIL_BODY = Color3.FromHexString('#c9b49a');
+const C_SNAIL_SHELL = Color3.FromHexString('#9a6f3f');
+const C_SNAIL_EYE = Color3.FromHexString('#3a2e26');
+
+/** カタツムリ1匹(からだ+うずまきのから+目の柄2本)。手でひろえる小さな生きもの */
+function makeSnail(s: Scene, seed: number): Mesh {
+  const A = A0();
+  // からだ(足): 細長いかまぼこ。底を平らにして地面に貼りつかせる
+  appendBlob(A, 0, 0.032, -0.03, 0.05, 0.032, 0.15, C_SNAIL_BODY, { segs: 8, noise: 0.05, seed, flatBottom: true });
+  appendBlob(A, 0, 0.045, 0.1, 0.042, 0.038, 0.055, C_SNAIL_BODY, { segs: 8, noise: 0.04, seed: seed + 1 });
+  // からのうずまき: 横から見て渦が読めるよう、YZ面に沿って玉を小さくしながら巻く
+  for (let i = 0; i < 8; i++) {
+    const t = i / 7;
+    const ang = t * Math.PI * 2.6 + 0.6;
+    const rad = 0.098 * (1 - t * 0.72);
+    const c = jitterColor(C_SNAIL_SHELL, seed + i * 3, 0.16);
+    appendBlob(
+      A,
+      0,
+      0.098 + Math.sin(ang) * rad * 0.58,
+      -0.035 + Math.cos(ang) * rad * 0.8,
+      0.052 * (1 - t * 0.45),
+      0.046 * (1 - t * 0.5),
+      0.046 * (1 - t * 0.5),
+      c,
+      { segs: 7, noise: 0.07, seed: seed + i }
+    );
+  }
+  // 目の柄(左右で長さを変えて、左右対称の「顔」にしない)
+  appendTrunk(A, [[-0.021, 0.07, 0.115], [-0.03, 0.138, 0.148]], 0.0085, 0.006, C_SNAIL_BODY, seed + 5);
+  appendTrunk(A, [[0.021, 0.07, 0.115], [0.031, 0.124, 0.152]], 0.0085, 0.006, C_SNAIL_BODY, seed + 7);
+  appendBlob(A, -0.031, 0.142, 0.149, 0.013, 0.013, 0.013, C_SNAIL_EYE, { segs: 5, noise: 0, seed });
+  appendBlob(A, 0.032, 0.128, 0.153, 0.012, 0.012, 0.012, C_SNAIL_EYE, { segs: 5, noise: 0, seed: seed + 2 });
+  return toMesh(s, `snail${seed}`, A);
+}
+
+/**
+ * 発光レイヤーの対象から外すメッシュ(DayNightが起動時に呼ぶ)。
+ * 虹は emissive=白 で描いているので、そのままだと発光レイヤーに焼かれて にじむ。
+ */
+export function weatherGlowExcludes(): Mesh[] {
+  return rainbowMesh ? [rainbowMesh] : [];
+}
+
+/** カタツムリのいまの位置(拾ったときの演出に使う)。出ていなければnull */
+export function snailWorldPos(spot: number, t: number): { x: number; y: number; z: number } | null {
+  const m = snailMeshes.get(spot);
+  if (!m || !m.isEnabled()) return null;
+  const p = snailPose(spot, t);
+  return { x: p.x, y: terrainHeight(p.x, p.z) + 0.12, z: p.z };
+}
+
+/** DayNightから: いまの空の色(水たまりの映りこみ・虹の明るさに使う) */
+export function setWeatherSky(sky: Color3): void {
+  skyTint.copyFrom(sky);
+  if (puddleMat) {
+    // 空を映した淡い色。強くすると水面が発光して見えるので、ごく弱く乗せる
+    puddleMat.emissiveColor.set(sky.r * 0.16, sky.g * 0.16, sky.b * 0.18);
+  }
+}
+
+/** 見た目の状態(検証・デバッグ用。読むだけで副作用はない) */
+export function weatherFxState(): Record<string, unknown> {
+  return {
+    rain: rainShown,
+    rainbow: rainbowShown,
+    rainParticles: rainPs?.getActiveCount() ?? 0,
+    rainEmitRate: rainPs?.emitRate ?? 0,
+    puddleAlpha: puddleMat?.alpha ?? 0,
+    puddlesVisible: puddleMeshes.filter((m) => m.isEnabled()).length,
+    rainbowVisible: rainbowMesh?.isEnabled() ?? false,
+    snailsVisible: [...snailMeshes.entries()].filter(([, m]) => m.isEnabled()).map(([k]) => k),
+  };
+}
+
+/**
+ * 毎フレーム: 天気の見た目を強さのとおりにあわせる。
+ * 何も降っていない・虹も出ていないときは、パーティクルもメッシュも止めて負荷を戻す。
+ * @param outdoor 屋外にいるか。室内(島の外にある部屋)では雨脚も水たまりも出さない
+ */
+export function updateWeatherFx(
+  now: WeatherNow, px: number, py: number, pz: number, outdoor = true
+): void {
+  if (!weatherScene) return;
+  const rain = outdoor ? now.rain : 0;
+  const bow = outdoor ? now.rainbow : 0;
+  rainShown = rain;
+  rainbowShown = bow;
+  // 雨脚: 発生数だけで強さを表す(粒の数は上限で頭打ち)
+  if (rainPs) {
+    rainPs.emitRate = RAIN_RATE * rain;
+    (rainPs.emitter as Vector3).set(px, py, pz);
+  }
+  // 水たまり: 降っているあいだ濃く、上がったらゆっくり乾く(虹の時間はまだ少し残る)
+  const wet = Math.max(rain, bow * 0.55);
+  if (puddleMat) puddleMat.alpha = 0.62 * wet;
+  for (const m of puddleMeshes) {
+    const on = wet > 0.02;
+    if (m.isEnabled() !== on) m.setEnabled(on);
+  }
+  // 虹: 島のどこにいても同じ大きさで海の方角に見えるよう、プレイヤーに追従させる
+  if (rainbowMesh && rainbowMat) {
+    const on = bow > 0.01;
+    if (rainbowMesh.isEnabled() !== on) rainbowMesh.setEnabled(on);
+    if (on) rainbowMesh.position.set(px, RAINBOW_Y, pz + RAINBOW_DIST);
+    rainbowMat.alpha = 0.55 * bow;
+  }
+  // カタツムリ: 出ている番号だけを地面にはわせる
+  for (const [spot, mesh] of snailMeshes) {
+    const on = outdoor && now.snails.includes(spot);
+    if (mesh.isEnabled() !== on) mesh.setEnabled(on);
+    if (!on) continue;
+    const p = snailPose(spot, now.t);
+    mesh.position.set(p.x, terrainHeight(p.x, p.z) - 0.01, p.z);
+    mesh.rotation.y = p.rotY;
   }
 }
 

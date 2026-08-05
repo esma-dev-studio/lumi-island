@@ -15,6 +15,7 @@ import type { PlayerController } from './PlayerController';
 import type { CharacterView } from '../characters/CharacterView';
 import { toast } from '../ui/Toast';
 import { sfx } from '../audio/AudioSystem';
+import { sharedWeather } from './WeatherSystem';
 import { ITEMS, type ItemId } from '../data/items';
 
 export type FishZone = 'sea' | 'pond' | null;
@@ -252,7 +253,10 @@ export class FishingSystem {
     this.bobber.setEnabled(true);
     sfx('splash');
     this.state = 'waiting';
-    this.waitT = this.debug ? 1.0 : 2.2 + Math.random() * 3.2;
+    // 雨のあいだは待ち時間が短くなる(はれ・くもり・雨上がりは 1.0 のまま)。
+    // 倍率の決め方は src/systems/WeatherSystem.ts にまとめてある
+    const wet = sharedWeather().fishWaitScale(this.game.time.day, this.game.time.hour);
+    this.waitT = (this.debug ? 1.0 : 2.2 + Math.random() * 3.2) * wet;
   }
 
   /** 巻き上げ完了。ここで初めて片付けとプレイヤーの操作解除を行う */

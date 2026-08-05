@@ -8,7 +8,11 @@ import type { ItemId } from '../data/items';
  * (ObjectiveSystem の ALWAYS_ALLOWED を参照)。
  */
 export type InteractionKind =
-  | 'talk' | 'gather' | 'shop' | 'fish' | 'place' | 'pickup' | 'sleep' | 'enter' | 'exit';
+  | 'talk' | 'gather' | 'shop' | 'fish' | 'place' | 'pickup' | 'sleep' | 'enter' | 'exit'
+  // v9: 虫とり・穴ほり。どちらも依頼の目的にはならないので、
+  // ObjectiveSystem の preferredKinds には決して入らない = 誘導中は自動で隠れる
+  // (matchesObjective の最初の1行で落ちる。gatherと同じ流儀)
+  | 'catch' | 'dig';
 
 export interface InteractionCandidate {
   id: string;
@@ -28,6 +32,10 @@ export const PRIORITY = {
   npcQuest: 10, // 依頼が進むNPC(報告・受注)
   npc: 20, // 通常会話
   gather: 30, // 採取対象
+  // 虫・ほりあとは採取より弱く、ドアより強い。どちらも既存の判定帯から3m以上はなして
+  // 配置してあるので実際には競合しないが、万一かさなっても採取を横取りしない順にしておく
+  catch: 32, // 虫(判定1.6m)
+  dig: 33, // ほりあと(判定1.9m)
   door: 35, // 自宅の出入り・ベッド(ドアの前に立ったら必ずこれが出る)
   shop: 40, // 店カウンター
   fishing: 50, // 釣り場

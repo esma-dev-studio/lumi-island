@@ -17,6 +17,8 @@ export type QuestState = 'locked' | 'open' | 'done';
 export interface NpcState {
   friendship: number;
   talkedToday: boolean;
+  /** きょう おくりものを あげたか(1日1回まで)。talkedTodayと同じ日次リセットに乗る */
+  giftedToday?: boolean;
   questTalked?: boolean;
 }
 
@@ -58,9 +60,9 @@ export function newGameState(): GameState {
     furnitureSeq: 1,
     quests: { q_wood: 'open', q_fish: 'locked', q_ore: 'locked', q_lantern: 'locked', q_lumi: 'locked' },
     npcs: {
-      minamo: { friendship: 0, talkedToday: false },
-      nokto: { friendship: 0, talkedToday: false },
-      tsumugi: { friendship: 0, talkedToday: false },
+      minamo: { friendship: 0, talkedToday: false, giftedToday: false },
+      nokto: { friendship: 0, talkedToday: false, giftedToday: false },
+      tsumugi: { friendship: 0, talkedToday: false, giftedToday: false },
     },
     islandLevel: 0,
     flags: {},

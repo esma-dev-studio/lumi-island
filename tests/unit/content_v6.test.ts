@@ -109,12 +109,14 @@ describe('新レシピ4種', () => {
     expect(INITIAL_RECIPES).not.toContain('r_mushlamp');
     expect(INITIAL_RECIPES).not.toContain('r_starlantern');
     // v7-P2の模様替え(室内向け家具3・かべがみ/ゆか2)も最初から見せる。順序はRECIPESの並び順。
-    // v8のほうき・つぼ・ガーデンテーブルも同じ理由で最初から
+    // v8のほうき・つぼ・ガーデンテーブルも同じ理由で最初から。
+    // v9の虫あみ・シャベル・わらのマットも同じ(道具→素材の階段の入口を最初から見せる)
     const known = knownRecipes(newGameState()).map((r) => r.id);
     expect(known).toEqual([
       'r_sickle', 'r_rod', 'r_flowerbed', 'r_shelldeco',
       'r_bookcase', 'r_dishrack', 'r_flowervase', 'r_wall_leaf', 'r_floor_rug',
       'r_broom', 'r_jar', 'r_gardentable',
+      'r_net', 'r_shovel', 'r_strawmat',
     ]);
   });
 

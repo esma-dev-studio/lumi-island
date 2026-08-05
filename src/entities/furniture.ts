@@ -6,6 +6,8 @@ import {
   A0, appendBlob, appendTrunk, appendShellFan, toMesh, applyArrays, getGlowMats, jitterColor, type Arrays,
 } from './flora';
 import { makeBench } from './buildings';
+import { makeCagedBugMesh, getCagedBug } from './bugs';
+import { faceOutward } from './deco';
 import { vnoise } from './terrain';
 import type { ItemId } from '../data/items';
 
@@ -610,6 +612,304 @@ export function makeFurnitureMesh(scene: Scene, item: ItemId): FurnitureMesh {
         fbox(A, s * 0.575, 0.68, 0, 0.03, 0.06, 0.72, WOOD_D); // 天板のふち
       }
       return { root: toMesh(scene, 'f_gardentable', A, 'keep'), colliderR: 0.6 };
+    }
+    // ---- v9の新家具4種 ----
+    // 法線の向きは v8 と同じ規約: appendBlobだけ='flip' / fbox・fboxR・appendTrunkだけ='keep'。
+    case 'f_bugcage': {
+      // こえだ3+クサツル2。中の虫が見えるように「枠」で組む
+      // (教訓1: 光るもの・見せたいものを不透明な箱の中に入れない)。
+      const A = A0();
+      fbox(A, 0, 0.035, 0, 0.34, 0.07, 0.34, WOOD); // 台
+      fbox(A, 0, 0.075, 0, 0.28, 0.02, 0.28, Color3.FromHexString('#c9b06a')); // かごの床(わら色)
+      for (const sx of [-1, 1]) {
+        for (const sz of [-1, 1]) {
+          fbox(A, sx * 0.135, 0.29, sz * 0.135, 0.026, 0.44, 0.026, C_TWIG_PROP); // 四すみの柱(こえだ)
+        }
+      }
+      // 横木(3段)。すきまを大きくとって中が見えるようにする
+      for (const y of [0.14, 0.31, 0.48]) {
+        for (const sz of [-0.135, 0.135]) fbox(A, 0, y, sz, 0.296, 0.018, 0.018, C_TWIG_PROP);
+        for (const sx of [-0.135, 0.135]) fbox(A, sx, y, 0, 0.018, 0.018, 0.296, C_TWIG_PROP);
+      }
+      // たてのすじ(前後だけ。左右は開けて中を見せる)
+      for (const sx of [-0.068, 0.068]) {
+        for (const sz of [-0.135, 0.135]) fbox(A, sx, 0.31, sz, 0.014, 0.4, 0.014, C_TWIG_PROP);
+      }
+      fbox(A, 0, 0.525, 0, 0.34, 0.03, 0.34, WOOD_D); // ふた
+      fbox(A, 0, 0.565, 0, 0.11, 0.05, 0.05, Color3.FromHexString('#7aa85f')); // 持ち手(クサツル)
+      const root = toMesh(scene, 'f_bugcage', A, 'keep');
+      // 中の虫(いま持っている虫のうち1匹)。虫は消費しないので、見た目だけの表示
+      const inner = makeCagedBugMesh(scene, getCagedBug(), 31);
+      inner.parent = root;
+      inner.position.set(0, 0.13, 0);
+      inner.rotation.y = 0.6;
+      return { root, colliderR: 0.26 };
+    }
+    case 'f_ancient_pot': {
+      // つぼのかけら3+ねんど1。つぎめ(なおしたあと)が見えるずんぐりした土器
+      const A = A0();
+      const clay = Color3.FromHexString('#9a6a4f');
+      const seam = Color3.FromHexString('#d9b98a'); // つぎめ(あとから埋めた土の色)
+      appendBlob(A, 0, 0.3, 0, 0.31, 0.3, 0.31, jitterColor(clay, 3, 0.07), {
+        segs: 10, noise: 0.06, flatBottom: true, bottomDark: 0.24, seed: 3,
+      });
+      appendBlob(A, 0, 0.53, 0, 0.19, 0.11, 0.19, jitterColor(clay, 5, 0.06), { segs: 9, noise: 0.06, seed: 5, bottomDark: 0.2 });
+      appendBlob(A, 0, 0.615, 0, 0.165, 0.045, 0.165, jitterColor(Color3.FromHexString('#7d5238'), 7, 0.06), {
+        segs: 9, noise: 0.05, seed: 7, bottomDark: 0.24,
+      }); // 口のふち
+      // つぎめ: たてに3本+よこに1本。長さ・角度をそろえず「われて なおした」形にする
+      const seams: [number, number, number, number][] = [
+        // [角度, 中心の高さ, たての長さ, 太さ]
+        [0.4, 0.34, 0.2, 0.016], [2.3, 0.26, 0.15, 0.013], [4.1, 0.4, 0.12, 0.012],
+      ];
+      for (let i = 0; i < seams.length; i++) {
+        const [a, y, len, w] = seams[i];
+        appendBlob(A, Math.cos(a) * 0.3, y, Math.sin(a) * 0.3, w, len, w,
+          jitterColor(seam, 10 + i, 0.08), { segs: 5, noise: 0.12, seed: 10 + i, bottomDark: 0.1 });
+      }
+      appendBlob(A, Math.cos(1.2) * 0.29, 0.2, Math.sin(1.2) * 0.29, 0.11, 0.014, 0.05,
+        jitterColor(seam, 21, 0.08), { segs: 6, noise: 0.14, seed: 21, bottomDark: 0.1 });
+      // もよう(古い土器らしい帯)。つぎめより暗い色にして混同させない
+      appendBlob(A, 0, 0.44, 0, 0.286, 0.028, 0.286, jitterColor(Color3.FromHexString('#6f4530'), 25, 0.06), {
+        segs: 10, noise: 0.04, seed: 25, bottomDark: 0.12,
+      });
+      return { root: faceOutward(toMesh(scene, 'f_ancient_pot', A, 'flip')), colliderR: 0.32 };
+    }
+    case 'f_strawmat': {
+      // わら3。わらを うずまきに あんだ まるい しきもの。踏んで通れる(colliderR=0)
+      // 重ねる板は上面の高さを必ず変える(教訓1: 同じ高さだとZファイティングで黒くなる)
+      const A = A0();
+      const straw = Color3.FromHexString('#c9b06a');
+      appendBlob(A, 0, 0.012, 0, 0.6, 0.012, 0.6, jitterColor(Color3.FromHexString('#a89457'), 3, 0.06), {
+        segs: 14, noise: 0.03, seed: 3, bottomDark: 0,
+      }); // そとのふち
+      appendBlob(A, 0, 0.018, 0, 0.54, 0.014, 0.54, jitterColor(straw, 5, 0.07), {
+        segs: 14, noise: 0.04, seed: 5, bottomDark: 0,
+      });
+      // うずまきの すじ(内へ小さくなる輪を3本。高さを少しずつ変える)
+      const rings: [number, number, number][] = [[0.42, 0.024, 7], [0.28, 0.029, 11], [0.15, 0.033, 13]];
+      for (let k = 0; k < rings.length; k++) {
+        const [rr, ry, sd] = rings[k];
+        const n = 10 + k * 2;
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * Math.PI * 2 + k * 0.7;
+          appendBlob(A, Math.cos(a) * rr, ry, Math.sin(a) * rr, 0.07, 0.008, 0.05,
+            jitterColor(k % 2 ? Color3.FromHexString('#d9c286') : straw, sd + i, 0.12),
+            { segs: 5, noise: 0.16, seed: sd + i, bottomDark: 0 });
+        }
+      }
+      appendBlob(A, 0, 0.036, 0, 0.08, 0.01, 0.08, jitterColor(Color3.FromHexString('#b8a05e'), 41, 0.08), {
+        segs: 7, noise: 0.12, seed: 41, bottomDark: 0,
+      }); // まん中の巻きはじめ
+      return { root: faceOutward(toMesh(scene, 'f_strawmat', A, 'flip')), colliderR: 0 };
+    }
+    case 'f_scarecrow': {
+      // わら3+こえだ2+かりくさ1。畑の見はり。
+      // 顔は「点2つ」にしない(教訓1: まるい面に左右対称の2点は顔の記号になってしまう)。
+      // 右目だけ木のボタン、左目は×のぬい目、口は1本のぬい目にして、手づくりの人形に見せる。
+      const A = A0();
+      appendTrunk(A, [[0, 0, 0], [0, 1.28, 0]], 0.05, 0.038, WOOD_D, 61); // 柱(こえだ)
+      fboxR(A, 0, 0.95, 0, 0.98, 0.05, 0.05, C_TWIG_PROP, { z: 0.06 }); // 横木(うで)
+      fbox(A, 0, 0.78, 0, 0.34, 0.42, 0.22, Color3.FromHexString('#8d9a6a')); // 服(かりくさ色)
+      fbox(A, 0, 0.62, 0, 0.36, 0.06, 0.24, Color3.FromHexString('#6f7d52')); // すそのおび
+      // そでから出た わら(左右で長さを変える)
+      for (const [sx, len] of [[-1, 0.2], [1, 0.15]] as [number, number][]) {
+        for (let i = 0; i < 4; i++) {
+          fboxR(A, sx * (0.47 + i * 0.012), 0.93 - i * 0.02, (i - 1.5) * 0.022, len, 0.02, 0.02,
+            jitterColor(Color3.FromHexString('#c9b06a'), 70 + i + (sx > 0 ? 0 : 5), 0.14),
+            { z: sx * (0.35 + i * 0.12) });
+        }
+      }
+      // すそから出た わら
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        fboxR(A, Math.cos(a) * 0.13, 0.55, Math.sin(a) * 0.09, 0.02, 0.16, 0.02,
+          jitterColor(Color3.FromHexString('#d9c286'), 80 + i, 0.14), { z: Math.cos(a) * 0.3, x: Math.sin(a) * 0.3 });
+      }
+      // 頭(わらを ふくろに つめた形)
+      fbox(A, 0, 1.15, 0, 0.28, 0.3, 0.26, Color3.FromHexString('#e2cfa0'));
+      fbox(A, 0, 1.31, 0, 0.2, 0.06, 0.19, Color3.FromHexString('#c9b06a')); // 頭のてっぺんの しばり
+      // ぼうし(つばの広い麦わら)
+      fbox(A, 0, 1.365, 0, 0.52, 0.03, 0.5, Color3.FromHexString('#c9a86b'));
+      fbox(A, 0, 1.43, 0, 0.26, 0.12, 0.25, Color3.FromHexString('#b8975c'));
+      fbox(A, 0, 1.395, 0, 0.28, 0.04, 0.27, Color3.FromHexString('#7aa85f')); // ぼうしの リボン(かりくさ)
+      // 顔: 左目=×のぬい目 / 口=1本のぬい目(右目のボタンは別メッシュ)
+      for (const rz of [0.6, -0.6]) {
+        fboxR(A, -0.075, 1.17, 0.132, 0.075, 0.014, 0.012, WOOD_D, { z: rz });
+      }
+      fboxR(A, 0.01, 1.06, 0.132, 0.15, 0.014, 0.012, WOOD_D, { z: -0.18 });
+      for (let i = 0; i < 3; i++) {
+        fbox(A, -0.03 + i * 0.045, 1.045 + (i % 2) * 0.012, 0.134, 0.012, 0.022, 0.01, WOOD_D); // 口の縫い目
+      }
+      const root = toMesh(scene, 'f_scarecrow', A, 'keep');
+      // 右目のボタン(丸い部品なので別メッシュにして法線を'flip'で確定させる)
+      const B = A0();
+      appendBlob(B, 0.075, 1.175, 0.14, 0.032, 0.03, 0.016, Color3.FromHexString('#c9a86b'), {
+        segs: 7, noise: 0.05, seed: 91, bottomDark: 0.12,
+      });
+      appendBlob(B, 0.075, 1.175, 0.152, 0.014, 0.013, 0.008, WOOD_D, { segs: 5, noise: 0.05, seed: 92, bottomDark: 0 });
+      const button = faceOutward(toMesh(scene, 'f_scarecrow_button', B, 'flip'));
+      button.parent = root;
+      button.isPickable = false;
+      return { root, colliderR: 0.3 };
+    }
+    // ---- v9 おくりもの(なかよし度)のお礼レシピ3種 ----
+    // 「特別なごほうび」なので、ふだんの家具より ひと手間かけた作りにする
+    // (面取り・飾り・銘板など、実物にある部品を足す)。法線の規約は v8/v9 と同じ。
+    case 'f_finetable': {
+      // ツムギのお礼。ガーデンテーブルの上等版: 面取りした天板・板目・ろくろ挽きふうの脚・貫
+      const A = A0();
+      // 天板: 下に一回り大きい「まわりぶち」を敷いて面取りに見せる(上面の高さは必ず変える)
+      fbox(A, 0, 0.662, 0, 1.36, 0.028, 0.88, WOOD_D);
+      fbox(A, 0, 0.692, 0, 1.3, 0.036, 0.82, WOOD);
+      // 板目(6枚。1枚ごとに色と幅を変えて「1枚の箱」に見せない)
+      for (let i = 0; i < 6; i++) {
+        fbox(A, 0, 0.716, -0.335 + i * 0.134, 1.26, 0.026, 0.118 + (i % 2) * 0.008,
+          jitterColor(i % 2 ? WOOD : Color3.FromHexString('#a07a52'), 90 + i, 0.1));
+      }
+      // 天板のふち飾り(細い象がん)
+      for (const sz of [-0.35, 0.35]) fbox(A, 0, 0.722, sz, 1.2, 0.02, 0.022, WOOD_D);
+      for (const sx of [-0.6, 0.6]) fbox(A, sx, 0.722, 0, 0.022, 0.02, 0.78, WOOD_D);
+      // 幕板(天板の下の帯)
+      for (const sz of [-0.36, 0.36]) fbox(A, 0, 0.6, sz, 1.18, 0.08, 0.05, WOOD_D);
+      for (const sx of [-0.58, 0.58]) fbox(A, sx, 0.6, 0, 0.05, 0.08, 0.72, WOOD_D);
+      // 脚4本: 太さを段でつけて「ろくろ挽き」に見せる(まっすぐな角材にしない)
+      for (const sx of [-0.55, 0.55]) {
+        for (const sz of [-0.33, 0.33]) {
+          fbox(A, sx, 0.03, sz, 0.13, 0.06, 0.13, WOOD_D); // 台
+          fbox(A, sx, 0.13, sz, 0.09, 0.15, 0.09, WOOD);
+          fbox(A, sx, 0.235, sz, 0.125, 0.07, 0.125, WOOD_D); // ふくらみ
+          fbox(A, sx, 0.4, sz, 0.085, 0.27, 0.085, WOOD);
+          fbox(A, sx, 0.545, sz, 0.11, 0.05, 0.11, WOOD_D); // 上のふくらみ
+          // 角の飾り(脚と幕板をつなぐ小さな添え木)
+          fboxR(A, sx - Math.sign(sx) * 0.07, 0.55, sz, 0.11, 0.02, 0.05, WOOD_D, { z: Math.sign(sx) * 0.7 });
+        }
+      }
+      // 貫(左右の脚をつなぐ横木と、まん中の一本)
+      for (const sx of [-0.55, 0.55]) fbox(A, sx, 0.2, 0, 0.055, 0.05, 0.6, WOOD_D);
+      fbox(A, 0, 0.2, 0, 1.06, 0.045, 0.05, WOOD_D);
+      fbox(A, 0, 0.24, 0, 0.16, 0.05, 0.09, WOOD); // 貫のまん中の飾り
+      return { root: toMesh(scene, 'f_finetable', A, 'keep'), colliderR: 0.62 };
+    }
+    case 'f_fishtrophy': {
+      // ミナモのお礼。二段の台+銘板+うでに支えられて はねる魚。
+      // 台と銘板は角のある部品(keep)、魚は丸い部品(flip)なので別メッシュにする
+      const A = A0();
+      fbox(A, 0, 0.04, 0, 0.52, 0.08, 0.36, WOOD_D); // 下の台
+      fbox(A, 0, 0.115, 0, 0.44, 0.07, 0.3, WOOD); // 上の台
+      fbox(A, 0, 0.155, 0, 0.36, 0.02, 0.24, WOOD_D); // 台の面
+      // 銘板(まえ面のまん中。すこし前へ出す)
+      fbox(A, 0, 0.075, 0.185, 0.26, 0.08, 0.012, Color3.FromHexString('#c9a86b'));
+      fbox(A, 0, 0.075, 0.192, 0.2, 0.02, 0.008, Color3.FromHexString('#8d7040')); // 刻んだ文字に見える線
+      // 魚を支える うで(うしろから前へ の字に伸びて、魚の腹の下へ回りこむ)
+      appendTrunk(A, [[-0.02, 0.16, -0.07], [-0.02, 0.34, -0.04], [-0.02, 0.46, 0]], 0.032, 0.02, WOOD_D, 77);
+      // 波しぶきの土台(魚が水から はねた ところに見せる)
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2 + 0.6;
+        fboxR(A, Math.cos(a) * 0.12, 0.2 + (i % 2) * 0.03, Math.sin(a) * 0.09, 0.03, 0.11, 0.03,
+          jitterColor(Color3.FromHexString('#a8cbe0'), 80 + i, 0.12), { z: Math.cos(a) * 0.45, x: Math.sin(a) * 0.45 });
+      }
+      const root = toMesh(scene, 'f_fishtrophy', A, 'keep');
+      // 魚(青いせなか・白い腹・尾びれ・背びれ・目)。
+      // からだは「横向き」(頭が+X・尾が-X)にする。正面(+Z)から見て魚の形が読めるようにするため
+      // ——頭をこちらへ向けると、ただの青い かたまりにしか見えない(実機の接写で確認して直した)。
+      // 尾を下げ 頭を上げて、水から はねた ところに見せる。
+      const F = A0();
+      const BLUE = Color3.FromHexString('#7aa8d4');
+      const BLUE_D = Color3.FromHexString('#4f7ba8');
+      const BELLY = Color3.FromHexString('#eef4f8');
+      // 塊どうしを大きく重ねる(すきまがあると「青い玉の房」に見えてしまう。実機の接写で確認)
+      const body: [number, number, number, number, number][] = [
+        // [x, y, rx, ry, rz]
+        [-0.15, 0.505, 0.085, 0.052, 0.036],
+        [-0.075, 0.525, 0.105, 0.075, 0.048],
+        [0.0, 0.555, 0.115, 0.088, 0.055],
+        [0.075, 0.595, 0.105, 0.075, 0.048],
+        [0.145, 0.63, 0.075, 0.05, 0.034],
+      ];
+      for (let i = 0; i < body.length; i++) {
+        const [bx, by, rx, ry, rz] = body[i];
+        appendBlob(F, bx, by, 0, rx, ry, rz, jitterColor(BLUE, 60 + i, 0.06), {
+          segs: 8, noise: 0.05, seed: 60 + i, bottomDark: 0.18,
+        });
+      }
+      // 腹(下半分だけ白っぽく)
+      appendBlob(F, -0.02, 0.5, 0, 0.11, 0.035, 0.045, BELLY, { segs: 7, noise: 0.05, seed: 66, bottomDark: 0 });
+      // 口さき
+      appendBlob(F, 0.215, 0.665, 0, 0.03, 0.025, 0.02, BLUE_D, { segs: 6, noise: 0.05, seed: 67 });
+      // 尾びれ(上下に開いたV。魚らしさの決め手なので大きめに)
+      for (const s of [-1, 1]) {
+        appendBlob(F, -0.27, 0.47 + s * 0.075, 0, 0.075, 0.055, 0.012,
+          jitterColor(BLUE_D, 70 + s, 0.1), { segs: 5, noise: 0.1, seed: 70 + s, bottomDark: 0.1 });
+      }
+      appendBlob(F, -0.23, 0.475, 0, 0.045, 0.03, 0.014, BLUE_D, { segs: 5, noise: 0.08, seed: 72 }); // 尾のつけね
+      // 背びれ(上)・しりびれ(下)・胸びれ(横)
+      appendBlob(F, -0.03, 0.64, 0, 0.075, 0.045, 0.012, jitterColor(BLUE_D, 73, 0.08), { segs: 5, noise: 0.1, seed: 73 });
+      appendBlob(F, -0.08, 0.465, 0, 0.05, 0.03, 0.012, jitterColor(BLUE_D, 76, 0.08), { segs: 5, noise: 0.1, seed: 76 });
+      for (const s of [-1, 1]) {
+        appendBlob(F, 0.02, 0.525, s * 0.05, 0.05, 0.022, 0.026,
+          jitterColor(BLUE_D, 74 + s, 0.1), { segs: 5, noise: 0.1, seed: 74 + s });
+      }
+      // 目(左右に1つずつ。魚は横向きなので「正面の点2つ」にはならない)
+      for (const s of [-1, 1]) {
+        appendBlob(F, 0.15, 0.655, s * 0.03, 0.016, 0.016, 0.012, Color3.FromHexString('#22384c'), {
+          segs: 5, noise: 0.03, seed: 78 + s, bottomDark: 0,
+        });
+      }
+      const fish = faceOutward(toMesh(scene, 'f_fishtrophy_fish', F, 'flip'));
+      fish.parent = root;
+      fish.isPickable = false;
+      return { root, colliderR: 0.3 };
+    }
+    case 'f_starmap': {
+      // ノクトのお礼。うしろへ かたむけて立てかけた 紺の星図。
+      // 板の面の部品は、板と同じかたむきで置かないと ずれるので、傾け変換をここでまとめる
+      const A = A0();
+      const LEAN = -0.2; // うしろ(-Z)へ かたむける量(rad)
+      const cl = Math.cos(LEAN), sl = Math.sin(LEAN);
+      /** 板ローカル(y=板の下からの高さ, z=板の面からの前後)を、かたむけた世界座標へ */
+      const lean = (
+        x: number, y: number, z: number, w: number, h: number, d: number, c: Color3
+      ): void => {
+        fboxR(A, x, 0.14 + y * cl - z * sl, y * sl + z * cl, w, h, d, c, { x: LEAN });
+      };
+      // 足(2本)と うしろの つっかえ棒
+      for (const sx of [-0.3, 0.3]) fbox(A, sx, 0.05, 0.02, 0.12, 0.1, 0.26, WOOD_D);
+      fboxR(A, 0, 0.28, -0.19, 0.06, 0.56, 0.05, WOOD_D, { x: 0.42 });
+      // わく(外がわ)と 紺の面
+      lean(0, 0.33, 0, 0.78, 0.66, 0.06, WOOD);
+      lean(0, 0.33, 0.035, 0.7, 0.58, 0.02, Color3.FromHexString('#2f3e5c'));
+      // わくの ふち飾り(上下だけ色を変える)
+      lean(0, 0.63, 0.01, 0.82, 0.06, 0.07, WOOD_D);
+      lean(0, 0.03, 0.01, 0.82, 0.06, 0.07, WOOD_D);
+      // 星(7つ。大きさと位置を そろえない=星座らしく見せる)
+      const stars: [number, number, number][] = [
+        [-0.22, 0.5, 0.026], [-0.05, 0.42, 0.034], [0.14, 0.5, 0.022],
+        [0.26, 0.36, 0.028], [-0.16, 0.22, 0.022], [0.08, 0.17, 0.026], [0.28, 0.12, 0.018],
+      ];
+      for (let i = 0; i < stars.length; i++) {
+        const [sx, sy, ss] = stars[i];
+        lean(sx, sy, 0.05, ss, ss, 0.012,
+          i % 3 === 1 ? Color3.FromHexString('#fff6d8') : Color3.FromHexString('#e8eeff'));
+      }
+      // 星をつなぐ線(4本。長さも角度もばらばらにする)
+      const links: [number, number, number, number][] = [
+        [-0.22, 0.5, -0.05, 0.42], [-0.05, 0.42, 0.14, 0.5],
+        [-0.05, 0.42, -0.16, 0.22], [0.14, 0.5, 0.26, 0.36],
+      ];
+      for (const [x0, y0, x1, y1] of links) {
+        const len = Math.hypot(x1 - x0, y1 - y0);
+        const ang = Math.atan2(y1 - y0, x1 - x0);
+        fboxR(
+          A, (x0 + x1) / 2,
+          0.14 + ((y0 + y1) / 2) * cl - 0.046 * sl,
+          ((y0 + y1) / 2) * sl + 0.046 * cl,
+          len, 0.008, 0.008, Color3.FromHexString('#8296c4'), { z: ang, x: LEAN }
+        );
+      }
+      // 下のふだ(星図の題名に見える白木の板)
+      lean(0, 0.09, 0.05, 0.4, 0.07, 0.014, Color3.FromHexString('#e2cfa0'));
+      return { root: toMesh(scene, 'f_starmap', A, 'keep'), colliderR: 0.34 };
     }
     default: {
       const A = A0();

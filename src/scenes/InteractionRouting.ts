@@ -2,8 +2,9 @@
 // いまの目的との突き合わせ(ObjectiveInteractionPolicy)→優先度・距離(InteractionResolver)で1つに決める。
 import { POIS } from '../data/island';
 import { ITEMS } from '../data/items';
+import { hasTool } from '../game/GameState';
 import { questFor } from '../systems/QuestSystem';
-import { GATHER_RULES } from '../systems/GatherSystem';
+import { GATHER_RULES, toolReason } from '../systems/GatherSystem';
 import { PRIORITY, type InteractionCandidate } from '../systems/InteractionResolver';
 import { objectiveActionContext } from '../systems/ObjectiveSystem';
 import { selectInteraction } from '../systems/ObjectiveInteractionPolicy';
@@ -137,6 +138,44 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
         priority: PRIORITY.gather + 5,
         distance: Math.hypot(px - n.def.x, pz - n.def.z),
         enabled: true, hint: gs.inter.hint.text, run: () => {},
+      });
+    }
+  }
+  // v9 虫(虫あみが要る)。判定はBugSystemのBUG_CATCH_R(1.6m)。
+  // 走って近づくと逃げるので、そもそも候補にならない = ヒントも出ない
+  const bug = gs.island.nearestBug(px, pz);
+  if (bug) {
+    const hasNet = hasTool(gs.state, 'net');
+    cands.push({
+      id: `bug_${bug.bug.key}`, kind: 'catch', targetId: String(bug.bug.key), itemId: bug.bug.bug,
+      priority: PRIORITY.catch, distance: bug.distance, enabled: hasNet,
+      hint: hasNet ? '<kbd>E</kbd>むしあみでつかまえる' : `つかまえるには ${toolReason('net')}`,
+      run: () => void gs.inter.tryCatchBug(gs.player, gs.playerView, bug.bug, bug.x, bug.z),
+    });
+    if (!hasNet) {
+      // 道具不足の理由も候補として表示だけする(実行不可)。採取ノードと同じ流儀
+      cands.push({
+        id: 'bug_reason', kind: 'catch', targetId: String(bug.bug.key), itemId: bug.bug.bug,
+        priority: PRIORITY.catch + 5, distance: bug.distance, enabled: true,
+        hint: `つかまえるには ${toolReason('net')}`, run: () => {},
+      });
+    }
+  }
+  // v9 ほりあと(シャベルが要る)
+  const dig = gs.island.nearestDig(px, pz);
+  if (dig) {
+    const hasShovel = hasTool(gs.state, 'shovel');
+    cands.push({
+      id: `dig_${dig.spot}`, kind: 'dig', targetId: String(dig.spot),
+      priority: PRIORITY.dig, distance: dig.distance, enabled: hasShovel,
+      hint: hasShovel ? '<kbd>E</kbd>ほる' : `ほるには ${toolReason('shovel')}`,
+      run: () => void gs.inter.tryDig(gs.player, gs.playerView, dig.spot, dig.x, dig.z),
+    });
+    if (!hasShovel) {
+      cands.push({
+        id: 'dig_reason', kind: 'dig', targetId: String(dig.spot),
+        priority: PRIORITY.dig + 5, distance: dig.distance, enabled: true,
+        hint: `ほるには ${toolReason('shovel')}`, run: () => {},
       });
     }
   }

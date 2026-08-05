@@ -1,8 +1,10 @@
-// 依頼リスト(Q)
+// 依頼リスト(Q)。下部に「なかよし度」(おくりもので上がる)をハートで小さく出す。
 import type { GameState } from '../game/GameState';
 import { activeQuests } from '../systems/QuestSystem';
-import { NPC_BY_ID } from '../data/npcs';
+import { NPCS, NPC_BY_ID } from '../data/npcs';
 import { QUESTS } from '../data/quests';
+import { FRIEND_BEST, HEART_MAX, friendshipHearts } from '../systems/GiftSystem';
+import { icon } from './icons';
 import { byInput } from './inputMode';
 
 export class QuestLogUI {
@@ -25,6 +27,25 @@ export class QuestLogUI {
     this.el.classList.add('hidden');
   }
 
+  /**
+   * なかよし度の1行 × NPC人数。ハートは HEART_MAX 個で、1つ=なかよし度2。
+   * 数字ではなく形で見せる(まだ数を読めない子でも「増えた」が分かる)。
+   * 見た目のクラスは他のパネルと同じものを使い、CSSは足さない(inlineで小さくする)。
+   */
+  private friendRows(s: GameState): string {
+    return NPCS.map((def) => {
+      const f = s.npcs[def.id]?.friendship ?? 0;
+      const filled = friendshipHearts(f);
+      const hearts = Array.from({ length: HEART_MAX }, (_, i) => icon(i < filled ? 'heart' : 'heart_off')).join('');
+      const best = f >= FRIEND_BEST ? '<span class="q-done">しんゆう</span>' : '';
+      return `<div class="quest-row" style="display:flex;align-items:center;gap:10px;padding:6px 12px">
+        <span class="q-title" style="min-width:4.5em">${def.name}</span>
+        <span style="display:inline-flex;gap:2px;font-size:0.95rem;line-height:0">${hearts}</span>
+        <span class="q-status" style="margin-top:0">${best}</span>
+      </div>`;
+    }).join('');
+  }
+
   private render(): void {
     const s = this.getState();
     const acts = activeQuests(s);
@@ -43,6 +64,8 @@ export class QuestLogUI {
       <div class="panel-title">島のおねがい <span class="panel-close" data-close>${byInput('とじる(Q)', 'とじる')}</span></div>
       <div class="craft-list">${rows || '<div class="inv-empty">いまは おねがいがない。島のみんなと話してみよう!</div>'}</div>
       <div class="panel-sub">たっせい: ${doneCount} / ${QUESTS.length}</div>
+      <div class="panel-sub">なかよし度</div>
+      <div class="craft-list">${this.friendRows(s)}</div>
     `;
     this.el.querySelector('[data-close]')?.addEventListener('click', () => this.close());
   }

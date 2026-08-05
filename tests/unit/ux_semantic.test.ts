@@ -417,8 +417,27 @@ describe('v6の新しい採取ヒント(4種)', () => {
     expect(GATHER_CATEGORIES).toContain('gatherMushroom');
     expect(GATHER_CATEGORIES).toContain('gatherShell');
     expect(GATHER_CATEGORIES).toContain('gatherStar');
-    // v6の6+4=10に、v8の拾いもの4種(こえだ・かりくさ・ねんど・うきだま)を足して14
-    expect(GATHER_CATEGORIES.length).toBe(14);
+    // v6の6+4=10に、v8の拾いもの4種(こえだ・かりくさ・ねんど・うきだま)を足して14、
+    // v9のカタツムリ(雨の日だけ・手でひろう)と わら(カマでかる)を足して16
+    expect(GATHER_CATEGORIES).toContain('gatherSnail');
+    expect(GATHER_CATEGORIES).toContain('gatherStraw');
+    expect(new Set(GATHER_CATEGORIES).size).toBe(GATHER_CATEGORIES.length); // 同じ名前を二重に足していない
+    expect(GATHER_CATEGORIES.length).toBe(16);
+  });
+
+  it('v9: カタツムリをひろう は採取あつかい(unknownにしない)', () => {
+    expect(categorizeHint('<kbd>E</kbd>カタツムリをひろう')).toBe('gatherSnail');
+    expect(categorizeHint('Eカタツムリをひろう')).toBe('gatherSnail');
+    expect(categorizeObjective('カタツムリを あつめよう')).toBe('gatherSnail');
+    expect(summarizeTrace([{ sec: 0, obj: '', hint: 'Eカタツムリをひろう' }]).unknownHints).toEqual([]);
+    // ほかの「ひろう」を横取りしていない
+    expect(categorizeHint('Eかいがらをひろう')).toBe('gatherShell');
+    expect(categorizeHint('Eうきだまをひろう')).toBe('gatherFloat');
+    expect(categorizeHint('Eこえだをひろう')).toBe('gatherTwig');
+    // クラフト・配置の最中に拾っても矛盾あつかいにしない(ほかの拾いものと同じ)
+    expect(isSemanticMatch('craft', 'gatherSnail')).toBe(true);
+    expect(isSemanticMatch('place', 'gatherSnail')).toBe(true);
+    expect(isSemanticMatch('gatherSnail', 'gatherShell')).toBe(false);
   });
   it('既存の文言の判定は変わらない(新ルールが古いヒントを横取りしない)', () => {
     expect(categorizeHint('Eベリーをつむ')).toBe('gatherBerry');

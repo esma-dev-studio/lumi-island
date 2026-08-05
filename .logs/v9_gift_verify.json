@@ -1,0 +1,96 @@
+{
+  "results": [
+    {
+      "name": "受注前(offer)の会話ではボタンを出さない",
+      "pass": true,
+      "detail": "dialogueOpen=false"
+    },
+    {
+      "name": "会話の最終行に「おくりものをする」が出る",
+      "pass": true,
+      "detail": "おくりものをする"
+    },
+    {
+      "name": "ボタンで選択パネルが開く",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Escで選択パネルが閉じ、会話は続く",
+      "pass": true,
+      "detail": "panelHidden=true dialogue=true"
+    },
+    {
+      "name": "大好物(のばな)で なかよし度 +2",
+      "pass": true,
+      "detail": "1→3"
+    },
+    {
+      "name": "反応セリフが「だいすき」の文になる",
+      "pass": true,
+      "detail": "まあ、のばな! わたし これが いちばん すきなの。"
+    },
+    {
+      "name": "もちものが1つ減る",
+      "pass": true,
+      "detail": "flower=2"
+    },
+    {
+      "name": "同じ日の2回目はボタンを出さない",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "翌日はまた「おくりものをする」が出る",
+      "pass": true,
+      "detail": "giftedToday=false"
+    },
+    {
+      "name": "なかよし度5でとくべつなレシピをおぼえる",
+      "pass": true,
+      "detail": "r_woodtable_fine"
+    },
+    {
+      "name": "お礼の手紙のトーストが出る",
+      "pass": true,
+      "detail": "[\"ツムギと なかよし +1\",\"ツムギから お礼の手紙: 「まどから 入る風が、あなたの ことを はなしていくの。」\",\"とくべつなレシピ「こだわりのテーブル」を おぼえた!\"]"
+    },
+    {
+      "name": "おねがいパネルに「なかよし度」とハートが出る",
+      "pass": true,
+      "detail": "svg=15"
+    },
+    {
+      "name": "クラフト画面にこだわりのテーブルが並ぶ",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "ずかんのじっせきに「はじめてのおくりもの」「しんゆう」が出る",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "なかよし度10で「しんゆうのあかし」",
+      "pass": true,
+      "detail": "friendship=11"
+    },
+    {
+      "name": "実績 a_gift_first / a_friend10 が達成される",
+      "pass": true,
+      "detail": "{\"g\":1,\"f\":1}"
+    },
+    {
+      "name": "タッチ(iPad)で ボタン→選ぶ→反応まで指だけで通る",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "consoleエラー0",
+      "pass": true,
+      "detail": ""
+    }
+  ],
+  "consoleErrors": [],
+  "shots": 17
+}

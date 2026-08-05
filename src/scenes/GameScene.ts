@@ -16,7 +16,7 @@ import { CharacterView } from '../characters/CharacterView';
 import { CHARACTERS } from '../data/characters';
 import { POIS } from '../data/island';
 import { ITEMS, validateItemData } from '../data/items';
-import { applyHomeStyle, newGameState, type GameState } from '../game/GameState';
+import { applyHomeStyle, invAddRecorded, newGameState, type GameState } from '../game/GameState';
 import { PlayerController, type InputState } from '../systems/PlayerController';
 import { InteractionSystem } from '../systems/InteractionSystem';
 import { FishingSystem } from '../systems/FishingSystem';
@@ -24,9 +24,11 @@ import { PlacementSystem } from '../systems/PlacementSystem';
 import { NPCSystem } from '../systems/NPCSystem';
 import { TutorialSystem } from '../systems/TutorialSystem';
 import { evaluate as evaluateAchievements } from '../systems/AchievementSystem';
+import { resetNpcDaily, validateGiftData } from '../systems/GiftSystem';
 import { currentObjective, type Objective } from '../systems/ObjectiveSystem';
 import { questFor } from '../systems/QuestSystem';
 import { NpcAvailabilityService } from '../systems/NpcAvailabilityService';
+import { sharedWeather, type Weather } from '../systems/WeatherSystem';
 import { Hud } from '../ui/Hud';
 import { ObjectiveHud } from '../ui/ObjectiveHud';
 import { InventoryUI } from '../ui/InventoryUI';
@@ -40,9 +42,14 @@ import { PauseMenu } from '../ui/PauseMenu';
 import { TouchControls } from '../ui/TouchControls';
 import { save } from '../save/SaveSystem';
 import { toast } from '../ui/Toast';
-import { sfx, setAmbient, setMusic } from '../audio/AudioSystem';
-import { updateEffects } from '../entities/effects';
+import { sfx, setAmbient, setMusic, setRain } from '../audio/AudioSystem';
+import { updateEffects, updateWeatherFx, snailWorldPos, burst, flyItem } from '../entities/effects';
 import { installLumiDebugApi } from '../debug/LumiDebugApi';
+
+/** ?weather= に書ける値(検証・撮影・回帰ボット用)。それ以外は日付から決める */
+const FORCE_WEATHER: Record<string, Weather> = {
+  rain: 'rainy', rainy: 'rainy', cloudy: 'cloudy', cloud: 'cloudy', sunny: 'sunny', sun: 'sunny',
+};
 
 export class GameScene {
   island: IslandScene;
@@ -56,6 +63,8 @@ export class GameScene {
   worldPause!: WorldPauseController;
   inputRouter!: InputRouter;
   npcAvail!: NpcAvailabilityService;
+  /** 天気(日付から決まる純ロジック。セーブしない) */
+  weather = sharedWeather();
   hud!: Hud;
   objHud!: ObjectiveHud;
   state: GameState = newGameState();
@@ -82,6 +91,7 @@ export class GameScene {
   private lastDay = 1;
   private saveTimer = 0;
   private hitstop = 0;
+  private rainbowToldToday = false; // 虹の案内トーストを1回だけ出す(次の雨でリセット)
   seq!: SequenceDirector;
   private occAcc = 0;
   private achAcc = 0; // じっせき判定のスロットル(1秒に1回)
@@ -114,6 +124,9 @@ export class GameScene {
     this.player = new PlayerController(this.playerView, this.island, {
       x: this.state.player.x, z: this.state.player.z, rotY: this.state.player.rotY,
     });
+    // 虫の逃走判定はプレイヤーの位置と速さで決まる(IslandScene.updateは位置を受け取らないので、
+    // ここで読み取り口を1つだけ差しこむ)。src/systems/BugSystem.ts を参照
+    this.island.playerProbe = () => ({ x: this.player.x, z: this.player.z, speed: this.player.speed });
     this.camCtl = new CameraController(this.scene);
     this.markers = new WorldMarkerController(this.scene);
     this.dialogueCam = new DialogueCameraPlanner(this.island, this.player);
@@ -211,6 +224,11 @@ export class GameScene {
     // 復元
     this.island.time.restore(this.state.time);
     this.lastDay = this.state.time.day;
+    // 天気は日付から毎回みちびき直せるのでセーブしない(リロードしても同じ天気になる)。
+    // ?weather=rain|cloudy|sunny は検証・撮影・回帰ボット用の固定スイッチ
+    this.weather.reset();
+    this.weather.setForced(FORCE_WEATHER[new URLSearchParams(location.search).get('weather') ?? ''] ?? null);
+    this.island.dayNight.setCold(this.weather.update(0, this.island.time.day, this.island.time.hour).cold);
     this.island.home.applyStyle(this.state.homeStyle); // 模様替えは家具の復元より先(床の見た目を先に決める)
     this.placement.restore();
     this.island.applyIslandLevel(this.state.islandLevel);
@@ -230,6 +248,7 @@ export class GameScene {
     }
     window.addEventListener('beforeunload', () => save(this.state));
     for (const p of validateItemData()) console.warn('[data]', p);
+    for (const p of validateGiftData()) console.warn('[data]', p);
     this.inputRouter.attach();
     this.touch.attach();
     if (this.opts.debug) installLumiDebugApi(this); // 決定的テスト用のAPI(実プレイ検証はデバッグなしで行う)
@@ -282,6 +301,47 @@ export class GameScene {
     }
     const progressKey = obj.progress ? `${obj.progress.cur}/${obj.progress.max}` : '';
     this.tutorial.update(dt, this.player.moving, obj, progressKey, dist);
+  }
+
+  // ---------- カタツムリ(雨の日だけ) ----------
+  /**
+   * E入力のルーティング。カタツムリは「ほかに何もできない場所」でだけ拾える形にして、
+   * 既存の候補(採取・会話・釣り・店・ドア)を横取りしない構造にする。
+   * 出る場所は ほかの候補から5m以上はなしてある(tests/unit/weather.test.ts が機械検査)ので、
+   * 手のとどく1m以内にカタツムリがいるとき、ほかの候補はそもそも射程に入らない
+   * =「見えているのに拾えない」も起きない。表示するヒントとEで動く処理は必ずここで一致する。
+   */
+  private routeWithSnail(uiOpen: boolean): string {
+    const want = this.wantInteract;
+    const snail =
+      !uiOpen && !this.indoor && !this.seq.active && !this.inter.busy &&
+      !this.fishing.locksPlayer && !this.placement.active
+        ? this.weather.snailWithinReach(this.player.x, this.player.z)
+        : null;
+    const hint = routeInteraction(this, uiOpen); // Eはここで消費される(他候補があればそれが動く)
+    if (!snail || hint) return hint;
+    if (want) this.pickSnail(snail.spot);
+    return '<kbd>E</kbd>カタツムリをひろう';
+  }
+
+  /** カタツムリを拾う: ずかんに記録し、その雨のあいだ同じ場所には出さない */
+  private pickSnail(spot: number): void {
+    const p = snailWorldPos(spot, this.weather.state.t);
+    this.weather.markSnailTaken(spot);
+    invAddRecorded(this.state, 'snail', 1); // 拾いものはずかんに記録する(採取と同じ)
+    toast(`+1 ${ITEMS.snail.name}`, 'snail');
+    sfx('pickup');
+    if (p) {
+      this.player.face(p.x, p.z);
+      burst(p.x, p.y + 0.08, p.z, 'moss', 8); // 濡れた草の色みの粒
+      flyItem(p.x, p.y, p.z);
+    }
+    this.playerView.play('pickup', {
+      onEnd: () => {
+        if (!this.player.moving) this.playerView.play('idle');
+      },
+    });
+    save(this.state);
   }
 
   // ---------- じっせき ----------
@@ -352,15 +412,29 @@ export class GameScene {
         this.player.update(dt, this.input);
         this.placement.update(this.player);
         updateEffects(dt, this.player.x, this.player.y, this.player.z);
+        // 天気(日付から決まる)。空・光の寒色、雨脚・水たまり・虹・カタツムリの見た目、雨音をあわせる。
+        // 室内では見た目を出さない(部屋は島の外にある)が、雨音だけは屋根ごしに小さく聞こえる。
+        // 会話・モーダルで世界が凍っているあいだ(frozen)は時計も止まるので、カタツムリの歩みも止める
+        // (ほしのかけら・うみどりと同じあつかい)。雨脚そのものはBabylon側で降りつづける
+        const wx = this.weather.update(frozen ? 0 : dt, this.island.time.day, this.island.time.hour);
+        this.island.dayNight.setCold(wx.cold);
+        updateWeatherFx(wx, this.player.x, this.player.y, this.player.z, !this.indoor);
+        setRain(this.indoor ? wx.rain * 0.4 : wx.rain);
+        // 虹は見おろしカメラだと画面に入らないので、出た瞬間に1回だけ「見上げるあそび」へ誘う
+        if (wx.rainbow > 0.05 && !this.rainbowToldToday && !this.indoor) {
+          this.rainbowToldToday = true;
+          toast('あめが あがって にじが でた! カメラを うごかして そらを さがしてみよう', 'lumina');
+        }
+        if (wx.rainbow <= 0.001 && this.rainbowToldToday && wx.rain > 0.5) this.rainbowToldToday = false;
         this.seq.update(dt);
-        const hint = routeInteraction(this, uiOpen);
+        const hint = this.routeWithSnail(uiOpen);
         this.shownHint = uiOpen || this.pauseMenu.open ? '' : hint;
         this.hud.setHint(this.shownHint);
         this.updateObjective(dt);
         // 進行まわり
         if (this.island.time.day !== this.lastDay) {
           this.lastDay = this.island.time.day;
-          for (const n of Object.values(this.state.npcs)) n.talkedToday = false;
+          resetNpcDaily(this.state); // talkedToday と giftedToday(おくりもの1日1回)
         }
         if (Object.keys(this.state.inventory).length > 0) this.tutorial.onFirstItem();
         this.updateAchievements(dt);

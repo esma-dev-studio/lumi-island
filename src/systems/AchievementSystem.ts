@@ -6,6 +6,7 @@
 // 達成の記録も stats に置く(キーは ACH_PREFIX + id)。セーブにそのまま乗るので、
 // 実績のためだけの新しいセーブ項目は増やさない。
 import type { GameState } from '../game/GameState';
+import { BUG_IDS } from './BugSystem';
 
 /** 達成の記録に使う stats のキーの接頭辞 */
 export const ACH_PREFIX = 'ach_';
@@ -41,9 +42,24 @@ export function statCount(s: GameState, key: string): number {
 }
 
 /**
- * 実績10種。並びがそのまま「ずかん」の下段の表示順になる。
+ * いちばん なかよしなNPCの なかよし度(実績 a_friend10 が読む)。
+ * npcsが無い・壊れた古い状態でも0を返すだけで壊れない(codexCountと同じ考え方)。
+ */
+export function maxFriendship(s: GameState): number {
+  let best = 0;
+  for (const n of Object.values((s.npcs ?? {}) as Record<string, { friendship?: unknown }>)) {
+    const f = n?.friendship;
+    if (typeof f === 'number' && Number.isFinite(f) && f > best) best = Math.floor(f);
+  }
+  return best;
+}
+
+/**
+ * 実績14種。並びがそのまま「ずかん」の下段の表示順になる。
  * flower(お花)・starshard(星のかけら)は近日追加の新素材。
  * codexCount が未定義を0で返すので、素材が増えるまでは「未達成のまま安全に」表示される。
+ * v9で「むしとり」2つと「おくりもの」2つを足した
+ * (おねがいマスターは いちばん最後の目標なので末尾のまま)。
  */
 export const ACHIEVEMENTS: AchievementDef[] = [
   {
@@ -81,6 +97,26 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   {
     id: 'a_star1', name: 'よふかしのたからもの', desc: '星のかけらを 1こ 見つけよう',
     target: 1, icon: 'ore', progress: (s) => codexCount(s, 'starshard'),
+  },
+  // ---- v9 むしとり(虫あみ) ----
+  // 数え方は codex(累計入手数)。売っても かごに入れても減らない
+  {
+    id: 'a_bug5', name: 'むしとりめいじん', desc: '虫を ぜんぶで 5ひき つかまえよう',
+    target: 5, icon: 'b_shiro', progress: (s) => BUG_IDS.reduce((n, id) => n + codexCount(s, id), 0),
+  },
+  {
+    id: 'a_bug_all', name: 'むしはかせ', desc: '6しゅるいの虫を ぜんぶ つかまえよう',
+    target: 6, icon: 'b_kabuto', progress: (s) => BUG_IDS.filter((id) => codexCount(s, id) > 0).length,
+  },
+  // ---- v9 おくりもの(なかよし度) ----
+  // gift_total は src/systems/GiftSystem.ts が数える。友情は npcs.friendship をそのまま見る
+  {
+    id: 'a_gift_first', name: 'はじめてのおくりもの', desc: '島のだれかに おくりものを 1回 あげよう',
+    target: 1, icon: 'heart', progress: (s) => statCount(s, 'gift_total'),
+  },
+  {
+    id: 'a_friend10', name: 'しんゆう', desc: 'だれかとの なかよし度を 10に しよう',
+    target: 10, icon: 'heart', progress: (s) => maxFriendship(s),
   },
   {
     id: 'a_all_quests', name: 'おねがいマスター', desc: '島のみんなの おねがいを 5つ かなえよう',

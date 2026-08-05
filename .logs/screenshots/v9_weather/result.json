@@ -1,0 +1,610 @@
+{
+  "checks": [
+    {
+      "name": "雨の日にカタツムリが出ている",
+      "ok": true,
+      "extra": "visible=[0,1,2,3]"
+    },
+    {
+      "name": "カタツムリのヒントが出ている",
+      "ok": true,
+      "extra": "hint=\"Eカタツムリをひろう\""
+    },
+    {
+      "name": "拾うともちものが増える",
+      "ok": true,
+      "extra": "inv=1"
+    },
+    {
+      "name": "すかんに登録される",
+      "ok": true,
+      "extra": "codex=1"
+    },
+    {
+      "name": "拾った1匹だけ消える",
+      "ok": true,
+      "extra": "visible=[1,2,3]"
+    },
+    {
+      "name": "ずかんにカタツムリが載る",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "夜の雨でも雨音が鳴っている",
+      "ok": true,
+      "extra": "{\"level\":1,\"gain\":0.05999999865889549,\"targetGain\":0.06,\"cutoff\":2200,\"playing\":true}"
+    },
+    {
+      "name": "夜のBGMと共存している",
+      "ok": true,
+      "extra": "{\"playing\":true,\"sounding\":true,\"indoor\":false,\"ducked\":false,\"hidden\":false,\"nightIdx\":8,\"seed\":3502646188,\"notes\":53,\"bpm\":62,\"gain\":0.07466566562652588,\"cutoff\":14000}"
+    },
+    {
+      "name": "虹が出ている",
+      "ok": true,
+      "extra": "bow=0.937"
+    },
+    {
+      "name": "虹のときは雨が止んでいる",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "雨が止めば雨音も止まる",
+      "ok": true,
+      "extra": "null"
+    },
+    {
+      "name": "雨が止めばカタツムリもひっこむ",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "雨が止めば水たまりも乾く",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "はれ<くもり<あめ の順に寒色が強まる",
+      "ok": true,
+      "extra": "sunny=0 cloudy=0.55 rainy=1"
+    },
+    {
+      "name": "雨は太陽が弱く・霧が濃い",
+      "ok": true,
+      "extra": "sunI 0.964 vs 1.855 / fog 0.00779 vs 0.0038"
+    },
+    {
+      "name": "「おと」オフで雨音が止まる・オンで戻る",
+      "ok": true,
+      "extra": "on={\"level\":1,\"gain\":0.05999999865889549,\"targetGain\":0.06,\"cutoff\":2178.434326171875,\"playing\":true} off=null back={\"level\":1,\"gain\":0.05999999865889549,\"targetGain\":0.06,\"cutoff\":2183.586669921875,\"playing\":true}"
+    },
+    {
+      "name": "リロードしても天気が同じ",
+      "ok": true,
+      "extra": "sunny,sunny,sunny,sunny,cloudy,sunny,sunny,sunny,rainy,sunny,rainy,cloudy"
+    },
+    {
+      "name": "1日目ははれ",
+      "ok": true,
+      "extra": "sunny"
+    },
+    {
+      "name": "雨の日は釣りの待ち時間が短い(実測0.6倍)",
+      "ok": true,
+      "extra": "比=0.598 (606.8ms vs 1014.6ms)"
+    },
+    {
+      "name": "consoleエラー0",
+      "ok": true,
+      "extra": ""
+    }
+  ],
+  "results": {
+    "rainDay": {
+      "day": 9,
+      "hour": 12.06,
+      "px": -3,
+      "pz": 8,
+      "weather": "rainy",
+      "rain": 1,
+      "rainbow": 0,
+      "cold": 1,
+      "snails": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "coldApplied": 1,
+      "sunI": 0.964,
+      "fogD": 0.00779,
+      "sky": "#95ADBBFF",
+      "fx": {
+        "rain": 1,
+        "rainbow": 0,
+        "rainParticles": 348,
+        "rainEmitRate": 420,
+        "puddleAlpha": 0.62,
+        "puddlesVisible": 5,
+        "rainbowVisible": false,
+        "snailsVisible": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "audio": {
+        "level": 1,
+        "gain": 0.05999999865889549,
+        "targetGain": 0.06,
+        "cutoff": 2178.85693359375,
+        "playing": true
+      },
+      "music": null,
+      "hint": "",
+      "codexSnail": 0,
+      "invSnail": 0,
+      "fps": 60
+    },
+    "puddle": {
+      "day": 9,
+      "hour": 12.06,
+      "px": -5,
+      "pz": -1.5,
+      "weather": "rainy",
+      "rain": 1,
+      "rainbow": 0,
+      "cold": 1,
+      "snails": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "coldApplied": 1,
+      "sunI": 0.964,
+      "fogD": 0.00779,
+      "sky": "#95ADBBFF",
+      "fx": {
+        "rain": 1,
+        "rainbow": 0,
+        "rainParticles": 359,
+        "rainEmitRate": 420,
+        "puddleAlpha": 0.62,
+        "puddlesVisible": 5,
+        "rainbowVisible": false,
+        "snailsVisible": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "audio": {
+        "level": 1,
+        "gain": 0.05999999865889549,
+        "targetGain": 0.06,
+        "cutoff": 2199.4140625,
+        "playing": true
+      },
+      "music": null,
+      "hint": "Eお店をみる(うる・かう)",
+      "codexSnail": 0,
+      "invSnail": 0,
+      "fps": 60
+    },
+    "snail": {
+      "day": 9,
+      "hour": 12.08,
+      "px": 10.4,
+      "pz": -2,
+      "weather": "rainy",
+      "rain": 1,
+      "rainbow": 0,
+      "cold": 1,
+      "snails": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "coldApplied": 1,
+      "sunI": 0.964,
+      "fogD": 0.00779,
+      "sky": "#95ADBBFF",
+      "fx": {
+        "rain": 1,
+        "rainbow": 0,
+        "rainParticles": 362,
+        "rainEmitRate": 420,
+        "puddleAlpha": 0.62,
+        "puddlesVisible": 5,
+        "rainbowVisible": false,
+        "snailsVisible": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "audio": {
+        "level": 1,
+        "gain": 0.05999999865889549,
+        "targetGain": 0.06,
+        "cutoff": 2200,
+        "playing": true
+      },
+      "music": null,
+      "hint": "Eカタツムリをひろう",
+      "codexSnail": 0,
+      "invSnail": 0,
+      "fps": 60
+    },
+    "picked": {
+      "day": 9,
+      "hour": 12.11,
+      "px": 10.4,
+      "pz": -2,
+      "weather": "rainy",
+      "rain": 1,
+      "rainbow": 0,
+      "cold": 1,
+      "snails": [
+        1,
+        2,
+        3
+      ],
+      "coldApplied": 1,
+      "sunI": 0.964,
+      "fogD": 0.00779,
+      "sky": "#95ADBBFF",
+      "fx": {
+        "rain": 1,
+        "rainbow": 0,
+        "rainParticles": 362,
+        "rainEmitRate": 420,
+        "puddleAlpha": 0.62,
+        "puddlesVisible": 5,
+        "rainbowVisible": false,
+        "snailsVisible": [
+          1,
+          2,
+          3
+        ]
+      },
+      "audio": {
+        "level": 1,
+        "gain": 0.05999999865889549,
+        "targetGain": 0.06,
+        "cutoff": 2200,
+        "playing": true
+      },
+      "music": null,
+      "hint": "",
+      "codexSnail": 1,
+      "invSnail": 1,
+      "fps": 60
+    },
+    "rainNight": {
+      "day": 9,
+      "hour": 3.06,
+      "px": -3,
+      "pz": 8,
+      "weather": "rainy",
+      "rain": 1,
+      "rainbow": 0,
+      "cold": 1,
+      "snails": [
+        1,
+        2,
+        3
+      ],
+      "coldApplied": 1,
+      "sunI": 0.261,
+      "fogD": 0.01194,
+      "sky": "#717F90FF",
+      "fx": {
+        "rain": 1,
+        "rainbow": 0,
+        "rainParticles": 357,
+        "rainEmitRate": 420,
+        "puddleAlpha": 0.62,
+        "puddlesVisible": 5,
+        "rainbowVisible": false,
+        "snailsVisible": [
+          1,
+          2,
+          3
+        ]
+      },
+      "audio": {
+        "level": 1,
+        "gain": 0.05999999865889549,
+        "targetGain": 0.06,
+        "cutoff": 2200,
+        "playing": true
+      },
+      "music": {
+        "playing": true,
+        "sounding": true,
+        "indoor": false,
+        "ducked": false,
+        "hidden": false,
+        "nightIdx": 8,
+        "seed": 3502646188,
+        "notes": 53,
+        "bpm": 62,
+        "gain": 0.07466566562652588,
+        "cutoff": 14000
+      },
+      "hint": "",
+      "codexSnail": 1,
+      "invSnail": 1,
+      "fps": 60
+    },
+    "rainbow": {
+      "day": 9,
+      "hour": 15.31,
+      "px": 0,
+      "pz": 8,
+      "weather": "rainy",
+      "rain": 0,
+      "rainbow": 0.937,
+      "cold": 0.243,
+      "snails": [],
+      "coldApplied": 0.245,
+      "sunI": 1.588,
+      "fogD": 0.00478,
+      "sky": "#A3D0E1FF",
+      "fx": {
+        "rain": 0,
+        "rainbow": 0.937287829738945,
+        "rainParticles": 16,
+        "rainEmitRate": 0,
+        "puddleAlpha": 0.3196151499409802,
+        "puddlesVisible": 5,
+        "rainbowVisible": true,
+        "snailsVisible": []
+      },
+      "audio": null,
+      "music": {
+        "playing": false,
+        "sounding": true,
+        "indoor": false,
+        "ducked": false,
+        "hidden": false,
+        "nightIdx": 8,
+        "seed": 3502646188,
+        "notes": 53,
+        "bpm": 62,
+        "gain": 0.06324437260627747,
+        "cutoff": 14000
+      },
+      "hint": "",
+      "codexSnail": 1,
+      "invSnail": 1,
+      "fps": 60
+    },
+    "after": {
+      "day": 9,
+      "hour": 18.06,
+      "px": -3,
+      "pz": 8,
+      "weather": "rainy",
+      "rain": 0,
+      "rainbow": 0,
+      "cold": 0,
+      "snails": [],
+      "coldApplied": 0,
+      "sunI": 1.132,
+      "fogD": 0.00511,
+      "sky": "#CFA984FF",
+      "fx": {
+        "rain": 0,
+        "rainbow": 0,
+        "rainParticles": 0,
+        "rainEmitRate": 0,
+        "puddleAlpha": 0,
+        "puddlesVisible": 0,
+        "rainbowVisible": false,
+        "snailsVisible": []
+      },
+      "audio": null,
+      "music": {
+        "playing": false,
+        "sounding": false,
+        "indoor": false,
+        "ducked": false,
+        "hidden": false,
+        "nightIdx": 8,
+        "seed": 3502646188,
+        "notes": 53,
+        "bpm": 62,
+        "gain": 0,
+        "cutoff": 14000
+      },
+      "hint": "",
+      "codexSnail": 1,
+      "invSnail": 1,
+      "fps": 60
+    },
+    "cloudy": {
+      "day": 9,
+      "hour": 12.06,
+      "px": -3,
+      "pz": 8,
+      "weather": "cloudy",
+      "rain": 0,
+      "rainbow": 0,
+      "cold": 0.55,
+      "snails": [],
+      "coldApplied": 0.55,
+      "sunI": 1.365,
+      "fogD": 0.00599,
+      "sky": "#9FC3D3FF",
+      "fx": {
+        "rain": 0,
+        "rainbow": 0,
+        "rainParticles": 0,
+        "rainEmitRate": 0,
+        "puddleAlpha": 0,
+        "puddlesVisible": 0,
+        "rainbowVisible": false,
+        "snailsVisible": []
+      },
+      "audio": null,
+      "music": {
+        "playing": false,
+        "sounding": false,
+        "indoor": false,
+        "ducked": false,
+        "hidden": false,
+        "nightIdx": 8,
+        "seed": 3502646188,
+        "notes": 53,
+        "bpm": 62,
+        "gain": 0,
+        "cutoff": 14000
+      },
+      "hint": "",
+      "codexSnail": 1,
+      "invSnail": 1,
+      "fps": 60
+    },
+    "sunny": {
+      "day": 9,
+      "hour": 12.06,
+      "px": -3,
+      "pz": 8,
+      "weather": "sunny",
+      "rain": 0,
+      "rainbow": 0,
+      "cold": 0,
+      "snails": [],
+      "coldApplied": 0,
+      "sunI": 1.855,
+      "fogD": 0.0038,
+      "sky": "#ABDEF0FF",
+      "fx": {
+        "rain": 0,
+        "rainbow": 0,
+        "rainParticles": 0,
+        "rainEmitRate": 0,
+        "puddleAlpha": 0,
+        "puddlesVisible": 0,
+        "rainbowVisible": false,
+        "snailsVisible": []
+      },
+      "audio": null,
+      "music": {
+        "playing": false,
+        "sounding": false,
+        "indoor": false,
+        "ducked": false,
+        "hidden": false,
+        "nightIdx": 8,
+        "seed": 3502646188,
+        "notes": 53,
+        "bpm": 62,
+        "gain": 0,
+        "cutoff": 14000
+      },
+      "hint": "",
+      "codexSnail": 1,
+      "invSnail": 1,
+      "fps": 60
+    },
+    "fishing": {
+      "rainy": [
+        599,
+        600,
+        602,
+        600,
+        617,
+        615,
+        596,
+        616,
+        622,
+        601
+      ],
+      "sunny": [
+        997,
+        1020,
+        1021,
+        1007,
+        1024,
+        1021,
+        1022,
+        1011,
+        1026,
+        997
+      ],
+      "avgRainy": 606.8,
+      "avgSunny": 1014.6,
+      "ratio": 0.598
+    }
+  },
+  "errors": [],
+  "log": [
+    "[01_rain_day] 昼の雨(広場) 9日 12.06時 rainy rain=1 bow=0 cold=1(applied 1) sunI=0.964 fog=0.00779 sky=#95ADBBFF pos=(-3,8) fps=60",
+    "      fx={\"rain\":1,\"rainbow\":0,\"rainParticles\":348,\"rainEmitRate\":420,\"puddleAlpha\":0.62,\"puddlesVisible\":5,\"rainbowVisible\":false,\"snailsVisible\":[0,1,2,3]}",
+    "      audio={\"level\":1,\"gain\":0.05999999865889549,\"targetGain\":0.06,\"cutoff\":2178.85693359375,\"playing\":true} hint=\"\"",
+    "[02_puddle] 水たまり接写 9日 12.06時 rainy rain=1 bow=0 cold=1(applied 1) sunI=0.964 fog=0.00779 sky=#95ADBBFF pos=(-5,-1.5) fps=60",
+    "      fx={\"rain\":1,\"rainbow\":0,\"rainParticles\":359,\"rainEmitRate\":420,\"puddleAlpha\":0.62,\"puddlesVisible\":5,\"rainbowVisible\":false,\"snailsVisible\":[0,1,2,3]}",
+    "      audio={\"level\":1,\"gain\":0.05999999865889549,\"targetGain\":0.06,\"cutoff\":2199.4140625,\"playing\":true} hint=\"Eお店をみる(うる・かう)\"",
+    "カタツムリ0 の位置 = {\"x\":10.749575829725309,\"y\":1.498177224513515,\"z\":-1.7290070557033186}",
+    "  寄り直し: 距離=0.55m near={\"spot\":0,\"x\":10.815329530762943,\"z\":-1.6581368840005712} seq=false indoor=false",
+    "[03_snail] カタツムリ接写 9日 12.08時 rainy rain=1 bow=0 cold=1(applied 1) sunI=0.964 fog=0.00779 sky=#95ADBBFF pos=(10.4,-2) fps=60",
+    "      fx={\"rain\":1,\"rainbow\":0,\"rainParticles\":362,\"rainEmitRate\":420,\"puddleAlpha\":0.62,\"puddlesVisible\":5,\"rainbowVisible\":false,\"snailsVisible\":[0,1,2,3]}",
+    "      audio={\"level\":1,\"gain\":0.05999999865889549,\"targetGain\":0.06,\"cutoff\":2200,\"playing\":true} hint=\"Eカタツムリをひろう\"",
+    "OK  雨の日にカタツムリが出ている — visible=[0,1,2,3]",
+    "OK  カタツムリのヒントが出ている — hint=\"Eカタツムリをひろう\"",
+    "[04_snail_picked] 拾ったあと 9日 12.11時 rainy rain=1 bow=0 cold=1(applied 1) sunI=0.964 fog=0.00779 sky=#95ADBBFF pos=(10.4,-2) fps=60",
+    "      fx={\"rain\":1,\"rainbow\":0,\"rainParticles\":362,\"rainEmitRate\":420,\"puddleAlpha\":0.62,\"puddlesVisible\":5,\"rainbowVisible\":false,\"snailsVisible\":[1,2,3]}",
+    "      audio={\"level\":1,\"gain\":0.05999999865889549,\"targetGain\":0.06,\"cutoff\":2200,\"playing\":true} hint=\"\"",
+    "OK  拾うともちものが増える — inv=1",
+    "OK  すかんに登録される — codex=1",
+    "OK  拾った1匹だけ消える — visible=[1,2,3]",
+    "OK  ずかんにカタツムリが載る",
+    "[06_rain_night] 夜の雨(0〜15時なので降っている) 9日 3.06時 rainy rain=1 bow=0 cold=1(applied 1) sunI=0.261 fog=0.01194 sky=#717F90FF pos=(-3,8) fps=60",
+    "      fx={\"rain\":1,\"rainbow\":0,\"rainParticles\":357,\"rainEmitRate\":420,\"puddleAlpha\":0.62,\"puddlesVisible\":5,\"rainbowVisible\":false,\"snailsVisible\":[1,2,3]}",
+    "      audio={\"level\":1,\"gain\":0.05999999865889549,\"targetGain\":0.06,\"cutoff\":2200,\"playing\":true} hint=\"\"",
+    "OK  夜の雨でも雨音が鳴っている — {\"level\":1,\"gain\":0.05999999865889549,\"targetGain\":0.06,\"cutoff\":2200,\"playing\":true}",
+    "OK  夜のBGMと共存している — {\"playing\":true,\"sounding\":true,\"indoor\":false,\"ducked\":false,\"hidden\":false,\"nightIdx\":8,\"seed\":3502646188,\"notes\":53,\"bpm\":62,\"gain\":0.07466566562652588,\"cutoff\":14000}",
+    "[07_rainbow] 雨上がりの虹(海の方角・カメラを下げた構図) 9日 15.31時 rainy rain=0 bow=0.937 cold=0.243(applied 0.245) sunI=1.588 fog=0.00478 sky=#A3D0E1FF pos=(0,8) fps=60",
+    "      fx={\"rain\":0,\"rainbow\":0.937287829738945,\"rainParticles\":16,\"rainEmitRate\":0,\"puddleAlpha\":0.3196151499409802,\"puddlesVisible\":5,\"rainbowVisible\":true,\"snailsVisible\":[]}",
+    "      audio=null hint=\"\"",
+    "OK  虹が出ている — bow=0.937",
+    "OK  虹のときは雨が止んでいる",
+    "[08_rainbow_beach] 虹(浜べから) 9日 15.31時 rainy rain=0 bow=0.939 cold=0.243(applied 0.245) sunI=1.588 fog=0.00478 sky=#A3D0E1FF pos=(-6,30) fps=60",
+    "      fx={\"rain\":0,\"rainbow\":0.9387858179109686,\"rainParticles\":0,\"rainEmitRate\":0,\"puddleAlpha\":0.3201259639076403,\"puddlesVisible\":5,\"rainbowVisible\":true,\"snailsVisible\":[]}",
+    "      audio=null hint=\"\"",
+    "[08b_rainbow_defaultcam] 虹(既定カメラ=地平線が入らない) 9日 15.31時 rainy rain=0 bow=0.939 cold=0.243(applied 0.245) sunI=1.588 fog=0.00478 sky=#A3D0E1FF pos=(0,8) fps=60",
+    "      fx={\"rain\":0,\"rainbow\":0.9387251955442603,\"rainParticles\":0,\"rainEmitRate\":0,\"puddleAlpha\":0.3201052916805928,\"puddlesVisible\":5,\"rainbowVisible\":true,\"snailsVisible\":[]}",
+    "      audio=null hint=\"\"",
+    "[09_after_rain] 雨上がり夕方 9日 18.06時 rainy rain=0 bow=0 cold=0(applied 0) sunI=1.132 fog=0.00511 sky=#CFA984FF pos=(-3,8) fps=60",
+    "      fx={\"rain\":0,\"rainbow\":0,\"rainParticles\":0,\"rainEmitRate\":0,\"puddleAlpha\":0,\"puddlesVisible\":0,\"rainbowVisible\":false,\"snailsVisible\":[]}",
+    "      audio=null hint=\"\"",
+    "OK  雨が止めば雨音も止まる — null",
+    "OK  雨が止めばカタツムリもひっこむ",
+    "OK  雨が止めば水たまりも乾く",
+    "[10_cloudy_day] くもり 9日 12.06時 cloudy rain=0 bow=0 cold=0.55(applied 0.55) sunI=1.365 fog=0.00599 sky=#9FC3D3FF pos=(-3,8) fps=60",
+    "      fx={\"rain\":0,\"rainbow\":0,\"rainParticles\":0,\"rainEmitRate\":0,\"puddleAlpha\":0,\"puddlesVisible\":0,\"rainbowVisible\":false,\"snailsVisible\":[]}",
+    "      audio=null hint=\"\"",
+    "[11_sunny_day] はれ(比較) 9日 12.06時 sunny rain=0 bow=0 cold=0(applied 0) sunI=1.855 fog=0.0038 sky=#ABDEF0FF pos=(-3,8) fps=60",
+    "      fx={\"rain\":0,\"rainbow\":0,\"rainParticles\":0,\"rainEmitRate\":0,\"puddleAlpha\":0,\"puddlesVisible\":0,\"rainbowVisible\":false,\"snailsVisible\":[]}",
+    "      audio=null hint=\"\"",
+    "OK  はれ<くもり<あめ の順に寒色が強まる — sunny=0 cloudy=0.55 rainy=1",
+    "OK  雨は太陽が弱く・霧が濃い — sunI 0.964 vs 1.855 / fog 0.00779 vs 0.0038",
+    "OK  「おと」オフで雨音が止まる・オンで戻る — on={\"level\":1,\"gain\":0.05999999865889549,\"targetGain\":0.06,\"cutoff\":2178.434326171875,\"playing\":true} off=null back={\"level\":1,\"gain\":0.05999999865889549,\"targetGain\":0.06,\"cutoff\":2183.586669921875,\"playing\":true}",
+    "OK  リロードしても天気が同じ — sunny,sunny,sunny,sunny,cloudy,sunny,sunny,sunny,rainy,sunny,rainy,cloudy",
+    "OK  1日目ははれ — sunny",
+    "釣りの待ち時間(ms) あめ: 599,600,602,600,617,615,596,616,622,601 平均=606.8",
+    "釣りの待ち時間(ms) はれ: 997,1020,1021,1007,1024,1021,1022,1011,1026,997 平均=1014.6",
+    "OK  雨の日は釣りの待ち時間が短い(実測0.6倍) — 比=0.598 (606.8ms vs 1014.6ms)",
+    "OK  consoleエラー0"
+  ]
+}

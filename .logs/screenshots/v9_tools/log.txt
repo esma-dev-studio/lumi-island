@@ -1,0 +1,91 @@
+
+===== A. 虫あみと虫6種 =====
+OK  昼は4〜5匹でる — 4匹
+OK  昼の虫は昼の種類だけ — b_ageha,b_kabuto,b_shiro,b_tento
+01_bug_day: 1日12.6時 pos=(6.6,14.5) 虫4匹[b_ageha,b_kabuto,b_shiro,b_tento] ほりあと4 ヒント="つかまえるには 虫あみが ひつよう" 対象=b_ageha
+OK  虫あみが無いと理由が出る — つかまえるには 虫あみが ひつよう
+02_catch_need_net: 1日12.6時 pos=(6.6,14.5) 虫4匹[b_ageha,b_kabuto,b_shiro,b_tento] ほりあと4 ヒント="つかまえるには 虫あみが ひつよう"
+03_craft_panel_net: 1日12.7時 pos=(6.6,14.5) 虫4匹[b_ageha,b_kabuto,b_shiro,b_tento] ほりあと4 ヒント=""
+OK  虫あみを作れた
+OK  道具に虫あみが入る
+OK  虫あみを持つと つかまえるヒントが出る — Eむしあみでつかまえる
+04_catch_hint: 1日12.7時 pos=(6.5,15) 虫4匹[b_ageha,b_kabuto,b_shiro,b_tento] ほりあと4 ヒント="Eむしあみでつかまえる"
+OK  つかまえるとずかんに登録される — {"b_ageha":1}
+OK  むしかごのレシピをひらめく
+05_caught_bug: 1日12.8時 pos=(6.5,15) 虫3匹[b_kabuto,b_shiro,b_tento] ほりあと4 ヒント=""
+OK  むしかごを作れた
+OK  むしかごを島に置けた
+OK  むしかごの中に虫のメッシュがある — cagedBug_b_ageha
+06_bugcage_placed: 1日12.9時 pos=(-6,12.6) 虫3匹[b_kabuto,b_shiro,b_tento] ほりあと4 ヒント="" 中身=cagedBug_b_ageha
+OK  走って近づくと逃げる(捕獲圏1.6mより手前で) — b_shiro: 逃げた距離=2.91m / 最接近=2.91m / 最高速=3.6m/s
+07_flee_when_running: 1日12.9時 pos=(-29.4,13.3) 虫4匹[b_kabuto,b_shiro,b_tento,b_shiro] ほりあと4 ヒント="草をかるには カマが ひつよう" b_shiro 逃げた距離=2.91m
+OK  歩けば1.6m以内まで寄れる(逃げない) — b_shiro: 最接近=1.01m / 逃げた=false / 最高速=1.7m/s
+OK  寄ると つかまえるヒントが出る — Eむしあみでつかまえる
+08_walk_close_enough: 1日13.3時 pos=(16.3,12.14) 虫4匹[b_kabuto,b_tento,b_shiro,b_kabuto] ほりあと4 ヒント="Eむしあみでつかまえる" b_shiro 最接近=1.01m
+OK  夜は3〜4匹でる — 3匹
+OK  夜の虫は夜の種類だけ — b_suzu
+OK  昼と夜で顔ぶれが変わる — 昼=b_ageha,b_kabuto,b_shiro,b_tento 夜=b_suzu
+09_bug_night: 1日21.7時 pos=(-3.5,17.6) 虫3匹[b_suzu,b_suzu,b_suzu] ほりあと4 ヒント="Eむしあみでつかまえる" 夜の虫=b_suzu
+  これまでにつかまえた虫: 5匹 {"b_ageha":1,"b_suzu":3,"b_hotaru":1}
+OK  虫を5匹つかまえて じっせき「むしとりめいじん」 — 5匹 / ach_a_bug5
+10_achievement_bug5: 1日22.6時 pos=(15.5,21.5) 虫2匹[b_suzu,b_hotaru] ほりあと4 ヒント="" 5匹
+
+===== B. シャベルとほりだしもの =====
+OK  ほりあとは毎日3〜4箇所 — 4箇所
+OK  シャベルが無いと理由が出る — ほるには シャベルが ひつよう
+11_dig_need_shovel: 1日12.1時 pos=(29.5,-5.8) 虫1匹[b_ageha] ほりあと4 ヒント="ほるには シャベルが ひつよう" 4箇所
+OK  シャベルを作れた
+OK  シャベルを持つと ほるヒントが出る — Eほる
+12_dig_hint: 1日12.1時 pos=(29.5,-5.8) 虫1匹[b_ageha] ほりあと4 ヒント="Eほる"
+OK  ほると跡が消える — 4 -> 3
+OK  ほりだしものが手に入る — shard_pot
+13_dug_loot: 1日12.2時 pos=(29.5,-5.8) 虫1匹[b_ageha] ほりあと3 ヒント="" 出土=shard_pot
+  出土の確率(3000回): つぼのかけら60.8% きらきらの石29.6% きんのかけら9.6%
+OK  出土は 6割/3割/1割 の傾向 — {"shard_pot":1823,"shiny_stone":889,"gold_piece":288}
+OK  翌日は別の場所に3〜4箇所できる — 0,10,5 -> 11,2,4,9
+14_dig_next_day: 2日12.3時 pos=(-27,-17.6) 虫1匹[b_shiro] ほりあと4 ヒント="Eほる" 0,10,5 -> 11,2,4,9
+
+===== C. カマと わら =====
+OK  カマを作れた
+OK  背の高い草で「わらをかる」が出る — tallgrass1 / Eわらをかる
+15_tallgrass_hint: 2日12.3時 pos=(-26.5,25.8) 虫1匹[b_shiro] ほりあと4 ヒント="Eわらをかる" tallgrass1
+OK  わらが手に入る — straw=2
+OK  かかしのレシピをひらめく
+16_straw_got: 2日12.4時 pos=(-26.5,25.8) 虫1匹[b_shiro] ほりあと4 ヒント="" わら2
+OK  わらのマットを作れた
+OK  かかしを作れた
+OK  かかし・わらのマットを島に置けた — かかし=true マット=true
+17_scarecrow_strawmat: 2日12.5時 pos=(-21.2,9.5) 虫2匹[b_shiro,b_ageha] ほりあと4 ヒント=""
+18_scarecrow_closeup: 2日12.6時 pos=(-20,8.4) 虫2匹[b_shiro,b_ageha] ほりあと4 ヒント=""
+  ほった回数=0 出土の内わけ={"shard_pot":1,"shiny_stone":0,"gold_piece":0}
+OK  つぼのかけらが出て、いにしえのつぼをひらめく — かけら=1
+OK  いにしえのつぼを作れた
+OK  いにしえのつぼを島に置けた
+19_ancient_pot: 2日12.7時 pos=(-18,8.2) 虫3匹[b_shiro,b_ageha,b_tento] ほりあと4 ヒント=""
+
+===== D. じっせき =====
+OK  6種そろうと じっせき「むしはかせ」 — ach_a_bug5,ach_a_bug_all
+20_achievement_bug_all: 2日12.8時 pos=(-18,8.2) 虫3匹[b_shiro,b_ageha,b_tento] ほりあと4 ヒント=""
+21_codex_bugs: 2日12.8時 pos=(-18,8.2) 虫3匹[b_shiro,b_ageha,b_tento] ほりあと4 ヒント=""
+
+===== E. 誘導中の抑制 =====
+OK  自由時は虫のヒントが出る — 目的="ツムギの はなしを聞こう" ヒント="Eむしあみでつかまえる"
+22_free_shows_catch: 2日12.2時 pos=(16.1,11.9) 虫4匹[b_shiro,b_ageha,b_tento,b_shiro] ほりあと4 ヒント="Eむしあみでつかまえる" 目的="ツムギの はなしを聞こう"
+OK  誘導中は虫のヒントが出ない — 目的="もくざいを あつめよう" ヒント=""
+23_guided_hides_catch: 2日12.3時 pos=(16.1,11.9) 虫5匹[b_shiro,b_ageha,b_tento,b_shiro,b_tento] ほりあと4 ヒント="" 目的="もくざいを あつめよう"
+OK  誘導中は ほりあとのヒントも出ない — ヒント=""
+24_guided_hides_dig: 2日12.3時 pos=(-27,-17.8) 虫5匹[b_shiro,b_ageha,b_tento,b_shiro,b_tento] ほりあと4 ヒント=""
+OK  自由にもどると ほりあとのヒントが出る — ヒント="Eほる"
+25_free_shows_dig: 2日12.3時 pos=(-27,-17.8) 虫5匹[b_shiro,b_ageha,b_tento,b_shiro,b_tento] ほりあと4 ヒント="Eほる"
+
+===== F. iPad(タッチの行動ボタン) =====
+OK  iPad: タッチUIが出る
+OK  iPad: 行動ボタンが「むしあみでつかまえる」 — むしあみでつかまえる
+26_ipad_catch: 1日12.3時 pos=(6.6,14.5) 虫2匹[b_ageha,b_kabuto] ほりあと4 ヒント="むしあみでつかまえる" ボタン="むしあみでつかまえる"
+OK  iPad: 行動ボタンが「ほる」 — ほる
+27_ipad_dig: 1日12.4時 pos=(29.5,-5.8) 虫2匹[b_ageha,b_kabuto] ほりあと4 ヒント="ほる" ボタン="ほる"
+OK  iPad: 行動ボタンが「わらをかる」 — わらをかる
+28_ipad_straw: 1日12.4時 pos=(-28,9.3) 虫3匹[b_ageha,b_kabuto,b_shiro] ほりあと4 ヒント="わらをかる" ボタン="わらをかる"
+
+consoleエラー: 0件
+判定: 45/45 OK

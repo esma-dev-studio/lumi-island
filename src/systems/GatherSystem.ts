@@ -1,7 +1,7 @@
 // 採取ルール(純ロジック): 何が必要で、何がとれて、いつ復活するか
 import type { GameState } from '../game/GameState';
 import { hasTool } from '../game/GameState';
-import type { ItemId, ToolId } from '../data/items';
+import { toolName, type ItemId, type ToolId } from '../data/items';
 import type { NodeKind } from '../data/island';
 
 export interface GatherRule {
@@ -34,6 +34,8 @@ export const GATHER_RULES: Record<NodeKind, GatherRule> = {
   clay: { tool: null, item: 'clay', count: [1, 2], respawnHours: 2.0, anim: 'pickup', verb: 'ねんどをとる' },
   // うきだまは朝だけ浜に流れつくスポーン制(src/systems/DriftSystem.ts)。ほしのかけらと同じtransientノード
   glassfloat: { tool: null, item: 'glassfloat', count: [1, 1], respawnHours: 0, anim: 'pickup', verb: 'うきだまをひろう' },
+  // v9 背の高い草: カマ(sickle)でだけ かれる。クサツルの草むら(grass)より復活が遅い
+  tallgrass: { tool: 'sickle', item: 'straw', count: [1, 2], respawnHours: 1.6, anim: 'interact', verb: 'わらをかる' },
 };
 
 export interface GatherCheck {
@@ -41,12 +43,14 @@ export interface GatherCheck {
   reason?: string; // だめな理由(ヒントに出す)
 }
 
+/** 道具が足りないときの理由文(採取・捕虫・穴ほりで同じ言い回しにする) */
+export function toolReason(tool: ToolId): string {
+  return `${toolName(tool)}が ひつよう`;
+}
+
 export function canGather(state: GameState, kind: NodeKind): GatherCheck {
   const rule = GATHER_RULES[kind];
-  if (rule.tool && !hasTool(state, rule.tool)) {
-    const toolName = { axe: 'オノ', pickaxe: 'ツルハシ', rod: 'ツリザオ', sickle: 'カマ' }[rule.tool];
-    return { ok: false, reason: `${toolName}が ひつよう` };
-  }
+  if (rule.tool && !hasTool(state, rule.tool)) return { ok: false, reason: toolReason(rule.tool) };
   return { ok: true };
 }
 

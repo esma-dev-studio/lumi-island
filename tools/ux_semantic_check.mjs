@@ -19,6 +19,10 @@ export const GATHER_CATEGORIES = [
   'gatherFlower', 'gatherMushroom', 'gatherShell', 'gatherStar',
   // v8で増えた「拾いもの」。同じく道具は要らない
   'gatherTwig', 'gatherCutgrass', 'gatherClay', 'gatherFloat',
+  // v9: 雨の日だけ地面に出るカタツムリ。むしあみは要らず、手でひろう(=採取と同じあつかい)
+  'gatherSnail',
+  // v9: カマでかる「背の高い草」。既存の草むら(クサツル)とは別の素材なので別カテゴリ
+  'gatherStraw',
 ];
 const GATHER = new Set(GATHER_CATEGORIES);
 /**
@@ -79,6 +83,9 @@ export const OBJ_RULES = [
   { cat: 'gatherCutgrass', re: /かりくさ.*あつめよう/, src: 'ObjectiveSystem craftStep: かりくさを あつめよう(ITEMS.cutgrass.name)' },
   { cat: 'gatherClay', re: /ねんど.*あつめよう/, src: 'ObjectiveSystem craftStep: ねんどを あつめよう(ITEMS.clay.name)' },
   { cat: 'gatherFloat', re: /うきだま.*(あつめよう|見つけよう)/, src: 'ObjectiveSystem craftStep: うきだまを あつめよう(ITEMS.glassfloat.name)' },
+  // v9: 雨の日だけの素材。同じ理由(将来のcraftStepでunknownにしない)
+  { cat: 'gatherSnail', re: /カタツムリ.*(あつめよう|見つけよう)/, src: 'ObjectiveSystem craftStep: カタツムリを あつめよう(ITEMS.snail.name)' },
+  { cat: 'gatherStraw', re: /わら.*あつめよう/, src: 'ObjectiveSystem craftStep: わらを あつめよう(ITEMS.straw.name)' },
 ];
 
 // ---- ホットヒント(.hud-hint)のカテゴリ表。上から順に最初に当たったものを採用 ----
@@ -112,6 +119,15 @@ export const HINT_RULES = [
   { cat: 'gatherTwig', re: /こえだをひろう/, src: 'GatherSystem verb: こえだをひろう(twig)' },
   { cat: 'gatherClay', re: /ねんどをとる/, src: 'GatherSystem verb: ねんどをとる(clay)' },
   { cat: 'gatherFloat', re: /うきだまをひろう/, src: 'GatherSystem verb: うきだまをひろう(glassfloat)' },
+  // v9: 雨の日のカタツムリ(GameScene.routeWithSnailが出すヒント。むしあみは要らない)
+  { cat: 'gatherSnail', re: /カタツムリをひろう/, src: 'GameScene.routeWithSnail: <kbd>E</kbd>カタツムリをひろう(snail)' },
+  // v9: カマ→わら。「わらをかる」は「草をかる」「かりくさをかる」と重ならない別の文言
+  { cat: 'gatherStraw', re: /わらをかる/, src: 'GatherSystem verb: わらをかる(tallgrass)' },
+  // v9: 虫あみ・シャベルの行動。どちらも依頼の目的にはならないので、
+  // 誘導中(guided)はそもそもヒントに出ない(出たら矛盾として検出される)。
+  // 「こうせきをほる」(gatherOre)より後ろに置くこと(「ほる」が横取りしないように)
+  { cat: 'catch', re: /むしあみでつかまえる|つかまえる/, src: 'InteractionRouting: <kbd>E</kbd>むしあみでつかまえる' },
+  { cat: 'dig', re: /ほる/, src: 'InteractionRouting: <kbd>E</kbd>ほる(ほりあと)' },
   { cat: 'carry', re: /もちかえる/, src: 'InteractionRouting: <kbd>E</kbd>◯◯を もちかえる' },
   { cat: 'talk', re: /と はなす/, src: 'InteractionRouting: <kbd>E</kbd>◯◯と はなす' },
 ];
@@ -181,6 +197,11 @@ export function isShopPanelTitle(title) {
  *    行動が絞られている段階(受注済み)では必ず矛盾。
  *  - 別素材の採取ヒント(例: 目的=ヒカリゴケ + ヒント=岩をくだく)。
  *  - 目的=report + hint=fish(報告に行くべき場面での釣り再開)。
+ *  - hint=catch / dig(v9の虫あみ・シャベル): どちらも依頼の目的にはならないので、
+ *    ObjectiveSystem の preferredKinds に入ることが決してない。
+ *    つまり誘導中(guided)は表示されない設計であり、出ていたら候補の絞りこみが
+ *    壊れたということ。sleep/enter/exit のような「常時許可」にはしない
+ *    (GATHER_CATEGORIESにも入れないので、craft/place目的中でも矛盾として検出される)。
  */
 export function isSemanticMatch(objCat, hintCat) {
   if (!hintCat || hintCat === 'none') return true;

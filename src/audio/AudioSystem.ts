@@ -41,6 +41,7 @@ export function setSoundEnabled(on: boolean): void {
   // オフのあいだにBGMの予約が溜まると、オンに戻した瞬間に一気に鳴ってしまう。
   // フェードを待たずに止め、次のフレームの setMusic で改めて鳴らし直す。
   if (!on) music?.silence();
+  if (!on) stopRain(); // 雨音も止める(次のフレームの setRain で鳴らし直す)
   if (!on && ctx) void ctx.suspend();
   if (on && ctx) void ctx.resume();
 }
@@ -199,6 +200,130 @@ export function setAmbient(mode: 'day' | 'night' | 'none'): void {
       else cricket();
     }
   }, 2600);
+}
+
+// ---- 雨音(ホワイトノイズ合成。素材ファイル不要) ----
+/**
+ * 本降りのときの音量。オルゴール(MUSIC.busGain=0.16)より小さくして、
+ * 雨の夜に両方鳴っても メロディが埋もれないようにする。
+ */
+const RAIN_GAIN = 0.06;
+/** 雨音のループ長(秒)。長いほど「同じ音の繰り返し」に聞こえにくい */
+const RAIN_LOOP_SEC = 3;
+/** 強さが変わるときのなめらかさ(秒)。降りはじめ・上がりぎわがぶつ切りにならない */
+const RAIN_RAMP_SEC = 1.2;
+
+interface RainNodes {
+  src: AudioBufferSourceNode;
+  gain: GainNode;
+  lp: BiquadFilterNode;
+  hp: BiquadFilterNode;
+  level: number;
+}
+let rain: RainNodes | null = null;
+
+/** ループ用のノイズ(ざあざあ)。1回だけ作って使い回す */
+function makeRainBuffer(c: AudioContext): AudioBuffer {
+  const len = Math.floor(c.sampleRate * RAIN_LOOP_SEC);
+  const buf = c.createBuffer(1, len, c.sampleRate);
+  const d = buf.getChannelData(0);
+  // 白色ノイズをすこし積分して、しゃりしゃりでなく「ざあ」という質感にする
+  let prev = 0;
+  for (let i = 0; i < len; i++) {
+    const n = Math.random() * 2 - 1;
+    prev = prev * 0.72 + n * 0.28;
+    d[i] = prev * 2.4;
+  }
+  // つなぎ目のぷつっを消す(頭とお尻をクロスフェード)
+  const fade = Math.floor(c.sampleRate * 0.05);
+  for (let i = 0; i < fade; i++) {
+    const k = i / fade;
+    d[i] = d[i] * k + d[len - fade + i] * (1 - k);
+  }
+  return buf;
+}
+
+function stopRain(): void {
+  if (!rain) return;
+  try {
+    rain.src.stop();
+  } catch {
+    // すでに止まっている
+  }
+  rain.src.disconnect();
+  rain.gain.disconnect();
+  rain = null;
+}
+
+/**
+ * 雨音の強さを設定する(0=無音 1=本降り)。毎フレーム呼んでよい。
+ * 「おと」がオフのあいだは何も作らない・鳴らさない(専用トグルは足さない)。
+ * @param level 雨脚(WeatherSystemのrainをそのまま渡す)
+ */
+export function setRain(level: number): void {
+  const want = enabled ? Math.max(0, Math.min(1, level)) : 0;
+  if (want <= 0) {
+    if (rain) {
+      // すぐ切らずに ふっと消す。消えきってから片づける
+      const c = ctx!;
+      rain.gain.gain.cancelScheduledValues(c.currentTime);
+      rain.gain.gain.setValueAtTime(rain.gain.gain.value, c.currentTime);
+      rain.gain.gain.linearRampToValueAtTime(0, c.currentTime + RAIN_RAMP_SEC * 0.5);
+      const dying = rain;
+      rain = null;
+      window.setTimeout(() => {
+        try {
+          dying.src.stop();
+        } catch {
+          // すでに止まっている
+        }
+        dying.src.disconnect();
+        dying.gain.disconnect();
+      }, RAIN_RAMP_SEC * 500 + 120);
+    }
+    return;
+  }
+  if (!rain) {
+    if (!ctx || !master) return; // 初回操作前でAudioContextがまだ無い(次のフレームで作る)
+    const c = ctx;
+    const src = c.createBufferSource();
+    src.buffer = makeRainBuffer(c);
+    src.loop = true;
+    // 高い成分を落として「ざあ」、低すぎる成分も落として こもらせない
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 1500;
+    lp.Q.value = 0.6;
+    const hp = c.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 190;
+    const gain = c.createGain();
+    gain.gain.value = 0;
+    src.connect(hp).connect(lp).connect(gain).connect(master);
+    src.start();
+    rain = { src, gain, lp, hp, level: 0 };
+  }
+  if (Math.abs(want - rain.level) < 0.01) return;
+  rain.level = want;
+  const c = ctx!;
+  const t0 = c.currentTime;
+  rain.gain.gain.cancelScheduledValues(t0);
+  rain.gain.gain.setValueAtTime(rain.gain.gain.value, t0);
+  rain.gain.gain.linearRampToValueAtTime(RAIN_GAIN * want, t0 + RAIN_RAMP_SEC);
+  // 本降りほど高い成分まで通す(小雨は やわらかく)
+  rain.lp.frequency.setTargetAtTime(900 + 1300 * want, t0, 0.4);
+}
+
+/** 雨音の内部状態(検証・デバッグ用。読むだけで副作用はない) */
+export function rainState(): Record<string, unknown> | null {
+  if (!rain) return null;
+  return {
+    level: rain.level,
+    gain: rain.gain.gain.value,
+    targetGain: RAIN_GAIN * rain.level,
+    cutoff: rain.lp.frequency.value,
+    playing: true,
+  };
 }
 
 // ---- 夜のオルゴールBGM(生成は MusicBox.ts) ----

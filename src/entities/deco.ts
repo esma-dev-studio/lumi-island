@@ -696,6 +696,124 @@ export function makeFlagstones(scene: Scene, seed: number, n = 7, spread = 1.4):
   return m;
 }
 
+/**
+ * appendBlobで作った形の「表と裏」をそろえる(v9で発見した見た目のバグの修正)。
+ *
+ * appendBlob の巻き順は内向き(外がわの面がバックフェースカリングで消える)。
+ * toMesh の 'flip' が直すのは**法線だけ**なので、GPUが実際に描くのは「向こう側の内面」になる。
+ * まるい形では輪郭も明るさもほぼ同じで気づけないが(教訓4「閉じた形状は裏返っていても気づけない」)、
+ * 平たい形では見えているのが「下面の内がわ」= 光が当たらない面になり、上面が真っ黒に見える。
+ * v9の「ほりあと」と「チョウの羽」で実害が出て、実機の接写と
+ * backFaceCulling を切った比較で原因を特定した。
+ *
+ * indices を反転すると巻き順が外向きになり、'flip'した法線と向きがそろう。
+ * ※ flora.ts の toMesh 自体は直さない(島じゅうの既存メッシュの見た目が変わってしまうため)。
+ *   v9で新しく作った平たいメッシュにだけ、この関数を通す。
+ */
+export function faceOutward(mesh: Mesh): Mesh {
+  mesh.flipFaces(false); // 法線はそのまま、巻き順だけ反転
+  return mesh;
+}
+
+// ============================================================
+// v9 背の高い草(tallgrass): カマで かると わらがとれる採取ノード。
+// 見た目で「ただの草むら(クサツル)」と区別する: 背が2倍ちかく、穂が立ち、
+// 根もとが たばになっている。appendBlobだけで組むので toMesh は 'flip'。
+// ============================================================
+const C_TALL = Color3.FromHexString('#a8b063'); // かれかけた黄みどり
+const C_TALL2 = Color3.FromHexString('#c2b96f');
+const C_TALL_HEAD = Color3.FromHexString('#d9c286'); // 穂
+
+export function makeTallGrassNode(scene: Scene, seed: number): Mesh {
+  const A = A0();
+  const n = 13;
+  for (let i = 0; i < n; i++) {
+    const th = (i / n) * Math.PI * 2 + seed * 0.7;
+    const r = 0.1 + vnoise(i, seed) * 0.2;
+    const h = 0.95 + vnoise(i * 2, seed) * 0.45; // 既存の草むら(0.3〜0.5m)の2倍以上
+    const lean = 0.09 + vnoise(seed, i) * 0.2;
+    const cx = Math.cos(th) * r, cz = Math.sin(th) * r;
+    const lx = Math.cos(th) * lean, lz = Math.sin(th) * lean;
+    const c = jitterColor(i % 3 === 0 ? C_TALL2 : C_TALL, seed + i, 0.16);
+    // 3段に分けて、上へいくほど細く・外へしなる
+    appendBlob(A, cx, h * 0.2, cz, 0.042, h * 0.22, 0.042, c, {
+      segs: 5, noise: 0.12, seed: seed + i, bottomDark: 0.36,
+    });
+    appendBlob(A, cx + lx * 0.4, h * 0.56, cz + lz * 0.4, 0.034, h * 0.2, 0.034,
+      jitterColor(c, seed + i + 3, 0.1), { segs: 5, noise: 0.14, seed: seed + i * 3, bottomDark: 0.22 });
+    appendBlob(A, cx + lx, h * 0.86, cz + lz, 0.026, h * 0.18, 0.026,
+      jitterColor(c, seed + i + 7, 0.12), { segs: 4, noise: 0.16, seed: seed + i * 5, bottomDark: 0.12 });
+    // 穂(全部には付けない。付ける本数を不ぞろいにする)
+    if (vnoise(i * 3, seed * 2) > 0.45) {
+      appendBlob(A, cx + lx * 1.25, h * 1.02, cz + lz * 1.25, 0.026, 0.1 + vnoise(i, seed) * 0.05, 0.026,
+        jitterColor(C_TALL_HEAD, seed + i * 11, 0.12), { segs: 5, noise: 0.14, seed: seed + i * 11, bottomDark: 0.1 });
+    }
+  }
+  // 根もとの たば(土から浮いて見えないように)
+  appendBlob(A, 0, 0.07, 0, 0.26, 0.07, 0.24, jitterColor(C_TALL, seed + 31, 0.1), {
+    segs: 8, noise: 0.2, seed: seed + 31, flatBottom: true, bottomDark: 0.34,
+  });
+  const m = faceOutward(toMesh(scene, `tallgrass_${seed}`, A, 'flip'));
+  m.isPickable = false;
+  return m;
+}
+
+// ============================================================
+// v9 ほりあと(dig): シャベルでほる場所の目印。
+// 「小さな土の盛り上がり+ヒビ」。当たり判定はなく、踏み越えられる。
+// ============================================================
+// 色は「ほりかえした ばかりの明るい土」。暗くすると草の上で真っ黒な板に見え、
+// 遠くから「ほりあと」だと気づけない(実機の接写で確認して明るくした)
+const C_SOIL = Color3.FromHexString('#9c7f5c');
+const C_SOIL_LIGHT = Color3.FromHexString('#b8997a');
+const C_CRACK = Color3.FromHexString('#6b5540');
+
+export function makeDigMound(scene: Scene, seed: number): Mesh {
+  const A = A0();
+  // 盛り上がった土(ふちをノイズでくずす。くずしすぎると三角の板が突き出て見える)
+  appendBlob(A, 0, 0.06, 0, 0.4, 0.1, 0.34, jitterColor(C_SOIL, seed, 0.1), {
+    segs: 10, noise: 0.16, seed, flatBottom: true, bottomDark: 0.14,
+  });
+  appendBlob(A, 0.05, 0.115, -0.04, 0.24, 0.06, 0.2, jitterColor(C_SOIL_LIGHT, seed + 3, 0.1), {
+    segs: 8, noise: 0.18, seed: seed + 3, bottomDark: 0.1,
+  });
+  // ヒビ(3本。長さ・角度・太さをそろえない=ただの十字にしない)。
+  // 数を増やすと「黒い櫛」に見えるので、1本につき2つぶんだけにする
+  const cracks: [number, number, number][] = [
+    [0.3, 0.28, 0.013], [1.9, 0.2, 0.011], [3.6, 0.24, 0.009],
+  ];
+  for (let i = 0; i < cracks.length; i++) {
+    const [a0, len, w] = cracks[i];
+    const a = a0 + seed * 0.11;
+    const steps = 2;
+    for (let k = 0; k < steps; k++) {
+      const t = (k + 0.5) / steps;
+      const wob = (vnoise(seed + i * 5, k) - 0.5) * 0.4; // まっすぐな線にしない
+      const aa = a + wob;
+      appendBlob(A, Math.cos(aa) * len * t, 0.14 - t * 0.02, Math.sin(aa) * len * t,
+        w + 0.004 * (1 - t), 0.01, len / steps * 0.58,
+        jitterColor(C_CRACK, seed + i * 7 + k, 0.1), { segs: 4, noise: 0.14, seed: seed + i * 7 + k, bottomDark: 0 });
+    }
+  }
+  // ほりかけの土くれ(まわりに2〜3つ)
+  const n = 2 + Math.floor(vnoise(seed, 17) * 1.99);
+  for (let i = 0; i < n; i++) {
+    const a = vnoise(seed + i, 23) * Math.PI * 2;
+    const r = 0.32 + vnoise(i, seed) * 0.13;
+    const s = 0.055 + vnoise(i * 3, seed) * 0.04;
+    appendBlob(A, Math.cos(a) * r, 0.02 + s * 0.5, Math.sin(a) * r, s * 1.3, s, s * 1.1,
+      jitterColor(C_SOIL_LIGHT, seed + i * 13, 0.12),
+      { segs: 5, noise: 0.2, seed: seed + i * 13, flatBottom: true, bottomDark: 0.16 });
+  }
+  // シャベルの すくいあと(明るい土の帯を1本。「ただの丸い土」に見せない)
+  appendBlob(A, -0.12, 0.135, 0.08, 0.17, 0.02, 0.075,
+    jitterColor(Color3.FromHexString('#c4a684'), seed + 51, 0.08),
+    { segs: 6, noise: 0.16, seed: seed + 51, bottomDark: 0 });
+  const m = faceOutward(toMesh(scene, `digmound_${seed}`, A, 'flip'));
+  m.isPickable = false;
+  return m;
+}
+
 /** 低い柵(縁の転落防止に見える程度): 杭+横木1本 */
 export function makeLowFence(scene: Scene, seed: number, len = 2.4): Mesh {
   const A = A0();

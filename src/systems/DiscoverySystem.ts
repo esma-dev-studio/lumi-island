@@ -20,6 +20,12 @@ export const RECIPE_DISCOVERY: Partial<Record<ItemId, string[]>> = {
   twig: ['r_pinwheel', 'r_birdhouse'],
   clay: ['r_pot'],
   glassfloat: ['r_seamobile'],
+  // v9 道具→素材の階段の「ごほうび」。
+  // むしかごは どの虫を初めてつかまえても ひらめく(6種すべてに同じレシピを載せる)。
+  b_shiro: ['r_bugcage'], b_ageha: ['r_bugcage'], b_tento: ['r_bugcage'],
+  b_kabuto: ['r_bugcage'], b_hotaru: ['r_bugcage'], b_suzu: ['r_bugcage'],
+  shard_pot: ['r_ancient_pot'],
+  straw: ['r_scarecrow'],
 };
 
 /**

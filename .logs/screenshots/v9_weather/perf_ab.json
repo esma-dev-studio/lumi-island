@@ -1,0 +1,65 @@
+{
+  "rows": [
+    {
+      "weather": "sunny",
+      "hour": 12,
+      "frames": 2065,
+      "rain": 0,
+      "p50": 6.7,
+      "p95": 8.8,
+      "p99": 10.4,
+      "max": 15.9,
+      "avg": 6.78
+    },
+    {
+      "weather": "rainy",
+      "hour": 12,
+      "frames": 1930,
+      "rain": 1,
+      "p50": 7.3,
+      "p95": 9.3,
+      "p99": 10.2,
+      "max": 11.7,
+      "avg": 7.26
+    },
+    {
+      "weather": "sunny",
+      "hour": 12,
+      "frames": 2094,
+      "rain": 0,
+      "p50": 6.7,
+      "p95": 8.6,
+      "p99": 9.5,
+      "max": 14.1,
+      "avg": 6.69
+    },
+    {
+      "weather": "rainy",
+      "hour": 12,
+      "frames": 1770,
+      "rain": 1,
+      "p50": 7.9,
+      "p95": 10.3,
+      "p99": 11.6,
+      "max": 15.2,
+      "avg": 7.91
+    }
+  ],
+  "summary": {
+    "offP50": 6.7,
+    "onP50": 7.6,
+    "offP95": 8.7,
+    "onP95": 9.8,
+    "offP99": 9.95,
+    "onP99": 10.9,
+    "offAvg": 6.74,
+    "onAvg": 7.59,
+    "deltaP50": 0.9,
+    "deltaP95": 1.1,
+    "deltaP99": 0.95,
+    "deltaAvg": 0.85
+  },
+  "errors": [],
+  "sampleMs": 14000,
+  "vsync": "off"
+}

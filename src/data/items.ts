@@ -7,6 +7,12 @@ export type ItemId =
   | 'fish' | 'nightfish' | 'jam'
   // v8 海の魚(桟橋でだけ つれる)
   | 'seafish' | 'rarefish'
+  // v9 雨の日だけ 地面に出る(道具なしで手にひろえる)
+  | 'snail'
+  // v9 虫あみでつかまえる虫6種(昼4・夜2)
+  | 'b_shiro' | 'b_ageha' | 'b_tento' | 'b_kabuto' | 'b_hotaru' | 'b_suzu'
+  // v9 シャベルで ほりだすもの3種 / カマでかる わら
+  | 'shard_pot' | 'shiny_stone' | 'gold_piece' | 'straw'
   | 'f_bench' | 'f_lantern' | 'f_stonelamp' | 'f_table' | 'f_planter'
   | 'f_chair' | 'f_shelf' | 'f_rug' | 'f_pot' | 'f_sign'
   | 'f_flowerbed' | 'f_mushlamp' | 'f_shelldeco' | 'f_starlantern'
@@ -14,11 +20,15 @@ export type ItemId =
   | 'f_bookcase' | 'f_dishrack' | 'f_flowervase'
   // v8 新しい置き家具(うえきばち f_pot は お店の品をクラフトでも作れるようにした)
   | 'f_broom' | 'f_jar' | 'f_birdhouse' | 'f_pinwheel' | 'f_seamobile' | 'f_gardentable'
+  // v9 新しい置き家具4種(虫かご・いにしえのつぼ・わらのマット・かかし)
+  | 'f_bugcage' | 'f_ancient_pot' | 'f_strawmat' | 'f_scarecrow'
+  // v9 おくりもの: なかよし度5でおしえてもらう とくべつな家具3種(NPC1人につき1つ)
+  | 'f_finetable' | 'f_fishtrophy' | 'f_starmap'
   // v7-P2 模様替え(かべがみ・ゆかいた)。使っても無くならないので、各1個あれば足りる
   | 'wall_cream' | 'wall_sky' | 'wall_leaf'
   | 'floor_wood' | 'floor_tile' | 'floor_rug';
 
-export type ToolId = 'axe' | 'pickaxe' | 'rod' | 'sickle';
+export type ToolId = 'axe' | 'pickaxe' | 'rod' | 'sickle' | 'net' | 'shovel';
 
 export interface ItemDef {
   id: ItemId;
@@ -50,7 +60,22 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   // ---- v8 海の魚2種(桟橋でだけ つれる。池では つれない) ----
   seafish: { id: 'seafish', name: 'あおうお', sell: 12, kind: 'food', desc: '昼の海で つれる、青いせなかの魚' },
   rarefish: { id: 'rarefish', name: 'にじうお', sell: 30, kind: 'food', desc: '夜の海に まれに出る、にじ色にひかる魚' },
+  // ---- v9 雨の日だけ 地面に出る(むしあみは いらない。手でひろえる) ----
+  snail: { id: 'snail', name: 'カタツムリ', sell: 14, kind: 'material', desc: '雨の日だけ 草の上を ゆっくり あるく。手でひろえる' },
   jam: { id: 'jam', name: 'ベリージャム', sell: 45, kind: 'food', desc: 'ルミベリーをにつめた。みんな大すき' },
+  // ---- v9 虫6種(むしあみが ひつよう。昼は花と草と林、夜は池と草むら) ----
+  b_shiro: { id: 'b_shiro', name: 'モンシロチョウ', sell: 8, kind: 'material', desc: '昼の花のまわりを ひらひら とぶ 白いチョウ' },
+  b_ageha: { id: 'b_ageha', name: 'アゲハチョウ', sell: 15, kind: 'material', desc: '花のそばに ときどき来る、大きな もようのチョウ' },
+  b_tento: { id: 'b_tento', name: 'テントウムシ', sell: 10, kind: 'material', desc: '草むらの 地面すれすれを あるく 赤い虫' },
+  b_kabuto: { id: 'b_kabuto', name: 'カブトムシ', sell: 30, kind: 'material', desc: '林の木の みきに とまっている、つのの ある虫' },
+  b_hotaru: { id: 'b_hotaru', name: 'ホタル', sell: 18, kind: 'material', desc: '夜の池のまわりで ちかちか 光りながら ただよう' },
+  b_suzu: { id: 'b_suzu', name: 'スズムシ', sell: 12, kind: 'material', desc: '夜の草むらに いる、りんりんと鳴く虫' },
+  // ---- v9 シャベルの ほりだしもの3種 ----
+  shard_pot: { id: 'shard_pot', name: 'つぼのかけら', sell: 10, kind: 'material', desc: '土の中から 出てきた、もようの ある やきものの かけら' },
+  shiny_stone: { id: 'shiny_stone', name: 'きらきらの石', sell: 20, kind: 'material', desc: 'みがいたように つやつやした、ふしぎな 小石' },
+  gold_piece: { id: 'gold_piece', name: 'きんのかけら', sell: 60, kind: 'material', desc: 'まれに 出てくる、ずっしり重い 金いろの かけら' },
+  // ---- v9 カマで かる わら ----
+  straw: { id: 'straw', name: 'わら', sell: 4, kind: 'material', desc: '背の高い草を かってたばねた もの' },
   f_bench: { id: 'f_bench', name: 'ウッドベンチ', sell: 30, kind: 'furniture', desc: 'すわってひと休みできるベンチ' },
   f_lantern: { id: 'f_lantern', name: 'ランタン', sell: 40, kind: 'furniture', desc: '夜をやさしく照らす', glow: true },
   f_stonelamp: { id: 'f_stonelamp', name: 'いしのランプ', sell: 55, kind: 'furniture', desc: 'ルミナこうせきの明かり', glow: true },
@@ -77,6 +102,15 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   f_pinwheel: { id: 'f_pinwheel', name: 'かざぐるま', sell: 28, kind: 'furniture', desc: '風で はねが ゆっくりまわる かざぐるま' },
   f_seamobile: { id: 'f_seamobile', name: 'うみのモビール', sell: 52, kind: 'furniture', desc: 'うきだまと かいがらのモビール。夜は あお白くひかる', glow: true },
   f_gardentable: { id: 'f_gardentable', name: 'ガーデンテーブル', sell: 46, kind: 'furniture', desc: '石の脚に 木の天板をのせた そとのテーブル' },
+  // ---- v9 新しい置き家具4種 ----
+  f_bugcage: { id: 'f_bugcage', name: 'むしかご', sell: 30, kind: 'furniture', desc: 'こえだで 組んだ かご。さいごに つかまえた虫が 中に見える' },
+  f_ancient_pot: { id: 'f_ancient_pot', name: 'いにしえのつぼ', sell: 55, kind: 'furniture', desc: 'つぼのかけらを つなぎ合わせて なおした、つぎめの ある土器' },
+  f_strawmat: { id: 'f_strawmat', name: 'わらのマット', sell: 20, kind: 'furniture', desc: 'わらを ぐるぐる まいて あんだ、まるい しきもの' },
+  f_scarecrow: { id: 'f_scarecrow', name: 'かかし', sell: 35, kind: 'furniture', desc: 'わらと こえだで つくった 畑の見はり。ぼうしを かぶっている' },
+  // ---- v9 おくりもの: なかよし度5の お礼レシピで作れる3種(島のみんなの おしえ) ----
+  f_finetable: { id: 'f_finetable', name: 'こだわりのテーブル', sell: 70, kind: 'furniture', desc: 'ツムギが おしえてくれた、木めを えらんで 組んだ とくべつなテーブル' },
+  f_fishtrophy: { id: 'f_fishtrophy', name: 'さかなのトロフィー', sell: 65, kind: 'furniture', desc: 'ミナモが おしえてくれた、木の台に つった魚を かざる トロフィー' },
+  f_starmap: { id: 'f_starmap', name: 'ほしぞらのちず', sell: 80, kind: 'furniture', desc: 'ノクトが おしえてくれた、夜空の 星のならびを うつしとった ちず' },
   // ---- v7-P2 模様替え(室内で「つかう」。何度でも かえられる) ----
   // 名前は6文字までにする。もちものの1マスは4文字ほどで折り返すので、
   // 「クリームのかべがみ」のような長い名前は3〜4行に割れて読みにくい(実機のスクショで確認)。
@@ -124,8 +158,16 @@ export const TOOLS: Record<ToolId, { id: ToolId; name: string; desc: string }> =
   axe: { id: 'axe', name: 'オノ', desc: '木をきって、もくざいをとる' },
   pickaxe: { id: 'pickaxe', name: 'ツルハシ', desc: '岩やこうせきをくだく' },
   rod: { id: 'rod', name: 'ツリザオ', desc: '海や池で魚をつる' },
-  sickle: { id: 'sickle', name: 'カマ', desc: '草をかりとる' },
+  sickle: { id: 'sickle', name: 'カマ', desc: '草をかりとる。背の高い草からは わらがとれる' },
+  // v9 道具→素材の階段: 道具を作ると、その道具でしか手に入らない素材が増える
+  net: { id: 'net', name: '虫あみ', desc: '虫をつかまえる' },
+  shovel: { id: 'shovel', name: 'シャベル', desc: '地面のほりあとを ほる' },
 };
+
+/** 道具の表示名(ヒントの「◯◯が ひつよう」に使う)。TOOLSを唯一の情報源にする */
+export function toolName(tool: ToolId): string {
+  return TOOLS[tool].name;
+}
 
 export interface RecipeDef {
   id: string;
@@ -164,6 +206,19 @@ export const RECIPES: RecipeDef[] = [
   { id: 'r_pinwheel', name: 'かざぐるま', out: 'f_pinwheel', outKind: 'item', cost: { twig: 1, fiber: 1, flower: 1 } },
   { id: 'r_seamobile', name: 'うみのモビール', out: 'f_seamobile', outKind: 'item', cost: { glassfloat: 1, shell: 2 } },
   { id: 'r_gardentable', name: 'ガーデンテーブル', out: 'f_gardentable', outKind: 'item', cost: { wood: 3, stone: 1 } },
+  // ---- v9 道具2種と、その道具でとれる素材から作るもの4種 ----
+  { id: 'r_net', name: '虫あみ', out: 'net', outKind: 'tool', cost: { twig: 2, fiber: 2 } },
+  { id: 'r_shovel', name: 'シャベル', out: 'shovel', outKind: 'tool', cost: { wood: 2, stone: 2 } },
+  { id: 'r_bugcage', name: 'むしかご', out: 'f_bugcage', outKind: 'item', cost: { twig: 3, fiber: 2 } },
+  { id: 'r_ancient_pot', name: 'いにしえのつぼ', out: 'f_ancient_pot', outKind: 'item', cost: { shard_pot: 3, clay: 1 } },
+  { id: 'r_strawmat', name: 'わらのマット', out: 'f_strawmat', outKind: 'item', cost: { straw: 3 } },
+  { id: 'r_scarecrow', name: 'かかし', out: 'f_scarecrow', outKind: 'item', cost: { straw: 3, twig: 2, cutgrass: 1 } },
+  // ---- v9 おくりもの: なかよし度5の お礼でおぼえる3種 ----
+  // INITIAL_RECIPES にも RECIPE_DISCOVERY にも入れない(お礼だけが入手経路)。
+  // 材料は「そのNPCらしいもの」で組む: ツムギ=木とやきもの、ミナモ=魚とかいがら、ノクト=星と草。
+  { id: 'r_woodtable_fine', name: 'こだわりのテーブル', out: 'f_finetable', outKind: 'item', cost: { wood: 4, shard_pot: 1 } },
+  { id: 'r_fishtrophy', name: 'さかなのトロフィー', out: 'f_fishtrophy', outKind: 'item', cost: { fish: 1, shell: 2 } },
+  { id: 'r_starmap', name: 'ほしぞらのちず', out: 'f_starmap', outKind: 'item', cost: { starshard: 1, straw: 2, moss: 2 } },
 ];
 
 // 最初から知っているレシピ。
@@ -173,10 +228,14 @@ export const RECIPES: RecipeDef[] = [
 // (ひらめきの引き金にできる「初めて手に入る素材」がもう残っていないため)。
 // v8: ほうき・つぼ・ガーデンテーブルも最初から見せる(拾えるものが増えたことに気づく入口)。
 // うえきばち・かざぐるま・とりのすばこ・うみのモビールは素材の初回入手でひらめく。
+// v9: 道具(虫あみ・シャベル)は「作ると新しい素材がとれる」階段の入口なので最初から見せる。
+// わらのマットも同じ理由(カマ→わら→マット の1歩目を見せる)。
+// むしかご・いにしえのつぼ・かかしは、その道具でとれた素材の初回入手でひらめく。
 export const INITIAL_RECIPES = [
   'r_sickle', 'r_rod', 'r_flowerbed', 'r_shelldeco',
   'r_bookcase', 'r_dishrack', 'r_flowervase', 'r_wall_leaf', 'r_floor_rug',
   'r_broom', 'r_jar', 'r_gardentable',
+  'r_net', 'r_shovel', 'r_strawmat',
 ];
 
 // ツムギの店で買える家具・かべがみ・ゆかいた

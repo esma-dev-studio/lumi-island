@@ -78,6 +78,12 @@ export class InputRouter {
   escape(): void {
     const gs = this.gs;
     if (gs.seq.active) return; // 就寝・見せ場の途中で中断やポーズをさせない(状態破壊防止)
+    // おくりものの選択パネルは会話の上に乗る小さなUI。開いていたらそれだけ閉じて会話に戻す
+    // (Escで会話ごと終わってしまうと、話しかけ直しが必要になって子どもが迷う)
+    if (gs.questDlg?.giftUI.open) {
+      gs.questDlg.giftUI.cancel();
+      return;
+    }
     const wasOpen =
       gs.invUI.open || gs.craftUI.open || gs.shopUI.open || gs.questLog.open ||
       gs.codexUI.open || gs.dialogue.open || gs.pauseMenu.open || gs.questComplete.open ||
@@ -87,6 +93,7 @@ export class InputRouter {
     gs.shopUI.close();
     gs.questLog.close();
     gs.codexUI.close();
+    gs.questDlg?.giftUI.close(); // 念のため(上のearly returnで通常は閉じている)
     gs.dialogue.close();
     gs.questComplete.hide();
     gs.pauseMenu.close();

@@ -116,10 +116,13 @@ export function load(): GameState | null {
     // NPC(既知IDのみ)
     if (typeof raw.npcs === 'object' && raw.npcs !== null) {
       for (const id of Object.keys(s.npcs)) {
-        const n = (raw.npcs as Record<string, { friendship?: unknown; talkedToday?: unknown }>)[id];
+        const n = (raw.npcs as Record<string, { friendship?: unknown; talkedToday?: unknown; giftedToday?: unknown }>)[id];
         if (n) {
           s.npcs[id].friendship = Math.floor(numIn(n.friendship, 0, 99999, 0));
           s.npcs[id].talkedToday = n.talkedToday === true;
+          // 項目が無い旧セーブ・壊れた値は false(=きょうはまだあげていない)。
+          // 1日1回の制限を「甘い側」に倒すので、読みこみで詰まることはない
+          s.npcs[id].giftedToday = n.giftedToday === true;
         }
       }
     }

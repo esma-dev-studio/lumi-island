@@ -10,7 +10,7 @@ import '@babylonjs/core/Layers/effectLayerSceneComponent';
 import type { Scene } from '@babylonjs/core/scene';
 import { Scene as BScene } from '@babylonjs/core/scene';
 import { getGlowMats } from '../entities/flora';
-import { setPoolLevels, nearestGlowSource } from '../entities/effects';
+import { setPoolLevels, nearestGlowSource, setWeatherSky, weatherGlowExcludes } from '../entities/effects';
 import type { WaterRefs } from '../entities/water';
 
 interface RawStop {
@@ -52,6 +52,22 @@ const C_BLUE = Color3.FromHexString('#a8c8ff');
 
 const TICK = 1 / 15; // 秒(重い色更新の周期)
 
+// ---- 天気(くもり・あめ)のときに空と光を寄せる寒色 ----
+// 「暗くする」のではなく「寒色に寄せて・コントラストを落とす」。夜と同じ考え方で、
+// 道と人物が読めなくなるほどは暗くしない(半球光はほとんど下げない)。
+const C_OVERCAST_SKY = Color3.FromHexString('#8d9aa6'); // 雨雲の空
+const C_OVERCAST_FOG = Color3.FromHexString('#93a0aa'); // 雨けむり
+const C_OVERCAST_SUN = Color3.FromHexString('#b8c4d2'); // 雲ごしの弱い光
+const C_OVERCAST_HEMI = Color3.FromHexString('#a2b0bc');
+const C_OVERCAST_SEA = Color3.FromHexString('#3c5a6b');
+/** いちばん寒いとき(本降り)の効き方 */
+const W_SKY_MIX = 0.72; // 空・霧の色をどれだけ寒色へ寄せるか
+const W_LIGHT_MIX = 0.55; // 太陽・半球光の色
+const W_SUN_DOWN = 0.48; // 太陽の強さの下げ幅
+const W_HEMI_DOWN = 0.1; // 半球光の下げ幅(暗くしすぎない)
+const W_FOG_UP = 1.05; // 霧の濃さの増し幅(雨けむり)
+const W_GLOW_UP = 0.35; // 発光物の増し幅(暗い空の中で灯りが映える)
+
 export class DayNight {
   sun: DirectionalLight;
   hemi: HemisphericLight;
@@ -61,6 +77,11 @@ export class DayNight {
   private poolLight: PointLight;
   private acc = TICK; // 初回は即時反映
   private tmpA = new Color3();
+  /** 天気の寒色ぐあい(0=はれ 1=本降り)。WeatherSystemが毎フレーム書き込む */
+  private cold = 0;
+  private lastHour = 6;
+  private lastPx: number | undefined;
+  private lastPz: number | undefined;
 
   constructor(
     private scene: Scene,
@@ -71,6 +92,8 @@ export class DayNight {
     this.hemi = new HemisphericLight('hemi', new Vector3(0, 1, 0), scene);
     this.glow = new GlowLayer('glow', scene, { mainTextureSamples: 2 });
     this.glow.intensity = 0.4;
+    // 天気の演出のうち、発光レイヤーに焼かれると にじむものを外す(虹)
+    for (const m of weatherGlowExcludes()) this.glow.addExcludedMesh(m);
     scene.fogMode = BScene.FOGMODE_EXP2;
     // 夜: いちばん近い発光物からプレイヤーへ光を回す(動的ライトはこの1灯のみ)
     this.poolLight = new PointLight('poolLight', new Vector3(0, -50, 0), scene);
@@ -87,8 +110,27 @@ export class DayNight {
     this.update(hour, px, pz);
   }
 
+  /**
+   * 天気の寒色ぐあいを設定する(0=はれ 1=本降り)。
+   * 色の計算はupdateにまとめてあるので、ここでは値を覚えて、変わったときだけ塗り直す
+   * (setHourのような即時更新のあとでも、天気が反映された絵になる)。
+   */
+  setCold(cold: number): void {
+    const v = Math.max(0, Math.min(1, cold));
+    if (Math.abs(v - this.cold) < 0.004) return;
+    this.cold = v;
+    this.update(this.lastHour, this.lastPx, this.lastPz);
+  }
+  get coldLevel(): number {
+    return this.cold;
+  }
+
   /** 即時更新(デバッグ・イベント用) */
   update(hour: number, px?: number, pz?: number): void {
+    this.lastHour = hour;
+    this.lastPx = px;
+    this.lastPz = pz;
+    const w = this.cold;
     const h = hour < STOPS[0].h ? hour + 24 : hour;
     let a = STOPS[0], b = STOPS[STOPS.length - 1];
     for (let i = 0; i < STOPS.length - 1; i++) {
@@ -103,15 +145,24 @@ export class DayNight {
     const L = (x: number, y: number): number => x + (y - x) * t;
 
     Color3.LerpToRef(a.sky, b.sky, t, this.tmpA);
+    // 天気ぶんの寒色寄せ。時刻の色を作りおえてから、その上に重ねる(時刻の階調は保つ)
+    if (w > 0) Color3.LerpToRef(this.tmpA, C_OVERCAST_SKY, w * W_SKY_MIX, this.tmpA);
     this.scene.clearColor = new Color4(this.tmpA.r, this.tmpA.g, this.tmpA.b, 1);
+    setWeatherSky(this.tmpA); // 水たまりの映りこみ・虹の下地に使う空の色
     Color3.LerpToRef(a.fog, b.fog, t, this.scene.fogColor);
-    this.scene.fogDensity = L(a.fogD, b.fogD);
+    if (w > 0) Color3.LerpToRef(this.scene.fogColor, C_OVERCAST_FOG, w * W_SKY_MIX, this.scene.fogColor);
+    this.scene.fogDensity = L(a.fogD, b.fogD) * (1 + w * W_FOG_UP);
     Color3.LerpToRef(a.sunC, b.sunC, t, this.sun.diffuse);
-    this.sun.intensity = L(a.sunI, b.sunI);
+    if (w > 0) Color3.LerpToRef(this.sun.diffuse, C_OVERCAST_SUN, w * W_LIGHT_MIX, this.sun.diffuse);
+    this.sun.intensity = L(a.sunI, b.sunI) * (1 - w * W_SUN_DOWN);
     Color3.LerpToRef(a.hemiC, b.hemiC, t, this.hemi.diffuse);
     Color3.LerpToRef(a.hemiG, b.hemiG, t, this.hemi.groundColor);
+    if (w > 0) {
+      Color3.LerpToRef(this.hemi.diffuse, C_OVERCAST_HEMI, w * W_LIGHT_MIX, this.hemi.diffuse);
+      Color3.LerpToRef(this.hemi.groundColor, C_OVERCAST_HEMI, w * W_LIGHT_MIX * 0.5, this.hemi.groundColor);
+    }
     // 開花後は夜の環境光がわずかに明るくなる(島がめざめた感じ)
-    this.hemi.intensity = L(a.hemiI, b.hemiI) * (1 + (this.lumiBoost - 1) * 0.08);
+    this.hemi.intensity = L(a.hemiI, b.hemiI) * (1 + (this.lumiBoost - 1) * 0.08) * (1 - w * W_HEMI_DOWN);
 
     // 太陽の向き(6時=東から、18時=西へ。夜は月の固定方向)
     const dayT = Math.max(0, Math.min(1, (hour - 6) / 12.5));
@@ -126,9 +177,11 @@ export class DayNight {
 
     // 発光(植物・窓・街灯)+光だまり
     const gm = getGlowMats(this.scene);
-    const mint = L(a.glowMint, b.glowMint) * this.lumiBoost;
-    const amber = L(a.glowAmber, b.glowAmber);
-    const blue = L(a.glowBlue, b.glowBlue) * Math.min(1.3, this.lumiBoost);
+    // 雨・くもりの暗い空では、窓や街灯の明かりを少しだけ強める(昼でも灯りが見えるように)
+    const gw = 1 + w * W_GLOW_UP;
+    const mint = L(a.glowMint, b.glowMint) * this.lumiBoost * gw;
+    const amber = L(a.glowAmber, b.glowAmber) * gw;
+    const blue = L(a.glowBlue, b.glowBlue) * Math.min(1.3, this.lumiBoost) * gw;
     this.lastGlow = { mint, amber, blue };
     gm.mint.emissiveColor.copyFrom(C_MINT);
     gm.mint.emissiveColor.scaleToRef(mint, gm.mint.emissiveColor);
@@ -139,8 +192,11 @@ export class DayNight {
     this.glow.intensity = (0.25 + L(a.glowMint, b.glowMint) * 0.5) * Math.min(1.4, this.lumiBoost);
     setPoolLevels(amber, mint, blue);
 
-    // 海・池の色
+    // 海・池の色(雨のときは彩度を落として寒色へ)
     Color3.LerpToRef(a.sea, b.sea, t, this.water.seaMat.diffuseColor);
+    if (w > 0) {
+      Color3.LerpToRef(this.water.seaMat.diffuseColor, C_OVERCAST_SEA, w * W_LIGHT_MIX, this.water.seaMat.diffuseColor);
+    }
     this.water.seaMat.diffuseColor.scaleToRef(0.96, this.water.pondMat.diffuseColor);
 
     // 夜のプレイヤー近傍ライト

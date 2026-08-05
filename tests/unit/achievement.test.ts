@@ -18,14 +18,17 @@ function putCodex(s: GameState, item: string, n: number): void {
 }
 
 describe('実績の定義', () => {
-  it('10種あり、idも表示名も重複しない', () => {
-    expect(ACHIEVEMENTS.length).toBe(10);
-    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(10);
-    expect(new Set(ACHIEVEMENTS.map((a) => a.name)).size).toBe(10);
+  it('idも表示名も重複しない', () => {
+    expect(ACHIEVEMENTS.length).toBeGreaterThanOrEqual(10);
+    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(ACHIEVEMENTS.length);
+    expect(new Set(ACHIEVEMENTS.map((a) => a.name)).size).toBe(ACHIEVEMENTS.length);
   });
 
-  it('仕様の10種がそろっている(id・表示名・必要数)', () => {
-    const table = ACHIEVEMENTS.map((a) => [a.id, a.name, a.target]);
+  // 実績はバージョンごとに増える(v9でむしとり・おくりものを追加)。
+  // ここでは「先にあった9種の並びが変わらないこと」と「最後は おねがいマスター」だけを固定し、
+  // 追加ぶんの中身は それぞれの機能のテストで見る(足すたびにこの表を書きかえない)。
+  it('v8までの9種の並び・表示名・必要数は変わらない', () => {
+    const table = ACHIEVEMENTS.slice(0, 9).map((a) => [a.id, a.name, a.target]);
     expect(table).toEqual([
       ['a_first_quest', 'はじめてのおてつだい', 1],
       ['a_wood10', 'きこりみならい', 10],
@@ -36,8 +39,12 @@ describe('実績の定義', () => {
       ['a_place5', 'しまのかざりつけ', 5],
       ['a_glow5', 'ひかりのしま', 5],
       ['a_star1', 'よふかしのたからもの', 1],
-      ['a_all_quests', 'おねがいマスター', 5],
     ]);
+  });
+
+  it('いちばん最後の目標は おねがいマスター', () => {
+    const last = ACHIEVEMENTS[ACHIEVEMENTS.length - 1];
+    expect([last.id, last.name, last.target]).toEqual(['a_all_quests', 'おねがいマスター', 5]);
   });
 
   it('未達成のヒント(desc)が全部ある(未獲得欄に取り方を見せる)', () => {

@@ -28,11 +28,31 @@ export function nextOutdoorEntry(schedule: ScheduleEntry[], hour: number): { hou
   return best ? { hour: best.hour, spot: best.spot } : null;
 }
 
+/**
+ * おくりものの反応セリフ(3段階)。文中の {item} は あげたものの名前に置きかわる。
+ *   love : 大好物(なかよし度 +2)
+ *   like : よろこぶもの(+1・専用のことば)
+ *   ok   : それ以外(+1・ふつうに受け取る)
+ */
+export interface GiftLines {
+  love: string[];
+  like: string[];
+  ok: string[];
+}
+
 export interface NpcDef {
   id: string;
   charId: string;
   name: string;
-  likes: ItemId[];
+  /** 大好物。おくりもので なかよし度が +2 になる(src/systems/GiftSystem.ts が読む) */
+  giftLoves: ItemId[];
+  /** よろこぶもの。+1 だが専用のことばで返す */
+  giftLikes: ItemId[];
+  giftLines: GiftLines;
+  /** なかよし度5でとどく お礼の手紙(ちいさな詩のような1文) */
+  thanksLetter: string;
+  /** なかよし度5でおぼえる とくべつなレシピID(src/data/items.ts の RECIPES) */
+  thanksRecipe: string;
   schedule: ScheduleEntry[];
   // 依頼の受注・報告相手になっている間は家に入らず、ここに居続ける(子どもを待たせない)
   questEntry: ScheduleEntry;
@@ -44,7 +64,16 @@ export const NPCS: NpcDef[] = [
     id: 'minamo',
     charId: 'minamo',
     name: 'ミナモ',
-    likes: ['fish', 'nightfish'],
+    // 釣りが大すき。サカナ系はぜんぶ大好物、浜べのひろいものをよろこぶ
+    giftLoves: ['fish', 'nightfish', 'seafish', 'rarefish'],
+    giftLikes: ['shell', 'glassfloat'],
+    giftLines: {
+      love: ['うわあ、{item}! ぼくの いちばんの こうぶつだよ。', 'きょうは いい日だなあ。ありがとう!'],
+      like: ['{item}だ! 浜べで ひろったの?', 'ぼくの たからばこに 入れておくね。'],
+      ok: ['{item}を くれるの? ありがとう。', 'なんだか うれしいな。'],
+    },
+    thanksLetter: '水のおとが、きみの 足おとに にてきたよ。',
+    thanksRecipe: 'r_fishtrophy',
     schedule: [
       { from: 6, to: 10, spot: 'pond', activity: 'fish' },
       { from: 10, to: 13, spot: 'plaza', activity: 'stroll' },
@@ -63,7 +92,16 @@ export const NPCS: NpcDef[] = [
     id: 'nokto',
     charId: 'nokto',
     name: 'ノクト',
-    likes: ['ore', 'moss'],
+    // 夜と星の研究者。空から来たかけらが大好物、光る石をよろこぶ
+    giftLoves: ['starshard', 'gold_piece'],
+    giftLikes: ['ore', 'shiny_stone', 'moss'],
+    giftLines: {
+      love: ['ほう…{item}か! これは たからものじゃ。', 'ワシの けんきゅうが すすむのう。ありがとう。'],
+      like: ['{item}じゃな。よい ひかりを もっておる。', 'ふむ、うれしいのう。'],
+      ok: ['{item}を くれるのか。かたじけない。', 'たいせつに するぞい。'],
+    },
+    thanksLetter: '星は 遠いが、おぬしは もう 近い。',
+    thanksRecipe: 'r_starmap',
     schedule: [
       { from: 6, to: 17, spot: 'home', activity: 'home' }, // 昼はうとうと
       { from: 17, to: 20, spot: 'forest', activity: 'watch' },
@@ -81,7 +119,16 @@ export const NPCS: NpcDef[] = [
     id: 'tsumugi',
     charId: 'tsumugi',
     name: 'ツムギ',
-    likes: ['wood', 'jam'],
+    // 家具職人。かざる花・あむ草が大好物、材になる木をよろこぶ
+    giftLoves: ['flower', 'cutgrass'],
+    giftLikes: ['wood', 'twig'],
+    giftLines: {
+      love: ['まあ、{item}! わたし これが いちばん すきなの。', 'たいせつに かざるわね。ありがとう。'],
+      like: ['{item}ね。ちょうど 手わざに つかいたかったの。', 'うれしい。ありがとうね。'],
+      ok: ['{item}を くれるの? ありがとう。', 'だいじに するわね。'],
+    },
+    thanksLetter: 'まどから 入る風が、あなたの ことを はなしていくの。',
+    thanksRecipe: 'r_woodtable_fine',
     schedule: [
       { from: 6, to: 12, spot: 'shop', activity: 'work' },
       { from: 12, to: 13.5, spot: 'bench', activity: 'idle' },

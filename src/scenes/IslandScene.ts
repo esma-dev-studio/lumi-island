@@ -15,11 +15,14 @@ import {
 import {
   scatterDeco, buildPondShore, buildHillDeck, hillDeckRails, deckGroundY, HILL_DECK,
   makeRockLedge, makeOutcrop, makeFlagstones, makeLowFence, makeSeabird, type Seabird,
+  makeTallGrassNode, makeDigMound,
 } from '../entities/deco';
+import { makeBugMesh, type BugMesh } from '../entities/bugs';
 import { buildHouse, makeBench, makeLamp, makeStoneRing } from '../entities/buildings';
 import { makeLogPile, makeCrate, makeBucketRod, makeTelescope, makeDriftwood, makeStump } from '../entities/props';
 import {
   GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, STAR_SPOTS, DRIFT_SPOTS, SEABIRD_CIRCLES,
+  BUG_SPOTS, DIG_SPOTS,
   type GatherNodeDef,
 } from '../data/island';
 import { DayNight } from './DayNight';
@@ -28,6 +31,10 @@ import { TimeSystem } from '../systems/TimeSystem';
 import { StarShardScheduler } from '../systems/StarShardSystem';
 import { DriftScheduler } from '../systems/DriftSystem';
 import { seabirdPose } from '../systems/SeabirdSystem';
+import {
+  BugScheduler, bugOffset, BUG_BY_ID, type ActiveBug, type BugId, type BugPlayer,
+} from '../systems/BugSystem';
+import { DigScheduler } from '../systems/DigSystem';
 
 export interface CircleCollider { x: number; z: number; r: number }
 export interface RectCollider { x: number; z: number; w: number; d: number; rot: number }
@@ -96,6 +103,18 @@ export class IslandScene {
   // ---- うみどり(海の上を旋回するだけ。当たり判定なし) ----
   private birds: Seabird[] = [];
   private birdT = 0;
+  // ---- v9 虫(出現・逃走は純ロジック、見た目だけここが持つ) ----
+  private bugs = new BugScheduler(BUG_SPOTS);
+  private bugMeshes = new Map<number, { id: BugId; m: BugMesh }>();
+  private bugPool = new Map<BugId, BugMesh[]>();
+  // ---- v9 ほりあと(毎日3〜4箇所) ----
+  private digs = new DigScheduler(DIG_SPOTS.length);
+  private digMeshes = new Map<number, Mesh>();
+  /**
+   * プレイヤーの位置と速さ。虫の逃走判定に使う。
+   * GameScene が init で1回だけ差しこむ(未設定なら虫は逃げないだけで、他は何も変わらない)。
+   */
+  playerProbe: (() => BugPlayer) | null = null;
 
   constructor(public engine: Engine) {
     this.scene = new Scene(engine);
@@ -211,6 +230,11 @@ export class IslandScene {
           root = makeClayNode(s, hashId(def.id));
           break;
         }
+        // v9 背の高い草(カマでかると わら)。踏み越えられるよう当たり判定は付けない
+        case 'tallgrass': {
+          root = makeTallGrassNode(s, hashId(def.id));
+          break;
+        }
         // 通常はGATHER_NODESに入らない(夜・朝のスポナーが動的に作る)。念のため同じ道を通せるようにしておく
         case 'starshard': {
           root = makeStarShard(s, hashId(def.id));
@@ -311,7 +335,9 @@ export class IslandScene {
     const ledges: [number, number, number, number][] = [
       // [x, z, 幅, 段数]
       [21.4, -29.6, 1.1, 3], [19.6, -27.4, 0.9, 3], [24.0, -33.0, 1.0, 2],
-      [16.9, -23.6, 0.85, 3], [34.6, -21.8, 1.1, 3], [32.4, -30.4, 1.0, 3],
+      // (34.6,-21.8)の岩段は柵(35.2,-23.4)の北端と0.25mしか離れておらず、東肩を歩くと
+      // 両者に交互に押されるジッタ帯になっていた(回帰ボットがここで停滞)。北西へ逃がす。
+      [16.9, -23.6, 0.85, 3], [34.2, -21.3, 1.1, 3], [32.4, -30.4, 1.0, 3],
       [30.6, -18.4, 0.95, 2], [35.6, -27.4, 0.9, 2],
     ];
     for (let i = 0; i < ledges.length; i++) {
@@ -337,7 +363,7 @@ export class IslandScene {
     }
     // 低い柵(落ちぎわに転落防止に見える程度)
     const fences: [number, number, number, number][] = [
-      [33.0, -29.6, 2.6, 0.6], [35.2, -23.4, 2.2, 1.9], [31.6, -32.2, 2.4, -0.3],
+      [33.0, -29.6, 2.6, 0.6], [35.35, -23.85, 1.8, 1.9], [31.6, -32.2, 2.4, -0.3],
     ];
     for (let i = 0; i < fences.length; i++) {
       const [fx, fz, fl, fr] = fences[i];
@@ -448,6 +474,8 @@ export class IslandScene {
     this.updateStars(dtSec);
     this.updateDrift(dtSec); // 朝のうきだま(同じ理由でポーズ中は進まない)
     this.updateBirds(dtSec);
+    this.updateBugs(dtSec); // 虫(昼夜で顔ぶれが変わる・走って近づくと逃げる)
+    this.updateDigs(); // ほりあと(日付が変わったら配置しなおす)
     // 池のごく弱い上下動(±1.2cm)。スイレンは子メッシュなので一緒にゆれる
     this.waterT += dtSec;
     this.water.pond.position.y = POND.waterY + Math.sin(this.waterT * 0.9) * 0.012;
@@ -563,6 +591,143 @@ export class IslandScene {
       b.wingL.rotation.z = p.wing;
       b.wingR.rotation.z = -p.wing;
     }
+  }
+
+  // ---------- v9 虫 ----------
+  /** いま出ている虫の数(検証・デバッグ用) */
+  get bugCount(): number {
+    return this.bugs.activeCount;
+  }
+  /** いま出ている虫の種類(検証・デバッグ用) */
+  get bugKinds(): string[] {
+    return this.bugs.active.map((b) => b.bug);
+  }
+  /** いま出ている虫の一覧(検証・デバッグ用。位置は毎フレーム変わる) */
+  get bugList(): { key: number; bug: string; x: number; z: number; wary: boolean; fleeing: boolean }[] {
+    return this.bugs.active.map((b) => {
+      const p = this.bugs.positionOf(b);
+      return { key: b.key, bug: b.bug, x: p.x, z: p.z, wary: b.wary, fleeing: b.fleeT > 0 };
+    });
+  }
+  /** 捕獲できる いちばん近い虫。無ければnull(InteractionRoutingが使う) */
+  nearestBug(px: number, pz: number): { bug: ActiveBug; distance: number; x: number; z: number } | null {
+    const hit = this.bugs.nearestCatchable(px, pz);
+    if (!hit) return null;
+    const p = this.bugs.positionOf(hit.bug);
+    return { bug: hit.bug, distance: hit.distance, x: p.x, z: p.z };
+  }
+  /** つかまえた: その虫を消して、スポットを しばらく使わない */
+  catchBug(key: number): void {
+    this.bugs.markCaught(key);
+    this.despawnBug(key);
+  }
+
+  private updateBugs(dt: number): void {
+    const plan = this.bugs.update(dt, this.time.day, this.time.hour, this.playerProbe?.() ?? null);
+    for (const key of plan.removed) this.despawnBug(key);
+    for (const b of plan.spawned) this.spawnBug(b);
+    // 位置・向き・はばたきの反映(メッシュは使い回すので、ここでは作らない)
+    for (const b of this.bugs.active) {
+      const entry = this.bugMeshes.get(b.key);
+      if (!entry) continue;
+      const m = entry.m;
+      const def = BUG_BY_ID[b.bug];
+      const spot = BUG_SPOTS[b.spot];
+      const o = bugOffset(def, b);
+      const gy = this.groundY(spot.x, spot.z);
+      m.root.position.set(spot.x + o.dx, gy + o.dy, spot.z + o.dz);
+      if (spot.kind === 'tree') {
+        // 木の みきに とまっている姿。スポットは幹から+Z側へ寄せてあるので、
+        // 頭を上へ向けて(x回転)幹に はりつかせる(データ側の約束: src/data/island.ts BUG_SPOTS)
+        m.root.rotation.set(-1.15, 0, 0);
+      } else {
+        m.root.rotation.set(0, o.rotY, 0);
+      }
+      if (m.wingL && m.wingR) {
+        m.wingL.rotation.z = o.wing;
+        m.wingR.rotation.z = -o.wing;
+      }
+      if (m.glowPart) {
+        // ホタルの明滅。共有マテリアルなので色は変えず、大きさと表示で ちかちかさせる
+        m.glowPart.setEnabled(o.blink > 0.05);
+        m.glowPart.scaling.setAll(0.4 + o.blink * 0.95);
+      }
+      // 逃げているあいだは小さくなって消える(空へ飛び去って見える)
+      if (b.fleeT > 0) m.root.scaling.setAll(Math.max(0.05, 1 - b.fleeT * 1.1));
+    }
+  }
+
+  private spawnBug(b: ActiveBug): void {
+    const pool = this.bugPool.get(b.bug);
+    const m = pool?.pop() ?? makeBugMesh(this.scene, b.bug, b.seed);
+    m.root.setEnabled(true);
+    m.root.scaling.setAll(1);
+    this.bugMeshes.set(b.key, { id: b.bug, m });
+  }
+
+  private despawnBug(key: number): void {
+    const entry = this.bugMeshes.get(key);
+    if (!entry) return;
+    this.bugMeshes.delete(key);
+    entry.m.root.setEnabled(false);
+    // 破棄せずに種類ごとの置き場へ戻す(数秒おきに作りなおすと描画がひっかかる)
+    const pool = this.bugPool.get(entry.id);
+    if (pool) pool.push(entry.m);
+    else this.bugPool.set(entry.id, [entry.m]);
+  }
+
+  // ---------- v9 ほりあと ----------
+  /** いま出ている「ほりあと」の数(検証・デバッグ用) */
+  get digCount(): number {
+    return this.digMeshes.size;
+  }
+  /** いま出ている「ほりあと」の場所の番号 */
+  get digSpots(): number[] {
+    return [...this.digMeshes.keys()];
+  }
+  /** いま出ている「ほりあと」の一覧(検証・デバッグ用) */
+  get digList(): { spot: number; x: number; z: number }[] {
+    return [...this.digMeshes.keys()].map((spot) => ({ spot, x: DIG_SPOTS[spot].x, z: DIG_SPOTS[spot].z }));
+  }
+  /** いちばん近い「ほりあと」。無ければnull */
+  nearestDig(px: number, pz: number, maxD = 1.9): { spot: number; distance: number; x: number; z: number } | null {
+    let best: { spot: number; distance: number; x: number; z: number } | null = null;
+    for (const spot of this.digMeshes.keys()) {
+      const p = DIG_SPOTS[spot];
+      const d = Math.hypot(px - p.x, pz - p.z);
+      if (d < maxD && (best === null || d < best.distance)) best = { spot, distance: d, x: p.x, z: p.z };
+    }
+    return best;
+  }
+  /** ほった: 跡を消す(その日はもう出ない) */
+  markDug(spot: number): void {
+    this.digs.markDug(spot);
+    this.despawnDig(spot);
+  }
+
+  private updateDigs(): void {
+    const plan = this.digs.update(this.time.day);
+    for (const spot of plan.despawn) this.despawnDig(spot);
+    for (const spot of plan.spawn) this.spawnDig(spot);
+  }
+
+  private spawnDig(spot: number): void {
+    if (this.digMeshes.has(spot)) return;
+    const p = DIG_SPOTS[spot];
+    const m = makeDigMound(this.scene, spot * 19 + 7);
+    m.position.set(p.x, this.groundY(p.x, p.z) - 0.03, p.z);
+    m.rotation.y = spot * 1.13;
+    // 影は落とす側にも受ける側にもしない。地面すれすれの平たい面を影マップの受け手にすると、
+    // 自分の深度と地形の深度がほぼ同じでシャドウアクネが出て、上面が真っ黒に見える(実機の接写で確認)
+    m.receiveShadows = false;
+    this.digMeshes.set(spot, m);
+  }
+
+  private despawnDig(spot: number): void {
+    const m = this.digMeshes.get(spot);
+    if (!m) return;
+    this.digMeshes.delete(spot);
+    m.dispose(); // 共有マテリアルは道連れにしない
   }
 
   /**
