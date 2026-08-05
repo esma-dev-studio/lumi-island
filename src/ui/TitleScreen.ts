@@ -8,6 +8,8 @@ import { byInput } from './inputMode';
 const HELP_KEYBOARD = `
             <span><kbd>W A S D</kbd>/<kbd>矢印</kbd></span><span>あるく</span>
             <span><kbd>Shift</kbd></span><span>はしる</span>
+            <span><kbd>マウス</kbd>ドラッグ</span><span>カメラを まわす</span>
+            <span><kbd>ホイール</kbd></span><span>ズーム(よる・ひく)</span>
             <span><kbd>E</kbd>/<kbd>Space</kbd></span><span>しらべる・とる・はなす</span>
             <span><kbd>Tab</kbd>/<kbd>I</kbd></span><span>もちもの</span>
             <span><kbd>C</kbd></span><span>クラフト</span>
@@ -19,6 +21,8 @@ const HELP_KEYBOARD = `
 const HELP_TOUCH = `
             <span>左下を ゆびで うごかす</span><span>あるく</span>
             <span>おおきく うごかす</span><span>はしる</span>
+            <span>がめんを ゆびで なぞる</span><span>カメラを まわす</span>
+            <span>ゆび2本で ひろげる・ちぢめる</span><span>ズーム(よる・ひく)</span>
             <span>右下の 大きいボタン</span><span>しらべる・とる・はなす</span>
             <span>右上の「もちもの」</span><span>もちもの</span>
             <span>右上の「クラフト」</span><span>クラフト</span>
@@ -62,7 +66,7 @@ export class TitleScreen {
           <div class="help-grid">${byInput(HELP_KEYBOARD, HELP_TOUCH)}
           </div>
         </div>
-        <div class="title-credit">オリジナル作品 / 3Dモデル・音はすべてプログラム生成 <span class="title-ver">v7.1</span></div>
+        <div class="title-credit">オリジナル作品 / 3Dモデル・音はすべてプログラム生成 <span class="title-ver">v8.0</span></div>
       </div>
     `;
     this.el.querySelectorAll<HTMLButtonElement>('[data-act]').forEach((b) => {

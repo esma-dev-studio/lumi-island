@@ -70,7 +70,10 @@ export const DIALOGUE_BACKDROPS: { x: number; y: number; z: number; r: number }[
 
 // 採取ノード(リスポーンあり)
 // flower/mushroom/shell は道具のいらない「拾いもの」。starshard は夜だけ動的に出る(GATHER_NODESには載せない)
-export type NodeKind = 'tree' | 'berry' | 'rock' | 'ore' | 'grass' | 'moss' | 'flower' | 'mushroom' | 'shell' | 'starshard';
+// v8: twig/cutgrass/clay も道具のいらない拾いもの。glassfloat は朝の浜に動的に出る(GATHER_NODESには載せない)
+export type NodeKind =
+  | 'tree' | 'berry' | 'rock' | 'ore' | 'grass' | 'moss' | 'flower' | 'mushroom' | 'shell' | 'starshard'
+  | 'twig' | 'cutgrass' | 'clay' | 'glassfloat';
 export interface GatherNodeDef {
   id: string;
   kind: NodeKind;
@@ -107,6 +110,16 @@ export const GATHER_NODES: GatherNodeDef[] = [
   N('mushroom', -9.5, -36.5, 1), N('mushroom', 1.5, -35.5, 2), N('mushroom', -17, -33, 3),
   // かいがら(浜べの乾いた砂。1ノード=2枚)
   N('shell', -8, 34.5, 1), N('shell', 8, 35.5, 2),
+  // ---- v8 ----
+  // こえだ(林の木の根もとに落ちた小枝2〜3本)。装飾の木から1.5mほどのところに置く
+  N('twig', -7.5, -30, 1), N('twig', 10.5, -37, 2), N('twig', -18.2, -29.7, 3), N('twig', 17.5, -38, 4),
+  // かりくさ(すでに見えている草むらのそば)。「見えるのに拾えない」を解消するのが目的なので、
+  // 散布デコの草(entities/deco.ts scatterDeco)が濃いところを実測して選んである
+  N('cutgrass', -23.6, 8.7, 1), N('cutgrass', -8.4, 15.6, 2), N('cutgrass', 4.4, 20.2, 3),
+  N('cutgrass', 25.8, 5.9, 4), N('cutgrass', -21.6, 19.5, 5),
+  // ねんど(池の南がわの岸。水ぎわから2.9m以上そとに置く=釣り場の帯(FishingSystem.zoneAt)と
+  // 重ねない。採取は釣りより優先度が高いので、重ねると「つりをする」を横取りしてしまう)
+  N('clay', 22, 31, 1), N('clay', 31.2, 31.5, 2),
 ];
 
 /**
@@ -125,6 +138,29 @@ export const STAR_SPOTS: { x: number; z: number }[] = [
   { x: -10, z: 30 }, // 浜べの手前
   { x: 24, z: -12 }, // 高台の登り口
   { x: 2, z: -18 }, // 林の入口
+];
+
+/**
+ * うきだま(ガラスのうきだま)が朝に流れつく浜べの候補地点。
+ * 実測: すべて terrainHeight 0.36〜0.38(波うちぎわの濡れた砂)で walkable、
+ * 最寄りの採取ノードまで3.5m以上、桟橋(x=4±1.2)からも離してある。
+ * 1日に出るのは最大1個(src/systems/DriftSystem.ts)。
+ */
+export const DRIFT_SPOTS: { x: number; z: number }[] = [
+  { x: -19, z: 31.5 }, // 西の浜のはし
+  { x: -5, z: 36.75 }, // 浜べPOIの南(いちばん見つけやすい)
+  { x: 11, z: 37.5 }, // 桟橋の東
+  { x: 18, z: 40.25 }, // 東の浜のはし
+];
+
+/**
+ * うみどり(カモメ)が旋回する円。海の上だけを飛ぶので当たり判定・採取はない。
+ * y は海面(SEA_Y=0.3)からの高さ。
+ */
+export const SEABIRD_CIRCLES: { x: number; z: number; r: number; y: number; speed: number; phase: number }[] = [
+  { x: 2, z: 58, r: 15, y: 7.5, speed: 0.16, phase: 0 },
+  { x: -12, z: 52, r: 11, y: 6.0, speed: 0.21, phase: 2.1 },
+  { x: 19, z: 58.5, r: 12, y: 9.0, speed: 0.13, phase: 4.3 },
 ];
 
 // 装飾の木・やぶ(採取不可のにぎやかし)

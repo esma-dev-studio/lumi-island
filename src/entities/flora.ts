@@ -479,6 +479,136 @@ export function makeShellNode(scene: Scene, seed: number): Mesh {
   return toMesh(scene, `shellnode_${seed}`, A, 'keep');
 }
 
+// ---- こえだ(林の木もとの採取ノード): 地面に落ちた小枝2〜3本 ----
+// appendBoxだけで組む(角のある枝に見せる)ので toMesh は 'keep'(makeLowFenceと同じ)。
+const C_TWIG = Color3.FromHexString('#7a5a3d');
+const C_TWIG2 = Color3.FromHexString('#8d6b46');
+export function makeTwigNode(scene: Scene, seed: number): Mesh {
+  const A = A0();
+  const n = 2 + Math.floor(vnoise(seed, 5) * 1.99); // 2〜3本
+  for (let i = 0; i < n; i++) {
+    const th = vnoise(seed + i * 3, 7) * Math.PI; // 向き(左右対称に置かない)
+    const len = 0.38 + vnoise(i, seed) * 0.26;
+    const cx = (vnoise(i * 5, seed) - 0.5) * 0.22;
+    const cz = (vnoise(seed, i * 5) - 0.5) * 0.22;
+    // 枝の太さ。太いと「角材」に見えるので3cm前後にとどめる(実機の接写で確認)
+    const th2 = 0.026 + vnoise(i, seed * 3) * 0.012;
+    const c = jitterColor(i % 2 ? C_TWIG2 : C_TWIG, seed + i, 0.14);
+    // 配置時に地面へ3cm沈むので、その分だけ持ち上げておく
+    appendBox(A, cx, 0.035 + th2 / 2, cz, len, th2, th2, c, th, seed + i);
+    // 枝分かれ(短い小枝を斜めに1本)
+    const bl = len * (0.3 + vnoise(i * 7, seed) * 0.2);
+    const bth = th + 0.8 + vnoise(i, seed * 5) * 0.7;
+    appendBox(
+      A, cx + Math.cos(th) * len * 0.28, 0.035 + th2 * 0.42, cz + Math.sin(th) * len * 0.28,
+      bl, th2 * 0.7, th2 * 0.7, jitterColor(c, seed + i + 3, 0.12), bth, seed + i + 11
+    );
+  }
+  // 根もとの落ち葉(平たい板。枝と同じ角ばった作りにそろえる)
+  for (let i = 0; i < 3; i++) {
+    const th = vnoise(seed * 2 + i, 13) * Math.PI;
+    const lx = (vnoise(i * 11, seed) - 0.5) * 0.4;
+    const lz = (vnoise(seed, i * 11) - 0.5) * 0.4;
+    appendBox(A, lx, 0.026, lz, 0.11, 0.012, 0.07,
+      jitterColor(Color3.FromHexString('#8a6a42'), seed + i * 5, 0.16), th, seed + i * 5);
+  }
+  return toMesh(scene, `twignode_${seed}`, A, 'keep');
+}
+
+// ---- かりくさ(草むらの採取ノード): 手でつかめる やわらかい草の株 ----
+// 既存の「草むら(クサツル・カマが要る)」と見た目で区別する: 背が高く、色は黄みどり、
+// 何本かは横へたおれている。makeGrassNodeと同じ appendBlob だけの組み方なので toMesh は既定('auto')。
+const C_CUTGRASS = Color3.FromHexString('#9ab863');
+const C_CUTGRASS2 = Color3.FromHexString('#b3c46f');
+export function makeCutGrassNode(scene: Scene, seed: number): Mesh {
+  const A = A0();
+  for (let i = 0; i < 9; i++) {
+    const th = (i / 9) * Math.PI * 2 + seed;
+    const r = 0.18 + vnoise(i, seed) * 0.22;
+    const h = 0.3 + vnoise(i * 2, seed) * 0.26;
+    const lean = 0.06 + vnoise(seed, i) * 0.16; // 外へたおれる量
+    const cx = Math.cos(th) * r, cz = Math.sin(th) * r;
+    const c = jitterColor(i % 3 === 0 ? C_CUTGRASS2 : C_CUTGRASS, seed + i, 0.16);
+    // 下半分(まっすぐ)と上半分(外へしなる)の2段で「たばねられる草」に見せる
+    appendBlob(A, cx, h * 0.3, cz, 0.05, h * 0.32, 0.05, c, {
+      segs: 5, noise: 0.14, seed: seed + i, bottomDark: 0.34,
+    });
+    appendBlob(A, cx + Math.cos(th) * lean, h * 0.72, cz + Math.sin(th) * lean, 0.042, h * 0.36, 0.042,
+      jitterColor(c, seed + i + 5, 0.12), { segs: 5, noise: 0.16, seed: seed + i * 3, bottomDark: 0.2 });
+  }
+  // 株の中心のこんもり(根もとが土から浮いて見えないように)
+  appendBlob(A, 0, 0.08, 0, 0.22, 0.08, 0.2, jitterColor(C_CUTGRASS, seed + 21, 0.1), {
+    segs: 7, noise: 0.2, seed: seed + 21, flatBottom: true, bottomDark: 0.3,
+  });
+  return toMesh(scene, `cutgrassnode_${seed}`, A);
+}
+
+// ---- ねんど(池の泥岸の採取ノード): 濡れた土のしみ+ねんどの塊 ----
+// appendBlobだけなので toMesh は 'flip'(makeMushroomNode・池の岸辺の泥と同じ)。
+const C_CLAY = Color3.FromHexString('#6b5a45');
+const C_CLAY_LUMP = Color3.FromHexString('#7d6a50');
+export function makeClayNode(scene: Scene, seed: number): Mesh {
+  const A = A0();
+  // 濡れた土のしみ(平たく・ふちをノイズでくずす)
+  appendBlob(A, 0, 0.04, 0, 0.46, 0.03, 0.38, jitterColor(C_CLAY, seed, 0.14), {
+    segs: 9, noise: 0.3, seed, bottomDark: 0,
+  });
+  const n = 3;
+  for (let i = 0; i < n; i++) {
+    const th = (i / n) * Math.PI * 2 + seed * 1.9;
+    const r = 0.1 + vnoise(i, seed) * 0.14;
+    const s = 0.09 + vnoise(i * 3, seed) * 0.05;
+    appendBlob(A, Math.cos(th) * r, 0.035 + s * 0.5, Math.sin(th) * r, s * 1.25, s, s * 1.1,
+      jitterColor(C_CLAY_LUMP, seed + i, 0.12),
+      { segs: 6, noise: 0.24, seed: seed + i * 3, flatBottom: true, bottomDark: 0.34 });
+  }
+  // 掘りあとの すじ(明るい色の小さな盛り上がり。ただの丸い塊に見せない)
+  for (let i = 0; i < 2; i++) {
+    const th = vnoise(seed + i, 31) * Math.PI * 2;
+    appendBlob(A, Math.cos(th) * 0.26, 0.05, Math.sin(th) * 0.26, 0.13, 0.02, 0.06,
+      jitterColor(Color3.FromHexString('#8a7358'), seed + i + 7, 0.1),
+      { segs: 5, noise: 0.2, seed: seed + i + 41, bottomDark: 0.1 });
+  }
+  return toMesh(scene, `claynode_${seed}`, A, 'flip');
+}
+
+// ---- うきだま(朝の浜に流れつくレア素材): ガラスの玉+あみ ----
+// appendBlobだけなので 'flip'。ガラスらしさは あわい青緑+白いハイライトの層で出す。
+export function makeGlassFloat(scene: Scene, seed: number): Mesh {
+  const A = A0();
+  const R = 0.155;
+  // 玉の中心。配置時に地面へ3cm沈むので、玉の下1割だけが砂にうまる高さにする
+  // (低くすると「砂にめりこんだ石」に、flatBottomを付けると「まんじゅう形」になる。実機の接写で確認)
+  const cy = R;
+  appendBlob(A, 0, cy, 0, R, R, R, Color3.FromHexString('#8fc6c0'), {
+    segs: 10, noise: 0.03, seed, bottomDark: 0.24,
+  });
+  // 上のハイライト(空の映りこみ)
+  appendBlob(A, -R * 0.28, cy + R * 0.64, R * 0.2, R * 0.42, R * 0.3, R * 0.4, Color3.FromHexString('#e2f4ef'), {
+    segs: 7, noise: 0.05, seed: seed + 3, bottomDark: 0,
+  });
+  // あみ(玉にかかった細いつな)。輪を2本。砂にうまる下がわは玉があるので描かない
+  for (let k = 0; k < 2; k++) {
+    const ax = k === 0 ? 1 : 0.35;
+    const az = k === 0 ? 0.35 : 1;
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      const ny = cy + Math.sin(a) * R * 1.02;
+      if (ny < 0.04) continue; // 地面より下の玉つぶは出さない(砂に散らばった小石に見える)
+      appendBlob(
+        A, Math.cos(a) * R * 1.02 * ax, ny, Math.sin(a) * R * 1.02 * az,
+        0.014, 0.014, 0.014, jitterColor(Color3.FromHexString('#c9b48a'), seed + k * 7 + i, 0.14),
+        { segs: 4, noise: 0.1, seed: seed + i + k * 13, bottomDark: 0.2 }
+      );
+    }
+  }
+  // 上の結び目
+  appendBlob(A, 0, cy + R * 1.16, 0, 0.036, 0.03, 0.036, Color3.FromHexString('#b8a377'), {
+    segs: 5, noise: 0.12, seed: seed + 9, bottomDark: 0.2,
+  });
+  return toMesh(scene, `glassfloat_${seed}`, A, 'flip');
+}
+
 // ---- ほしのかけら(夜だけ現れるレア素材): 小さな結晶。淡い青白に発光する ----
 export function makeStarShard(scene: Scene, seed: number): Mesh {
   const mesh = new Mesh(`starshard_${seed}`, scene);

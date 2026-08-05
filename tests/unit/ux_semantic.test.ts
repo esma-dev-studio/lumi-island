@@ -417,7 +417,8 @@ describe('v6の新しい採取ヒント(4種)', () => {
     expect(GATHER_CATEGORIES).toContain('gatherMushroom');
     expect(GATHER_CATEGORIES).toContain('gatherShell');
     expect(GATHER_CATEGORIES).toContain('gatherStar');
-    expect(GATHER_CATEGORIES.length).toBe(10);
+    // v6の6+4=10に、v8の拾いもの4種(こえだ・かりくさ・ねんど・うきだま)を足して14
+    expect(GATHER_CATEGORIES.length).toBe(14);
   });
   it('既存の文言の判定は変わらない(新ルールが古いヒントを横取りしない)', () => {
     expect(categorizeHint('Eベリーをつむ')).toBe('gatherBerry');

@@ -1,0 +1,94 @@
+{
+ "when": "2026-08-05T08:16:04.210Z",
+ "sampleMs": 14000,
+ "rows": [
+  {
+   "label": "beach_ON_0",
+   "frames": 2280,
+   "p50": 6.2,
+   "p95": 8.2,
+   "p99": 8.9,
+   "avg": 6.14,
+   "activeMeshes": 45
+  },
+  {
+   "label": "beach_OFF_0",
+   "frames": 2541,
+   "p50": 5.5,
+   "p95": 7.5,
+   "p99": 8.3,
+   "avg": 5.51,
+   "activeMeshes": 37
+  },
+  {
+   "label": "beach_ON_1",
+   "frames": 2313,
+   "p50": 6.1,
+   "p95": 8,
+   "p99": 8.7,
+   "avg": 6.05,
+   "activeMeshes": 46
+  },
+  {
+   "label": "beach_OFF_1",
+   "frames": 2653,
+   "p50": 5.2,
+   "p95": 7.1,
+   "p99": 8,
+   "avg": 5.28,
+   "activeMeshes": 35
+  },
+  {
+   "label": "plaza_ON_0",
+   "frames": 2284,
+   "p50": 6.1,
+   "p95": 7.4,
+   "p99": 8,
+   "avg": 6.13,
+   "activeMeshes": 53
+  },
+  {
+   "label": "plaza_OFF_0",
+   "frames": 2518,
+   "p50": 5.6,
+   "p95": 6.8,
+   "p99": 7.5,
+   "avg": 5.56,
+   "activeMeshes": 45
+  },
+  {
+   "label": "plaza_ON_1",
+   "frames": 2331,
+   "p50": 6,
+   "p95": 7.3,
+   "p99": 8.4,
+   "avg": 6.01,
+   "activeMeshes": 53
+  },
+  {
+   "label": "plaza_OFF_1",
+   "frames": 2434,
+   "p50": 5.8,
+   "p95": 7.1,
+   "p99": 7.7,
+   "avg": 5.75,
+   "activeMeshes": 45
+  }
+ ],
+ "summary": {
+  "beach": {
+   "onP95": 8.1,
+   "offP95": 7.3,
+   "onP50": 6.15,
+   "offP50": 5.35,
+   "deltaP95": 0.8
+  },
+  "plaza": {
+   "onP95": 7.35,
+   "offP95": 6.95,
+   "onP50": 6.05,
+   "offP50": 5.7,
+   "deltaP95": 0.4
+  }
+ }
+}

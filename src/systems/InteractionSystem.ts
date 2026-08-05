@@ -12,12 +12,13 @@ import { toast } from '../ui/Toast';
 import { sfx } from '../audio/AudioSystem';
 import { burst, flyItem } from '../entities/effects';
 import { ITEMS } from '../data/items';
-import { discoverRecipe } from './DiscoverySystem';
+import { discoverRecipes } from './DiscoverySystem';
 
 /** 採取時の効果音(ノード種ごと)。素手で拾うものはすべて pickup */
 const KIND_SFX: Record<NodeKind, 'chop' | 'mine' | 'sickle' | 'pickup'> = {
   tree: 'chop', rock: 'mine', grass: 'sickle', berry: 'pickup', moss: 'pickup', ore: 'mine',
   flower: 'pickup', mushroom: 'pickup', shell: 'pickup', starshard: 'pickup',
+  twig: 'pickup', cutgrass: 'pickup', clay: 'pickup', glassfloat: 'pickup',
 };
 /**
  * 粒バーストの色キー(src/entities/effects.ts の BURST_COLORS)。
@@ -28,6 +29,10 @@ const KIND_BURST: Partial<Record<NodeKind, string>> = {
   mushroom: 'tree', // 土と葉の茶みどり
   shell: 'craft', // 砂のあたたかい色
   starshard: 'ore', // 淡い青白
+  twig: 'tree', // 枝と落ち葉の茶みどり
+  cutgrass: 'grass', // 草の緑
+  clay: 'tree', // 濡れた土の茶
+  glassfloat: 'splash', // 波しぶきの青白
 };
 
 interface NodeState {
@@ -244,11 +249,12 @@ export class InteractionSystem {
     const n = gatherAmount(node.def.kind, this.debug);
     invAddRecorded(this.state, rule.item, n); // 採取はずかんに記録する
     toast(`+${n} ${ITEMS[rule.item].name}`, rule.item);
-    // 初めて手に入れた素材なら、それを使うレシピをひらめく(2回目以降は何も起きない)
-    const learned = discoverRecipe(this.state, rule.item);
-    if (learned) {
+    // 初めて手に入れた素材なら、それを使うレシピをひらめく(2回目以降は何も起きない)。
+    // 1つの素材で2つひらめくこともある(こえだ=かざぐるま+とりのすばこ)
+    const learned = discoverRecipes(this.state, rule.item);
+    if (learned.length > 0) {
       sfx('quest');
-      toast(`レシピを ひらめいた! ${learned.name}`, learned.out);
+      for (const r of learned) toast(`レシピを ひらめいた! ${r.name}`, r.out);
     }
     if (node.transient) {
       // ほしのかけら: 枯れて復活するのではなく、その場から消える(次の夜まで同じ場所に出ない)。

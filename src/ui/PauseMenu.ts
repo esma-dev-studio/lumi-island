@@ -7,6 +7,8 @@ import { byInput } from './inputMode';
 const HELP_KEYBOARD = `
           <span><kbd>W A S D</kbd></span><span>あるく</span>
           <span><kbd>Shift</kbd></span><span>はしる</span>
+          <span><kbd>マウス</kbd>ドラッグ</span><span>カメラを まわす</span>
+          <span><kbd>ホイール</kbd></span><span>ズーム(よる・ひく)</span>
           <span><kbd>E</kbd></span><span>しらべる・とる・はなす</span>
           <span><kbd>Tab</kbd></span><span>もちもの</span>
           <span><kbd>C</kbd></span><span>クラフト</span>
@@ -17,6 +19,8 @@ const HELP_KEYBOARD = `
 const HELP_TOUCH = `
           <span>左下を ゆびで うごかす</span><span>あるく</span>
           <span>おおきく うごかす</span><span>はしる</span>
+          <span>がめんを ゆびで なぞる</span><span>カメラを まわす</span>
+          <span>ゆび2本で ひろげる・ちぢめる</span><span>ズーム(よる・ひく)</span>
           <span>右下の 大きいボタン</span><span>しらべる・とる・はなす</span>
           <span>右上の「もちもの」</span><span>もちもの</span>
           <span>右上の「クラフト」</span><span>クラフト</span>

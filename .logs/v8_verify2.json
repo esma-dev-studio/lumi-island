@@ -1,0 +1,114 @@
+{
+ "when": "2026-08-05T08:18:42.720Z",
+ "checks": [
+  {
+   "name": "歩行可能域の主成分が1つ(v6と同じ 164,505セル前後)",
+   "ok": true,
+   "extra": "164505セル"
+  },
+  {
+   "name": "主成分いがいは1セルの点だけ(袋小路なし)",
+   "ok": true,
+   "extra": "[1,1,1,1]"
+  },
+  {
+   "name": "クラフト: r_broom",
+   "ok": true,
+   "extra": ""
+  },
+  {
+   "name": "クラフト: r_pot",
+   "ok": true,
+   "extra": ""
+  },
+  {
+   "name": "クラフト: r_jar",
+   "ok": true,
+   "extra": ""
+  },
+  {
+   "name": "クラフト: r_birdhouse",
+   "ok": true,
+   "extra": ""
+  },
+  {
+   "name": "クラフト: r_pinwheel",
+   "ok": true,
+   "extra": ""
+  },
+  {
+   "name": "クラフト: r_seamobile",
+   "ok": true,
+   "extra": ""
+  },
+  {
+   "name": "クラフト: r_gardentable",
+   "ok": true,
+   "extra": ""
+  },
+  {
+   "name": "設置: f_broom",
+   "ok": true,
+   "extra": "ghost=(-6,6) "
+  },
+  {
+   "name": "設置: f_pot",
+   "ok": true,
+   "extra": "ghost=(-3,6) "
+  },
+  {
+   "name": "設置: f_jar",
+   "ok": true,
+   "extra": "ghost=(0,6) "
+  },
+  {
+   "name": "設置: f_birdhouse",
+   "ok": true,
+   "extra": "ghost=(3,6) "
+  },
+  {
+   "name": "設置: f_pinwheel",
+   "ok": true,
+   "extra": "ghost=(6,6) "
+  },
+  {
+   "name": "設置: f_seamobile",
+   "ok": true,
+   "extra": "ghost=(12,6) "
+  },
+  {
+   "name": "設置: f_gardentable",
+   "ok": true,
+   "extra": "ghost=(15,6) "
+  },
+  {
+   "name": "かざぐるまが回っている(2枚目の直前)",
+   "ok": true,
+   "extra": "9.73 → 10.72"
+  },
+  {
+   "name": "夜: 青い光だまりが出ている",
+   "ok": true,
+   "extra": "{\"total\":9,\"blue\":2,\"alpha\":0.371}"
+  }
+ ],
+ "notes": [
+  "連結成分: {\"grid\":501,\"step\":0.2,\"walkableCells\":164509,\"components\":5,\"top\":[{\"cells\":164505,\"areaM2\":6580,\"sample\":[-48.2,-26.4]},{\"cells\":1,\"areaM2\":0,\"sample\":[26.8,-28]},{\"cells\":1,\"areaM2\":0,\"sample\":[28.8,-26.2]},{\"cells\":1,\"areaM2\":0,\"sample\":[34.2,-29.4]},{\"cells\":1,\"areaM2\":0,\"sample\":[34.4,-29.2]}],\"nodeCount\":70,\"circleColliders\":93,\"rectColliders\":11}",
+  "置いた家具: [{\"item\":\"f_broom\",\"x\":-6,\"z\":6},{\"item\":\"f_pot\",\"x\":-3,\"z\":6},{\"item\":\"f_jar\",\"x\":0,\"z\":6},{\"item\":\"f_birdhouse\",\"x\":3,\"z\":6},{\"item\":\"f_pinwheel\",\"x\":6,\"z\":6},{\"item\":\"f_seamobile\",\"x\":12,\"z\":6},{\"item\":\"f_gardentable\",\"x\":15,\"z\":6}]",
+  "shot 07_f_broom",
+  "shot 08_f_pot",
+  "shot 09_f_jar",
+  "shot 10_f_birdhouse",
+  "shot 11_f_pinwheel_a",
+  "shot 12_f_seamobile_day",
+  "shot 13_f_gardentable",
+  "shot 14_f_pinwheel_b",
+  "shot 15_f_seamobile_night",
+  "shot 16_night_row",
+  "shot 22_day_row"
+ ],
+ "errors": [
+  "TypeError: Cannot read properties of undefined (reading 'player')"
+ ],
+ "fatal": "TypeError: Cannot read properties of undefined (reading 'player')"
+}

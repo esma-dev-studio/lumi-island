@@ -1,0 +1,91 @@
+{
+ "when": "2026-08-05T07:56:12.454Z",
+ "checks": [
+  {
+   "name": "iPad: 行動ボタンが「かりくさをかる」",
+   "ok": true,
+   "extra": "{\"hint\":\"かりくさをかる\",\"act\":\"かりくさをかる\",\"shown\":true}"
+  },
+  {
+   "name": "iPad: 行動ボタンが「こえだをひろう」",
+   "ok": true,
+   "extra": "{\"hint\":\"こえだをひろう\",\"act\":\"こえだをひろう\",\"shown\":true}"
+  },
+  {
+   "name": "昼の海20回: あおうおが混ざる",
+   "ok": true,
+   "extra": "{\"fish\":11,\"seafish\":9}"
+  },
+  {
+   "name": "夜の海20回: にじうお/ヨザカナが出る",
+   "ok": true,
+   "extra": "{\"nightfish\":15,\"fish\":2,\"rarefish\":3}"
+  },
+  {
+   "name": "昼500回のあおうお率が5割前後",
+   "ok": true,
+   "extra": "{\"fish\":267,\"seafish\":233}"
+  },
+  {
+   "name": "夜500回のにじうお率が2割前後",
+   "ok": true,
+   "extra": "{\"nightfish\":290,\"fish\":114,\"rarefish\":96}"
+  },
+  {
+   "name": "池は従来の2種だけ",
+   "ok": true,
+   "extra": "[{\"fish\":200},{\"fish\":59,\"nightfish\":141}]"
+  },
+  {
+   "name": "q_fish未完了の海は従来の2種だけ",
+   "ok": true,
+   "extra": "[{\"fish\":200},{\"nightfish\":140,\"fish\":60}]"
+  },
+  {
+   "name": "consoleエラー0",
+   "ok": true,
+   "extra": ""
+  }
+ ],
+ "notes": [
+  "shot 24_ipad_かりくさ",
+  "shot 24_ipad_こえだ",
+  "iPad: [{\"name\":\"かりくさ\",\"x\":-23.6,\"z\":8.7,\"want\":\"かりくさをかる\",\"hint\":\"かりくさをかる\",\"act\":\"かりくさをかる\",\"shown\":true},{\"name\":\"こえだ\",\"x\":-7.5,\"z\":-30,\"want\":\"こえだをひろう\",\"hint\":\"こえだをひろう\",\"act\":\"こえだをひろう\",\"shown\":true}]",
+  "海の抽選(実機・デバッグなし): {\"day20\":{\"fish\":11,\"seafish\":9},\"night20\":{\"nightfish\":15,\"fish\":2,\"rarefish\":3},\"day500\":{\"fish\":267,\"seafish\":233},\"night500\":{\"nightfish\":290,\"fish\":114,\"rarefish\":96},\"pondDay\":{\"fish\":200},\"pondNight\":{\"fish\":59,\"nightfish\":141},\"lockedDay\":{\"fish\":200},\"lockedNight\":{\"nightfish\":140,\"fish\":60}}"
+ ],
+ "errors": [],
+ "trials": {
+  "day20": {
+   "fish": 11,
+   "seafish": 9
+  },
+  "night20": {
+   "nightfish": 15,
+   "fish": 2,
+   "rarefish": 3
+  },
+  "day500": {
+   "fish": 267,
+   "seafish": 233
+  },
+  "night500": {
+   "nightfish": 290,
+   "fish": 114,
+   "rarefish": 96
+  },
+  "pondDay": {
+   "fish": 200
+  },
+  "pondNight": {
+   "fish": 59,
+   "nightfish": 141
+  },
+  "lockedDay": {
+   "fish": 200
+  },
+  "lockedNight": {
+   "nightfish": 140,
+   "fish": 60
+  }
+ }
+}

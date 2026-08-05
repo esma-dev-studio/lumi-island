@@ -28,6 +28,12 @@ export const GATHER_RULES: Record<NodeKind, GatherRule> = {
   // ほしのかけらは夜だけ出るスポーン制(src/systems/StarShardSystem.ts)。
   // ノードそのものが消えるので respawnHours は使われない(transientノード)。
   starshard: { tool: null, item: 'starshard', count: [1, 1], respawnHours: 0, anim: 'pickup', verb: 'ほしのかけらをひろう', nightOnly: true },
+  // v8の「拾えるもの」3種。どれも道具なしで手にとれる(見えているのに拾えない、をなくす)
+  twig: { tool: null, item: 'twig', count: [1, 2], respawnHours: 1.4, anim: 'pickup', verb: 'こえだをひろう' },
+  cutgrass: { tool: null, item: 'cutgrass', count: [1, 2], respawnHours: 1.0, anim: 'pickup', verb: 'かりくさをかる' },
+  clay: { tool: null, item: 'clay', count: [1, 2], respawnHours: 2.0, anim: 'pickup', verb: 'ねんどをとる' },
+  // うきだまは朝だけ浜に流れつくスポーン制(src/systems/DriftSystem.ts)。ほしのかけらと同じtransientノード
+  glassfloat: { tool: null, item: 'glassfloat', count: [1, 1], respawnHours: 0, anim: 'pickup', verb: 'うきだまをひろう' },
 };
 
 export interface GatherCheck {

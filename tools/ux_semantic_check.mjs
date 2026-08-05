@@ -17,6 +17,8 @@ export const GATHER_CATEGORIES = [
   'gatherWood', 'gatherStone', 'gatherFiber', 'gatherMoss', 'gatherOre', 'gatherBerry',
   // v6で増えた「拾いもの」。道具が要らないので blocked(理由表示)にはならず、必ず動詞のヒントが出る
   'gatherFlower', 'gatherMushroom', 'gatherShell', 'gatherStar',
+  // v8で増えた「拾いもの」。同じく道具は要らない
+  'gatherTwig', 'gatherCutgrass', 'gatherClay', 'gatherFloat',
 ];
 const GATHER = new Set(GATHER_CATEGORIES);
 /**
@@ -72,6 +74,11 @@ export const OBJ_RULES = [
   { cat: 'gatherMushroom', re: /きのこ.*あつめよう/, src: 'ObjectiveSystem craftStep: きのこを あつめよう(ITEMS.mushroom.name)' },
   { cat: 'gatherShell', re: /かいがら.*あつめよう/, src: 'ObjectiveSystem craftStep: かいがらを あつめよう(ITEMS.shell.name)' },
   { cat: 'gatherStar', re: /ほしのかけら.*(あつめよう|見つけよう)/, src: 'ObjectiveSystem craftStep: ほしのかけらを あつめよう(ITEMS.starshard.name)' },
+  // v8の素材。v6と同じ理由で、レシピ駆動のcraftStepが将来これらを案内したときにunknownにしない
+  { cat: 'gatherTwig', re: /こえだ.*あつめよう/, src: 'ObjectiveSystem craftStep: こえだを あつめよう(ITEMS.twig.name)' },
+  { cat: 'gatherCutgrass', re: /かりくさ.*あつめよう/, src: 'ObjectiveSystem craftStep: かりくさを あつめよう(ITEMS.cutgrass.name)' },
+  { cat: 'gatherClay', re: /ねんど.*あつめよう/, src: 'ObjectiveSystem craftStep: ねんどを あつめよう(ITEMS.clay.name)' },
+  { cat: 'gatherFloat', re: /うきだま.*(あつめよう|見つけよう)/, src: 'ObjectiveSystem craftStep: うきだまを あつめよう(ITEMS.glassfloat.name)' },
 ];
 
 // ---- ホットヒント(.hud-hint)のカテゴリ表。上から順に最初に当たったものを採用 ----
@@ -89,6 +96,9 @@ export const HINT_RULES = [
   { cat: 'exit', re: /そとへ でる/, src: 'InteractionRouting: <kbd>E</kbd>そとへ でる' },
   { cat: 'gatherWood', re: /木をきる/, src: 'GatherSystem verb: 木をきる(tree)' },
   { cat: 'gatherStone', re: /岩をくだく/, src: 'GatherSystem verb: 岩をくだく(rock)' },
+  // v8「かりくさをかる」は かな書きなので、漢字の「草をかる」(クサツル)とは重ならない。
+  // それでも取り違えが起きないよう、かりくさを先に見る
+  { cat: 'gatherCutgrass', re: /かりくさをかる/, src: 'GatherSystem verb: かりくさをかる(cutgrass)' },
   { cat: 'gatherFiber', re: /草をかる|クサツルをかる/, src: 'GatherSystem verb: 草をかる(grass)' },
   { cat: 'gatherMoss', re: /ヒカリゴケをとる/, src: 'GatherSystem verb: ヒカリゴケをとる(moss)' },
   { cat: 'gatherOre', re: /こうせきをほる/, src: 'GatherSystem verb: こうせきをほる(ore)' },
@@ -98,6 +108,10 @@ export const HINT_RULES = [
   { cat: 'gatherMushroom', re: /きのこをとる/, src: 'GatherSystem verb: きのこをとる(mushroom)' },
   { cat: 'gatherShell', re: /かいがらをひろう/, src: 'GatherSystem verb: かいがらをひろう(shell)' },
   { cat: 'gatherStar', re: /ほしのかけらをひろう/, src: 'GatherSystem verb: ほしのかけらをひろう(starshard)' },
+  // v8の拾いもの(「かりくさをかる」は上の gatherFiber より前に置いてある)
+  { cat: 'gatherTwig', re: /こえだをひろう/, src: 'GatherSystem verb: こえだをひろう(twig)' },
+  { cat: 'gatherClay', re: /ねんどをとる/, src: 'GatherSystem verb: ねんどをとる(clay)' },
+  { cat: 'gatherFloat', re: /うきだまをひろう/, src: 'GatherSystem verb: うきだまをひろう(glassfloat)' },
   { cat: 'carry', re: /もちかえる/, src: 'InteractionRouting: <kbd>E</kbd>◯◯を もちかえる' },
   { cat: 'talk', re: /と はなす/, src: 'InteractionRouting: <kbd>E</kbd>◯◯と はなす' },
 ];

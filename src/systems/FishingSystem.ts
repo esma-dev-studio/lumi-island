@@ -19,6 +19,43 @@ import { ITEMS, type ItemId } from '../data/items';
 
 export type FishZone = 'sea' | 'pond' | null;
 
+// ---- 何がつれるかの抽選(純ロジック。描画・状態機械から切り離してテストできるようにする) ----
+/** 夜の時間帯(この間は光る魚が出る) */
+export function isFishNight(hour: number): boolean {
+  return hour >= 19 || hour < 5;
+}
+/**
+ * 海の魚(あおうお・にじうお)の解禁条件。
+ * 最初の釣り依頼(q_fish)が終わるまでは従来の魚だけにする:
+ * 「サカナを1匹つろう」の最中に見なれない魚が出ると、達成できたのか分からず混乱するため。
+ */
+export function seaFishUnlocked(state: Pick<GameState, 'quests'>): boolean {
+  return state.quests.q_fish === 'done';
+}
+/** 昼の海であおうおが出る確率 */
+export const SEA_DAY_RATE = 0.5;
+/** 夜の海でにじうおが出る確率(レア) */
+export const SEA_NIGHT_RARE_RATE = 0.2;
+/** 夜にヨザカナが出る確率(従来どおり。残りはサカナ) */
+export const NIGHT_FISH_RATE = 0.7;
+
+/**
+ * その場所・時刻でつれる魚を1匹えらぶ。
+ * - 池(pond)は従来どおり: 昼=サカナ / 夜=7割ヨザカナ。
+ * - 海(sea)は解禁後だけ: 昼=5割あおうお / 夜=2割にじうお、外れたら従来の抽選。
+ */
+export function pickFishFor(
+  zone: FishZone, hour: number, unlocked: boolean, rand: () => number = Math.random
+): ItemId {
+  const night = isFishNight(hour);
+  if (zone === 'sea' && unlocked) {
+    if (!night) return rand() < SEA_DAY_RATE ? 'seafish' : 'fish';
+    if (rand() < SEA_NIGHT_RARE_RATE) return 'rarefish';
+  }
+  if (night) return rand() < NIGHT_FISH_RATE ? 'nightfish' : 'fish';
+  return 'fish';
+}
+
 /**
  * 釣りの状態(明示的な状態機械)。演出が終わるまで次の釣りを始めさせないための区別を持つ。
  *   idle → casting →(着水)→ waiting →(ヒット)→ bite →(E)→ reeling →(アニメ終了)→ cooldown → idle
@@ -37,6 +74,13 @@ const COOLDOWN_S = 1.2; // 釣り上げたあと、次の釣りを始められ�
 const COOLDOWN_LEAVE_D = 1.5; // 釣り場からこれだけ離れたらクールダウンを打ち切る
 const BITE_S = 1.25; // 「!」が出てからにげられるまで
 const REEL_PULL = 0.75; // 巻き上げ中にウキを竿先へ手繰り寄せる割合
+
+/** つれたときのひとこと(めずらしい魚だけ)。トーストの本文に足す */
+const CATCH_NOTE: Partial<Record<ItemId, string>> = {
+  nightfish: '! よるにしか つれない魚だ',
+  seafish: '! 海のあおい魚だ',
+  rarefish: '! めったに つれない にじ色の魚だ',
+};
 
 export class FishingSystem {
   state: FishingState = 'idle';
@@ -164,8 +208,8 @@ export class FishingSystem {
     sfx('catch');
     // 取得はこの1回だけ(以降はreelingが終わるまでbiteに戻らないので二重取得しない)
     invAddRecorded(this.game, item, 1); // 釣り上げはずかんに記録する
-    // 夜魚はすこし特別に(依頼はどちらの魚でも進む)
-    toast(item === 'nightfish' ? `+1 ${ITEMS[item].name}! よるにしか つれない魚だ` : `+1 ${ITEMS[item].name}`, item);
+    // めずらしい魚はすこし特別に(依頼はどちらの魚でも進む)。演出・効果音は全部の魚で同じ
+    toast(`+1 ${ITEMS[item].name}${CATCH_NOTE[item] ?? ''}`, item);
     this.onCatch?.(item);
     // 巻き上げ演出が終わるまで reeling を維持する(この間は動けない・次の釣りも始められない)
     this.state = 'reeling';
@@ -248,10 +292,14 @@ export class FishingSystem {
 
   private pickFish(): ItemId {
     const h = this.game.time.hour;
-    const night = h >= 19 || h < 5;
-    if (this.debug) return night ? 'nightfish' : 'fish';
-    if (night) return Math.random() < 0.7 ? 'nightfish' : 'fish';
-    return 'fish';
+    const unlocked = seaFishUnlocked(this.game);
+    if (this.debug) {
+      // デバッグ走行は決定的にする(採取量が最大固定なのと同じ方針)。
+      // 自動テスト・回帰ボットは最初の釣り依頼の最中に釣るので、そこは従来どおりの魚になる
+      if (this.zone === 'sea' && unlocked) return isFishNight(h) ? 'rarefish' : 'seafish';
+      return isFishNight(h) ? 'nightfish' : 'fish';
+    }
+    return pickFishFor(this.zone, h, unlocked);
   }
 
   update(dt: number, player: PlayerController, view: CharacterView): void {

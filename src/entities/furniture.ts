@@ -12,6 +12,7 @@ import type { ItemId } from '../data/items';
 const WOOD = Color3.FromHexString('#8a6a4a');
 const WOOD_D = Color3.FromHexString('#63472f');
 const STONE = Color3.FromHexString('#9a948a');
+const C_TWIG_PROP = Color3.FromHexString('#7a5a3d'); // こえだ(素材が見た目に出るようにする)
 
 function fbox(A: Arrays, cx: number, cy: number, cz: number, w: number, h: number, d: number, c: Color3): void {
   // furniture用の簡易box(全面。向き回転は配置側のmesh.rotationで行う)
@@ -31,6 +32,75 @@ function fbox(A: Arrays, cx: number, cy: number, cz: number, w: number, h: numbe
   q([[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]]);
   q([[x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0]]);
   q([[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]]);
+}
+
+/**
+ * 傾け・回転つきの box(fboxのローカル回転つき版)。
+ * 屋根の勾配・かざぐるまの羽根のように、Y回転だけでは作れない部品に使う。
+ * 8頂点を剛体回転させるだけなので巻き順は fbox と同じ(toMeshは'keep')。
+ */
+function fboxR(
+  A: Arrays, cx: number, cy: number, cz: number, w: number, h: number, d: number, c: Color3,
+  rot: { x?: number; y?: number; z?: number } = {}
+): void {
+  const rx = rot.x ?? 0, ry = rot.y ?? 0, rz = rot.z ?? 0;
+  const cxr = Math.cos(rx), sxr = Math.sin(rx);
+  const cyr = Math.cos(ry), syr = Math.sin(ry);
+  const czr = Math.cos(rz), szr = Math.sin(rz);
+  const tf = (px: number, py: number, pz: number): [number, number, number] => {
+    // Z → X → Y の順(Babylonのローカル回転と同じ考え方)
+    let x = px * czr - py * szr;
+    let y = px * szr + py * czr;
+    let z = pz;
+    const y2 = y * cxr - z * sxr;
+    z = y * sxr + z * cxr;
+    y = y2;
+    const x2 = x * cyr + z * syr;
+    z = -x * syr + z * cyr;
+    x = x2;
+    return [cx + x, cy + y, cz + z];
+  };
+  const hw = w / 2, hh = h / 2, hd = d / 2;
+  const v = [
+    tf(-hw, -hh, hd), tf(hw, -hh, hd), tf(hw, hh, hd), tf(-hw, hh, hd),
+    tf(hw, -hh, -hd), tf(-hw, -hh, -hd), tf(-hw, hh, -hd), tf(hw, hh, -hd),
+  ];
+  const q = (a: number, b: number, c2: number, d2: number, shade: number): void => {
+    const base = A.pos.length / 3;
+    for (const i of [a, b, c2, d2]) {
+      A.pos.push(v[i][0], v[i][1], v[i][2]);
+      const f = shade * (0.96 + (vnoise(v[i][0] * 5 + 3, v[i][1] * 5 + v[i][2]) - 0.5) * 0.08);
+      A.col.push(c.r * f, c.g * f, c.b * f, 1);
+    }
+    A.idx.push(base, base + 2, base + 1, base, base + 3, base + 2);
+  };
+  q(0, 1, 2, 3, 0.97); q(4, 5, 6, 7, 0.9); q(1, 4, 7, 2, 0.94);
+  q(5, 0, 3, 6, 0.92); q(3, 2, 7, 6, 1.05); q(5, 4, 1, 0, 0.74);
+}
+
+// ---- ゆっくり回る家具(かざぐるま)----
+// フレームごとの更新は「シーンにひとつだけ」の監視で回す(家具ごとに監視を足さない)。
+// IslandScene.update とは別系統だが、deco.ts の風のゆれと同じ作りにそろえてある。
+interface Spinner {
+  mesh: Mesh;
+  speed: number; // rad/秒
+}
+let spinners: Spinner[] = [];
+let spinScene: Scene | null = null;
+function registerSpinner(scene: Scene, mesh: Mesh, speed: number): void {
+  if (spinScene !== scene) {
+    // シーンを作り直したら(タイトル→ゲーム本編)、前のシーンのメッシュは持ち越さない
+    spinners = [];
+    spinScene = scene;
+    scene.onBeforeRenderObservable.add(() => {
+      const dt = Math.min(0.25, scene.getEngine().getDeltaTime() / 1000);
+      for (const s of spinners) s.mesh.rotation.z += s.speed * dt;
+    });
+  }
+  spinners.push({ mesh, speed });
+  mesh.onDisposeObservable.add(() => {
+    spinners = spinners.filter((s) => s.mesh !== mesh);
+  });
 }
 
 export interface FurnitureMesh {
@@ -191,6 +261,13 @@ export function makeFurnitureMesh(scene: Scene, item: ItemId): FurnitureMesh {
       appendBlob(A, 0, 0.16, 0, 0.2, 0.17, 0.2, Color3.FromHexString('#c96f52'), { segs: 7, noise: 0.06, flatBottom: true });
       appendBlob(A, 0, 0.42, 0, 0.17, 0.15, 0.17, Color3.FromHexString('#5d8a4e'), { segs: 6, noise: 0.22, seed: 9 });
       appendBlob(A, 0.08, 0.55, 0.03, 0.1, 0.09, 0.1, Color3.FromHexString('#6f9a58'), { segs: 5, noise: 0.2, seed: 11 });
+      // v8: レシピ(ねんど2+のばな1)で作れるようにしたので、材料の のばなが見えるようにする
+      const potHeads = ['#e8d9a0', '#d98a9a', '#e0a0ae'];
+      for (let i = 0; i < 3; i++) {
+        const th = (i / 3) * Math.PI * 2 + 0.7;
+        appendBlob(A, Math.cos(th) * 0.1, 0.56 + (i % 2) * 0.04, Math.sin(th) * 0.1, 0.045, 0.035, 0.045,
+          jitterColor(Color3.FromHexString(potHeads[i]), 60 + i, 0.08), { segs: 5, noise: 0.08, seed: 60 + i, bottomDark: 0.12 });
+      }
       return { root: toMesh(scene, 'f_pot', A), colliderR: 0.26 };
     }
     case 'f_sign': {
@@ -401,6 +478,138 @@ export function makeFurnitureMesh(scene: Scene, item: ItemId): FurnitureMesh {
       glowPart.parent = root;
       glowPart.isPickable = false;
       return { root, glowPart, colliderR: 0.22 };
+    }
+    // ---- v8の新家具6種 ----
+    // 法線の向きの規約(機械確認ずみ): appendBlobだけ='flip' / fbox・fboxR・appendTrunk・appendShellFanだけ='keep'。
+    // ひとつのメッシュに両方を混ぜない(混ぜたい場合は光る部分などを別メッシュにする)。
+    case 'f_broom': {
+      // こえだ2+かりくさ2。立てかけた ほうき(え=こえだ、ほ=かりくさ)
+      const A = A0();
+      appendTrunk(A, [[0, 0.28, 0], [0, 1.12, 0]], 0.028, 0.021, WOOD_D, 7); // え
+      // ほ: 細い草を たばねた すそ広がり
+      for (let i = 0; i < 11; i++) {
+        const th = (i / 11) * Math.PI * 2 + 0.4;
+        const r = 0.035 + (i % 3) * 0.022;
+        const h = 0.3 + ((i * 7) % 5) * 0.025;
+        fboxR(A, Math.cos(th) * r, h / 2 + 0.005, Math.sin(th) * r, 0.026, h, 0.026,
+          jitterColor(Color3.FromHexString('#c9b06a'), 10 + i, 0.16),
+          { z: Math.cos(th) * -0.12, x: Math.sin(th) * 0.12 });
+      }
+      // しばり(かりくさの色。材料が見た目に出るようにする)
+      for (const y of [0.3, 0.36]) {
+        fbox(A, 0, y, 0, 0.13, 0.028, 0.13, Color3.FromHexString('#7aa85f'));
+      }
+      return { root: toMesh(scene, 'f_broom', A, 'keep'), colliderR: 0.22 };
+    }
+    case 'f_jar': {
+      // ねんど3。まるい つぼ(口はすぼまり、ふちだけ外へ張り出す)
+      const A = A0();
+      const clay = Color3.FromHexString('#b0785a');
+      appendBlob(A, 0, 0.27, 0, 0.27, 0.27, 0.27, jitterColor(clay, 3, 0.06), {
+        segs: 9, noise: 0.05, flatBottom: true, bottomDark: 0.2, seed: 3,
+      });
+      appendBlob(A, 0, 0.33, 0, 0.274, 0.03, 0.274, jitterColor(Color3.FromHexString('#d2a077'), 5, 0.06), {
+        segs: 9, noise: 0.03, seed: 5, bottomDark: 0.08,
+      }); // もようの帯
+      appendBlob(A, 0, 0.47, 0, 0.16, 0.09, 0.16, jitterColor(clay, 7, 0.05), { segs: 8, noise: 0.05, seed: 7, bottomDark: 0.2 });
+      appendBlob(A, 0, 0.54, 0, 0.115, 0.045, 0.115, jitterColor(clay, 9, 0.05), { segs: 8, noise: 0.05, seed: 9, bottomDark: 0.2 });
+      appendBlob(A, 0, 0.575, 0, 0.14, 0.03, 0.14, jitterColor(Color3.FromHexString('#8d5d44'), 11, 0.06), {
+        segs: 8, noise: 0.05, seed: 11, bottomDark: 0.24,
+      }); // 口のふち
+      return { root: toMesh(scene, 'f_jar', A, 'flip'), colliderR: 0.28 };
+    }
+    case 'f_birdhouse': {
+      // もくざい2+こえだ2。柱の上の すばこ(切妻屋根・丸い入口・とまり木)
+      const A = A0();
+      appendTrunk(A, [[0, 0, 0], [0, 1.02, 0]], 0.045, 0.036, WOOD_D, 17); // 柱
+      fbox(A, 0, 1.14, 0, 0.34, 0.3, 0.3, WOOD); // 本体
+      fbox(A, 0, 0.99, 0, 0.38, 0.03, 0.34, WOOD_D); // 床板
+      // 切妻屋根(左右の板を「外がわが下がる」向きに傾ける。符号を逆にするとV字の谷になる)
+      for (const s of [-1, 1]) {
+        fboxR(A, s * 0.11, 1.35, 0, 0.28, 0.028, 0.38, jitterColor(WOOD_D, 20 + s, 0.1), { z: -s * 0.62 });
+      }
+      fbox(A, 0, 1.43, 0, 0.06, 0.04, 0.38, WOOD_D); // むね
+      fbox(A, 0, 1.19, 0.152, 0.1, 0.1, 0.02, Color3.FromHexString('#3f2f22')); // 入口(奥まった黒い口)
+      fbox(A, 0, 1.09, 0.19, 0.022, 0.022, 0.1, C_TWIG_PROP); // とまり木(こえだ)
+      // こえだのかざり: 屋根の下に横木を1本わたす(柱にななめに立てかけると「折れた脚」に見える)
+      fboxR(A, 0, 1.3, 0.21, 0.42, 0.022, 0.022, jitterColor(C_TWIG_PROP, 31, 0.12), { z: 0.05 });
+      fbox(A, 0.14, 1.22, 0.21, 0.02, 0.16, 0.02, jitterColor(C_TWIG_PROP, 37, 0.12));
+      return { root: toMesh(scene, 'f_birdhouse', A, 'keep'), colliderR: 0.3 };
+    }
+    case 'f_pinwheel': {
+      // こえだ1+クサツル1+のばな1。羽根がゆっくりまわる(registerSpinner)
+      const A = A0();
+      appendTrunk(A, [[0, 0, 0], [0, 0.9, 0]], 0.03, 0.022, WOOD_D, 23); // 柄(こえだ)
+      for (const y of [0.3, 0.62]) {
+        fbox(A, 0, y, 0, 0.055, 0.03, 0.055, Color3.FromHexString('#7aa85f')); // クサツルのしばり
+      }
+      fbox(A, 0, 0.9, 0.012, 0.05, 0.05, 0.05, WOOD_D); // じく受け
+      const root = toMesh(scene, 'f_pinwheel', A, 'keep');
+      // 羽根: 原点をじくにそろえた別メッシュ。rotation.z でまわす
+      const S = A0();
+      const heads = ['#e8d9a0', '#d98a9a', '#e0a0ae', '#f2e2a8', '#dfb0c0'];
+      for (let k = 0; k < 5; k++) {
+        const a = (k / 5) * Math.PI * 2;
+        fboxR(S, Math.cos(a) * 0.14, Math.sin(a) * 0.14, 0, 0.24, 0.13, 0.012,
+          jitterColor(Color3.FromHexString(heads[k]), 40 + k, 0.08), { z: a });
+      }
+      fbox(S, 0, 0, 0.012, 0.06, 0.06, 0.03, Color3.FromHexString('#f2e2a8')); // 中心(花の芯の色)
+      const spin = toMesh(scene, 'f_pinwheel_blades', S, 'keep');
+      spin.parent = root;
+      spin.position.set(0, 0.9, 0.045);
+      spin.isPickable = false;
+      registerSpinner(scene, spin, 1.1);
+      return { root, colliderR: 0.2 };
+    }
+    case 'f_seamobile': {
+      // うきだま1+かいがら2。うきだまが ほのかに あお白く光る(光だまりは PlacementSystem が付ける)
+      const A = A0();
+      appendTrunk(A, [[0, 0, 0], [0, 1.06, 0]], 0.04, 0.03, WOOD_D, 29); // 柱
+      fbox(A, 0, 1.08, 0.26, 0.05, 0.05, 0.56, WOOD); // 腕(前へ出す)
+      fbox(A, 0, 1.11, 0.52, 0.11, 0.03, 0.07, WOOD_D); // 腕さきの受け
+      // つり糸。細すぎると見えないので2cm角にし、色も明るくする
+      const hang: [number, number, number][] = [
+        // [x, z, ひもの長さ]
+        [0, 0.29, 0.3], [0, 0.11, 0.52], [0, 0.47, 0.36],
+      ];
+      for (let i = 0; i < hang.length; i++) {
+        const [hx, hz, hl] = hang[i];
+        fbox(A, hx, 1.06 - hl / 2, hz, 0.02, hl, 0.02, Color3.FromHexString('#dcc99c'));
+      }
+      // かいがら2枚(下げた先に。表と裏を重ねて厚みを出す)
+      for (let i = 1; i < 3; i++) {
+        const [hx, hz, hl] = hang[i];
+        const col = Color3.FromHexString(i === 1 ? '#efe3c8' : '#e6d6ae');
+        appendShellFan(A, hx, 1.06 - hl, hz, 0.17, 1.2 + i * 2.1, 0.06, true, col, 70 + i * 9);
+        appendShellFan(A, hx, 1.06 - hl, hz, 0.17, 1.2 + i * 2.1, 0.06, false, col, 70 + i * 9);
+      }
+      const root = toMesh(scene, 'f_seamobile', A, 'keep');
+      // うきだま(光る部分)。ひとかたまりの丸い形なので applyArrays の auto 判定で正しく向く。
+      // 共有の青マテリアルに頂点色がかかるので、白に近い色にして「あわいガラス」に見せる
+      // (色をつけると青×青で暗い玉になる)
+      const glowPart = mkGlow((G) => {
+        appendBlob(G, 0, 1.06 - hang[0][2] - 0.12, hang[0][1], 0.12, 0.12, 0.12,
+          Color3.FromHexString('#f4fbff'), { segs: 9, noise: 0.03, bottomDark: 0.06 });
+      }, 'blue', root);
+      return { root, glowPart, colliderR: 0.26 };
+    }
+    case 'f_gardentable': {
+      // もくざい3+いし1。石の脚に 木の天板をのせた そとのテーブル
+      const A = A0();
+      for (const s of [-1, 1]) {
+        fbox(A, s * 0.38, 0.31, 0, 0.16, 0.62, 0.5, jitterColor(STONE, 41 + s, 0.1)); // 石の脚
+        fbox(A, s * 0.38, 0.05, 0, 0.22, 0.1, 0.58, jitterColor(STONE, 51 + s, 0.1)); // 脚の台
+      }
+      fbox(A, 0, 0.3, 0, 0.62, 0.09, 0.16, jitterColor(STONE, 61, 0.08)); // 石のぬき
+      // 天板(板を5枚ならべ、1枚ごとに色をずらして「1枚の箱」に見せない)
+      for (let i = 0; i < 5; i++) {
+        fbox(A, 0, 0.68, -0.28 + i * 0.14, 1.14, 0.055, 0.125, jitterColor(i % 2 ? WOOD : WOOD_D, 70 + i, 0.12));
+      }
+      fbox(A, 0, 0.645, 0, 1.06, 0.035, 0.62, WOOD_D); // 天板の受け
+      for (const s of [-1, 1]) {
+        fbox(A, s * 0.575, 0.68, 0, 0.03, 0.06, 0.72, WOOD_D); // 天板のふち
+      }
+      return { root: toMesh(scene, 'f_gardentable', A, 'keep'), colliderR: 0.6 };
     }
     default: {
       const A = A0();

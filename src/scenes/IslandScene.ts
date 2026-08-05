@@ -6,22 +6,28 @@ import { CascadedShadowGenerator } from '@babylonjs/core/Lights/Shadows/cascaded
 import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
 import { buildTerrain, terrainHeight, pondShoreR, type Terrain } from '../entities/terrain';
 import { initEffects, attachLightPool, registerGlowSource, unregisterGlowSource, burst } from '../entities/effects';
-import { buildWater, onPier, updatePond, PIER, type WaterRefs } from '../entities/water';
+import { buildWater, onPier, updatePond, PIER, SEA_Y, type WaterRefs } from '../entities/water';
 import {
   makeTree, makeBerryTree, makeRock, makeOreNode, makeGrassNode, makeMoss, makeLumiTree, getGlowMats,
   makeFlowerNode, makeMushroomNode, makeShellNode, makeStarShard,
+  makeTwigNode, makeCutGrassNode, makeClayNode, makeGlassFloat,
 } from '../entities/flora';
 import {
   scatterDeco, buildPondShore, buildHillDeck, hillDeckRails, deckGroundY, HILL_DECK,
-  makeRockLedge, makeOutcrop, makeFlagstones, makeLowFence,
+  makeRockLedge, makeOutcrop, makeFlagstones, makeLowFence, makeSeabird, type Seabird,
 } from '../entities/deco';
 import { buildHouse, makeBench, makeLamp, makeStoneRing } from '../entities/buildings';
 import { makeLogPile, makeCrate, makeBucketRod, makeTelescope, makeDriftwood, makeStump } from '../entities/props';
-import { GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, STAR_SPOTS, type GatherNodeDef } from '../data/island';
+import {
+  GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, STAR_SPOTS, DRIFT_SPOTS, SEABIRD_CIRCLES,
+  type GatherNodeDef,
+} from '../data/island';
 import { DayNight } from './DayNight';
 import { HomeInterior, homeFloorY, insideHomeFloor, HOME_RECTS, HOME_CIRCLES } from './HomeInterior';
 import { TimeSystem } from '../systems/TimeSystem';
 import { StarShardScheduler } from '../systems/StarShardSystem';
+import { DriftScheduler } from '../systems/DriftSystem';
+import { seabirdPose } from '../systems/SeabirdSystem';
 
 export interface CircleCollider { x: number; z: number; r: number }
 export interface RectCollider { x: number; z: number; w: number; d: number; rot: number }
@@ -82,6 +88,14 @@ export class IslandScene {
   private starSpotOfNode = new Map<string, number>();
   private starSparkleT = 0;
   private starSparkleI = 0;
+  // ---- 朝のうきだま(同じ作り。1日1個だけ浜に流れつく) ----
+  private drift = new DriftScheduler(DRIFT_SPOTS.length);
+  private driftNodeOfSpot = new Map<number, string>();
+  private driftSpotOfNode = new Map<string, number>();
+  private driftSparkleT = 0;
+  // ---- うみどり(海の上を旋回するだけ。当たり判定なし) ----
+  private birds: Seabird[] = [];
+  private birdT = 0;
 
   constructor(public engine: Engine) {
     this.scene = new Scene(engine);
@@ -184,9 +198,26 @@ export class IslandScene {
           root = makeShellNode(s, hashId(def.id));
           break;
         }
-        // 通常はGATHER_NODESに入らない(夜のスポナーが動的に作る)。念のため同じ道を通せるようにしておく
+        // v8の拾いもの3種。こちらも当たり判定は付けない(踏み越えられる)
+        case 'twig': {
+          root = makeTwigNode(s, hashId(def.id));
+          break;
+        }
+        case 'cutgrass': {
+          root = makeCutGrassNode(s, hashId(def.id));
+          break;
+        }
+        case 'clay': {
+          root = makeClayNode(s, hashId(def.id));
+          break;
+        }
+        // 通常はGATHER_NODESに入らない(夜・朝のスポナーが動的に作る)。念のため同じ道を通せるようにしておく
         case 'starshard': {
           root = makeStarShard(s, hashId(def.id));
+          break;
+        }
+        case 'glassfloat': {
+          root = makeGlassFloat(s, hashId(def.id));
           break;
         }
       }
@@ -332,6 +363,13 @@ export class IslandScene {
     scatterDeco(s);
     getGlowMats(s); // 初期化
 
+    // ---- うみどり(海の上を旋回するだけ) ----
+    // 影・遮蔽フェード・当たり判定のどれにも入れない(空の上なので影は落とせず、負荷だけ増える)
+    for (let i = 0; i < SEABIRD_CIRCLES.length; i++) {
+      this.birds.push(makeSeabird(s, 300 + i * 11));
+    }
+    this.updateBirds(0); // 最初のフレームから海の上にいる状態にしておく
+
     // ---- マイホームの室内(島の外。屋外にいるあいだは消えている) ----
     // 遮蔽フェード(occludables)には入れない: プレイヤーが乗る床と、カメラの手前に来る壁だから
     this.home = new HomeInterior(s, [this.terrain.mesh, this.water.sea]);
@@ -408,6 +446,8 @@ export class IslandScene {
     // ほしのかけら: この関数はWorldPauseControllerが「凍っていないフレーム」だけ呼ぶので、
     // ポーズ・会話・見せ場のあいだは進まない。睡眠で朝6時へ飛んだ場合も「夜が終わった」として消える
     this.updateStars(dtSec);
+    this.updateDrift(dtSec); // 朝のうきだま(同じ理由でポーズ中は進まない)
+    this.updateBirds(dtSec);
     // 池のごく弱い上下動(±1.2cm)。スイレンは子メッシュなので一緒にゆれる
     this.waterT += dtSec;
     this.water.pond.position.y = POND.waterY + Math.sin(this.waterT * 0.9) * 0.012;
@@ -464,15 +504,83 @@ export class IslandScene {
     this.nodes.delete(id);
   }
 
+  // ---------- 朝のうきだま ----------
+  /** いま浜に出ているうきだまの数(検証・デバッグ用) */
+  get glassFloatCount(): number {
+    return this.driftNodeOfSpot.size;
+  }
+
+  private updateDrift(dt: number): void {
+    const plan = this.drift.update(dt, this.time.day, this.time.hour);
+    for (const spot of plan.despawn) this.despawnDrift(spot);
+    for (const spot of plan.spawn) this.spawnDrift(spot);
+    if (this.driftNodeOfSpot.size === 0) return;
+    // 波のきらめき: 2.5秒に1回だけ(共有パーティクルなので同じフレームに複数出さない)
+    this.driftSparkleT += dt;
+    if (this.driftSparkleT < 2.5) return;
+    this.driftSparkleT = 0;
+    for (const spot of this.driftNodeOfSpot.keys()) {
+      const p = DRIFT_SPOTS[spot];
+      burst(p.x, this.groundY(p.x, p.z) + 0.26, p.z, 'splash', 4);
+    }
+  }
+
+  private spawnDrift(spot: number): void {
+    const p = DRIFT_SPOTS[spot];
+    const id = `glassfloat${spot + 1}`;
+    if (this.nodes.has(id)) return;
+    const y = this.groundY(p.x, p.z);
+    const root = makeGlassFloat(this.scene, spot * 23 + 5);
+    root.position.set(p.x, y - 0.03, p.z);
+    root.rotation.y = spot * 1.7;
+    this.nodes.set(id, { def: { id, kind: 'glassfloat', x: p.x, z: p.z }, root, y, transient: true });
+    this.driftNodeOfSpot.set(spot, id);
+    this.driftSpotOfNode.set(id, spot);
+    burst(p.x, y + 0.25, p.z, 'splash', 10); // 打ち上げられた合図(波しぶきの色)
+  }
+
+  private despawnDrift(spot: number): void {
+    const id = this.driftNodeOfSpot.get(spot);
+    if (id === undefined) return;
+    this.driftNodeOfSpot.delete(spot);
+    this.driftSpotOfNode.delete(id);
+    const node = this.nodes.get(id);
+    if (!node) return;
+    node.root.dispose(); // 共有マテリアルは道連れにしない
+    this.nodes.delete(id);
+  }
+
+  // ---------- うみどり ----------
+  private updateBirds(dt: number): void {
+    if (this.birds.length === 0) return;
+    this.birdT += dt;
+    for (let i = 0; i < this.birds.length; i++) {
+      const b = this.birds[i];
+      const p = seabirdPose(SEABIRD_CIRCLES[i], this.birdT, SEA_Y);
+      b.root.position.set(p.x, p.y, p.z);
+      b.root.rotation.set(0, p.rotY, p.roll);
+      // 翼は付け根(x=0)まわりのZ回転だけ。左翼は+X側にあるので符号を逆にすると左右対称にはばたく
+      b.wingL.rotation.z = p.wing;
+      b.wingR.rotation.z = -p.wing;
+    }
+  }
+
   /**
-   * 一時ノード(ほしのかけら)を採ったときに InteractionSystem が呼ぶ。
-   * 見た目を消し、その場所はその夜のあいだ もう出さない。
+   * 一時ノード(ほしのかけら・うきだま)を採ったときに InteractionSystem が呼ぶ。
+   * 見た目を消し、その場所は その夜/その日のあいだ もう出さない。
    */
   removeNode(id: string): void {
     const spot = this.starSpotOfNode.get(id);
-    if (spot === undefined) return;
-    this.stars.markTaken(spot);
-    this.despawnStar(spot);
+    if (spot !== undefined) {
+      this.stars.markTaken(spot);
+      this.despawnStar(spot);
+      return;
+    }
+    const dspot = this.driftSpotOfNode.get(id);
+    if (dspot !== undefined) {
+      this.drift.markTaken(dspot);
+      this.despawnDrift(dspot);
+    }
   }
 
   /** ルミの木の段階(0=ねむり 1=めばえ 2=かいか)を見た目へ反映(蕾⇄花の差し替え) */

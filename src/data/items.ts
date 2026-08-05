@@ -2,12 +2,18 @@
 export type ItemId =
   | 'wood' | 'stone' | 'fiber' | 'berry' | 'moss' | 'ore'
   | 'flower' | 'mushroom' | 'shell' | 'starshard'
+  // v8 拾えるものを増やす(どれも道具なしで手にとれる)
+  | 'twig' | 'cutgrass' | 'clay' | 'glassfloat'
   | 'fish' | 'nightfish' | 'jam'
+  // v8 海の魚(桟橋でだけ つれる)
+  | 'seafish' | 'rarefish'
   | 'f_bench' | 'f_lantern' | 'f_stonelamp' | 'f_table' | 'f_planter'
   | 'f_chair' | 'f_shelf' | 'f_rug' | 'f_pot' | 'f_sign'
   | 'f_flowerbed' | 'f_mushlamp' | 'f_shelldeco' | 'f_starlantern'
   // v7-P2 室内向けの家具(クラフト)
   | 'f_bookcase' | 'f_dishrack' | 'f_flowervase'
+  // v8 新しい置き家具(うえきばち f_pot は お店の品をクラフトでも作れるようにした)
+  | 'f_broom' | 'f_jar' | 'f_birdhouse' | 'f_pinwheel' | 'f_seamobile' | 'f_gardentable'
   // v7-P2 模様替え(かべがみ・ゆかいた)。使っても無くならないので、各1個あれば足りる
   | 'wall_cream' | 'wall_sky' | 'wall_leaf'
   | 'floor_wood' | 'floor_tile' | 'floor_rug';
@@ -34,8 +40,16 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   mushroom: { id: 'mushroom', name: 'きのこ', sell: 5, kind: 'material', desc: '林の木の根もと、日かげに生える' },
   shell: { id: 'shell', name: 'かいがら', sell: 6, kind: 'material', desc: '浜べの砂の上でひろえる、おうぎの形' },
   starshard: { id: 'starshard', name: 'ほしのかけら', sell: 18, kind: 'material', desc: '夜だけ 地面できらめく、まれな かけら' },
+  // ---- v8 拾えるもの4種 ----
+  twig: { id: 'twig', name: 'こえだ', sell: 3, kind: 'material', desc: '林の木の根もとに おちている 小さなえだ' },
+  cutgrass: { id: 'cutgrass', name: 'かりくさ', sell: 3, kind: 'material', desc: '草むらで つかめる やわらかい草' },
+  clay: { id: 'clay', name: 'ねんど', sell: 5, kind: 'material', desc: '池の どろの岸で とれる こまかい土' },
+  glassfloat: { id: 'glassfloat', name: 'うきだま', sell: 25, kind: 'material', desc: '朝の浜に ながれつく ガラスのうきだま' },
   fish: { id: 'fish', name: 'サカナ', sell: 18, kind: 'food', desc: '昼の海や池でつれる' },
   nightfish: { id: 'nightfish', name: 'ヨザカナ', sell: 35, kind: 'food', desc: '夜だけつれる、光る魚' },
+  // ---- v8 海の魚2種(桟橋でだけ つれる。池では つれない) ----
+  seafish: { id: 'seafish', name: 'あおうお', sell: 12, kind: 'food', desc: '昼の海で つれる、青いせなかの魚' },
+  rarefish: { id: 'rarefish', name: 'にじうお', sell: 30, kind: 'food', desc: '夜の海に まれに出る、にじ色にひかる魚' },
   jam: { id: 'jam', name: 'ベリージャム', sell: 45, kind: 'food', desc: 'ルミベリーをにつめた。みんな大すき' },
   f_bench: { id: 'f_bench', name: 'ウッドベンチ', sell: 30, kind: 'furniture', desc: 'すわってひと休みできるベンチ' },
   f_lantern: { id: 'f_lantern', name: 'ランタン', sell: 40, kind: 'furniture', desc: '夜をやさしく照らす', glow: true },
@@ -56,6 +70,13 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   f_bookcase: { id: 'f_bookcase', name: '木のほんだな', sell: 40, kind: 'furniture', desc: '木とクサツルで組んだ、せの低いほんだな' },
   f_dishrack: { id: 'f_dishrack', name: 'しょっきだな', sell: 42, kind: 'furniture', desc: 'おさらとカップをならべる 台所のたな' },
   f_flowervase: { id: 'f_flowervase', name: 'はなかざり', sell: 28, kind: 'furniture', desc: 'かいがらの花びんに のばなをいけた。夜はほのかに光る', glow: true },
+  // ---- v8 新しい置き家具6種(うえきばち f_pot は上の お店の品と同じもの) ----
+  f_broom: { id: 'f_broom', name: 'ほうき', sell: 22, kind: 'furniture', desc: 'こえだの柄に かりくさをたばねた ほうき' },
+  f_jar: { id: 'f_jar', name: 'つぼ', sell: 26, kind: 'furniture', desc: 'ねんどを やいて作った、ずんぐりした つぼ' },
+  f_birdhouse: { id: 'f_birdhouse', name: 'とりのすばこ', sell: 34, kind: 'furniture', desc: '小さな丸い入口の すばこ。とまり木つき' },
+  f_pinwheel: { id: 'f_pinwheel', name: 'かざぐるま', sell: 28, kind: 'furniture', desc: '風で はねが ゆっくりまわる かざぐるま' },
+  f_seamobile: { id: 'f_seamobile', name: 'うみのモビール', sell: 52, kind: 'furniture', desc: 'うきだまと かいがらのモビール。夜は あお白くひかる', glow: true },
+  f_gardentable: { id: 'f_gardentable', name: 'ガーデンテーブル', sell: 46, kind: 'furniture', desc: '石の脚に 木の天板をのせた そとのテーブル' },
   // ---- v7-P2 模様替え(室内で「つかう」。何度でも かえられる) ----
   // 名前は6文字までにする。もちものの1マスは4文字ほどで折り返すので、
   // 「クリームのかべがみ」のような長い名前は3〜4行に割れて読みにくい(実機のスクショで確認)。
@@ -133,6 +154,16 @@ export const RECIPES: RecipeDef[] = [
   { id: 'r_flowervase', name: 'はなかざり', out: 'f_flowervase', outKind: 'item', cost: { flower: 2, shell: 1 } },
   { id: 'r_wall_leaf', name: 'わかばのかべ', out: 'wall_leaf', outKind: 'item', cost: { fiber: 2, flower: 3 } },
   { id: 'r_floor_rug', name: 'ラグのゆか', out: 'floor_rug', outKind: 'item', cost: { fiber: 4, flower: 2 } },
+  // ---- v8 新しい家具7種 ----
+  // うえきばち(r_pot)は お店の品 f_pot と同じもの。作っても買っても手に入る
+  // (かべがみ・ゆかいたと同じ考え方。名前が2つに割れると子どもが混乱するので新IDを作らない)。
+  { id: 'r_broom', name: 'ほうき', out: 'f_broom', outKind: 'item', cost: { twig: 2, cutgrass: 2 } },
+  { id: 'r_pot', name: 'うえきばち', out: 'f_pot', outKind: 'item', cost: { clay: 2, flower: 1 } },
+  { id: 'r_jar', name: 'つぼ', out: 'f_jar', outKind: 'item', cost: { clay: 3 } },
+  { id: 'r_birdhouse', name: 'とりのすばこ', out: 'f_birdhouse', outKind: 'item', cost: { wood: 2, twig: 2 } },
+  { id: 'r_pinwheel', name: 'かざぐるま', out: 'f_pinwheel', outKind: 'item', cost: { twig: 1, fiber: 1, flower: 1 } },
+  { id: 'r_seamobile', name: 'うみのモビール', out: 'f_seamobile', outKind: 'item', cost: { glassfloat: 1, shell: 2 } },
+  { id: 'r_gardentable', name: 'ガーデンテーブル', out: 'f_gardentable', outKind: 'item', cost: { wood: 3, stone: 1 } },
 ];
 
 // 最初から知っているレシピ。
@@ -140,9 +171,12 @@ export const RECIPES: RecipeDef[] = [
 // きのこランプ・ほしのランタンは素材の初回入手でひらめく(src/systems/DiscoverySystem.ts)。
 // v7-P2の5つ(室内向け家具3・かべがみ/ゆか2)は、家の中を自分で飾れることに気づく入口なので最初から見せる
 // (ひらめきの引き金にできる「初めて手に入る素材」がもう残っていないため)。
+// v8: ほうき・つぼ・ガーデンテーブルも最初から見せる(拾えるものが増えたことに気づく入口)。
+// うえきばち・かざぐるま・とりのすばこ・うみのモビールは素材の初回入手でひらめく。
 export const INITIAL_RECIPES = [
   'r_sickle', 'r_rod', 'r_flowerbed', 'r_shelldeco',
   'r_bookcase', 'r_dishrack', 'r_flowervase', 'r_wall_leaf', 'r_floor_rug',
+  'r_broom', 'r_jar', 'r_gardentable',
 ];
 
 // ツムギの店で買える家具・かべがみ・ゆかいた

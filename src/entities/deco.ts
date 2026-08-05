@@ -260,6 +260,60 @@ function makeBushSource(scene: Scene): Mesh {
 }
 
 // ============================================================
+// うみどり(カモメ・v8): 海の上を旋回するだけの にぎやかし。
+// 当たり判定・採取・音はない。翼は左右べつメッシュにして、Z軸まわりに回すだけで
+// はばたかせる(ボーン・アニメクリップは使わない=負荷はほぼゼロ)。
+// 正面は+Z(SeabirdSystem.seabirdPose の rotY と同じ規約)。
+// ============================================================
+const C_GULL = Color3.FromHexString('#eef0ee'); // からだ(白)
+const C_GULL_BACK = Color3.FromHexString('#c9d2d8'); // せなか(あわい灰青)
+const C_GULL_TIP = Color3.FromHexString('#5f666d'); // 翼のさき(黒っぽい灰)
+const C_GULL_BEAK = Color3.FromHexString('#e0a94f'); // くちばし
+
+export interface Seabird {
+  root: Mesh;
+  wingL: Mesh;
+  wingR: Mesh;
+}
+
+/** カモメ1羽(からだ+左右の翼)。翼は root の子で、rotation.z で上下する */
+export function makeSeabird(scene: Scene, seed: number): Seabird {
+  const A = A0();
+  // からだ(前後に長い紡すい形)+ せなかの色の層
+  appendBlob(A, 0, 0, 0, 0.105, 0.095, 0.3, jitterColor(C_GULL, seed, 0.05), {
+    segs: 8, noise: 0.06, seed, bottomDark: 0.1,
+  });
+  appendBlob(A, 0, 0.045, -0.02, 0.09, 0.05, 0.22, jitterColor(C_GULL_BACK, seed + 1, 0.06), {
+    segs: 7, noise: 0.06, seed: seed + 1, bottomDark: 0.06,
+  });
+  // 頭・くちばし
+  appendBlob(A, 0, 0.05, 0.27, 0.075, 0.075, 0.085, C_GULL, { segs: 7, noise: 0.05, seed: seed + 2, bottomDark: 0.1 });
+  appendBlob(A, 0, 0.035, 0.37, 0.022, 0.02, 0.06, C_GULL_BEAK, { segs: 5, noise: 0.04, seed: seed + 3, bottomDark: 0.1 });
+  // 尾(平たく広がる)
+  appendBlob(A, 0, 0.01, -0.3, 0.085, 0.016, 0.12, jitterColor(C_GULL_BACK, seed + 4, 0.06), {
+    segs: 6, noise: 0.08, seed: seed + 4, bottomDark: 0.08,
+  });
+  const root = toMesh(scene, `gull_${seed}`, A, 'flip');
+  root.isPickable = false;
+
+  // 翼: 付け根(x=0)を軸に回すので、ローカル原点は からだの中心にそろえる
+  const wing = (sx: number, name: string): Mesh => {
+    const W = A0();
+    appendBlob(W, sx * 0.4, 0.02, -0.02, 0.4, 0.016, 0.13, jitterColor(C_GULL, seed + 5, 0.04), {
+      segs: 7, noise: 0.06, seed: seed + 5, bottomDark: 0.05,
+    });
+    appendBlob(W, sx * 0.72, 0.012, -0.07, 0.16, 0.013, 0.075, jitterColor(C_GULL_TIP, seed + 6, 0.08), {
+      segs: 6, noise: 0.08, seed: seed + 6, bottomDark: 0.05,
+    });
+    const m = toMesh(scene, name, W, 'flip');
+    m.parent = root;
+    m.isPickable = false;
+    return m;
+  };
+  return { root, wingL: wing(1, `gullWingL_${seed}`), wingR: wing(-1, `gullWingR_${seed}`) };
+}
+
+// ============================================================
 // 池の岸辺(v5-P1): 濡れた土・小石・アシ・水草・流木・水に入った石
 // 等間隔に並べず、要所へまとめて置いて「クラスタ+空白」のリズムを作る。
 // 空白にする場所: 北(角度およそ-1.2 ミナモの小屋と道)と西(角度およそ-2.4 釣り場)。

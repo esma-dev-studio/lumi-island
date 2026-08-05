@@ -337,6 +337,8 @@ export class GameScene {
   render(): void {
     const dt = Math.min(0.25, this.engine.getDeltaTime() / 1000);
     const menuPaused = this.pauseMenu.open || this.paused;
+    // マウスの見回し(ドラッグ・ホイール)を受け付けるか: ポーズ中・パネル表示中は回さない
+    this.camCtl.orbitEnabled = !menuPaused && !this.modalOpen;
     if (!menuPaused) {
       if (this.hitstop > 0) {
         this.hitstop -= dt; // ヒットストップ: 描画は続け、世界を一瞬止める

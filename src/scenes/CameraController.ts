@@ -1,12 +1,15 @@
 // カメラ制御: 追従 / 会話クローズアップ / イベント(夜の見せ場・開花) / 軽いシェイク
 //
-// タッチ(iPad)では追従カメラを指で動かせる:
-//   1本指ドラッグ = 見回し(横=ヨー、縦=見下ろし角) / 2本指ピンチ = ズーム
+// 追従カメラは指でもマウスでも動かせる(感度・範囲は同じ):
+//   タッチ(iPad) 1本指ドラッグ = 見回し(横=ヨー、縦=見下ろし角) / 2本指ピンチ = ズーム
+//   PC(マウス)   左ボタンドラッグ = 見回し                     / ホイール   = ズーム
 // 制約:
 //   - 購読は3Dキャンバスだけ。画面に重なるDOMのタッチUI(仮想スティック等)の指は奪わない。
-//   - PCのマウスは対象外(pointerTypeがtouch/penのときだけ動かす)。従来どおり操作感は変わらない。
+//   - 指とマウスは pointerType で完全に分けて処理する(同じドラッグが二重に効かない)。
+//   - マウスは4px以上動かしたときだけドラッグ扱い(将来のクリック操作と食い合わない)。
 //   - ヨーは360度自由(制限も自動リセンターも無い)。移動入力は PlayerController 側で
 //     このヨーぶん回してカメラ相対にするため、どこを向いても「上=画面の奥」で歩ける。
+//   - マウスに触れなければヨーは0のまま = キーボードだけの操作は従来と完全に同じ。
 import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { Scene } from '@babylonjs/core/scene';
@@ -16,7 +19,7 @@ const CAM_DIST = 6.6;
 const CAM_HEIGHT = 4.9;
 const CAM_LOOK_UP = 0.95;
 
-// ---- タッチ見回しの範囲(既定値=1.0/0.0 のとき従来と完全に同じ構図) ----
+// ---- 見回しの範囲(タッチ・マウス共通。既定値=1.0/0.0 のとき従来と完全に同じ構図) ----
 // ヨーだけは上限を持たない(360度回せる)。回した向きに合わせて移動もカメラ相対になる。
 export const ZOOM_MIN = 0.7; // 近づく側(距離 4.6m)
 export const ZOOM_MAX = 1.6; // 引く側(距離 10.6m)
@@ -24,6 +27,12 @@ export const PITCH_MIN = 0.6; // 低い視点(仰角 約21度)
 export const PITCH_MAX = 1.7; // 見下ろし(仰角 約45度)
 const YAW_PER_PX = 0.005; // 横1pxあたりの回転量(約1250pxで一周)
 const PITCH_PER_PX = 0.0022;
+
+// ---- マウス(PC)の見回し ----
+/** これ未満の移動はクリック扱い(カメラを回さない) */
+export const MOUSE_DRAG_MIN_PX = 4;
+const ZOOM_PER_WHEEL_PX = 0.0016; // ホイール1ノッチ(deltaY=100)でおよそ16%
+const WHEEL_MAX_PX = 240; // 1回のホイールで動かせる上限(端末差・慣性を吸収する)
 
 type Mode = 'follow' | 'dialogue' | 'event' | 'room';
 
@@ -39,8 +48,8 @@ export interface RoomShot {
 // ---- 追従カメラのヨーの公開値 ----
 // 移動をカメラ相対にするため PlayerController が読む。CameraController の実体を
 // 渡す配線(GameScene)を増やさずに済むよう、モジュール変数で1つだけ持つ。
-// 重要: 指(pointerType=touch/pen)でキャンバスをドラッグしたときだけ0以外になる。
-// PC(マウス+キーボード)ではタッチ購読が一度も発火しないので常に0のまま
+// 重要: 指でのドラッグか、マウス左ボタンでのドラッグをしたときだけ0以外になる。
+// キーボードだけで遊ぶかぎりどちらの購読も一度も発火しないので常に0のまま
 // = PlayerController 側の回転は恒等式になり、キーボード移動は従来と一切変わらない。
 let publishedYaw = 0;
 
@@ -82,6 +91,23 @@ export function nextZoom(zoomAtStart: number, startDistPx: number, curDistPx: nu
   return clampRange((zoomAtStart * startDistPx) / curDistPx, ZOOM_MIN, ZOOM_MAX);
 }
 
+/** 押した点からこれだけ動いたらドラッグ(それ未満はクリック扱いで何もしない) */
+export function isDragBeyondThreshold(dxPx: number, dyPx: number): boolean {
+  return Math.hypot(dxPx, dyPx) >= MOUSE_DRAG_MIN_PX;
+}
+
+/** ホイールの deltaY をピクセル相当にそろえる(行・ページ単位のブラウザでも効き目を同じにする) */
+export function wheelDeltaPx(deltaY: number, deltaMode = 0): number {
+  const perUnit = deltaMode === 1 ? 33 : deltaMode === 2 ? 400 : 1; // 1=行, 2=ページ
+  return clampRange(deltaY * perUnit, -WHEEL_MAX_PX, WHEEL_MAX_PX);
+}
+
+/** ホイール後のズーム係数。奥へ回す(deltaY<0)と近づく。範囲はピンチとまったく同じ */
+export function nextZoomWheel(zoom: number, deltaY: number, deltaMode = 0): number {
+  const d = wheelDeltaPx(deltaY, deltaMode);
+  return clampRange(zoom * (1 + d * ZOOM_PER_WHEEL_PX), ZOOM_MIN, ZOOM_MAX);
+}
+
 export class CameraController {
   cam: FreeCamera;
   private mode: Mode = 'follow';
@@ -96,7 +122,7 @@ export class CameraController {
   private desiredPos = new Vector3();
   private desiredTgt = new Vector3();
   private lookAt = new Vector3();
-  // タッチ見回しの状態
+  // 見回しの状態(タッチ・マウス共通)
   private orbitYaw = 0;
   private orbitPitch = 1;
   private orbitZoom = 1;
@@ -105,6 +131,17 @@ export class CameraController {
   private pinchStartDist = 0;
   private pinchStartZoom = 1;
   private detachTouch: (() => void) | null = null;
+  /**
+   * 見回し入力(マウスのドラッグ・ホイール)を受け付けるか。
+   * ポーズ中・パネル表示中は GameScene が毎フレーム false にする。
+   */
+  orbitEnabled = true;
+  // マウスドラッグの状態
+  private mouseId = -1;
+  private mouseStart: { x: number; y: number } | null = null;
+  private mouseLast = { x: 0, y: 0 };
+  private mouseDragging = false;
+  private detachMouse: (() => void) | null = null;
 
   constructor(scene: Scene) {
     this.cam = new FreeCamera('cam', new Vector3(0, 10, 10), scene);
@@ -112,7 +149,10 @@ export class CameraController {
     this.cam.maxZ = 400;
     this.setYaw(0); // 新しいカメラは正面から(前のシーンの見回しを持ち越さない)
     const canvas = scene.getEngine().getRenderingCanvas();
-    if (canvas && typeof canvas.addEventListener === 'function') this.attachTouch(canvas);
+    if (canvas && typeof canvas.addEventListener === 'function') {
+      this.attachTouch(canvas);
+      this.attachMouse(canvas, scene);
+    }
   }
 
   /** ヨーの唯一の書き込み口。公開値(移動のカメラ相対化が読む)と必ず同じ値にする */
@@ -224,6 +264,99 @@ export class CameraController {
     if (!p) return;
     const d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
     this.orbitZoom = nextZoom(this.pinchStartZoom, this.pinchStartDist, d);
+  }
+
+  // ---------- マウス(PC) ----------
+  /**
+   * いま見回し入力を受け付けてよいか。
+   * 追従カメラのときだけ動かす(会話・見せ場・室内では回さない=構図が乱れない)。
+   * ポーズ・パネル表示中は GameScene が orbitEnabled を false にしている。
+   */
+  private canOrbit(): boolean {
+    return this.orbitEnabled && this.mode === 'follow';
+  }
+
+  /**
+   * 左ボタンドラッグ=見回し(タッチの1本指と同じ感度・同じ範囲)、
+   * ホイール=ズーム(ピンチと同じ範囲)。
+   * 指のハンドラとは pointerType で分かれているので、二重に効くことはない。
+   */
+  private attachMouse(canvas: HTMLCanvasElement, scene: Scene): void {
+    const isMouse = (e: PointerEvent): boolean => e.pointerType === 'mouse';
+    const baseCursor = canvas.style.cursor;
+    const sceneCursor = scene.defaultCursor;
+    // ドラッグ中の見た目。Babylonがポインタの移動ごとに scene.defaultCursor を
+    // キャンバスへ書き戻すので、そちらも一緒に変えないと元へ戻されてしまう。
+    const setGrabbing = (on: boolean): void => {
+      scene.defaultCursor = on ? 'grabbing' : sceneCursor;
+      canvas.style.cursor = on ? 'grabbing' : baseCursor;
+    };
+    const stopDrag = (): void => {
+      this.mouseId = -1;
+      this.mouseStart = null;
+      this.mouseDragging = false;
+      setGrabbing(false);
+    };
+    const down = (e: PointerEvent): void => {
+      if (!isMouse(e) || e.button !== 0 || !this.canOrbit()) return;
+      this.mouseId = e.pointerId;
+      this.mouseStart = { x: e.clientX, y: e.clientY };
+      this.mouseLast = { x: e.clientX, y: e.clientY };
+      this.mouseDragging = false;
+      // 画面の外までドラッグしても切れないようにする(離した瞬間は必ず受け取れる)
+      try {
+        canvas.setPointerCapture(e.pointerId);
+      } catch {
+        /* 未対応環境では捕捉なしで続行 */
+      }
+    };
+    const move = (e: PointerEvent): void => {
+      if (!isMouse(e) || e.pointerId !== this.mouseId || !this.mouseStart) return;
+      // 途中でポーズ・パネル・会話が始まったらドラッグを打ち切る(復帰時にカメラが飛ばない)
+      if (!this.canOrbit()) {
+        stopDrag();
+        return;
+      }
+      if (!this.mouseDragging) {
+        // 4px動くまではクリックかもしれないので、カメラには一切触れない
+        if (!isDragBeyondThreshold(e.clientX - this.mouseStart.x, e.clientY - this.mouseStart.y)) return;
+        this.mouseDragging = true;
+        setGrabbing(true);
+      }
+      const dx = e.clientX - this.mouseLast.x;
+      const dy = e.clientY - this.mouseLast.y;
+      this.mouseLast = { x: e.clientX, y: e.clientY };
+      this.setYaw(nextYaw(this.orbitYaw, dx));
+      this.orbitPitch = nextPitch(this.orbitPitch, dy);
+      e.preventDefault(); // ドラッグ中に文字選択・画像ドラッグを起こさない
+    };
+    const up = (e: PointerEvent): void => {
+      if (!isMouse(e) || e.pointerId !== this.mouseId) return;
+      try {
+        canvas.releasePointerCapture(e.pointerId);
+      } catch {
+        /* 解放済み */
+      }
+      stopDrag();
+    };
+    const wheel = (e: WheelEvent): void => {
+      if (!this.canOrbit()) return;
+      this.orbitZoom = nextZoomWheel(this.orbitZoom, e.deltaY, e.deltaMode);
+      e.preventDefault(); // ページのスクロール・ブラウザの拡大を起こさない
+    };
+    canvas.addEventListener('pointerdown', down);
+    canvas.addEventListener('pointermove', move, { passive: false });
+    canvas.addEventListener('pointerup', up);
+    canvas.addEventListener('pointercancel', up);
+    canvas.addEventListener('wheel', wheel, { passive: false });
+    this.detachMouse = () => {
+      canvas.removeEventListener('pointerdown', down);
+      canvas.removeEventListener('pointermove', move);
+      canvas.removeEventListener('pointerup', up);
+      canvas.removeEventListener('pointercancel', up);
+      canvas.removeEventListener('wheel', wheel);
+      stopDrag();
+    };
   }
 
   /** 追従カメラの理想位置・注視点を desiredPos / desiredTgt に入れる */
@@ -349,6 +482,8 @@ export class CameraController {
   dispose(): void {
     this.detachTouch?.();
     this.detachTouch = null;
+    this.detachMouse?.();
+    this.detachMouse = null;
     publishedYaw = 0; // 破棄後に古い向きが移動へ効き続けないようにする
   }
 }

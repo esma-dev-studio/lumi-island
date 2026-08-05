@@ -96,8 +96,11 @@ describe('新レシピ4種', () => {
     expect(ITEMS.f_flowerbed.glow).toBeUndefined();
     expect(ITEMS.f_shelldeco.glow).toBeUndefined();
     const glowing = (Object.keys(ITEMS) as ItemId[]).filter((k) => ITEMS[k].glow);
-    // v7-P2で「はなかざり」(室内向け・弱い光)が加わった。数え方(ITEMSのglowフラグ)は変えていない
-    expect(glowing.sort()).toEqual(['f_flowervase', 'f_lantern', 'f_mushlamp', 'f_starlantern', 'f_stonelamp']);
+    // v7-P2で「はなかざり」(室内向け・弱い光)、v8で「うみのモビール」(弱い光)が加わった。
+    // 数え方(ITEMSのglowフラグ)は変えていない
+    expect(glowing.sort()).toEqual([
+      'f_flowervase', 'f_lantern', 'f_mushlamp', 'f_seamobile', 'f_starlantern', 'f_stonelamp',
+    ]);
   });
 
   it('はなだん・かいがらのかざりは最初から知っている', () => {
@@ -105,11 +108,13 @@ describe('新レシピ4種', () => {
     expect(INITIAL_RECIPES).toContain('r_shelldeco');
     expect(INITIAL_RECIPES).not.toContain('r_mushlamp');
     expect(INITIAL_RECIPES).not.toContain('r_starlantern');
-    // v7-P2の模様替え(室内向け家具3・かべがみ/ゆか2)も最初から見せる。順序はRECIPESの並び順
+    // v7-P2の模様替え(室内向け家具3・かべがみ/ゆか2)も最初から見せる。順序はRECIPESの並び順。
+    // v8のほうき・つぼ・ガーデンテーブルも同じ理由で最初から
     const known = knownRecipes(newGameState()).map((r) => r.id);
     expect(known).toEqual([
       'r_sickle', 'r_rod', 'r_flowerbed', 'r_shelldeco',
       'r_bookcase', 'r_dishrack', 'r_flowervase', 'r_wall_leaf', 'r_floor_rug',
+      'r_broom', 'r_jar', 'r_gardentable',
     ]);
   });
 
@@ -170,7 +175,8 @@ describe('レシピのひらめき(初回入手フック)', () => {
   });
 
   it('ひらめき表は最初から知っているレシピと重ならない', () => {
-    for (const id of Object.values(RECIPE_DISCOVERY)) {
+    // v8でひらめき表は「素材1つにつきレシピ複数」になったので平らにしてから見る
+    for (const id of Object.values(RECIPE_DISCOVERY).flat()) {
       expect(INITIAL_RECIPES).not.toContain(id);
     }
   });

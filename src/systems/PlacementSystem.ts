@@ -97,12 +97,14 @@ const GLOW_TINT: Partial<Record<ItemId, 'amber' | 'mint' | 'blue'>> = {
   f_stonelamp: 'blue',
   f_starlantern: 'blue',
   f_mushlamp: 'mint',
+  f_seamobile: 'blue', // うきだまの あお白い光
 };
 
-/** 光だまりの広さ(m)。表にないものは既定。はなかざりは「ほのかに」なので小さい */
+/** 光だまりの広さ(m)。表にないものは既定。はなかざり・うみのモビールは「ほのかに」なので小さい */
 const GLOW_RADIUS_DEFAULT = 1.6;
 const GLOW_RADIUS: Partial<Record<ItemId, number>> = {
   f_flowervase: 1.05,
+  f_seamobile: 1.15,
 };
 
 const ng = (reason: string): PlacementCheck => ({ ok: false, reason });

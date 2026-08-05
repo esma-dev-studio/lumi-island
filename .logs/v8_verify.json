@@ -1,0 +1,375 @@
+{
+ "when": "2026-08-05T08:17:59.928Z",
+ "checks": [
+  {
+   "name": "twig: 近くのノードが見つかる",
+   "ok": true,
+   "extra": "near=twig"
+  },
+  {
+   "name": "twig: ヒント文言",
+   "ok": true,
+   "extra": "Eこえだをひろう"
+  },
+  {
+   "name": "twig: ずかんに登録された",
+   "ok": true,
+   "extra": "codex=2"
+  },
+  {
+   "name": "cutgrass: 近くのノードが見つかる",
+   "ok": true,
+   "extra": "near=cutgrass"
+  },
+  {
+   "name": "cutgrass: ヒント文言",
+   "ok": true,
+   "extra": "Eかりくさをかる"
+  },
+  {
+   "name": "cutgrass: ずかんに登録された",
+   "ok": true,
+   "extra": "codex=2"
+  },
+  {
+   "name": "clay: 近くのノードが見つかる",
+   "ok": true,
+   "extra": "near=clay"
+  },
+  {
+   "name": "clay: ヒント文言",
+   "ok": true,
+   "extra": "Eねんどをとる"
+  },
+  {
+   "name": "clay: ずかんに登録された",
+   "ok": true,
+   "extra": "codex=2"
+  },
+  {
+   "name": "こえだ初回で かざぐるま+とりのすばこ をひらめく",
+   "ok": true,
+   "extra": "[\"+2 こえだ\",\"レシピを ひらめいた! かざぐるま\",\"レシピを ひらめいた! とりのすばこ\"]"
+  },
+  {
+   "name": "ねんど初回で うえきばち をひらめく",
+   "ok": true,
+   "extra": "[\"+2 ねんど\",\"レシピを ひらめいた! うえきばち\"]"
+  },
+  {
+   "name": "かりくさではひらめかない(表にない素材)",
+   "ok": true,
+   "extra": ""
+  },
+  {
+   "name": "朝6〜10時に うきだまが浜に流れつく",
+   "ok": true,
+   "extra": ""
+  },
+  {
+   "name": "うきだまのヒント文言",
+   "ok": true,
+   "extra": "Eうきだまをひろう"
+  },
+  {
+   "name": "うきだまが ずかんに登録された",
+   "ok": true,
+   "extra": "codex=1"
+  },
+  {
+   "name": "うきだま初回で うみのモビール をひらめく",
+   "ok": true,
+   "extra": "[\"+1 うきだま\",\"レシピを ひらめいた! うみのモビール\"]"
+  },
+  {
+   "name": "拾ったら その場から消える",
+   "ok": true,
+   "extra": "count=0"
+  },
+  {
+   "name": "同じ日に2個目は出ない",
+   "ok": true,
+   "extra": "count=0"
+  },
+  {
+   "name": "クラフト: r_broom",
+   "ok": true,
+   "extra": ""
+  },
+  {
+   "name": "クラフト: r_pot",
+   "ok": true,
+   "extra": ""
+  },
+  {
+   "name": "クラフト: r_jar",
+   "ok": true,
+   "extra": ""
+  },
+  {
+   "name": "クラフト: r_birdhouse",
+   "ok": true,
+   "extra": ""
+  },
+  {
+   "name": "クラフト: r_pinwheel",
+   "ok": true,
+   "extra": ""
+  },
+  {
+   "name": "クラフト: r_seamobile",
+   "ok": true,
+   "extra": ""
+  },
+  {
+   "name": "クラフト: r_gardentable",
+   "ok": true,
+   "extra": ""
+  },
+  {
+   "name": "もちものに f_broom がある",
+   "ok": true,
+   "extra": "n=1"
+  },
+  {
+   "name": "もちものに f_pot がある",
+   "ok": true,
+   "extra": "n=1"
+  },
+  {
+   "name": "もちものに f_jar がある",
+   "ok": true,
+   "extra": "n=1"
+  },
+  {
+   "name": "もちものに f_birdhouse がある",
+   "ok": true,
+   "extra": "n=1"
+  },
+  {
+   "name": "もちものに f_pinwheel がある",
+   "ok": true,
+   "extra": "n=1"
+  },
+  {
+   "name": "もちものに f_seamobile がある",
+   "ok": true,
+   "extra": "n=1"
+  },
+  {
+   "name": "もちものに f_gardentable がある",
+   "ok": true,
+   "extra": "n=1"
+  },
+  {
+   "name": "設置: f_broom",
+   "ok": true,
+   "extra": "began=true reason=ここには おけないよ"
+  },
+  {
+   "name": "設置: f_pot",
+   "ok": true,
+   "extra": "began=true reason=ここには おけないよ"
+  },
+  {
+   "name": "設置: f_jar",
+   "ok": true,
+   "extra": "began=true reason=ここには おけないよ"
+  },
+  {
+   "name": "設置: f_birdhouse",
+   "ok": true,
+   "extra": "began=true reason=ここには おけないよ"
+  },
+  {
+   "name": "設置: f_pinwheel",
+   "ok": true,
+   "extra": "began=true reason=ここには おけないよ"
+  },
+  {
+   "name": "設置: f_seamobile",
+   "ok": true,
+   "extra": "began=true reason=ここには おけないよ"
+  },
+  {
+   "name": "設置: f_gardentable",
+   "ok": false,
+   "extra": "began=true reason=しぜんの めぐみの ばしょだよ"
+  },
+  {
+   "name": "かざぐるまの羽根が回っている",
+   "ok": true,
+   "extra": "10.156 → 11.476"
+  },
+  {
+   "name": "うみのモビールの光だまり(青)が夜に光る",
+   "ok": true,
+   "extra": "{\"total\":9,\"blue\":2,\"alpha\":0.371}"
+  },
+  {
+   "name": "うみどりが3羽いる",
+   "ok": true,
+   "extra": "[{\"x\":14.7,\"y\":8.1,\"z\":50.1,\"w\":0.02},{\"x\":-22.8,\"y\":5.8,\"z\":49.9,\"w\":0.13},{\"x\":8.3,\"y\":9.6,\"z\":64,\"w\":-0.12}]"
+  },
+  {
+   "name": "うみどりが動いている",
+   "ok": true,
+   "extra": "[{\"x\":16.3,\"y\":7.8,\"z\":53.4,\"w\":-0.05},{\"x\":-21.6,\"y\":5.8,\"z\":46.6,\"w\":-0.02},{\"x\":7.5,\"y\":9.8,\"z\":61.8,\"w\":0.16}]"
+  },
+  {
+   "name": "翼がはばたいている",
+   "ok": true,
+   "extra": "[0.02,0.13,-0.12] → [-0.05,-0.02,0.16]"
+  },
+  {
+   "name": "q_fish完了前の桟橋(昼)= 従来のサカナ",
+   "ok": true,
+   "extra": "[\"+1 サカナ\"]"
+  },
+  {
+   "name": "q_fish完了後の桟橋(昼)= あおうお",
+   "ok": true,
+   "extra": "[]"
+  },
+  {
+   "name": "q_fish完了後の桟橋(夜)= にじうお",
+   "ok": true,
+   "extra": "[\"+1 にじうお! めったに つれない にじ色の魚だ\"]"
+  },
+  {
+   "name": "池は従来どおり(あおうおは増えない)",
+   "ok": true,
+   "extra": "sea=1 fish=1"
+  },
+  {
+   "name": "誘導中(もくざい集め)は かりくさのヒントが出ない",
+   "ok": true,
+   "extra": "obj=\"もくざいを あつめよう\" hint=\"\""
+  },
+  {
+   "name": "自由なときは かりくさのヒントが出る",
+   "ok": true,
+   "extra": "hint=\"Eかりくさをかる\""
+  }
+ ],
+ "notes": [
+  "採取ノード数: 70",
+  "shot 01_node_twig hint=\"Eこえだをひろう\"",
+  "twig toasts: [\"+2 こえだ\",\"レシピを ひらめいた! かざぐるま\",\"レシピを ひらめいた! とりのすばこ\"]",
+  "shot 02_node_cutgrass hint=\"Eかりくさをかる\"",
+  "cutgrass toasts: [\"+2 かりくさ\"]",
+  "shot 03_node_clay hint=\"Eねんどをとる\"",
+  "clay toasts: [\"+2 ねんど\",\"レシピを ひらめいた! うえきばち\"]",
+  "うきだま: {\"id\":\"glassfloat1\",\"x\":-19,\"z\":31.5}",
+  "shot 04_beach_morning_float",
+  "shot 05_node_glassfloat hint=\"Eうきだまをひろう\"",
+  "shot 06_craft_panel_v8 hint=\"\"",
+  "置いた家具: [{\"item\":\"f_broom\",\"x\":-6,\"z\":6,\"ok\":true},{\"item\":\"f_pot\",\"x\":-3,\"z\":6,\"ok\":true},{\"item\":\"f_jar\",\"x\":0,\"z\":6,\"ok\":true},{\"item\":\"f_birdhouse\",\"x\":3,\"z\":6,\"ok\":true},{\"item\":\"f_pinwheel\",\"x\":6,\"z\":6,\"ok\":true},{\"item\":\"f_seamobile\",\"x\":9,\"z\":6,\"ok\":true},{\"item\":\"f_gardentable\",\"x\":12,\"z\":6,\"ok\":false}]",
+  "shot 07_f_broom",
+  "shot 08_f_pot",
+  "shot 09_f_jar",
+  "shot 10_f_birdhouse",
+  "shot 11_f_pinwheel_a",
+  "shot 12_f_seamobile_day",
+  "shot 13_f_gardentable",
+  "shot 14_f_pinwheel_b",
+  "shot 15_f_seamobile_night",
+  "shot 16_night_row",
+  "shot 17_seabirds",
+  "shot 18_seabirds_from_pier",
+  "shot 19_fishing_pier hint=\"\"",
+  "池の釣り判定: null",
+  "shot 20_guided_suppressed hint=\"\"",
+  "shot 21_free_hint hint=\"Eかりくさをかる\""
+ ],
+ "errors": [],
+ "codex": {
+  "twig": 2,
+  "cutgrass": 2,
+  "clay": 2,
+  "glassfloat": 1,
+  "f_broom": 1,
+  "f_pot": 1,
+  "f_jar": 1,
+  "f_birdhouse": 1,
+  "f_pinwheel": 1,
+  "f_seamobile": 1,
+  "f_gardentable": 1,
+  "fish": 1,
+  "seafish": 1,
+  "rarefish": 1
+ },
+ "recipes": [
+  "r_sickle",
+  "r_rod",
+  "r_flowerbed",
+  "r_shelldeco",
+  "r_bookcase",
+  "r_dishrack",
+  "r_flowervase",
+  "r_wall_leaf",
+  "r_floor_rug",
+  "r_broom",
+  "r_jar",
+  "r_gardentable",
+  "r_pinwheel",
+  "r_birdhouse",
+  "r_pot",
+  "r_seamobile"
+ ],
+ "furniture": [
+  {
+   "id": 1,
+   "item": "f_broom",
+   "x": -6,
+   "z": 9.5,
+   "rotY": 0
+  },
+  {
+   "id": 2,
+   "item": "f_pot",
+   "x": -3,
+   "z": 9.5,
+   "rotY": 0
+  },
+  {
+   "id": 3,
+   "item": "f_jar",
+   "x": 0,
+   "z": 9.5,
+   "rotY": 0
+  },
+  {
+   "id": 4,
+   "item": "f_birdhouse",
+   "x": 3,
+   "z": 9.5,
+   "rotY": 0
+  },
+  {
+   "id": 5,
+   "item": "f_pinwheel",
+   "x": 6,
+   "z": 9.5,
+   "rotY": 0
+  },
+  {
+   "id": 6,
+   "item": "f_seamobile",
+   "x": 9,
+   "z": 9.5,
+   "rotY": 0
+  }
+ ],
+ "stats": {
+  "place_total": 6,
+  "ach_a_place5": 1,
+  "place_glow": 1
+ },
+ "floatPos": {
+  "id": "glassfloat1",
+  "x": -19,
+  "z": 31.5
+ },
+ "nodeCount": 70
+}

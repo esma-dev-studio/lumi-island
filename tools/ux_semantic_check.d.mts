@@ -5,7 +5,8 @@
 /** 素材別の採取カテゴリ(GATHER_CATEGORIES と同じ並び) */
 export type GatherCategory =
   | 'gatherWood' | 'gatherStone' | 'gatherFiber' | 'gatherMoss' | 'gatherOre' | 'gatherBerry'
-  | 'gatherFlower' | 'gatherMushroom' | 'gatherShell' | 'gatherStar';
+  | 'gatherFlower' | 'gatherMushroom' | 'gatherShell' | 'gatherStar'
+  | 'gatherTwig' | 'gatherCutgrass' | 'gatherClay' | 'gatherFloat';
 
 export type ObjectiveCategory =
   | 'talk' | 'report'
