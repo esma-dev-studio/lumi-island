@@ -39,6 +39,70 @@ export interface FurnitureMesh {
   colliderR: number; // 0=通行可(ラグなど)
 }
 
+// ---------------------------------------------------------------------------
+// マイホーム(室内)の作りつけ家具。島に置く家具と違い、持ち運びはしない。
+// ローカル座標は床の上面 y=0・正面 +Z。すべて fbox だけで組み、toMeshは'keep'で法線を確定させる
+// (丸い部品 appendBlob を混ぜると巻き順の判定が当てにならなくなる)。
+// ---------------------------------------------------------------------------
+const LINEN = Color3.FromHexString('#efe6d4'); // マットレス・シーツ
+const QUILT = Color3.FromHexString('#9ec7b6'); // かけぶとん(島の灯りに合うミント)
+const PILLOW = Color3.FromHexString('#f6f1e2');
+
+/** ベッド(頭は-Z側)。footprint 約1.10 × 2.06m */
+export function makeRoomBed(scene: Scene): Mesh {
+  const A = A0();
+  for (const sx of [-0.45, 0.45]) {
+    for (const sz of [-0.85, 0.85]) fbox(A, sx, 0.13, sz, 0.11, 0.26, 0.11, WOOD_D);
+  }
+  fbox(A, 0, 0.31, 0, 1.1, 0.14, 1.95, WOOD); // フレーム
+  fbox(A, 0, 0.44, 0.03, 1.02, 0.14, 1.86, LINEN); // マットレス
+  fbox(A, 0, 0.53, 0.3, 1.04, 0.11, 1.28, QUILT); // かけぶとん
+  fbox(A, 0, 0.55, -0.36, 1.04, 0.08, 0.18, PILLOW); // シーツの折り返し
+  fbox(A, 0, 0.56, -0.66, 0.64, 0.14, 0.32, PILLOW); // まくら
+  fbox(A, 0, 0.68, -1.0, 1.1, 0.8, 0.08, WOOD); // ヘッドボード
+  fbox(A, 0, 0.44, 1.0, 1.1, 0.34, 0.08, WOOD); // フットボード
+  return toMesh(scene, 'homeBed', A, 'keep');
+}
+
+/**
+ * 室内のラグ(平たい織物)。2.42 × 1.86m・通行できる。
+ * 重ねる板は「上面の高さを必ず変える」(同じ高さに重ねると床とZファイティングして黒く見える)。
+ */
+export function makeRoomRug(scene: Scene): Mesh {
+  const A = A0();
+  fbox(A, 0, 0.01, 0, 2.42, 0.012, 1.86, Color3.FromHexString('#a86b4e')); // ふち
+  fbox(A, 0, 0.014, 0, 2.24, 0.02, 1.68, Color3.FromHexString('#cf9a72')); // 本体
+  for (const sx of [-0.62, 0.62]) {
+    fbox(A, sx, 0.017, 0, 0.26, 0.026, 1.42, Color3.FromHexString('#e2c39a')); // 織りの線
+  }
+  return toMesh(scene, 'homeRug', A, 'keep');
+}
+
+/** つくえ(長辺は±Z方向)+ デスクランプ。footprint 約0.58 × 1.08m */
+export function makeRoomDesk(scene: Scene): { root: Mesh; glowPart: Mesh } {
+  const A = A0();
+  fbox(A, 0, 0.72, 0, 0.58, 0.06, 1.08, WOOD); // 天板
+  for (const sx of [-0.23, 0.23]) {
+    for (const sz of [-0.47, 0.47]) fbox(A, sx, 0.35, sz, 0.07, 0.7, 0.07, WOOD_D);
+  }
+  fbox(A, 0.02, 0.59, -0.28, 0.5, 0.18, 0.44, WOOD_D); // 引き出し
+  fbox(A, -0.24, 0.59, -0.28, 0.05, 0.05, 0.18, Color3.FromHexString('#c9a86b')); // 取っ手
+  fbox(A, -0.02, 0.79, 0.3, 0.3, 0.08, 0.2, Color3.FromHexString('#a85f4f')); // 本
+  fbox(A, -0.02, 0.86, 0.32, 0.27, 0.06, 0.18, Color3.FromHexString('#5d7382'));
+  fbox(A, 0.13, 0.82, -0.3, 0.06, 0.14, 0.06, WOOD_D); // ランプの脚
+  fbox(A, 0.13, 0.98, -0.3, 0.24, 0.12, 0.24, Color3.FromHexString('#c9a86b')); // かさ
+  const root = toMesh(scene, 'homeDesk', A, 'keep');
+  // ランプの光る部分。かさ(不透明)の下へはみ出させる。中に埋めると光っているのが見えない(教訓1)
+  const G = A0();
+  fbox(G, 0.13, 0.87, -0.3, 0.15, 0.11, 0.15, Color3.FromHexString('#f2e0b8'));
+  const glowPart = new Mesh('homeDeskLamp', scene);
+  applyArrays(glowPart, G);
+  glowPart.material = getGlowMats(scene).amber;
+  glowPart.parent = root;
+  glowPart.isPickable = false;
+  return { root, glowPart };
+}
+
 export function makeFurnitureMesh(scene: Scene, item: ItemId): FurnitureMesh {
   const glowMats = getGlowMats(scene);
   const mkGlow = (build: (G: Arrays) => void, mat: 'mint' | 'amber' | 'blue', parent: Mesh): Mesh => {

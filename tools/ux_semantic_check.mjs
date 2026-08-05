@@ -53,7 +53,7 @@ export const OBJ_RULES = [
   { cat: 'tutorial', re: /あるいてみよう/, src: 'TutorialSystem: <kbd>WASD</kbd>か<kbd>矢印キー</kbd>で あるいてみよう' },
   { cat: 'free', re: /じゆうに くらそう/, src: 'ObjectiveSystem: 島で じゆうに くらそう(headline=クリア!)' },
   // NPC不在の待ち案内。「ほうこくしよう」より先に見る(不在時は報告ではなく就寝が次の行動)
-  { cat: 'sleep', re: /ねているよ|ねて まとう|ベッドで .*ねよう/, src: 'ObjectiveSystem/NpcAvailabilityService: ◯◯は もう ねているよ<br>家のベッドで 朝まで ねよう / ベッドで あさまで ねよう' },
+  { cat: 'sleep', re: /ねているよ|ねて まとう|ベッドで .*ねよう/, src: 'ObjectiveSystem/NpcAvailabilityService: ◯◯は もう ねているよ<br>家のベッドで 朝まで ねよう / 家に はいって ベッドで ねよう' },
   { cat: 'report', re: /ほうこくしよう/, src: 'ObjectiveSystem: ◯◯に ほうこくしよう(headline=できた!)' },
   { cat: 'talk', re: /はなしを聞こう|話しかけよう/, src: 'ObjectiveSystem: ◯◯の はなしを聞こう' },
   { cat: 'craft', re: /ざいりょうが そろった|Cで .+を作ろう/, src: 'ObjectiveSystem: ざいりょうが そろったよ! <kbd>C</kbd>で ◯◯を作ろう' },
@@ -84,6 +84,9 @@ export const HINT_RULES = [
   { cat: 'fish', re: /つりをする|つりあげる|まってる/, src: 'InteractionRouting: <kbd>E</kbd>つりをする / FishingSystem: まってる… <kbd>Esc</kbd>やめる / !! <kbd>E</kbd>つりあげる' },
   { cat: 'shop', re: /お店をみる|うる・かう/, src: 'InteractionRouting: <kbd>E</kbd>お店をみる(うる・かう)' },
   { cat: 'sleep', re: /ねる[((]あさまで/, src: 'InteractionRouting: <kbd>E</kbd>ねる(あさまで)' },
+  // v7 マイホーム: 自宅の出入り。sleepと同じ「常時許可」カテゴリ(下の isSemanticMatch を参照)
+  { cat: 'enter', re: /家に はいる/, src: 'InteractionRouting: <kbd>E</kbd>家に はいる' },
+  { cat: 'exit', re: /そとへ でる/, src: 'InteractionRouting: <kbd>E</kbd>そとへ でる' },
   { cat: 'gatherWood', re: /木をきる/, src: 'GatherSystem verb: 木をきる(tree)' },
   { cat: 'gatherStone', re: /岩をくだく/, src: 'GatherSystem verb: 岩をくだく(rock)' },
   { cat: 'gatherFiber', re: /草をかる|クサツルをかる/, src: 'GatherSystem verb: 草をかる(grass)' },
@@ -146,6 +149,11 @@ export function isShopPanelTitle(title) {
  *    (これは判定の緩和ではなく、設計の意味論への較正)。
  *    なお目的そのものがベッド誘導(objCat='sleep')のときは従来どおり厳格で、
  *    採取などのヒントが出れば矛盾のまま。
+ *  - hint=enter/exit(「Eいえに はいる」「Eそとへ でる」): v7でベッドが家の中へ移り、
+ *    「ねる」には まず入室が要るようになった。src/systems/ObjectiveSystem.ts の
+ *    ALWAYS_ALLOWED も ['sleep','enter','exit'] になっていて、誘導中のどの文脈にも混ざる
+ *    (混ぜないと「ベッドでねて待つ」の誘導どおりに動けない・室内に閉じこめられる)。
+ *    よって sleep と同じ常時許可あつかいにする。判定の緩和ではなく、設計の意味論への較正。
  *  - hint=unknown: 表にない文言(src側の新しいヒント等)を矛盾と決めつけない。
  *    ただし見落としに気づけるよう、summarizeTraceがunknownHintsとして文言を残す。
  *  - 目的=craft(「Cで ◯◯を作ろう」): 目的文には作る物しか出ず、不足素材が何かは読み取れない。
@@ -166,8 +174,8 @@ export function isSemanticMatch(objCat, hintCat) {
   if (ANYTHING_OK_OBJ.has(objCat)) return true;
   if (hintCat === 'blocked') return true;
   if (hintCat === 'dialogue') return true;
-  // ねるは ObjectiveSystem の ALWAYS_ALLOWED で全誘導文脈に意図的に混ぜてある補助導線
-  if (hintCat === 'sleep') return true;
+  // ねる・自宅の出入りは ObjectiveSystem の ALWAYS_ALLOWED で全誘導文脈に意図的に混ぜてある補助導線
+  if (hintCat === 'sleep' || hintCat === 'enter' || hintCat === 'exit') return true;
   if (hintCat === 'unknown') return true;
   if (hintCat === 'shop') return false;
   if (objCat === hintCat) return true;

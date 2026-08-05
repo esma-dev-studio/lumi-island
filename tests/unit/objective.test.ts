@@ -208,14 +208,15 @@ describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
     expect(o?.id).toBe('tut_move');
     expect(objectiveActionContext(o).guided).toBe(false);
   });
-  it('NPC不在のベッド誘導中は「ねる」だけ', () => {
+  it('NPC不在のベッド誘導中は「ねる」と自宅の出入りだけ(ベッドは家の中にある)', () => {
     const s = newGameState();
     acceptQuest(s, QUEST_BY_ID.q_wood);
     invAdd(s, 'wood', 5);
     const o = currentObjective(s, 'tsumugi', { tsumugi: { hidden: true } });
     const ctx = objectiveActionContext(o);
     expect(ctx.guided).toBe(true);
-    expect(ctx.preferredKinds).toEqual(['sleep']);
+    expect(ctx.preferredKinds).toEqual(['sleep', 'enter', 'exit']);
+    expect(ctx.preferredKinds).not.toContain('gather');
     expect(ctx.targetPoiId).toBe('bed');
   });
   it('クラフト段階はE候補を対象にしない(targetItemIdsが空)', () => {

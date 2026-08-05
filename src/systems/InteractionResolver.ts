@@ -2,8 +2,13 @@
 // 優先度(小さいほど強い)と距離を別々に扱う。
 import type { ItemId } from '../data/items';
 
-/** 候補の意味(いまの目的と一致するかの判定に使う) */
-export type InteractionKind = 'talk' | 'gather' | 'shop' | 'fish' | 'place' | 'pickup' | 'sleep';
+/**
+ * 候補の意味(いまの目的と一致するかの判定に使う)。
+ * enter/exit は自宅の出入り。sleepと同じで「どの目的の最中でも押してよい」補助導線
+ * (ObjectiveSystem の ALWAYS_ALLOWED を参照)。
+ */
+export type InteractionKind =
+  | 'talk' | 'gather' | 'shop' | 'fish' | 'place' | 'pickup' | 'sleep' | 'enter' | 'exit';
 
 export interface InteractionCandidate {
   id: string;
@@ -23,6 +28,7 @@ export const PRIORITY = {
   npcQuest: 10, // 依頼が進むNPC(報告・受注)
   npc: 20, // 通常会話
   gather: 30, // 採取対象
+  door: 35, // 自宅の出入り・ベッド(ドアの前に立ったら必ずこれが出る)
   shop: 40, // 店カウンター
   fishing: 50, // 釣り場
   furniture: 60, // 設置家具の持ち帰り

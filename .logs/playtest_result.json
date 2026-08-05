@@ -1,6 +1,7 @@
 {
   "completed": true,
-  "totalSec": 300,
+  "homeRoundTrip": true,
+  "totalSec": 363,
   "timeline": [
     {
       "sec": 5,
@@ -35,7 +36,7 @@
       "label": "はじめての夜(発光を確認)"
     },
     {
-      "sec": 43,
+      "sec": 42,
       "label": "目標: q_fish_offer"
     },
     {
@@ -59,117 +60,120 @@
       "label": "目標: q_fish_mats_wood"
     },
     {
-      "sec": 78,
+      "sec": 77,
       "label": "目標: q_fish_mats_fiber"
     },
     {
-      "sec": 84,
+      "sec": 81,
       "label": "目標: q_fish_craft_r_rod"
     },
     {
-      "sec": 85,
+      "sec": 82,
       "label": "目標: q_fish_fish"
     },
     {
-      "sec": 108,
+      "sec": 103,
       "label": "目標: q_fish_report"
     },
     {
-      "sec": 136,
+      "sec": 134,
       "label": "目標: q_ore_offer"
     },
     {
-      "sec": 149,
+      "sec": 146,
       "label": "目標: q_ore_gather"
     },
     {
-      "sec": 157,
+      "sec": 155,
       "label": "目標: q_ore_report"
     },
     {
-      "sec": 161,
+      "sec": 158,
       "label": "目標: q_lantern_offer"
     },
     {
-      "sec": 174,
-      "label": "目標: q_lantern_mats_wood"
-    },
-    {
-      "sec": 183,
+      "sec": 172,
       "label": "目標: q_lantern_mats_moss"
     },
     {
-      "sec": 193,
+      "sec": 186,
       "label": "目標: q_lantern_craft_r_lantern"
     },
     {
-      "sec": 195,
+      "sec": 187,
       "label": "目標: q_lantern_place"
     },
     {
-      "sec": 207,
+      "sec": 201,
       "label": "はじめての家具配置"
     },
     {
-      "sec": 207,
+      "sec": 201,
       "label": "目標: q_lantern_report"
     },
     {
-      "sec": 211,
+      "sec": 204,
       "label": "目標: q_lumi_offer"
     },
     {
-      "sec": 212,
-      "label": "目標: q_lumi_mats_wood"
+      "sec": 206,
+      "label": "目標: q_lumi_mats_stone"
     },
     {
-      "sec": 222,
-      "label": "目標: q_lumi_mats_moss"
+      "sec": 213,
+      "label": "目標: q_lumi_mats_ore"
     },
     {
-      "sec": 243,
-      "label": "目標: q_lumi_craft_r_lantern"
+      "sec": 224,
+      "label": "目標: q_lumi_craft_r_stonelamp"
     },
     {
-      "sec": 245,
+      "sec": 226,
       "label": "目標: q_lumi_place"
     },
     {
-      "sec": 258,
+      "sec": 318,
       "label": "目標: q_lumi_mats_wood"
     },
     {
-      "sec": 267,
+      "sec": 325,
       "label": "目標: q_lumi_mats_moss"
     },
     {
-      "sec": 282,
+      "sec": 332,
       "label": "目標: q_lumi_craft_r_lantern"
     },
     {
-      "sec": 284,
+      "sec": 333,
       "label": "目標: q_lumi_place"
     },
     {
-      "sec": 295,
+      "sec": 345,
       "label": "目標: q_lumi_report"
     },
     {
-      "sec": 300,
+      "sec": 349,
       "label": "目標: free"
     },
     {
-      "sec": 300,
+      "sec": 349,
       "label": "ルミの木 開花!"
     },
     {
-      "sec": 300,
-      "label": "終了(5分0秒)"
+      "sec": 363,
+      "label": "マイホーム 入室→就寝→退出: OK"
+    },
+    {
+      "sec": 363,
+      "label": "終了(6分3秒)"
     }
   ],
   "errors": 0,
   "errorSamples": [],
   "fps": [
+    60,
+    60,
+    60,
     60,
     60,
     60,
@@ -197,5 +201,5 @@
     "q_lantern": "done",
     "q_lumi": "done"
   },
-  "day": 2
+  "day": 3
 }

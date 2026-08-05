@@ -70,6 +70,9 @@ export function load(): GameState | null {
     s.time.hour = finite(rawHour) && rawHour >= 0 && rawHour < 24 ? rawHour : 6;
 
     // プレイヤー(島の範囲へクランプ)
+    // 注意: この±70はマイホームの室内(src/scenes/HomeInterior.ts の HOME_ROOM=58,-58 付近)も
+    // 通す幅であること。狭めると「室内で保存 → 再開したら島の外れへ飛ばされる」ようになる。
+    // 位置が室内の床から外れていた場合の復帰は GameScene.init が受けもつ(入口へ戻す)。
     const p = raw.player as { x?: unknown; z?: unknown; rotY?: unknown } | undefined;
     s.player.x = numIn(p?.x, -70, 70, base.player.x);
     s.player.z = numIn(p?.z, -70, 70, base.player.z);
@@ -168,6 +171,14 @@ export function load(): GameState | null {
     s.stats.quest_done = Math.max(s.stats.quest_done ?? 0, doneQuests);
 
     // フラグ(booleanのみ)
+    //
+    // ここは「後からフィールドを増やしても旧セーブが壊れない」ための汎用の入れ物なので、
+    // 新しいフラグを足すときにこの関数を直す必要はない。v7の `indoor`(家の中にいるか)も
+    // この道を通る。ただし前提が2つあるので、消さないこと:
+    //   1) boolean以外は捨てる → 壊れた値("yes"等)は undefined になり、!== true なので屋外あつかい。
+    //   2) 未知のキーはそのまま通す → indoorを知らない旧コードのセーブでも読める。
+    // 旧セーブ(indoorが無い)は undefined のままなので、GameSceneの `flags.indoor === true` 判定で
+    // 自動的に屋外から始まる(移行処理はいらない)。
     s.flags = {};
     if (typeof raw.flags === 'object' && raw.flags !== null) {
       for (const [k, v] of Object.entries(raw.flags as Record<string, unknown>)) {

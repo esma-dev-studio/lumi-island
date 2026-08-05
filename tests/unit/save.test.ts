@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { newGameState } from '../../src/game/GameState';
 import { save, load, hasSave, clearSave } from '../../src/save/SaveSystem';
+import { HOME_ROOM, homeFloorY } from '../../src/scenes/HomeInterior';
 
 // nodeテスト環境用のlocalStorageスタブ
 const store = new Map<string, string>();
@@ -116,6 +117,35 @@ describe('セーブ/ロード', () => {
       const back = load()!;
       expect(back.islandLevel).toBe(0);
       expect(back.flags).toEqual({ a: true });
+    });
+  });
+
+  // ---- v7: マイホーム(家の中)の記録 ----
+  describe('室内フラグ(flags.indoor)', () => {
+    it('室内で保存すると、室内の位置ごと復元される(位置はクランプ±70の内側)', () => {
+      const s = newGameState();
+      s.flags.indoor = true;
+      s.player = { x: HOME_ROOM.x, z: HOME_ROOM.z, rotY: 1 };
+      save(s);
+      const back = load()!;
+      expect(back.flags.indoor).toBe(true);
+      expect(back.player.x).toBe(HOME_ROOM.x);
+      expect(back.player.z).toBe(HOME_ROOM.z);
+      expect(homeFloorY(back.player.x, back.player.z)).toBe(HOME_ROOM.floorY);
+    });
+    it('indoorの無い旧セーブは屋外あつかい(undefined=false)', () => {
+      const s = newGameState();
+      s.flags.tut_move = true;
+      save(s);
+      const back = load()!;
+      expect(back.flags.indoor).toBeUndefined();
+      expect(back.flags.indoor === true).toBe(false);
+    });
+    it('indoorが壊れた値(文字列)のときは屋外あつかい', () => {
+      const s = newGameState();
+      put({ ...s, flags: { indoor: 'yes' } });
+      const back = load()!;
+      expect(back.flags.indoor).toBeUndefined();
     });
   });
 });

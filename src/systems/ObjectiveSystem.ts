@@ -47,8 +47,10 @@ export interface ObjectiveActionContext {
   guided: boolean;
 }
 
-// 「ねる」はゲーム内時間を進めるだけで、どの目的とも衝突しない(夜に詰まらせない)
-const ALWAYS_ALLOWED: InteractionKind[] = ['sleep'];
+// 「ねる」はゲーム内時間を進めるだけで、どの目的とも衝突しない(夜に詰まらせない)。
+// 自宅の出入り(enter/exit)も同じあつかい: ベッドは家の中にあるので、
+// 誘導中でも家に入れないと「ねて待つ」が実行できなくなる。出るほうも塞がない(室内に閉じこめない)。
+const ALWAYS_ALLOWED: InteractionKind[] = ['sleep', 'enter', 'exit'];
 const FREE_CONTEXT = (): ObjectiveActionContext => ({ preferredKinds: [], guided: false });
 
 /** NPCの在/不在。GameSceneがNPCSystemから作って渡す。不在ならベッドへ誘導する */
@@ -179,11 +181,11 @@ function withAvailability(o: Objective, avail?: Record<string, NpcAvailability>)
   if (!a || !a.hidden) return o;
   return {
     id: `${o.id}_wait`, headline: 'いまやること',
-    label: a.waitLabel ?? `${npcName(o.target.id)}は いまは いないよ<br>ベッドで あさまで ねよう`,
+    label: a.waitLabel ?? `${npcName(o.target.id)}は いまは いないよ<br>家に はいって ベッドで ねよう`,
     target: { kind: 'poi', id: 'bed' },
     lostHint: byInput(
-      'じぶんの家の ドアの前で <kbd>E</kbd>を おすと ねむれるよ。',
-      'じぶんの家の ドアの前で 右下の 大きいボタンを おすと ねむれるよ。'
+      'じぶんの家の ドアの前で <kbd>E</kbd>を おすと 家に はいれるよ。中のベッドで あさまで ねよう。',
+      'じぶんの家の ドアの前で 右下の 大きいボタンを おすと 家に はいれるよ。中のベッドで あさまで ねよう。'
     ),
   };
 }
@@ -251,9 +253,10 @@ export function objectiveActionContext(obj: Objective | null): ObjectiveActionCo
     if (obj.headline !== REPORT_HEADLINE) return FREE_CONTEXT();
     return { preferredKinds: ['talk', ...ALWAYS_ALLOWED], targetNpcId: obj.target.id, guided: true };
   }
-  // NPC不在でベッドへ誘導中(withAvailabilityが作る目的)
+  // NPC不在でベッドへ誘導中(withAvailabilityが作る目的)。
+  // ベッドは家の中なので、出入り(enter/exit)も許可しないと誘導どおりに動けない
   if (obj.target.kind === 'poi' && obj.target.id === 'bed') {
-    return { preferredKinds: ['sleep'], targetPoiId: 'bed', guided: true };
+    return { preferredKinds: [...ALWAYS_ALLOWED], targetPoiId: 'bed', guided: true };
   }
   if (obj.gatherItem) {
     return { preferredKinds: ['gather', ...ALWAYS_ALLOWED], targetItemIds: [obj.gatherItem], guided: true };

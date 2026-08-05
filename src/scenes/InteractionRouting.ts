@@ -7,10 +7,19 @@ import { GATHER_RULES } from '../systems/GatherSystem';
 import { PRIORITY, type InteractionCandidate } from '../systems/InteractionResolver';
 import { objectiveActionContext } from '../systems/ObjectiveSystem';
 import { selectInteraction } from '../systems/ObjectiveInteractionPolicy';
+import { HOME_DOOR, HOME_BED, HOME_ACT_R } from './HomeInterior';
 import type { GameScene } from './GameScene';
 
 export const SHOP_POINT = { x: POIS.shop.x + 4.6, z: POIS.shop.z }; // 店カウンター(工房の正面)
-export const SLEEP_POINT = { x: -30.9, z: 6.7 }; // ミオの家のドア前
+/** ミオの家のドア前。ここでEを押すと室内へ入る(ねるのは室内のベッド) */
+export const HOME_POINT = { x: -30.9, z: 6.7 };
+/**
+ * 家から出たときに立つ場所。ドア前(HOME_POINT)そのものは家のコライダー+体半径の内側で
+ * 「立てない・四方ふさがり」の点なので、そこへ出すと壁にめりこんだ状態から始まってしまう
+ * (実測: canStand=false / isBoxedIn=true)。1mだけ島がわへずらした、実際に立てる点へ出す。
+ * HOME_POINTから1.0mなので「<kbd>E</kbd>家に はいる」のヒント(2.0m)はそのまま出る。
+ */
+export const HOME_EXIT = { x: -29.9, z: 6.7 };
 
 // 戻り値はホットヒント(1行)。E押下(gs.wantInteract)はここで消費する。
 export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
@@ -42,6 +51,35 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
 
   const cands: InteractionCandidate[] = [];
   const px = gs.player.x, pz = gs.player.z;
+
+  // ---- 室内(マイホーム)にいるときは、ベッドとドアだけ ----
+  // 島の候補(NPC・採取・店・釣り・家具)はどれも80m以上はなれていて距離条件に入らないが、
+  // 「室内では室内のことだけ」を構造で保証するために早く返す。
+  if (gs.indoor) {
+    const bedD = Math.hypot(px - HOME_BED.x, pz - HOME_BED.z);
+    if (bedD < HOME_ACT_R) {
+      cands.push({
+        id: 'sleep', kind: 'sleep', targetId: 'bed',
+        priority: PRIORITY.door, distance: bedD, enabled: true,
+        hint: '<kbd>E</kbd>ねる(あさまで)',
+        run: () => gs.seq.sleep(),
+      });
+    }
+    const doorD = Math.hypot(px - HOME_DOOR.x, pz - HOME_DOOR.z);
+    if (doorD < HOME_ACT_R) {
+      cands.push({
+        id: 'exit_home', kind: 'exit', targetId: 'home',
+        priority: PRIORITY.door, distance: doorD, enabled: true,
+        hint: '<kbd>E</kbd>そとへ でる',
+        run: () => gs.seq.leaveHome(),
+      });
+    }
+    const inBest = selectInteraction(cands, objectiveActionContext(gs.lastObjective));
+    if (!inBest) return '';
+    if (want) inBest.run();
+    return inBest.hint;
+  }
+
   // NPC: 受注できる/報告できるときだけ最優先。進行中(話しても進まない)は採取より下げる。
   // ※これを最優先のままにすると、鉱石のそばに立つノクトが採取のEを毎回横取りして
   //   依頼が進まない(実測399秒の主因)
@@ -114,14 +152,14 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
       });
     }
   }
-  // ねる(自宅のドア)
-  const sleepD = Math.hypot(px - SLEEP_POINT.x, pz - SLEEP_POINT.z);
-  if (sleepD < 2.0) {
+  // 自宅のドア: 家の中へ入る(ねるのは室内のベッド)
+  const homeD = Math.hypot(px - HOME_POINT.x, pz - HOME_POINT.z);
+  if (homeD < 2.0) {
     cands.push({
-      id: 'sleep', kind: 'sleep', targetId: 'bed',
-      priority: PRIORITY.shop, distance: sleepD, enabled: true,
-      hint: '<kbd>E</kbd>ねる(あさまで)',
-      run: () => gs.seq.sleep(),
+      id: 'enter_home', kind: 'enter', targetId: 'home',
+      priority: PRIORITY.door, distance: homeD, enabled: true,
+      hint: '<kbd>E</kbd>家に はいる',
+      run: () => gs.seq.enterHome(),
     });
   }
   // 設置家具の持ち帰り

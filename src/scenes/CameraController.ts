@@ -25,7 +25,16 @@ export const PITCH_MAX = 1.7; // 見下ろし(仰角 約45度)
 const YAW_PER_PX = 0.005; // 横1pxあたりの回転量(約1250pxで一周)
 const PITCH_PER_PX = 0.0022;
 
-type Mode = 'follow' | 'dialogue' | 'event';
+type Mode = 'follow' | 'dialogue' | 'event' | 'room';
+
+/** 室内(ドールハウス)の構図。開いた南側から部屋を見おろす */
+export interface RoomShot {
+  cx: number;
+  cy: number; // 床の高さ
+  cz: number;
+  dist: number; // 部屋の中心から南(+Z)へ引く距離
+  height: number; // 床からのカメラの高さ
+}
 
 // ---- 追従カメラのヨーの公開値 ----
 // 移動をカメラ相対にするため PlayerController が読む。CameraController の実体を
@@ -81,6 +90,7 @@ export class CameraController {
   private evTarget = new Vector3();
   private evDist = 12;
   private evHeight = 7;
+  private roomShot: RoomShot | null = null;
   private shakeAmp = 0;
   // 一時オブジェクト(毎フレームのnewを避ける)
   private desiredPos = new Vector3();
@@ -158,6 +168,11 @@ export class CameraController {
       const dx = x - prev.x;
       const dy = y - prev.y;
       this.touches.set(e.pointerId, { x, y });
+      // 室内(ドールハウス構図)では見回さない。ヨーを動かすと移動の向きだけがずれてしまう
+      if (this.mode === 'room') {
+        e.preventDefault();
+        return;
+      }
       if (this.touches.size >= 2) {
         this.updatePinch();
       } else if (e.pointerId === this.dragId) {
@@ -236,6 +251,37 @@ export class CameraController {
     if (this.mode === 'dialogue') this.mode = 'follow';
   }
 
+  /**
+   * 室内カメラ(ドールハウス構図)。部屋の南から北を見おろす。
+   * 向き(ヨー)は既定と同じ0にそろえるので、Wキー=画面の奥 の対応が屋外と変わらない。
+   */
+  beginRoom(shot: RoomShot, snap = false): void {
+    this.mode = 'room';
+    this.roomShot = shot;
+    this.resetOrbit(); // 室内では見回さない(ヨー0=移動の向きも屋外と同じ)
+    if (snap) {
+      this.roomPose(shot.cx, shot.cz);
+      this.cam.position.copyFrom(this.desiredPos);
+      this.lookAt.copyFrom(this.desiredTgt);
+      this.cam.setTarget(this.lookAt);
+    }
+  }
+  endRoom(): void {
+    if (this.mode === 'room') this.mode = 'follow';
+    this.roomShot = null;
+  }
+  get isRoom(): boolean {
+    return this.mode === 'room';
+  }
+
+  /** 室内カメラの理想位置・注視点。プレイヤーの位置にごくわずかだけ寄る(部屋から外れない) */
+  private roomPose(px: number, pz: number): void {
+    const s = this.roomShot;
+    if (!s) return;
+    this.desiredPos.set(s.cx + (px - s.cx) * 0.16, s.cy + s.height, s.cz + s.dist);
+    this.desiredTgt.set(s.cx + (px - s.cx) * 0.34, s.cy + 1.0, s.cz + (pz - s.cz) * 0.14);
+  }
+
   beginEvent(x: number, y: number, z: number, dist: number, height: number): void {
     this.mode = 'event';
     this.evTarget.set(x, y, z);
@@ -270,12 +316,17 @@ export class CameraController {
       this.desiredPos.set(this.evTarget.x, this.evTarget.y + this.evHeight, this.evTarget.z + this.evDist);
       this.desiredTgt.set(this.evTarget.x, this.evTarget.y + 2.2, this.evTarget.z);
       k = Math.min(1, dt * 3.2);
+    } else if (this.mode === 'room') {
+      this.roomPose(px, pz);
+      k = Math.min(1, dt * 5);
     } else {
       this.followPose(px, py, pz);
     }
-    // 地形へ潜らない
-    const g = terrainHeight(this.desiredPos.x, this.desiredPos.z) + 0.6;
-    if (this.desiredPos.y < g) this.desiredPos.y = g;
+    // 地形へ潜らない(室内は島の外=地形が海底なので、この持ち上げは適用しない)
+    if (this.mode !== 'room') {
+      const g = terrainHeight(this.desiredPos.x, this.desiredPos.z) + 0.6;
+      if (this.desiredPos.y < g) this.desiredPos.y = g;
+    }
 
     const p = this.cam.position;
     p.x += (this.desiredPos.x - p.x) * k;

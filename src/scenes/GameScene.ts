@@ -4,7 +4,8 @@ import type { Engine } from '@babylonjs/core/Engines/engine';
 import { IslandScene } from './IslandScene';
 import { CameraController } from './CameraController';
 import { SequenceDirector } from './SequenceDirector';
-import { routeInteraction } from './InteractionRouting';
+import { routeInteraction, HOME_EXIT } from './InteractionRouting';
+import { HOME_SHOT, HOME_SPAWN, HOME_BED, insideHomeFloor } from './HomeInterior';
 import { WorldMarkerController, type MarkerNpc } from './WorldMarkerController';
 import { QuestDialogueController } from './QuestDialogueController';
 import { DialogueCameraPlanner, leanToward } from './DialogueCameraPlanner';
@@ -73,6 +74,8 @@ export class GameScene {
   pauseMenu!: PauseMenu;
   touch!: TouchControls;
   paused = false;
+  /** いま家の中にいるか(セーブは state.flags.indoor)。E候補・カメラ・室内の表示がこれで切り替わる */
+  indoor = false;
   wantInteract = false;
   input: InputState = { up: false, down: false, left: false, right: false, run: false };
   private shownHint = ''; // HUDに出ている操作ヒント(タッチの行動ボタンが同じ内容を出す)
@@ -202,7 +205,19 @@ export class GameScene {
     this.placement.restore();
     this.island.applyIslandLevel(this.state.islandLevel);
     this.island.dayNight.update(this.island.time.hour, this.player.x, this.player.z);
-    this.camCtl.snapTo(this.player.x, this.player.y, this.player.z);
+    // 室内で保存したセーブは室内から始める(indoorが無い旧セーブは屋外あつかい)。
+    // 保存位置が室内の床から外れていたら入口へ戻す(壊れたセーブで海に立たせない)
+    this.indoor = this.state.flags.indoor === true;
+    this.island.home.setActive(this.indoor);
+    if (this.indoor) {
+      if (!insideHomeFloor(this.player.x, this.player.z)) {
+        this.player.teleport(HOME_SPAWN.x, HOME_SPAWN.z);
+        this.player.face(HOME_BED.x, HOME_BED.z);
+      }
+      this.camCtl.beginRoom(HOME_SHOT, true);
+    } else {
+      this.camCtl.snapTo(this.player.x, this.player.y, this.player.z);
+    }
     window.addEventListener('beforeunload', () => save(this.state));
     for (const p of validateItemData()) console.warn('[data]', p);
     this.inputRouter.attach();
@@ -224,6 +239,8 @@ export class GameScene {
       if (n) return { x: n.x, z: n.z, isNpc: false };
     }
     if (o.target.kind === 'poi' && o.target.id) {
+      // 「ベッドでねよう」の目的地は、室内にいるあいだは室内のベッド(距離表示を正しくする)
+      if (o.target.id === 'bed' && this.indoor) return { x: HOME_BED.x, z: HOME_BED.z, isNpc: false };
       const poi = POIS[o.target.id];
       if (poi) return { x: poi.x, z: poi.z, isNpc: false };
     }
@@ -246,8 +263,9 @@ export class GameScene {
       const p = this.npcs.positionOf(obj.target.id);
       if (p && !p.hidden) marks.push({ id: obj.target.id, x: p.x, y: p.y, z: p.z, kind: reportMode ? 'report' : 'target' });
     }
-    // 会話・達成バナー・見せ場の最中は誘導を消し、視線を演出に集める(P1-1)
-    if (this.modalOpen || this.seq.active) {
+    // 会話・達成バナー・見せ場の最中は誘導を消し、視線を演出に集める(P1-1)。
+    // 室内(6×5mの部屋)でも消す: 矢印・光の柱は地形の高さに置くので、島の外では足もとが合わない
+    if (this.modalOpen || this.seq.active || this.indoor) {
       this.markers.hideAll();
     } else {
       this.markers.update(tp, tp?.isNpc ?? false, this.player.x, this.player.z, marks, reportMode);
@@ -270,6 +288,32 @@ export class GameScene {
     for (const a of unlocked) toast(`じっせき たっせい! ${a.name}`, a.icon);
     sfx('quest');
     save(this.state); // 達成の記録を取りこぼさない
+  }
+
+  // ---------- 自宅の出入り ----------
+  /**
+   * 室内/屋外を入れかえる。SequenceDirectorが暗転しきった一瞬に1回だけ呼ぶ。
+   * 位置・カメラ・表示・セーブをここでまとめて そろえる(呼び出し側に散らさない)。
+   */
+  applyIndoor(indoor: boolean): void {
+    this.indoor = indoor;
+    this.state.flags.indoor = indoor;
+    this.island.home.setActive(indoor);
+    this.restoreAllOcclusionImmediately(); // 半透明のまま画がすり替わらないように
+    if (indoor) {
+      this.player.teleport(HOME_SPAWN.x, HOME_SPAWN.z);
+      this.player.face(HOME_BED.x, HOME_BED.z); // 入ったらベッドのほうを向く
+      this.camCtl.beginRoom(HOME_SHOT, true);
+    } else {
+      // ドア前ちょうど(HOME_POINT)は家のコライダーの内側なので、立てる点(HOME_EXIT)へ出す
+      this.player.teleport(HOME_EXIT.x, HOME_EXIT.z);
+      this.player.face(HOME_EXIT.x + 2.4, HOME_EXIT.z + 0.6); // 家に背を向けて島のほうへ
+      this.camCtl.endRoom();
+      this.camCtl.snapTo(this.player.x, this.player.y, this.player.z);
+    }
+    this.island.dayNight.update(this.island.time.hour, this.player.x, this.player.z);
+    this.state.player = { x: this.player.x, z: this.player.z, rotY: this.player.rotY };
+    save(this.state);
   }
 
   // ---------- カメラ遮蔽 ----------

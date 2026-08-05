@@ -19,6 +19,7 @@ import { buildHouse, makeBench, makeLamp, makeStoneRing } from '../entities/buil
 import { makeLogPile, makeCrate, makeBucketRod, makeTelescope, makeDriftwood, makeStump } from '../entities/props';
 import { GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, STAR_SPOTS, type GatherNodeDef } from '../data/island';
 import { DayNight } from './DayNight';
+import { HomeInterior, homeFloorY, insideHomeFloor, HOME_RECTS, HOME_CIRCLES } from './HomeInterior';
 import { TimeSystem } from '../systems/TimeSystem';
 import { StarShardScheduler } from '../systems/StarShardSystem';
 
@@ -66,6 +67,7 @@ export class IslandScene {
   }
   terrain!: Terrain;
   water!: WaterRefs;
+  home!: HomeInterior; // マイホームの室内(屋外にいるあいだは消えている)
   shadows!: CascadedShadowGenerator;
   circles: CircleCollider[] = [];
   rects: RectCollider[] = [];
@@ -330,19 +332,31 @@ export class IslandScene {
     scatterDeco(s);
     getGlowMats(s); // 初期化
 
+    // ---- マイホームの室内(島の外。屋外にいるあいだは消えている) ----
+    // 遮蔽フェード(occludables)には入れない: プレイヤーが乗る床と、カメラの手前に来る壁だから
+    this.home = new HomeInterior(s, [this.terrain.mesh, this.water.sea]);
+    this.shadows.addShadowCaster(this.home.root, true);
+    this.home.root.receiveShadows = true;
+    for (const r of HOME_RECTS) this.rects.push(r);
+    for (const c of HOME_CIRCLES) this.circles.push(c);
+
     this.dayNight.update(this.time.hour);
   }
 
-  /** 歩ける高さ(桟橋・高台の観測デッキの上はその床の高さ) */
+  /** 歩ける高さ(マイホームの床・桟橋・高台の観測デッキの上はその床の高さ) */
   groundY(x: number, z: number): number {
+    const home = homeFloorY(x, z);
+    if (home !== null) return home;
     if (onPier(x, z)) return PIER.y;
     const deck = deckGroundY(x, z);
     if (deck !== null) return deck;
     return terrainHeight(x, z);
   }
 
-  /** 移動可能か(海・池・衝突) */
+  /** 移動可能か(マイホームの床・海・池・衝突) */
   walkable(x: number, z: number): boolean {
+    // マイホームの室内。部屋のまわりは島の規則どおり「海の中」なので外へは抜けられない
+    if (insideHomeFloor(x, z)) return true;
     if (onPier(x, z)) return true;
     const h = terrainHeight(x, z);
     if (h < SEA_WALK_Y) return false;
@@ -390,6 +404,7 @@ export class IslandScene {
 
   update(dtSec: number): void {
     this.time.advance(dtSec);
+    this.home.update(this.time.hour); // 室内灯(室内にいるときだけ効く)
     // ほしのかけら: この関数はWorldPauseControllerが「凍っていないフレーム」だけ呼ぶので、
     // ポーズ・会話・見せ場のあいだは進まない。睡眠で朝6時へ飛んだ場合も「夜が終わった」として消える
     this.updateStars(dtSec);

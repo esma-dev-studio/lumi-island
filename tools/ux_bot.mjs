@@ -176,8 +176,8 @@ const nav = { base: 0, heading: 0, off: 0, side: 1, bad: 0, creep: 0, holdFrom: 
 // 解除は「よけ始めた距離より3m近づけた」か「5秒たった」の早いほう。
 //
 // 粘らせるのは"近づけている一歩"のときだけ(navigate内のd1<d0の枝)。
-// 遠ざかる一歩では必ず角度を広げ直す枝に入り、角度は135度までに制限しているので、
-// 目的地から離れ続けることは原理的に起きない。
+// 遠ざかる一歩では必ず角度を広げ直す枝に入り、角度は90度までに制限しているので、
+// よけている最中に目的地から遠ざかることは原理的に起きない(engageOffsetの説明を参照)。
 // (向きを決め打ちして離れ続ける「コミット型の迂回」は、ベスト距離を基準にした解除条件を
 //  永久に満たせずライブロックした。2026-08-03の走行2で52回連続・757秒の完全停止を招いたため廃止)
 const HOLD_GAIN = 3; // よけ始めた距離から これだけ近づけたら まっすぐに戻す(m)
@@ -191,7 +191,12 @@ function clearOffset() {
 /** よけを engage する(角度を広げる)。戻す条件の基準をここで決める */
 function engageOffset(d0) {
   if (nav.off === 0) nav.holdFrom = d0 ?? Infinity; // よけ始めた地点の距離
-  if (nav.off >= 3) { nav.side = -nav.side; nav.off = 1; } else nav.off++; // 最大135度まで
+  // 最大90度まで。135度(off=3)は目的地方向の速度成分が cos135°=-0.71 になり、
+  // 「よけ」のつもりで走って遠ざかる。HOLD_MS(5秒)のあいだ粘るので1回で数m離れ、
+  // 実測では最短到達8mから17〜19mまで押し戻されていた(停滞中のダンプ16件中6件がoff=3)。
+  // 90度なら目的地方向の成分は0で、よけが距離を増やすことは原理的に起きない
+  // (「135度までに制限しているので離れ続けない」という元の但し書きは算数が合っていなかった)。
+  if (nav.off >= 2) { nav.side = -nav.side; nav.off = 1; } else nav.off++;
   nav.holdUntil = Date.now() + HOLD_MS;
 }
 
@@ -374,11 +379,18 @@ async function navigate(s) {
   if (s.arrow) {
     // 矢印が出ているあいだは矢印が最優先(目的地が画面外)
     nav.base = dirIndex(s.arrow.x - cx, s.arrow.y - cy);
-  } else if (d0 === null && s.markers.length) {
-    // 矢印が消える近さ: NPCの頭上マーカーへ寄る
+  } else if (s.markers.length) {
+    // 矢印は「目的地が画面に入った」時点で消える(WorldMarkerController)。
+    // つまり矢印が無い=画面のどこかに見えている、ということ。
+    // 遊ぶ人はそこでNPCの頭のマーカー(!・✓)を見て歩くので、ボットも同じものを見る。
+    //
+    // ここを d0===null(3m未満)に限っていたのが停滞の主因だった:
+    // 3m〜画面内(実測12〜17m)では 矢印もマーカーも使わず、前の向きのまま歩き続けていた。
+    // (実測 v7走行2のミナモ報告: 停滞中のダンプ7件のうち4件が
+    //  「矢印なし・マーカーは見えている・12〜17m」で、95秒 最短8mを更新できなかった)
     const m = s.markers[0];
     nav.base = dirIndex(m.x - cx, m.y - cy + 40);
-    nav.off = 0;
+    if (d0 === null) nav.off = 0; // 目前まで来たら よけを解いてまっすぐ寄る(従来どおり)
   }
   nav.heading = (nav.base + nav.side * nav.off + 8) % 8;
 
@@ -542,11 +554,12 @@ try {
     const hintCat = categorizeHint(s.hint);
     const objCat = categorizeObjective(s.objective, s.head);
     const shopBait = hintCat === 'shop' && objCat !== 'free';
-    // 「Eねる(あさまで)」も、ベッドへ誘導されているとき以外は押さない。
-    // ねるはどの目的中でも出てよい補助導線(ObjectiveSystemのALWAYS_ALLOWED)なので
-    // 表示は矛盾ではないが、押すと朝までスキップされて時間の状態が変わってしまう。
-    // 遊ぶ人も、採取の途中でたまたま家の前を通っただけで寝たりはしない。
-    const sleepBait = hintCat === 'sleep' && objCat !== 'sleep' && objCat !== 'free';
+    // 「Eねる(あさまで)」「E家に はいる」も、ベッドへ誘導されているとき以外は押さない。
+    // どちらもどの目的中でも出てよい補助導線(ObjectiveSystemのALWAYS_ALLOWED)なので
+    // 表示は矛盾ではないが、押すと朝までスキップ・室内へ移動と、時間や場所の状態が変わってしまう。
+    // 遊ぶ人も、採取の途中でたまたま家の前を通っただけで寝たり家に入ったりはしない。
+    // 「そとへ でる」だけは常に押してよい(室内に取り残されないための逃げ道)。
+    const sleepBait = (hintCat === 'sleep' || hintCat === 'enter') && objCat !== 'sleep' && objCat !== 'free';
     const bait = shopBait || sleepBait;
     if (bait && atGoal && Date.now() > noShopNudgeUntil) {
       noShopNudgeUntil = Date.now() + 3000; // 同じ場面でmarkを埋めない
@@ -557,7 +570,7 @@ try {
         sleepHintAvoided++;
         sleepHintAvoidedSamples.push({ sec: sec(), obj: s.objective, hint: s.hint });
       }
-      mark(`${shopBait ? '店' : 'ねる'}のヒントが出たがEは押さない(目的: ${s.objective})`);
+      mark(`${shopBait ? '店' : hintCat === 'enter' ? '家に はいる' : 'ねる'}のヒントが出たがEは押さない(目的: ${s.objective})`);
     }
     if (!bait && /E/.test(s.hint) && (atGoal || onTheWay) && (onTheWay || Date.now() > noEUntil)) {
       await page.keyboard.press('e');

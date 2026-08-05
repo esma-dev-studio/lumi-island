@@ -30,7 +30,7 @@ npm run dev
 |---|---|---|
 | WASD / 矢印キー | あるく | 最初から |
 | Shift | はしる | 最初から |
-| E / Space | しらべる・とる・はなす・つりあげる | 最初から |
+| E / Space | しらべる・とる・はなす・つりあげる・家に はいる/でる・ねる | 最初から |
 | Esc | 閉じる / メニュー | 最初から |
 | Tab / I | もちもの | はじめて素材を手に入れたら |
 | Q | 島のおねがい | はじめて依頼を受けたら |
@@ -52,7 +52,19 @@ npm run dev
 売却はツムギ工房のカウンター(うる/かう)。家具は「もちもの」から「おく」で配置できます。
 セーブは自動(約20秒ごと+節目)。タイトルの「つづきから」で再開できます。
 
-**「ねる」は補助機能です。** 自宅のドアでEを押すと朝までスキップできますが、これは
+### 自分の家(マイホーム)
+
+自宅のドアの前で**E**を押すと「家に はいる」で室内に入れます(短い暗転のあと、
+壁を2面だけ立てた**ドールハウス構図**で部屋を南から見おろします)。
+中には**ベッド・つくえ・いす・ラグ**があり、
+
+- **ベッドのわきでE** … 「ねる(あさまで)」→ 朝までスキップして、そのままベッドの横で目がさめます
+- **ドアの前でE** … 「そとへ でる」→ 自宅の前に戻ります
+
+室内にいるかどうかもセーブされるので、家の中でやめれば次も家の中から始まります
+(この項目が無い古いセーブは屋外あつかいで読み込まれます)。室内でも島の時間は流れます。
+
+**「ねる」は補助機能です。** 家の中のベッドでEを押すと朝までスキップできますが、これは
 自由探索・時間調整のための補助であり、**メイン依頼の進行に睡眠は必要ありません**。
 依頼を受注中・報告待ちのNPCは questCritical により在宅時間帯でも家に入らず、
 いつでも話しかけられます(`src/systems/NPCSystem.ts`)。
@@ -65,7 +77,7 @@ NPCがどうしても見つからないときの補助導線として使って�
 src/
   main.ts          エントリ(タイトル→ゲーム/展示のルーティング)
   game/            GameState(純データ。セーブ対象)
-  scenes/          GameScene(統括) / InteractionRouting(E入力) / SequenceDirector(見せ場) / IslandScene / DayNight / ShowcaseScene
+  scenes/          GameScene(統括) / InteractionRouting(E入力) / SequenceDirector(見せ場・出入りの暗転) / IslandScene / HomeInterior(家の中) / DayNight / ShowcaseScene
   systems/         Player/NPC/Interaction/Gather/Fishing/Crafting/Quest/Placement/Time(純ロジック)
   characters/      CharacterView(GLBロード・クロスフェード・まばたき)
   entities/        terrain/water/flora/deco/buildings/furniture(実行時プロシージャル生成)
@@ -77,8 +89,8 @@ tools/
   chargen/         キャラクターGLB生成パイプライン(リグ・アニメ・テクスチャ)
   shot.mjs 等      ヘッドレスEdgeでのスクリーンショット検証ハーネス
 tests/
-  unit/            Vitest(100件: 状態・クラフト・依頼・目標・候補選択・時間・セーブ・採取・配置)
-  e2e/             Playwright(21件: 基本フロー・睡眠・夜釣り・モーダル停止・会話カメラ・オンボーディング)
+  unit/            Vitest(454件: 状態・クラフト・依頼・目標・候補選択・時間・セーブ・採取・配置・家の中の間取り)
+  e2e/             Playwright(24件: 基本フロー・家の出入りと睡眠・夜釣り・モーダル停止・会話カメラ・オンボーディング)
 ```
 
 - ロジック(systems)はBabylon/DOM非依存でユニットテスト可能
@@ -87,8 +99,8 @@ tests/
 
 ## テスト・検証(3段階)
 
-- **A. ユニット** — `npm run verify` … typecheck + lint + Vitest 100件 + 同形異文字チェック
-- **B. 決定的リグレッション** — `npm run e2e`(Playwright 21件・システムのEdge)/
+- **A. ユニット** — `npm run verify` … typecheck + lint + Vitest 454件 + 同形異文字チェック
+- **B. 決定的リグレッション** — `npm run e2e`(Playwright 24件・システムのEdge)/
   `npm run test:regression`(実キー入力でタイトル→全依頼→開花を通しで実行。進行判断に
   内部状態の読み取りを使うため回帰試験であり、「子どもが遊べた証明」ではない)
 - **C. ブラックボックスUX** — `npm run test:ux` … 画面の目標文・距離・矢印・マーカー・

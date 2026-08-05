@@ -37,7 +37,7 @@ async function gameInfo() {
     const g = window.__lumi.game;
     const o = g.lastObjective ?? { id: 'none' };
     return JSON.stringify({
-      px: g.player.x, pz: g.player.z,
+      px: g.player.x, pz: g.player.z, indoor: g.indoor,
       obj: o.id, objGather: o.gatherItem ?? null, objCraft: o.craftRecipe ?? null,
       hour: g.state.time.hour, day: g.state.time.day,
       dialogue: g.dialogue.open, qc: g.questComplete.open, paused: g.pauseMenu.open,
@@ -200,16 +200,52 @@ async function npcPos(id) {
   return JSON.parse(await read(`JSON.stringify(window.__lumi.game.npcs.positionOf('${id}'))`));
 }
 
+// ---- 自宅(v7 マイホーム) ----
+// 座標は src/scenes/HomeInterior.ts の HOME_DOOR / HOME_BED と同じ(ボットはTSを読めないので写し)。
+const HOME_ENTRANCE = { x: -30.9, z: 6.7 }; // 屋外: ミオの家のドア前
+const HOME_BED = { x: 56.8, z: -59.2 }; // 室内: ベッドのわき
+const HOME_DOOR = { x: 59.6, z: -59.9 }; // 室内: ドアの前
+
+async function waitUntil(js, ms) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    if (await read(js)) return true;
+    await sleep(120);
+  }
+  return false;
+}
+
+/** 室内のドアから外へ出る(室内にいなければ何もしない) */
+async function leaveHome() {
+  if (!(await read('window.__lumi.game.indoor'))) return true;
+  if (!(await navigate(HOME_DOOR.x, HOME_DOOR.z, 1.1, 30000))) return false;
+  await pressE();
+  return await waitUntil('window.__lumi.game.indoor === false', 5000);
+}
+
 // NPCが家に入っている(hidden)あいだは会えない。
-// ツムギ/ミナモは朝6時に外へ出る→ベッドで寝て朝にする(実プレイヤーと同じ手段)。
+// ツムギ/ミナモは朝6時に外へ出る→家に入ってベッドで寝て朝にする(実プレイヤーと同じ手段)。
 // ノクトは夕方17時から外に出る→その場で待つ(実時間25秒=ゲーム内1時間)。
 async function sleepAtBed() {
-  const ok = await navigate(-30.9, 6.7, 1.4, 60000);
-  if (!ok) return false;
+  // 1) 自宅のドアの前へ → E で家に はいる
+  if (!(await read('window.__lumi.game.indoor'))) {
+    if (!(await navigate(HOME_ENTRANCE.x, HOME_ENTRANCE.z, 1.4, 60000))) return false;
+    await pressE();
+    if (!(await waitUntil('window.__lumi.game.indoor === true', 5000))) return false;
+    await sleep(400);
+  }
+  // 2) 室内のベッドのわきへ → E で ねる
+  if (!(await navigate(HOME_BED.x, HOME_BED.z, 1.1, 30000))) {
+    await leaveHome();
+    return false;
+  }
   await pressE();
-  await sleep(3600); // フェード+朝
+  await sleep(2400); // 暗転+朝
   await flushDialogs();
-  return (await read('window.__lumi.game.state.time.hour')) < 12;
+  const morning = (await read('window.__lumi.game.state.time.hour')) < 12;
+  // 3) そとへ でる(室内に取り残されない)
+  const out = await leaveHome();
+  return morning && out;
 }
 
 async function waitVisible(npcId, maxMs = 330000) {
@@ -304,6 +340,8 @@ try {
     if (!flags.gather && Object.keys(info.inv).length > 0) { flags.gather = true; mark('はじめての採取'); }
     if (info.paused) { await page.keyboard.press('Escape'); await sleep(250); continue; } // 誤ポーズ解除
     if (info.dialogue || info.qc || info.seq) { await flushDialogs(); continue; }
+    // 家の中にいるのに、ねる用の目標ではない: まず外へ出る(室内に取り残されない)
+    if (info.indoor && !info.obj.endsWith('_wait')) { await leaveHome(); continue; }
     if (info.obj !== lastObj) { lastObj = info.obj; objSince = Date.now(); mark(`目標: ${info.obj}`); }
     if (Date.now() - objSince > 600000) {
       await snap(`stuck_${info.obj}`);
@@ -391,11 +429,27 @@ try {
   clearInterval(fpsTimer);
   clearInterval(hbTimer);
 
+  // ---- v7: マイホームの通し確認(入室→就寝→退出)。本編を終えたあとに1回だけ ----
+  // 走行中もNPC不在時に同じ経路を通るが、その日の時間帯しだいなので、ここで必ず1回通す。
+  let homeOk = null;
+  try {
+    await snap('home_before');
+    homeOk = await sleepAtBed();
+    const stillIn = await read('window.__lumi.game.indoor');
+    if (stillIn) homeOk = false;
+    await snap('home_after');
+    mark(`マイホーム 入室→就寝→退出: ${homeOk ? 'OK' : 'NG'}`);
+  } catch (e) {
+    homeOk = false;
+    mark(`マイホームの確認で例外: ${e.message}`);
+  }
+
   const finalInfo = await gameInfo();
   const totalSec = Math.round((Date.now() - START) / 1000);
   mark(`終了(${Math.floor(totalSec / 60)}分${totalSec % 60}秒)`);
   const result = {
     completed: finalInfo.level >= 2,
+    homeRoundTrip: homeOk, // v7: 入室→就寝→退出を通せたか
     totalSec, timeline, errors: errors.length,
     errorSamples: errors.slice(0, 5),
     fps: fpsSamples,
@@ -403,8 +457,8 @@ try {
     day: finalInfo.day,
   };
   writeFileSync('.logs/playtest_result.json', JSON.stringify(result, null, 2));
-  console.log('RESULT', JSON.stringify({ completed: result.completed, totalSec, errors: errors.length, fpsAvg: Math.round(fpsSamples.reduce((a, b) => a + b, 0) / (fpsSamples.length || 1)) }));
-  process.exitCode = result.completed && errors.length === 0 ? 0 : 1;
+  console.log('RESULT', JSON.stringify({ completed: result.completed, homeRoundTrip: homeOk, totalSec, errors: errors.length, fpsAvg: Math.round(fpsSamples.reduce((a, b) => a + b, 0) / (fpsSamples.length || 1)) }));
+  process.exitCode = result.completed && homeOk !== false && errors.length === 0 ? 0 : 1;
 } catch (e) {
   console.error('BOT FAILED:', e.message);
   writeFileSync('.logs/playtest_result.json', JSON.stringify({ completed: false, error: e.message, timeline, errors: errors.slice(0, 8) }, null, 2));

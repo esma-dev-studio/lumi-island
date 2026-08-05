@@ -85,6 +85,13 @@ describe('categorizeHint(ホットヒント)', () => {
     expect(categorizeHint('   ')).toBe('none');
     expect(categorizeHint('Eなぞの そうさ')).toBe('unknown');
   });
+  it('v7 マイホームの出入り(enter / exit)', () => {
+    expect(categorizeHint('E家に はいる')).toBe('enter');
+    expect(categorizeHint('Eそとへ でる')).toBe('exit');
+    expect(categorizeHint('<kbd>E</kbd>家に はいる')).toBe('enter');
+    expect(categorizeHint('家に はいる')).toBe('enter'); // タッチの行動ボタンのラベル
+    expect(categorizeHint('そとへ でる')).toBe('exit');
+  });
 });
 
 describe('isSemanticMatch(既知の矛盾を検出する)', () => {
@@ -181,6 +188,19 @@ describe('isSemanticMatch(既知の矛盾を検出する)', () => {
   it('会話送りのヒントはどの目的中でも矛盾ではない', () => {
     expect(isSemanticMatch('gatherWood', 'dialogue')).toBe(true);
     expect(isSemanticMatch('report', 'dialogue')).toBe(true);
+  });
+  it('v7 自宅の出入りもどの目的の最中でもtrue(ALWAYS_ALLOWEDの補助導線)', () => {
+    // ベッドが家の中へ移ったので、ObjectiveSystem の ALWAYS_ALLOWED は
+    // ['sleep','enter','exit']。sleepと同じ「常時許可」の意味論なので同じあつかいにする。
+    for (const obj of ['gatherWood', 'gatherOre', 'fish', 'report', 'craft', 'place', 'sleep']) {
+      expect(isSemanticMatch(obj, 'enter'), `${obj} x enter`).toBe(true);
+      expect(isSemanticMatch(obj, 'exit'), `${obj} x exit`).toBe(true);
+    }
+    // 目的そのものがベッド誘導のときも、採取などのヒントは従来どおり矛盾のまま
+    expect(isSemanticMatch('sleep', 'gatherWood')).toBe(false);
+  });
+  it('ベッド誘導の目的文は「家に はいって ベッドで ねよう」でもsleep', () => {
+    expect(categorizeObjective('ツムギは いまは いないよ<br>家に はいって ベッドで ねよう')).toBe('sleep');
   });
 });
 

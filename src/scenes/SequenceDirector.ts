@@ -1,6 +1,7 @@
 // 見せ場(初回の夜・ルミの木開花)と就寝を、排他的な状態機械で進行する。
 // 睡眠はsetTimeoutを使わずタイムラインで処理し、多重実行できない。
 import { POIS } from '../data/island';
+import { HOME_SHOT } from './HomeInterior';
 import { terrainHeight } from '../entities/terrain';
 import { burst } from '../entities/effects';
 import { toast } from '../ui/Toast';
@@ -8,16 +9,23 @@ import { sfx } from '../audio/AudioSystem';
 import { save } from '../save/SaveSystem';
 import type { GameScene } from './GameScene';
 
-export type SequenceState = 'idle' | 'sleeping' | 'intro' | 'bloom';
+export type SequenceState = 'idle' | 'sleeping' | 'intro' | 'bloom' | 'travel';
 
 const SLEEP_FADE_IN = 0.45; // 暗転までの秒
 const SLEEP_TOTAL = 1.05; // 起床までの秒
+// 自宅の出入りの暗転(全体で約0.3秒)。フェード時間はCSSに足さず要素へ直接書く
+const TRAVEL_FADE = 0.14; // 暗転しきるまで
+const TRAVEL_SWAP = 0.16; // 入れかえる瞬間(暗転しきったところ)
+const TRAVEL_TOTAL = 0.32; // 明転しきるまで
 
 export class SequenceDirector {
   private state: SequenceState = 'idle';
   private t = 0; // 現在の状態の経過秒
   private sleepApplied = false; // 時刻更新を1回だけ行う
   private sleepFade: HTMLElement | null = null;
+  private travelFade: HTMLElement | null = null;
+  private travelTo: 'in' | 'out' = 'in';
+  private travelApplied = false;
   private mossQueue: { x: number; y: number; z: number }[] = []; // 開花に呼応するコケ
   private npcReacted = false;
 
@@ -72,6 +80,40 @@ export class SequenceDirector {
     }
     this.state = 'idle';
     this.gs.camCtl.endEvent();
+    // 万一 室内で見せ場が走っても、終わったらドールハウス構図へ戻す(追従カメラのまま残さない)
+    if (this.gs.indoor) this.gs.camCtl.beginRoom(HOME_SHOT, true);
+  }
+
+  // ---------- 自宅の出入り ----------
+  /** 家に はいる(短い暗転のあいだに室内へ入れかえる)。連打しても1回ぶん */
+  enterHome(): void {
+    this.travel('in');
+  }
+  /** そとへ でる */
+  leaveHome(): void {
+    this.travel('out');
+  }
+  /** いま出入りの暗転中か(検証・ボット用) */
+  get traveling(): boolean {
+    return this.state === 'travel';
+  }
+
+  private travel(to: 'in' | 'out'): void {
+    if (this.state !== 'idle') return; // 排他: 演出・就寝中は動かさない
+    this.state = 'travel';
+    this.t = 0;
+    this.travelTo = to;
+    this.travelApplied = false;
+    if (!this.travelFade) {
+      const el = document.createElement('div');
+      // CSS(src/ui/style.css)は触らずに、この演出ぶんだけ要素へ直接書く
+      el.style.cssText =
+        'position:absolute;inset:0;background:#0e1626;opacity:0;pointer-events:none;' +
+        `transition:opacity ${TRAVEL_FADE}s linear;z-index:20`;
+      document.getElementById('ui-root')!.appendChild(el);
+      this.travelFade = el;
+    }
+    this.travelFade.style.opacity = '1';
   }
 
   /** 自宅ベッドで寝る。連打しても1回ぶんしか実行されない */
@@ -90,14 +132,26 @@ export class SequenceDirector {
 
   update(dt: number): void {
     const gs = this.gs;
-    // 初回の夜: 夕方開始から日没を迎えた瞬間に一度だけ(UIを開いている間は待つ)
-    if (this.state === 'idle' && !gs.modalOpen && !gs.state.flags.intro_done && gs.island.time.hour >= 19.4 && gs.island.time.hour < 22) {
+    // 初回の夜: 夕方開始から日没を迎えた瞬間に一度だけ(UIを開いている間・家の中にいる間は待つ)。
+    // 室内で始めると、島のルミの木へカメラが飛んで部屋の構図が壊れる
+    if (this.state === 'idle' && !gs.modalOpen && !gs.indoor && !gs.state.flags.intro_done && gs.island.time.hour >= 19.4 && gs.island.time.hour < 22) {
       gs.state.flags.intro_done = true;
       this.start('intro');
       sfx('bloom');
     }
     if (this.state === 'idle') return;
     this.t += dt;
+
+    if (this.state === 'travel') {
+      // 暗転しきったところで入れかえる(明るいまま部屋が差し替わるのを見せない)
+      if (!this.travelApplied && this.t >= TRAVEL_SWAP) {
+        this.travelApplied = true;
+        gs.applyIndoor(this.travelTo === 'in');
+        if (this.travelFade) this.travelFade.style.opacity = '0';
+      }
+      if (this.t >= TRAVEL_TOTAL) this.state = 'idle';
+      return;
+    }
 
     if (this.state === 'sleeping') {
       // 暗転しきったら: 時刻更新→GameStateへ同期→NPC再配置→同期後にセーブ(この順を守る)

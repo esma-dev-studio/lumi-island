@@ -322,7 +322,7 @@ describe('ObjectiveSystem(いまやること・迷子ヒント)', () => {
       'ツムギに 近づいて <kbd>E</kbd>で話しかけよう。'
     );
     expect(currentObjective(newGameState(), 'tsumugi', asleep).lostHint).toBe(
-      'じぶんの家の ドアの前で <kbd>E</kbd>を おすと ねむれるよ。'
+      'じぶんの家の ドアの前で <kbd>E</kbd>を おすと 家に はいれるよ。中のベッドで あさまで ねよう。'
     );
   });
 
@@ -335,7 +335,7 @@ describe('ObjectiveSystem(いまやること・迷子ヒント)', () => {
       'ツムギに 近づいて 右下の 大きいボタンで話しかけよう。'
     );
     expect(currentObjective(newGameState(), 'tsumugi', asleep).lostHint).toBe(
-      'じぶんの家の ドアの前で 右下の 大きいボタンを おすと ねむれるよ。'
+      'じぶんの家の ドアの前で 右下の 大きいボタンを おすと 家に はいれるよ。中のベッドで あさまで ねよう。'
     );
   });
 
