@@ -16,6 +16,51 @@ export class ShopUI {
     this.el = document.createElement('div');
     this.el.className = 'panel shop-panel hidden';
     document.getElementById('ui-root')!.appendChild(this.el);
+    // クリックは委譲で1回だけ(描画途中の例外・再描画競合への免疫。CraftUIと同方針)
+    this.el.addEventListener('click', (e) => {
+      const t = (e.target as HTMLElement).closest(
+        '[data-close], .shop-tab, [data-sell], [data-sellall], [data-buy]'
+      ) as HTMLElement | null;
+      if (!t) return;
+      const s = this.getState();
+      if (t.hasAttribute('data-close')) {
+        this.close();
+        return;
+      }
+      if (t.classList.contains('shop-tab')) {
+        this.tab = t.dataset.tab as 'sell' | 'buy';
+        this.render();
+        return;
+      }
+      if (t.dataset.sell) {
+        const id = t.dataset.sell as ItemId;
+        if (invRemove(s, id, 1)) {
+          s.lumina += ITEMS[id].sell;
+          toast(`+${ITEMS[id].sell} ルミナ`, 'lumina');
+          this.onTrade?.();
+          this.render();
+        }
+      } else if (t.dataset.sellall) {
+        const id = t.dataset.sellall as ItemId;
+        const n = invCount(s, id);
+        if (n > 0 && invRemove(s, id, n)) {
+          s.lumina += ITEMS[id].sell * n;
+          toast(`+${ITEMS[id].sell * n} ルミナ`, 'lumina');
+          this.onTrade?.();
+          this.render();
+        }
+      } else if (t.dataset.buy) {
+        const id = t.dataset.buy as ItemId;
+        const price = Number(t.dataset.price);
+        if (s.lumina >= price && !(t as HTMLButtonElement).disabled) {
+          s.lumina -= price;
+          invAddRecorded(s, id, 1); // 買ったものもずかんに記録する(売却は記録しない)
+          toast(`${ITEMS[id].name}を かった!`, id);
+          this.onTrade?.();
+          this.render();
+        }
+      }
+    });
   }
 
   show(): void {
@@ -70,48 +115,6 @@ export class ShopUI {
       </div>
       <div class="craft-list">${body}</div>
     `;
-    this.el.querySelector('[data-close]')?.addEventListener('click', () => this.close());
-    this.el.querySelectorAll<HTMLButtonElement>('.shop-tab').forEach((b) => {
-      b.onclick = () => {
-        this.tab = b.dataset.tab as 'sell' | 'buy';
-        this.render();
-      };
-    });
-    this.el.querySelectorAll<HTMLButtonElement>('[data-sell]').forEach((b) => {
-      b.onclick = () => {
-        const id = b.dataset.sell as ItemId;
-        if (invRemove(s, id, 1)) {
-          s.lumina += ITEMS[id].sell;
-          toast(`+${ITEMS[id].sell} ルミナ`, 'lumina');
-          this.onTrade?.();
-          this.render();
-        }
-      };
-    });
-    this.el.querySelectorAll<HTMLButtonElement>('[data-sellall]').forEach((b) => {
-      b.onclick = () => {
-        const id = b.dataset.sellall as ItemId;
-        const n = invCount(s, id);
-        if (n > 0 && invRemove(s, id, n)) {
-          s.lumina += ITEMS[id].sell * n;
-          toast(`+${ITEMS[id].sell * n} ルミナ`, 'lumina');
-          this.onTrade?.();
-          this.render();
-        }
-      };
-    });
-    this.el.querySelectorAll<HTMLButtonElement>('[data-buy]').forEach((b) => {
-      b.onclick = () => {
-        const id = b.dataset.buy as ItemId;
-        const price = Number(b.dataset.price);
-        if (s.lumina >= price) {
-          s.lumina -= price;
-          invAddRecorded(s, id, 1); // 買ったものもずかんに記録する(売却は記録しない)
-          toast(`${ITEMS[id].name}を かった!`, id);
-          this.onTrade?.();
-          this.render();
-        }
-      };
-    });
+    // クリック処理はコンストラクタの委譲リスナーが担当(ここでは付けない)
   }
 }

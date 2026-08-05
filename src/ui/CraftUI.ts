@@ -15,6 +15,27 @@ export class CraftUI {
     this.el = document.createElement('div');
     this.el.className = 'panel craft-panel hidden';
     document.getElementById('ui-root')!.appendChild(this.el);
+    // クリックは委譲で1回だけ付ける(毎描画のonclick割当てだと、描画途中の例外や
+    // 再描画競合で「ボタンは見えるのに押せない」状態になり得る。実地報告あり)
+    this.el.addEventListener('click', (e) => {
+      const t = (e.target as HTMLElement).closest('[data-close], .craft-btn') as HTMLElement | null;
+      if (!t) return;
+      if (t.hasAttribute('data-close')) {
+        this.close();
+        return;
+      }
+      const id = (t as HTMLButtonElement).dataset.id;
+      if (!id || (t as HTMLButtonElement).disabled) return;
+      const s = this.getState();
+      const r = knownRecipes(s).find((x) => x.id === id);
+      if (r && craft(s, r)) {
+        sfx('craft');
+        const outName = r.outKind === 'tool' ? TOOLS[r.out as ToolId].name : ITEMS[r.out as ItemId].name;
+        this.showPop(outName, r.out);
+        this.onCrafted?.();
+        this.render();
+      }
+    });
   }
 
   toggle(): void {
@@ -67,18 +88,6 @@ export class CraftUI {
       <div class="panel-title">クラフト <span class="panel-close" data-close>${byInput('とじる(C)', 'とじる')}</span></div>
       <div class="craft-list">${rows || '<div class="inv-empty">まだレシピを知らない。島のみんなに聞いてみよう!</div>'}</div>
     `;
-    this.el.querySelector('[data-close]')?.addEventListener('click', () => this.close());
-    this.el.querySelectorAll<HTMLButtonElement>('.craft-btn').forEach((b) => {
-      b.onclick = () => {
-        const r = knownRecipes(s).find((x) => x.id === b.dataset.id);
-        if (r && craft(s, r)) {
-          sfx('craft');
-          const outName = r.outKind === 'tool' ? TOOLS[r.out as ToolId].name : ITEMS[r.out as ItemId].name;
-          this.showPop(outName, r.out);
-          this.onCrafted?.();
-          this.render();
-        }
-      };
-    });
+    // クリック処理はコンストラクタの委譲リスナーが担当(ここでは付けない)
   }
 }

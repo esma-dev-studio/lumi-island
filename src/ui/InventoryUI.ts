@@ -24,6 +24,20 @@ export class InventoryUI {
     this.el = document.createElement('div');
     this.el.className = 'panel inv-panel hidden';
     document.getElementById('ui-root')!.appendChild(this.el);
+    // クリックは委譲で1回だけ(描画途中の例外・再描画競合への免疫。CraftUIと同方針)
+    this.el.addEventListener('click', (e) => {
+      const t = (e.target as HTMLElement).closest('[data-close], [data-place], [data-use]') as HTMLElement | null;
+      if (!t) return;
+      if (t.hasAttribute('data-close')) {
+        this.close();
+      } else if (t.dataset.place) {
+        this.close();
+        this.onPlace?.(t.dataset.place as ItemId);
+      } else if (t.dataset.use) {
+        this.onUse?.(t.dataset.use as ItemId);
+        this.render();
+      }
+    });
   }
 
   toggle(): void {
@@ -64,19 +78,7 @@ export class InventoryUI {
       <div class="panel-sub">どうぐ</div>
       <div class="inv-tools">${tools}</div>
     `;
-    this.el.querySelector('[data-close]')?.addEventListener('click', () => this.close());
-    this.el.querySelectorAll<HTMLButtonElement>('[data-place]').forEach((b) => {
-      b.onclick = () => {
-        this.close();
-        this.onPlace?.(b.dataset.place as ItemId);
-      };
-    });
-    // 模様替えはその場で切り替わる。もちものは閉じない(3種を見くらべながら選べるように)
-    this.el.querySelectorAll<HTMLButtonElement>('[data-use]').forEach((b) => {
-      b.onclick = () => {
-        this.onUse?.(b.dataset.use as ItemId);
-        this.render();
-      };
-    });
+    // クリック処理はコンストラクタの委譲リスナーが担当(ここでは付けない)。
+    // 模様替えはその場で切り替わり、もちものは閉じない(3種を見くらべながら選べるように)
   }
 }
