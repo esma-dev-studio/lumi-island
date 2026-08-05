@@ -52,8 +52,8 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
   const cands: InteractionCandidate[] = [];
   const px = gs.player.x, pz = gs.player.z;
 
-  // ---- 室内(マイホーム)にいるときは、ベッドとドアだけ ----
-  // 島の候補(NPC・採取・店・釣り・家具)はどれも80m以上はなれていて距離条件に入らないが、
+  // ---- 室内(マイホーム)にいるときは、ベッド・ドアと、室内に置いた家具の持ち帰りだけ ----
+  // 島の候補(NPC・採取・店・釣り)はどれも80m以上はなれていて距離条件に入らないが、
   // 「室内では室内のことだけ」を構造で保証するために早く返す。
   if (gs.indoor) {
     const bedD = Math.hypot(px - HOME_BED.x, pz - HOME_BED.z);
@@ -72,6 +72,21 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
         priority: PRIORITY.door, distance: doorD, enabled: true,
         hint: '<kbd>E</kbd>そとへ でる',
         run: () => gs.seq.leaveHome(),
+      });
+    }
+    // 室内に置いた家具の持ち帰り。ドア・ベッドより優先度が低い(PRIORITY.furniture=60 > door=35)ので、
+    // 判定圏に重ねて置けないルール(HomeInterior.checkHomePlacement)と合わせて、
+    // 「そとへ でる」「ねる」が家具に横取りされることはない。
+    // 誘導中(ベッドで待つ等)は preferredKinds に pickup が入っていないので、そもそも出ない
+    const inNear = gs.placement.nearest(px, pz);
+    if (inNear) {
+      cands.push({
+        id: `furn_${inNear.data.id}`, kind: 'pickup',
+        targetId: String(inNear.data.id), itemId: inNear.data.item,
+        priority: PRIORITY.furniture,
+        distance: Math.hypot(px - inNear.data.x, pz - inNear.data.z), enabled: true,
+        hint: `<kbd>E</kbd>${ITEMS[inNear.data.item].name}を もちかえる`,
+        run: () => gs.placement.pickUp(inNear),
       });
     }
     const inBest = selectInteraction(cands, objectiveActionContext(gs.lastObjective));

@@ -1,0 +1,60 @@
+01_indoor_default: indoor=true pos=(58.8,-57.7) 1日14.1時 かべ=wall_cream ゆか=floor_wood 家具=0 ヒント=""
+OK  起動時はクリーム+木のゆか
+OK  もちものに「つかう」が出る(室内)
+02_style_sky_tile: indoor=true pos=(58.8,-57.7) 1日14.1時 かべ=wall_sky ゆか=floor_tile 家具=0 ヒント=""
+OK  そら色のかべがみ+しろタイル — wall_sky/floor_tile
+03_style_leaf_rug: indoor=true pos=(58.8,-57.7) 1日14.2時 かべ=wall_leaf ゆか=floor_rug 家具=0 ヒント=""
+OK  わかばのかべがみ+ラグふうのゆか — wall_leaf/floor_rug
+04_style_back_to_default: indoor=true pos=(58.8,-57.7) 1日14.2時 かべ=wall_cream ゆか=floor_wood 家具=0 ヒント=""
+OK  元(クリーム+木)へも戻せる
+OK  模様替えでアイテムは減らない
+05_inventory_use_panel: indoor=true pos=(58.8,-57.7) 1日14.2時 かべ=wall_sky ゆか=floor_wood 家具=0 ヒント=""
+OK  配置モードに入っている — f_bookcase
+  aim → ねらい(57,-56.5) 実ゴースト(57,-56.5) 理由=なし(置ける)
+OK  置ける場所ではヒントに「おく」 — Eおく Rまわす Escやめる
+06_place_ghost_indoor: indoor=true pos=(58.7,-56.5) 1日14.3時 かべ=wall_cream ゆか=floor_wood 家具=0 ヒント="Eおく Rまわす Escやめる"
+07_bookcase_placed: indoor=true pos=(58.7,-56.5) 1日14.3時 かべ=wall_cream ゆか=floor_wood 家具=1 ヒント=""
+OK  室内にほんだなを置けた — [{"item":"f_bookcase","x":57,"z":-56.5}]
+OK  置いた数のカウンタが増える — 1
+OK  近づくと「もちかえる」が出る — E木のほんだなを もちかえる
+08_bookcase_picked_up: indoor=true pos=(57.9,-55.6) 1日14.4時 かべ=wall_cream ゆか=floor_wood 家具=0 ヒント=""
+OK  持ち帰ると家具が消える — []
+OK  持ち帰るともちものに戻る
+  aim → ねらい(57,-56.5) 実ゴースト(57,-56.5) 理由=なし(置ける)
+09_bookcase_placed_again: indoor=true pos=(58.7,-56.5) 1日14.5時 かべ=wall_cream ゆか=floor_wood 家具=1 ヒント=""
+OK  同じ場所へもう一度置ける — [{"item":"f_bookcase","x":57,"z":-56.5}]
+  aim → ねらい(59.5,-60) 実ゴースト(59.5,-60) 理由=ドアの前は あけておこう
+10_reason_door: indoor=true pos=(58.3,-58.8) 1日14.5時 かべ=wall_cream ゆか=floor_wood 家具=1 ヒント="ドアの前は あけておこう — うごかして ばしょを さがそう Rまわす Escやめる"
+OK  ドアの前は置けない(理由つき) — ドアの前は あけておこう / ドアの前は あけておこう — うごかして ばしょを さがそう Rまわす Escやめる
+OK  ドアの前ではEを押しても置けない
+  aim → ねらい(57.5,-59.5) 実ゴースト(57.5,-59.5) 理由=ねる場所を あけておこう
+11_reason_bed: indoor=true pos=(59.2,-59.5) 1日14.6時 かべ=wall_cream ゆか=floor_wood 家具=1 ヒント="ねる場所を あけておこう — うごかして ばしょを さがそう Rまわす Escやめる"
+OK  ベッドのわきは置けない(理由つき) — ねる場所を あけておこう / ねる場所を あけておこう — うごかして ばしょを さがそう Rまわす Escやめる
+  aim → ねらい(59.5,-56.5) 実ゴースト(59.5,-56.5) 理由=なし(置ける)
+12_flowervase_night: indoor=true pos=(57.8,-56.5) 1日21.1時 かべ=wall_cream ゆか=floor_wood 家具=2 ヒント="E木のほんだなを もちかえる"
+OK  はなかざりを室内に置けた
+OK  光る家具のカウンタが増える — 1
+OK  室内の光だまりが床の高さにある — 床高の光だまり=6 / 全体=9
+13_indoor_all_furniture_day: indoor=true pos=(57.8,-56.5) 1日14時 かべ=wall_cream ゆか=floor_wood 家具=2 ヒント="E木のほんだなを もちかえる"
+14_reload_keeps_style: indoor=true pos=(57.8,-56.5) 1日14.2時 かべ=wall_leaf ゆか=floor_tile 家具=2 ヒント="E木のほんだなを もちかえる"
+OK  リロードしても模様替えが残る — wall_leaf/floor_tile
+OK  リロードしても室内の家具が残る — [{"item":"f_bookcase","x":57,"z":-56.5},{"item":"f_flowervase","x":59.5,"z":-56.5}]
+15_legacy_save_default_style: indoor=true pos=(57.8,-56.5) 1日14.3時 かべ=wall_cream ゆか=floor_wood 家具=2 ヒント="E木のほんだなを もちかえる"
+OK  homeStyleの無い旧セーブはデフォルト — wall_cream/floor_wood
+16_outdoor_inventory_no_use: indoor=false pos=(-29.9,6.7) 1日14.4時 かべ=wall_cream ゆか=floor_wood 家具=2 ヒント=""
+OK  屋外では「つかう」を出さない — つかう=0 / おく=4
+  aim → ねらい(2.5,6.5) 実ゴースト(2.5,6.5) 理由=なし(置ける)
+17_outdoor_place_bench: indoor=false pos=(2.5,8.2) 1日14.5時 かべ=wall_cream ゆか=floor_wood 家具=3 ヒント=""
+OK  屋外の配置は従来どおり動く — 2 -> 3
+18_ipad_indoor: indoor=true pos=(58.8,-57.7) 1日15.1時 かべ=wall_cream ゆか=floor_wood 家具=0 ヒント=""
+OK  タッチでもちものを開ける
+19_ipad_style_changed: indoor=true pos=(58.8,-57.7) 1日15.1時 かべ=wall_sky ゆか=floor_rug 家具=0 ヒント=""
+OK  タッチだけで模様替えできる — wall_sky/floor_rug
+OK  タッチだけで配置モードに入れる
+  iPad配置さがし: pos=(57.64,-57.7) 理由=なし(置ける)
+OK  スティックだけで置ける場所を見つけられる — null
+20_ipad_place_ghost: indoor=true pos=(57.64,-57.7) 1日15.2時 かべ=wall_sky ゆか=floor_rug 家具=0 ヒント="おく"
+21_ipad_placed: indoor=true pos=(57.64,-57.7) 1日15.3時 かべ=wall_sky ゆか=floor_rug 家具=1 ヒント=""
+OK  タッチだけで家具を置ける — [{"item":"f_dishrack","x":56,"z":-57.5}]
+consoleエラー: 0件
+判定: 30/30 OK

@@ -1,6 +1,6 @@
 // セーブ/ロード(localStorage)。スキーマ検証・サニタイズと、壊れたデータからの安全な復旧。
 import { newGameState, SAVE_VERSION, type GameState, type PlacedFurniture, type QuestState } from '../game/GameState';
-import { ITEMS, TOOLS, RECIPES, type ItemId, type ToolId } from '../data/items';
+import { ITEMS, TOOLS, RECIPES, DEFAULT_HOME_STYLE, isStyleFor, type ItemId, type ToolId } from '../data/items';
 import { QUESTS } from '../data/quests';
 
 const KEY = 'lumi_save';
@@ -144,6 +144,15 @@ export function load(): GameState | null {
     );
 
     s.islandLevel = intIn(raw.islandLevel, 0, 2, 0);
+
+    // マイホームの模様替え(かべ・ゆか): 既知のIDで、しかも正しいスロットのものだけ通す。
+    // 項目が無い旧セーブ・壊れた値・かべとゆかの取りちがえは、どれも既定の見た目へ戻す
+    // (codexと同じで「知らないIDは捨てる」方針。新しい見た目を足しても旧セーブは壊れない)。
+    const hs = raw.homeStyle as { wall?: unknown; floor?: unknown } | undefined;
+    s.homeStyle = {
+      wall: typeof hs?.wall === 'string' && isStyleFor('wall', hs.wall) ? hs.wall : DEFAULT_HOME_STYLE.wall,
+      floor: typeof hs?.floor === 'string' && isStyleFor('floor', hs.floor) ? hs.floor : DEFAULT_HOME_STYLE.floor,
+    };
 
     // ずかん(種類ごとの累計入手数): 実在ItemID・0以上の整数のみ。
     // 項目が無い旧セーブは空({})のまま=ずかんは何も登録されていない状態で始まる。

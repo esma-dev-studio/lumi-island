@@ -16,7 +16,7 @@ import { CharacterView } from '../characters/CharacterView';
 import { CHARACTERS } from '../data/characters';
 import { POIS } from '../data/island';
 import { ITEMS, validateItemData } from '../data/items';
-import { newGameState, type GameState } from '../game/GameState';
+import { applyHomeStyle, newGameState, type GameState } from '../game/GameState';
 import { PlayerController, type InputState } from '../systems/PlayerController';
 import { InteractionSystem } from '../systems/InteractionSystem';
 import { FishingSystem } from '../systems/FishingSystem';
@@ -40,7 +40,7 @@ import { PauseMenu } from '../ui/PauseMenu';
 import { TouchControls } from '../ui/TouchControls';
 import { save } from '../save/SaveSystem';
 import { toast } from '../ui/Toast';
-import { sfx, setAmbient } from '../audio/AudioSystem';
+import { sfx, setAmbient, setMusic } from '../audio/AudioSystem';
 import { updateEffects } from '../entities/effects';
 import { installLumiDebugApi } from '../debug/LumiDebugApi';
 
@@ -121,7 +121,8 @@ export class GameScene {
 
     this.hud = new Hud();
     this.objHud = new ObjectiveHud();
-    this.invUI = new InventoryUI(() => this.state);
+    // 「つかう」(模様替え)は室内にいるときだけ出す。判定の元は indoor ひとつだけにする
+    this.invUI = new InventoryUI(() => this.state, () => this.indoor);
     this.craftUI = new CraftUI(() => this.state);
     this.shopUI = new ShopUI(() => this.state);
     this.dialogue = new DialogueUI();
@@ -184,6 +185,14 @@ export class GameScene {
       location.reload();
     };
     this.invUI.onPlace = (item) => this.placement.begin(item);
+    // 模様替え(かべがみ・ゆかいた): その場で見た目が替わる。アイテムは消費しない
+    this.invUI.onUse = (item) => {
+      if (!this.indoor || !applyHomeStyle(this.state, item)) return;
+      this.island.home.applyStyle(this.state.homeStyle);
+      toast(`${ITEMS[item].name}に かえた`, item);
+      sfx('place');
+      save(this.state);
+    };
     this.craftUI.onCrafted = () => {
       if (Object.keys(this.state.inventory).some((k) => ITEMS[k as keyof typeof ITEMS]?.kind === 'furniture')) {
         this.tutorial.onFirstFurniture();
@@ -202,6 +211,7 @@ export class GameScene {
     // 復元
     this.island.time.restore(this.state.time);
     this.lastDay = this.state.time.day;
+    this.island.home.applyStyle(this.state.homeStyle); // 模様替えは家具の復元より先(床の見た目を先に決める)
     this.placement.restore();
     this.island.applyIslandLevel(this.state.islandLevel);
     this.island.dayNight.update(this.island.time.hour, this.player.x, this.player.z);
@@ -301,6 +311,7 @@ export class GameScene {
     this.island.home.setActive(indoor);
     this.restoreAllOcclusionImmediately(); // 半透明のまま画がすり替わらないように
     if (indoor) {
+      this.island.home.applyStyle(this.state.homeStyle); // 入るたびに貼りなおす(セーブと画を必ず一致させる)
       this.player.teleport(HOME_SPAWN.x, HOME_SPAWN.z);
       this.player.face(HOME_BED.x, HOME_BED.z); // 入ったらベッドのほうを向く
       this.camCtl.beginRoom(HOME_SHOT, true);
@@ -357,6 +368,8 @@ export class GameScene {
           save(this.state);
         }
         setAmbient(this.island.time.isNight ? 'night' : 'day');
+        // 夜のオルゴールBGM(19:00〜翌4:30)。演出中は少し下げて効果音とぶつけない
+        setMusic(this.island.time.day, this.island.time.hour, this.indoor, this.seq.active);
         this.hud.setClock(this.island.time.label(), this.island.time.day);
         this.hud.setLumina(this.state.lumina);
         this.state.time = { day: this.island.time.day, hour: this.island.time.hour };

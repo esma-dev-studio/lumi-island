@@ -1,10 +1,14 @@
-// 効果音・環境音: WebAudio合成(素材ファイル不要)。モジュールシングルトン。
+// 効果音・環境音・夜のBGM: WebAudio合成(素材ファイル不要)。モジュールシングルトン。
 // 自動再生制限のため、最初のユーザー操作でAudioContextを起こす。
+import { MusicBox } from './MusicBox';
+import { isMusicHour, nightIndex } from './musicPhrase';
+
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let enabled = true;
 let ambientTimer: number | null = null;
 let currentAmbient: 'day' | 'night' | 'none' = 'none';
+let music: MusicBox | null = null;
 
 function ensureCtx(): AudioContext | null {
   if (!enabled) return null;
@@ -34,6 +38,9 @@ export function initAudioOnGesture(): void {
 
 export function setSoundEnabled(on: boolean): void {
   enabled = on;
+  // オフのあいだにBGMの予約が溜まると、オンに戻した瞬間に一気に鳴ってしまう。
+  // フェードを待たずに止め、次のフレームの setMusic で改めて鳴らし直す。
+  if (!on) music?.silence();
   if (!on && ctx) void ctx.suspend();
   if (on && ctx) void ctx.resume();
 }
@@ -192,4 +199,31 @@ export function setAmbient(mode: 'day' | 'night' | 'none'): void {
       else cricket();
     }
   }, 2600);
+}
+
+// ---- 夜のオルゴールBGM(生成は MusicBox.ts) ----
+/**
+ * ゲーム内時刻をそのまま渡す(毎フレーム呼んでよい)。
+ * 19:00〜翌4:30 はフェードインして演奏し、朝はフェードアウトする。
+ * 「おと」がオフのあいだは何も作らない・鳴らさない(専用トグルは足さない)。
+ * @param day    ゲーム内の日数(同じ夜のあいだ同じフレーズを繰り返すためのシード)
+ * @param hour   ゲーム内時刻(0〜24)
+ * @param indoor 室内にいるか(ローパスで少しこもらせる)
+ * @param duck   見せ場・就寝の演出中か(効果音とぶつからないよう少し下げる)
+ */
+export function setMusic(day: number, hour: number, indoor = false, duck = false): void {
+  const want = enabled && isMusicHour(hour);
+  if (!music) {
+    if (!want) return; // 昼は何も作らない
+    if (!ctx || !master) return; // 初回操作前でAudioContextがまだ無い(次のフレームで作る)
+    music = new MusicBox(ctx, master);
+  }
+  music.setIndoor(indoor);
+  music.setDuck(duck);
+  music.setNight(want, nightIndex(day, hour));
+}
+
+/** BGMの内部状態(検証・デバッグ用。読むだけで副作用はない) */
+export function musicState(): Record<string, unknown> | null {
+  return music ? music.state() : null;
 }

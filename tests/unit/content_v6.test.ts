@@ -96,7 +96,8 @@ describe('新レシピ4種', () => {
     expect(ITEMS.f_flowerbed.glow).toBeUndefined();
     expect(ITEMS.f_shelldeco.glow).toBeUndefined();
     const glowing = (Object.keys(ITEMS) as ItemId[]).filter((k) => ITEMS[k].glow);
-    expect(glowing.sort()).toEqual(['f_lantern', 'f_mushlamp', 'f_starlantern', 'f_stonelamp']);
+    // v7-P2で「はなかざり」(室内向け・弱い光)が加わった。数え方(ITEMSのglowフラグ)は変えていない
+    expect(glowing.sort()).toEqual(['f_flowervase', 'f_lantern', 'f_mushlamp', 'f_starlantern', 'f_stonelamp']);
   });
 
   it('はなだん・かいがらのかざりは最初から知っている', () => {
@@ -104,8 +105,12 @@ describe('新レシピ4種', () => {
     expect(INITIAL_RECIPES).toContain('r_shelldeco');
     expect(INITIAL_RECIPES).not.toContain('r_mushlamp');
     expect(INITIAL_RECIPES).not.toContain('r_starlantern');
+    // v7-P2の模様替え(室内向け家具3・かべがみ/ゆか2)も最初から見せる。順序はRECIPESの並び順
     const known = knownRecipes(newGameState()).map((r) => r.id);
-    expect(known).toEqual(['r_sickle', 'r_rod', 'r_flowerbed', 'r_shelldeco']);
+    expect(known).toEqual([
+      'r_sickle', 'r_rod', 'r_flowerbed', 'r_shelldeco',
+      'r_bookcase', 'r_dishrack', 'r_flowervase', 'r_wall_leaf', 'r_floor_rug',
+    ]);
   });
 
   it('作れる(材料を消費して家具が1つ増え、ずかんにも載る)', () => {

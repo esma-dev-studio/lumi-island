@@ -153,20 +153,29 @@ const POOL_LIFT = 0.07; // 地面からの浮かせ量(m)。小さいとz-fight�
  * 発光する光だまり(地形に沿う扇形メッシュ)。DayNightが明るさ(共有マテリアルのalpha)を制御する。
  * lx/lzは親メッシュのローカル位置。親にparentすると親の回転・位置で地形追従がずれるため、
  * ワールド座標で組んで親には付けず、親が消えるときに一緒に消す。
+ *
+ * flatY を渡すと、地形を見ずに「その高さの平らな円」になる(マイホームの床のように、
+ * 地形の起伏と関係のない床の上に置く場合)。島の外は地形の土台がゼロでノイズだけが残るため、
+ * これを渡さないと室内の光だまりが波うって床に食いこむ。
+ * 返り値は作った光だまり(呼び出し側で親付け・位置合わせをしたいとき用。sceneがまだ無ければnull)。
  */
-export function attachLightPool(parent: Mesh, lx: number, lz: number, radius: number, tint: PoolTint): void {
-  if (!scene) return;
+export function attachLightPool(
+  parent: Mesh, lx: number, lz: number, radius: number, tint: PoolTint, flatY?: number
+): Mesh | null {
+  if (!scene) return null;
   const w = Vector3.TransformCoordinates(new Vector3(lx, 0, lz), parent.computeWorldMatrix(true));
-  const pool = buildPoolMesh(scene, w.x, w.z, radius, tint);
+  const pool = buildPoolMesh(scene, w.x, w.z, radius, tint, flatY);
   parent.onDisposeObservable.add(() => {
     if (!pool.isDisposed()) pool.dispose(); // 共有マテリアル・テクスチャは消さない
   });
+  return pool;
 }
 
 /** 地形に沿う光だまり1枚(中心+同心リング)。UVは中心(0.5,0.5)から半径方向へ張る */
-function buildPoolMesh(s: Scene, wx: number, wz: number, radius: number, tint: PoolTint): Mesh {
+function buildPoolMesh(s: Scene, wx: number, wz: number, radius: number, tint: PoolTint, flatY?: number): Mesh {
   const rings = Math.max(3, Math.ceil(radius / POOL_BAND));
-  const baseY = terrainHeight(wx, wz);
+  const groundAt = (gx: number, gz: number): number => (flatY === undefined ? terrainHeight(gx, gz) : flatY);
+  const baseY = groundAt(wx, wz);
   const positions: number[] = [0, POOL_LIFT, 0];
   const normals: number[] = [0, 1, 0];
   const uvs: number[] = [0.5, 0.5];
@@ -176,7 +185,7 @@ function buildPoolMesh(s: Scene, wx: number, wz: number, radius: number, tint: P
       const a = (i / POOL_SEGS) * Math.PI * 2;
       const cos = Math.cos(a), sin = Math.sin(a);
       const dx = cos * radius * f, dz = sin * radius * f;
-      positions.push(dx, terrainHeight(wx + dx, wz + dz) + POOL_LIFT - baseY, dz);
+      positions.push(dx, groundAt(wx + dx, wz + dz) + POOL_LIFT - baseY, dz);
       normals.push(0, 1, 0);
       uvs.push(0.5 + 0.5 * f * cos, 0.5 + 0.5 * f * sin);
     }

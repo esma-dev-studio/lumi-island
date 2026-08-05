@@ -252,7 +252,7 @@ export function makeFurnitureMesh(scene: Scene, item: ItemId): FurnitureMesh {
           jitterColor(Color3.FromHexString('#e2cfa0'), 50 + i, 0.1),
           { segs: 5, noise: 0.09, seed: 50 + i, bottomDark: 0.3 });
       }
-      const root = toMesh(scene, 'f_mushlamp', A, 'flip');
+      const root = toMesh(scene, 'f_mushlamp', A, 'keep'); // 'flip'は昼に真っ黒(v7.1で実写確認して修正)
       // かさ(淡い黄緑に発光する部分)。共有のmintマテリアルなのでdisposeしない
       const G = A0();
       for (let i = 0; i < stems.length; i++) {
@@ -261,7 +261,7 @@ export function makeFurnitureMesh(scene: Scene, item: ItemId): FurnitureMesh {
           jitterColor(Color3.FromHexString('#cfe8a0'), 60 + i, 0.08),
           { segs: 7, noise: 0.1, seed: 60 + i, flatBottom: true, bottomDark: 0.22 });
       }
-      const glowPart = toMesh(scene, 'f_mushlamp_glow', G, 'flip');
+      const glowPart = toMesh(scene, 'f_mushlamp_glow', G, 'keep');
       glowPart.material = glowMats.mint;
       glowPart.parent = root;
       glowPart.isPickable = false;
@@ -290,7 +290,7 @@ export function makeFurnitureMesh(scene: Scene, item: ItemId): FurnitureMesh {
       appendBlob(A, 0, 0.13, 0, 0.28, 0.15, 0.26, jitterColor(STONE, 13), { segs: 7, noise: 0.22, flatBottom: true, bottomDark: 0.3 });
       appendBlob(A, 0.17, 0.07, -0.12, 0.13, 0.09, 0.12, jitterColor(STONE, 17), { segs: 6, noise: 0.24, seed: 17, flatBottom: true, bottomDark: 0.3 });
       appendBlob(A, -0.16, 0.06, 0.14, 0.11, 0.08, 0.1, jitterColor(STONE, 23), { segs: 6, noise: 0.24, seed: 23, flatBottom: true, bottomDark: 0.3 });
-      const root = toMesh(scene, 'f_starlantern', A, 'flip');
+      const root = toMesh(scene, 'f_starlantern', A, 'keep'); // 同上
       // ほしのかけら(六角の双すい)。閉じた1つの形なのでapplyArraysのauto判定で正しく向く
       const glowPart = mkGlow((G) => {
         const base = G.pos.length / 3;
@@ -312,6 +312,95 @@ export function makeFurnitureMesh(scene: Scene, item: ItemId): FurnitureMesh {
         }
       }, 'blue', root);
       return { root, glowPart, colliderR: 0.32 };
+    }
+    // ---- v7-P2の室内向け家具3種 ----
+    // どれも室内の作りつけ家具(makeRoomBed等)と同じ寸法感で作る。屋外に置いても壊れない
+    // (配置の道すじは既存家具とまったく同じで、室内かどうかで作り分けはしない)。
+    case 'f_bookcase': {
+      // もくざい4+クサツル2。せが低く浅い本だな(お店の「本だな」f_shelfは高さ1.3m・こちらは0.88m)
+      const A = A0();
+      fbox(A, 0, 0.44, -0.13, 0.86, 0.88, 0.04, WOOD); // 背板
+      for (const sx of [-0.41, 0.41]) fbox(A, sx, 0.44, 0, 0.05, 0.88, 0.3, WOOD_D); // がわ板
+      for (const y of [0.04, 0.44, 0.855]) fbox(A, 0, y, 0, 0.86, 0.045, 0.3, WOOD); // たな板
+      const cols = ['#a85f4f', '#5d7382', '#c9a86b', '#6f9a8d', '#8a5f45'];
+      for (let i = 0; i < 5; i++) {
+        // 下段: 立てた本(高さをそろえない)
+        const h = 0.24 + (i % 3) * 0.03;
+        fbox(A, -0.28 + i * 0.14, 0.0625 + h / 2, 0.01, 0.09, h, 0.19, Color3.FromHexString(cols[i]));
+      }
+      for (let i = 0; i < 3; i++) {
+        // 中段: ねかせて積んだ本(少しずつずらす)
+        fbox(A, -0.16 + i * 0.035, 0.4875 + i * 0.05, 0.02, 0.42, 0.048, 0.24, Color3.FromHexString(cols[(i + 2) % 5]));
+      }
+      // クサツルのしばり(がわ板に2本ずつ回す)。素材が見た目に出るようにする
+      for (const sx of [-0.41, 0.41]) {
+        for (const y of [0.28, 0.68]) fbox(A, sx, y, 0, 0.062, 0.035, 0.32, Color3.FromHexString('#7aa85f'));
+      }
+      return { root: toMesh(scene, 'f_bookcase', A, 'keep'), colliderR: 0.42 };
+    }
+    case 'f_dishrack': {
+      // もくざい3+いし2。下は木のとだな、天板は石、上はおさらとカップののったオープンだな
+      const A = A0();
+      for (const sx of [-0.3, 0.3]) {
+        for (const sz of [-0.13, 0.13]) fbox(A, sx, 0.05, sz, 0.07, 0.1, 0.07, WOOD_D); // 足
+      }
+      fbox(A, 0, 0.34, 0, 0.72, 0.48, 0.34, WOOD); // とだな本体
+      for (const sx of [-0.18, 0.18]) fbox(A, sx, 0.34, 0.18, 0.3, 0.4, 0.02, WOOD_D); // とびら2枚
+      for (const sx of [-0.035, 0.035]) fbox(A, sx, 0.34, 0.2, 0.032, 0.032, 0.032, Color3.FromHexString('#c9a86b')); // 取っ手
+      fbox(A, 0, 0.62, 0, 0.78, 0.07, 0.38, jitterColor(STONE, 31)); // 石の天板
+      fbox(A, 0, 0.66, 0, 0.7, 0.02, 0.3, jitterColor(STONE, 43)); // 天板の面(色をわずかに変えて厚みを出す)
+      for (const sx of [-0.34, 0.34]) fbox(A, sx, 0.9, -0.11, 0.05, 0.5, 0.05, WOOD_D); // 上だなの柱
+      fbox(A, 0, 0.885, -0.145, 0.76, 0.45, 0.03, WOOD); // 上だなの背板
+      fbox(A, 0, 1.13, -0.11, 0.78, 0.04, 0.28, WOOD); // 上だなの天板
+      fbox(A, 0, 0.88, -0.11, 0.72, 0.035, 0.24, WOOD); // 中だな
+      // おさら(立てかけ)とカップ(ふせて置く)
+      for (let i = 0; i < 3; i++) {
+        fbox(A, -0.23 + i * 0.23, 0.79, -0.125, 0.19, 0.19, 0.028, Color3.FromHexString(i === 1 ? '#dfe8ea' : '#eef2f2'));
+      }
+      for (let i = 0; i < 3; i++) {
+        fbox(A, -0.22 + i * 0.22, 0.955, -0.1, 0.13, 0.115, 0.13, Color3.FromHexString(i % 2 ? '#e6eef0' : '#f4f8f8'));
+        fbox(A, -0.22 + i * 0.22, 0.955, -0.02, 0.03, 0.06, 0.035, Color3.FromHexString('#d2dcde')); // 取っ手
+      }
+      return { root: toMesh(scene, 'f_dishrack', A, 'keep'), colliderR: 0.4 };
+    }
+    case 'f_flowervase': {
+      // のばな2+かいがら1。かいがら色の花びんに のばなをいけた小さなおきもの。
+      // 花の中心だけが ほのかに光る(暗い室内でも位置が分かる程度の弱い光)
+      const A = A0();
+      appendBlob(A, 0, 0.13, 0, 0.12, 0.13, 0.12, Color3.FromHexString('#e8d9a0'), {
+        segs: 8, noise: 0.09, flatBottom: true, bottomDark: 0.26,
+      });
+      appendBlob(A, 0, 0.255, 0, 0.078, 0.055, 0.078, Color3.FromHexString('#efe6c8'), { segs: 8, noise: 0.07, seed: 3 });
+      const heads = ['#e8d9a0', '#d98a9a', '#e0a0ae'];
+      const stems: [number, number, number][] = [[-0.055, 0.03, 0.44], [0.012, -0.04, 0.52], [0.062, 0.05, 0.4]];
+      for (let i = 0; i < stems.length; i++) {
+        const [hx, hz, top] = stems[i];
+        appendBlob(A, hx, (top + 0.24) / 2, hz, 0.014, (top - 0.24) / 2, 0.014,
+          Color3.FromHexString('#6f9a58'), { segs: 4, noise: 0.05, seed: 80 + i, bottomDark: 0.2 });
+        const head = Color3.FromHexString(heads[i]);
+        for (let k = 0; k < 5; k++) {
+          const phi = (k / 5) * Math.PI * 2 + i;
+          appendBlob(A, hx + Math.cos(phi) * 0.045, top, hz + Math.sin(phi) * 0.045, 0.038, 0.014, 0.038,
+            jitterColor(head, i * 5 + k, 0.07), { segs: 5, noise: 0.07, seed: 90 + i * 7 + k, bottomDark: 0.14 });
+        }
+      }
+      // 向きは'keep'。実機のスクショで確かめた結果で、appendBlobだけの形でも
+      // 'flip'にすると面の裏がわが照らされて まっ黒に見える(教訓4の「必ず複数角度で実物確認」)。
+      // ※既存の f_mushlamp / f_starlantern は'flip'のままで、実機では暗く出ている(別件)
+      const root = toMesh(scene, 'f_flowervase', A, 'keep');
+      // 光る部分は別メッシュ。散らばった小さな塊なのでautoに任せず向きを明示する
+      const G = A0();
+      for (let i = 0; i < stems.length; i++) {
+        const [hx, hz, top] = stems[i];
+        appendBlob(G, hx, top + 0.014, hz, 0.026, 0.022, 0.026, Color3.FromHexString('#f2e2a8'), {
+          segs: 6, noise: 0.05, seed: 100 + i, bottomDark: 0,
+        });
+      }
+      const glowPart = toMesh(scene, 'f_flowervase_glow', G, 'keep');
+      glowPart.material = glowMats.amber; // 共有マテリアルなのでdisposeしない
+      glowPart.parent = root;
+      glowPart.isPickable = false;
+      return { root, glowPart, colliderR: 0.22 };
     }
     default: {
       const A = A0();

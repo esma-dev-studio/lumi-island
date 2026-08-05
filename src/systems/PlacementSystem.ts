@@ -15,6 +15,10 @@ import { save } from '../save/SaveSystem';
 import { attachLightPool, registerGlowSource, unregisterGlowSource } from '../entities/effects';
 import { terrainHeight } from '../entities/terrain';
 import { POIS, POND, ENTRANCES, NPC_SPOTS, GATHER_NODES } from '../data/island';
+import {
+  HOME_ROOM, checkHomePlacement, homeFloorY, insideHomeFloor,
+  type HomeObstacle, type HomePlaceProblem,
+} from '../scenes/HomeInterior';
 
 interface PlacedRuntime {
   data: PlacedFurniture;
@@ -42,7 +46,22 @@ export const PLACE_REASON = {
   gather: 'しぜんの めぐみの ばしょだよ',
   obstacle: 'ほかの ものと かさなっているよ',
   building: 'たてものの 中には おけないよ',
+  // ---- 室内(マイホーム)だけで出る理由 ----
+  room: 'へやの 中に おこう',
+  door: 'ドアの前は あけておこう',
+  path: 'とおり道が なくなっちゃうよ',
 } as const;
+
+/** 室内の判定の種類 → 子ども向けの理由文言(文言はぜんぶPLACE_REASONに集める) */
+const HOME_REASON: Record<Exclude<HomePlaceProblem, null>, string> = {
+  area: PLACE_REASON.room,
+  builtin: PLACE_REASON.furniture,
+  furniture: PLACE_REASON.furniture,
+  door: PLACE_REASON.door,
+  bed: PLACE_REASON.bed,
+  player: PLACE_REASON.player,
+  path: PLACE_REASON.path,
+};
 
 // ---- 判定のしきい値(距離はm) ----
 const MAP_R = 46; // 島の外周(これより外は置けない)
@@ -78,6 +97,12 @@ const GLOW_TINT: Partial<Record<ItemId, 'amber' | 'mint' | 'blue'>> = {
   f_stonelamp: 'blue',
   f_starlantern: 'blue',
   f_mushlamp: 'mint',
+};
+
+/** 光だまりの広さ(m)。表にないものは既定。はなかざりは「ほのかに」なので小さい */
+const GLOW_RADIUS_DEFAULT = 1.6;
+const GLOW_RADIUS: Partial<Record<ItemId, number>> = {
+  f_flowervase: 1.05,
 };
 
 const ng = (reason: string): PlacementCheck => ({ ok: false, reason });
@@ -183,15 +208,36 @@ export class PlacementSystem {
     this.rebuildColliders();
   }
 
+  /** その座標がマイホームの室内か(セーブから復元した家具にも同じ判定を使う) */
+  private isIndoorSpot(x: number, z: number): boolean {
+    return homeFloorY(x, z) !== null;
+  }
+
   private spawn(f: PlacedFurniture): void {
     const fm = makeFurnitureMesh(this.island.scene, f.item);
     const y = this.island.groundY(f.x, f.z) - 0.01;
-    fm.root.position.set(f.x, y, f.z);
+    const indoor = this.isIndoorSpot(f.x, f.z);
+    const home = indoor ? (this.island.home?.root ?? null) : null;
+    if (home) {
+      // 室内の家具は部屋の子にする。屋外にいるあいだは部屋ごと消えるので、
+      // 島から「海に浮かぶ家具」が見えることはない(作りつけ家具と同じあつかい)
+      fm.root.parent = home;
+      fm.root.position.set(f.x - HOME_ROOM.x, y - HOME_ROOM.floorY, f.z - HOME_ROOM.z);
+    } else {
+      fm.root.position.set(f.x, y, f.z);
+    }
     fm.root.rotation.y = f.rotY;
     this.island.shadows.addShadowCaster(fm.root, true);
     fm.root.receiveShadows = true;
     if (ITEMS[f.item].glow) {
-      attachLightPool(fm.root, 0, 0, 1.6, GLOW_TINT[f.item] ?? 'amber');
+      const radius = GLOW_RADIUS[f.item] ?? GLOW_RADIUS_DEFAULT;
+      const tint = GLOW_TINT[f.item] ?? 'amber';
+      // 室内は床が平らなので、地形ではなく床の高さで平らな光だまりを作る
+      const pool = attachLightPool(fm.root, 0, 0, radius, tint, indoor ? y + 0.01 : undefined);
+      if (pool && home) {
+        pool.parent = home;
+        pool.position.set(f.x - HOME_ROOM.x, y + 0.01 - HOME_ROOM.floorY, f.z - HOME_ROOM.z);
+      }
       registerGlowSource(f.x, y + 0.9, f.z);
     }
     this.placed.set(f.id, { data: f, mesh: fm.root, colliderR: fm.colliderR });
@@ -234,7 +280,11 @@ export class PlacementSystem {
     const fz = player.z - Math.cos(player.rotY) * 1.7;
     this.gx = Math.round(fx * 2) / 2;
     this.gz = Math.round(fz * 2) / 2;
-    const y = this.island.groundY(this.gx, this.gz);
+    // 室内では床の高さで固定する。壁の向こうへ向けるとゴーストが部屋の外の地形(海の高さ)まで
+    // 落ちてしまい、「置けない」を伝えるまえに見た目がこわれるため
+    const y = insideHomeFloor(player.x, player.z)
+      ? HOME_ROOM.floorY
+      : this.island.groundY(this.gx, this.gz);
     this.ghost.position.set(this.gx, y - 0.01, this.gz);
     this.ghost.rotation.y = this.rot;
     this.indicator.position.set(this.gx, y + 0.04, this.gz);
@@ -243,8 +293,25 @@ export class PlacementSystem {
     this.indicator.material = this.valid ? this.okMat : this.ngMat;
   }
 
+  /**
+   * 室内(マイホーム)の判定。屋外のルール(島の外周・地形・NPCの立ち位置…)は一切使わない。
+   * 島のコライダーも見ない: 部屋は島から80m以上はなれていて、どれも当たらないため。
+   */
+  private checkIndoor(x: number, z: number): PlacementCheck {
+    const r = Math.max(0.22, this.ghostR);
+    const others: HomeObstacle[] = [];
+    for (const p of this.placed.values()) {
+      if (!this.isIndoorSpot(p.data.x, p.data.z)) continue;
+      others.push({ x: p.data.x, z: p.data.z, r: Math.max(0.22, p.colliderR) });
+    }
+    const problem = checkHomePlacement(x, z, r, others, this.lastPlayer);
+    return problem === null ? { ok: true } : ng(HOME_REASON[problem]);
+  }
+
   /** 共通ルール(checkPlacement)+ 島のコライダー。置けない理由つき */
   private check(x: number, z: number): PlacementCheck {
+    // 室内にいるあいだは室内のルールだけ(屋外のルール・挙動は何も変わらない)
+    if (insideHomeFloor(this.lastPlayer.x, this.lastPlayer.z)) return this.checkIndoor(x, z);
     const base = checkPlacement(this.state, x, z, this.lastPlayer);
     if (!base.ok) return base;
     if (!this.island.walkable(x, z)) return ng(PLACE_REASON.outside);

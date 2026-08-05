@@ -1,6 +1,6 @@
 // ゲーム状態(描画非依存の純データ)。セーブ/ロードの対象。
-import type { ItemId, ToolId } from '../data/items';
-import { INITIAL_RECIPES } from '../data/items';
+import type { HomeStyle, ItemId, ToolId } from '../data/items';
+import { DECOR_SLOT, DEFAULT_HOME_STYLE, INITIAL_RECIPES, isDecor } from '../data/items';
 
 export const SAVE_VERSION = 1;
 
@@ -38,6 +38,11 @@ export interface GameState {
   codex: Partial<Record<ItemId, number>>;
   /** 実績などが読む累計カウンタ(例: place_total, place_glow, quest_done)。採取・釣りはcodexを使う */
   stats: Record<string, number>;
+  /**
+   * マイホームの模様替え(かべ・ゆかの見た目ID)。アイテムは消費しないので「いま貼ってあるもの」だけを持つ。
+   * 値は src/data/items.ts の DECOR_SLOT にあるIDのみ。読みこみ時の検証は SaveSystem が行う。
+   */
+  homeStyle: HomeStyle;
 }
 
 export function newGameState(): GameState {
@@ -61,7 +66,19 @@ export function newGameState(): GameState {
     flags: {},
     codex: {},
     stats: {},
+    homeStyle: { ...DEFAULT_HOME_STYLE },
   };
+}
+
+/**
+ * 模様替えアイテムを「つかう」。かべ/ゆかのどちらを かえるかは DECOR_SLOT が決める。
+ * アイテムは消費しない(何度でも かえられる)。模様替えでないアイテムなら false。
+ */
+export function applyHomeStyle(s: GameState, item: ItemId): boolean {
+  if (!isDecor(item)) return false;
+  if (!s.homeStyle) s.homeStyle = { ...DEFAULT_HOME_STYLE };
+  s.homeStyle[DECOR_SLOT[item]] = item;
+  return true;
 }
 
 /** ずかん・実績用の記録つき入手。手に入れる経路(採取・釣り・クラフト・購入)はこちらを使う */
