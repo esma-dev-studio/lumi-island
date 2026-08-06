@@ -72,9 +72,13 @@ export const DIALOGUE_BACKDROPS: { x: number; y: number; z: number; r: number }[
 // flower/mushroom/shell は道具のいらない「拾いもの」。starshard は夜だけ動的に出る(GATHER_NODESには載せない)
 // v8: twig/cutgrass/clay も道具のいらない拾いもの。glassfloat は朝の浜に動的に出る(GATHER_NODESには載せない)
 // v9: tallgrass(背の高い草)はカマが要る採取ノード。既存の草むら(grass=クサツル)とは別物
+// v11: starweed(ほしくさ)/lightshell(ひかりの貝)は「よるの入り江」でとれる2種。
+// 島のGATHER_NODESには入らず、入り江の座標は src/scenes/CoveArea.ts の COVE_NODES が持つ
+// (どちらも同じ InteractionSystem / GATHER_RULES を通る)。
 export type NodeKind =
   | 'tree' | 'berry' | 'rock' | 'ore' | 'grass' | 'moss' | 'flower' | 'mushroom' | 'shell' | 'starshard'
-  | 'twig' | 'cutgrass' | 'clay' | 'glassfloat' | 'tallgrass';
+  | 'twig' | 'cutgrass' | 'clay' | 'glassfloat' | 'tallgrass'
+  | 'starweed' | 'lightshell';
 export interface GatherNodeDef {
   id: string;
   kind: NodeKind;

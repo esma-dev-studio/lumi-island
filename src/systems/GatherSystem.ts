@@ -36,6 +36,10 @@ export const GATHER_RULES: Record<NodeKind, GatherRule> = {
   glassfloat: { tool: null, item: 'glassfloat', count: [1, 1], respawnHours: 0, anim: 'pickup', verb: 'うきだまをひろう' },
   // v9 背の高い草: カマ(sickle)でだけ かれる。クサツルの草むら(grass)より復活が遅い
   tallgrass: { tool: 'sickle', item: 'straw', count: [1, 2], respawnHours: 1.6, anim: 'interact', verb: 'わらをかる' },
+  // v11 よるの入り江の2種。どちらも道具はいらず、島の拾いものと同じく時間で復活する
+  // (入り江は船でしか行けないので、行った先で「なにも採れない」時間を作らない値にしてある)
+  starweed: { tool: null, item: 'starweed', count: [1, 2], respawnHours: 1.8, anim: 'pickup', verb: 'ほしくさをつむ' },
+  lightshell: { tool: null, item: 'lightshell', count: [1, 1], respawnHours: 2.6, anim: 'pickup', verb: 'ひかりの貝をひろう' },
 };
 
 export interface GatherCheck {

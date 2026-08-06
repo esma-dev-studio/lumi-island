@@ -421,6 +421,20 @@ export class CameraController {
     this.evDist = dist;
     this.evHeight = height;
   }
+
+  /**
+   * イベントカメラを理想位置へ即座に置く(補間しない)。
+   * 場面が遠くへ飛ぶとき(v11 ふねの航海: 島 → 80m先の入り江)に使う。
+   * 補間のままだとカメラが追いつくまで「何も写っていない海」が数フレーム出る。
+   */
+  snapEvent(): void {
+    if (this.mode !== 'event') return;
+    this.desiredPos.set(this.evTarget.x, this.evTarget.y + this.evHeight, this.evTarget.z + this.evDist);
+    this.desiredTgt.set(this.evTarget.x, this.evTarget.y + 2.2, this.evTarget.z);
+    this.cam.position.copyFrom(this.desiredPos);
+    this.lookAt.copyFrom(this.desiredTgt);
+    this.cam.setTarget(this.lookAt);
+  }
   endEvent(): void {
     if (this.mode === 'event') this.mode = 'follow';
   }

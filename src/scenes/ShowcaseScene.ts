@@ -16,7 +16,8 @@ import '@babylonjs/core/Rendering/depthRendererSceneComponent';
 import { CharacterView } from '../characters/CharacterView';
 import { CHARACTERS, ANIMS } from '../data/characters';
 
-const CHAR_IDS = ['mio', 'minamo', 'nokto', 'tsumugi'];
+// 表示するキャラは CHARACTERS の定義順に自動で増える(人数を数え打ちしない)
+const CHAR_IDS = Object.keys(CHARACTERS);
 
 export class ShowcaseScene {
   scene: Scene;
@@ -111,16 +112,18 @@ export class ShowcaseScene {
 
   private applyLayout(): void {
     if (this.lineup) {
-      const xs = [-0.95, -0.32, 0.32, 0.95];
+      // 人数に合わせて等間隔に並べる(4人固定の座標表にしない)
+      const gap = 0.63;
+      const x0 = -((CHAR_IDS.length - 1) * gap) / 2;
       CHAR_IDS.forEach((id, i) => {
         const v = this.views.get(id)!;
         v.setEnabled(true);
-        v.root.position.x = xs[i];
+        v.root.position.x = x0 + i * gap;
         v.root.position.z = 0;
         v.root.rotation = new Vector3(0, 0, 0);
       });
       this.cam.target = new Vector3(0, 0.55, 0);
-      this.cam.radius = 3.4;
+      this.cam.radius = 3.4 + Math.max(0, CHAR_IDS.length - 4) * 0.55;
       this.cam.alpha = -Math.PI / 2;
     } else {
       for (const id of CHAR_IDS) {

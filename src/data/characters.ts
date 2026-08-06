@@ -33,4 +33,9 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     id: 'tsumugi', name: 'ツムギ', species: 'ヤギ', path: 'assets/characters/tsumugi.glb',
     scale: 1, yOffset: 0, walkSpeed: 1.6, runSpeed: 3.2, animNames: ANIMS,
   },
+  // v11第2章 ロカ(ペンギン)。よちよち歩きなので いちばん おそい
+  roka: {
+    id: 'roka', name: 'ロカ', species: 'ペンギン', path: 'assets/characters/roka.glb',
+    scale: 1, yOffset: 0, walkSpeed: 1.2, runSpeed: 2.4, animNames: ANIMS,
+  },
 };

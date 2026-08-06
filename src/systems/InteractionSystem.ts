@@ -22,6 +22,7 @@ const KIND_SFX: Record<NodeKind, 'chop' | 'mine' | 'sickle' | 'pickup'> = {
   flower: 'pickup', mushroom: 'pickup', shell: 'pickup', starshard: 'pickup',
   twig: 'pickup', cutgrass: 'pickup', clay: 'pickup', glassfloat: 'pickup',
   tallgrass: 'sickle',
+  starweed: 'pickup', lightshell: 'pickup',
 };
 /**
  * 粒バーストの色キー(src/entities/effects.ts の BURST_COLORS)。
@@ -37,6 +38,8 @@ const KIND_BURST: Partial<Record<NodeKind, string>> = {
   clay: 'tree', // 濡れた土の茶
   glassfloat: 'splash', // 波しぶきの青白
   tallgrass: 'grass', // 草の緑(クサツルと同じ)
+  starweed: 'moss', // ほしくさの穂の うすみどりの光
+  lightshell: 'ore', // ひかりの貝の あお白い光
 };
 
 interface NodeState {

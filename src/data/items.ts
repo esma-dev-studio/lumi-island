@@ -13,6 +13,8 @@ export type ItemId =
   | 'b_shiro' | 'b_ageha' | 'b_tento' | 'b_kabuto' | 'b_hotaru' | 'b_suzu'
   // v9 シャベルで ほりだすもの3種 / カマでかる わら
   | 'shard_pot' | 'shiny_stone' | 'gold_piece' | 'straw'
+  // v11 よるの入り江でとれる2種(道具はいらない)
+  | 'starweed' | 'lightshell'
   | 'f_bench' | 'f_lantern' | 'f_stonelamp' | 'f_table' | 'f_planter'
   | 'f_chair' | 'f_shelf' | 'f_rug' | 'f_pot' | 'f_sign'
   | 'f_flowerbed' | 'f_mushlamp' | 'f_shelldeco' | 'f_starlantern'
@@ -78,6 +80,9 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   gold_piece: { id: 'gold_piece', name: 'きんのかけら', sell: 60, kind: 'material', desc: 'まれに 出てくる、ずっしり重い 金いろの かけら' },
   // ---- v9 カマで かる わら ----
   straw: { id: 'straw', name: 'わら', sell: 4, kind: 'material', desc: '背の高い草を かってたばねた もの' },
+  // ---- v11 よるの入り江の2種(ふねで わたった先の 野原と砂浜でとれる) ----
+  starweed: { id: 'starweed', name: 'ほしくさ', sell: 12, kind: 'material', desc: 'よるの入り江の野原にゆれる 銀いろの草。穂が ほしくずのように光る' },
+  lightshell: { id: 'lightshell', name: 'ひかりの貝', sell: 20, kind: 'material', desc: '入り江の砂浜でひろえる貝。夜は 中がわが あお白く光る' },
   f_bench: { id: 'f_bench', name: 'ウッドベンチ', sell: 30, kind: 'furniture', desc: 'すわってひと休みできるベンチ' },
   f_lantern: { id: 'f_lantern', name: 'ランタン', sell: 40, kind: 'furniture', desc: '夜をやさしく照らす', glow: true },
   f_stonelamp: { id: 'f_stonelamp', name: 'いしのランプ', sell: 55, kind: 'furniture', desc: 'ルミナこうせきの明かり', glow: true },

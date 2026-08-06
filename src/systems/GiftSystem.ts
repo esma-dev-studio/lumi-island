@@ -12,7 +12,7 @@
 import type { GameState } from '../game/GameState';
 import { invCount, invRemove, learnRecipe, statAdd } from '../game/GameState';
 import { ITEMS, RECIPES, type ItemId } from '../data/items';
-import { NPC_BY_ID, type NpcDef } from '../data/npcs';
+import { NPCS, NPC_BY_ID, type NpcDef } from '../data/npcs';
 
 /** おくりものの受け取りかた(セリフとなかよし度の増えかたが変わる) */
 export type GiftTier = 'love' | 'like' | 'ok';
@@ -39,6 +39,20 @@ export const thanksKey = (npcId: string): string => `gift_thanks_${npcId}`;
 export const bestKey = (npcId: string): string => `gift_best_${npcId}`;
 /** おくりものの回数(実績 a_gift_first が読む) */
 export const GIFT_TOTAL_KEY = 'gift_total';
+
+/**
+ * これまでに 出会ったNPC(なかよし度の一覧に出す相手)。
+ *
+ * 「出会った」= セーブに そのNPCの記録(GameState.npcs[id])が ある、と決める。
+ * こうしておくと 表示は人数に しばられない:
+ *   - いまの3人(ミナモ・ノクト・ツムギ)は newGameState が最初から記録を持つので 表示は変わらない
+ *   - あとから島へ来るNPC(v11のロカ)は、出会って記録ができた日から 自動で1行ふえる
+ * 並びは NPCS の定義順のまま(表示の順番が日によって入れかわらない)。
+ */
+export function metNpcs(s: GameState): NpcDef[] {
+  const rt = s.npcs ?? {};
+  return NPCS.filter((def) => rt[def.id] !== undefined);
+}
 
 /** そのNPCが そのアイテムを どう受け取るか */
 export function giftTier(npcId: string, item: ItemId): GiftTier {
@@ -149,7 +163,11 @@ export function applyGift(s: GameState, npcId: string, item: ItemId): GiftResult
   rt.giftedToday = true;
   statAdd(s, GIFT_TOTAL_KEY);
 
-  const lines = def.giftLines[tier].map((l) => l.replace(/\{item\}/g, ITEMS[item].name));
+  // そのものにしか言えない反応(giftLinesByItem)があれば そちらを使う。
+  // なかよし度の増えかたは tier のままなので、好みの表とセリフの表は別々に育てられる
+  const lines = (def.giftLinesByItem?.[item] ?? def.giftLines[tier]).map((l) =>
+    l.replace(/\{item\}/g, ITEMS[item].name)
+  );
   const reward: GiftReward = {};
 
   // お礼(なかよし度5)。stats に印をつけて1回だけにする(会話の+1で先に越えていても届く)
@@ -187,6 +205,11 @@ export function validateGiftData(): string[] {
     }
     for (const key of ['love', 'like', 'ok'] as const) {
       if (def.giftLines[key].length === 0) problems.push(`${def.name}の${key}のセリフが空`);
+    }
+    // そのもの専用のセリフ: アイテムが実在するか・空でないか
+    for (const [id, lines] of Object.entries(def.giftLinesByItem ?? {})) {
+      if (!(id in ITEMS)) problems.push(`${def.name}の専用セリフのアイテム${id}が存在しない`);
+      if (!lines || lines.length === 0) problems.push(`${def.name}の${id}専用セリフが空`);
     }
   }
   return problems;

@@ -4,7 +4,9 @@ import type { Engine } from '@babylonjs/core/Engines/engine';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { CascadedShadowGenerator } from '@babylonjs/core/Lights/Shadows/cascadedShadowGenerator';
 import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
-import { buildTerrain, terrainHeight, walkableGround, type Terrain } from '../entities/terrain';
+import {
+  buildTerrain, coveGroundY, coveWalkable, insideCoveArea, terrainHeight, walkableGround, type Terrain,
+} from '../entities/terrain';
 import { initEffects, attachLightPool, registerGlowSource, unregisterGlowSource, burst } from '../entities/effects';
 import { buildWater, onPier, updatePond, PIER, SEA_Y, type WaterRefs } from '../entities/water';
 import {
@@ -27,6 +29,8 @@ import {
 } from '../data/island';
 import { DayNight } from './DayNight';
 import { HomeInterior, homeFloorY, insideHomeFloor, HOME_RECTS, HOME_CIRCLES } from './HomeInterior';
+import { CoveArea, COVE_CIRCLES, COVE_NODES, ISLAND_BOAT } from './CoveArea';
+import { makeBoat, type BoatMesh } from '../entities/cove';
 import { buildGarden, type GardenView } from '../entities/garden';
 import { gardenFenceColliders } from '../systems/GardenSystem';
 import type { GardenPlot } from '../game/GameState';
@@ -75,6 +79,8 @@ export class IslandScene {
   terrain!: Terrain;
   water!: WaterRefs;
   home!: HomeInterior; // マイホームの室内(屋外にいるあいだは消えている)
+  cove!: CoveArea; // v11 よるの入り江(島にいるあいだは消えている)
+  islandBoat!: BoatMesh; // 島の桟橋によこづけしてある小舟(しゅうり前は こわれた部品つき)
   garden!: GardenView; // 自宅のお庭(柵・門・花だん)
   shadows!: CascadedShadowGenerator;
   circles: CircleCollider[] = [];
@@ -239,6 +245,10 @@ export class IslandScene {
           root = makeGlassFloat(s, hashId(def.id));
           break;
         }
+        // v11 よるの入り江の2種(ほしくさ・ひかりの貝)は島のGATHER_NODESに入らない。
+        // 見た目と位置は CoveArea が持ち、build の最後にこの nodes へ合流させる
+        default:
+          continue;
       }
       root.position.set(def.x, y - 0.03, def.z);
       if (def.kind === 'tree' || def.kind === 'berry') caster(root, false);
@@ -407,11 +417,53 @@ export class IslandScene {
     for (const r of HOME_RECTS) this.rects.push(r);
     for (const c of HOME_CIRCLES) this.circles.push(c);
 
+    // ---- v11 ミナモの桟橋のよこ: しゅうりちゅうの小舟 ----
+    // 水にうかんでいるので当たり判定は付けない(そこは walkableGround が海=歩けない)。
+    // 桟橋の東がわ1.0mなので、桟橋の上を歩く道すじ(x=4±1.3)には かからない。
+    this.islandBoat = makeBoat(s, 17);
+    this.islandBoat.root.position.set(ISLAND_BOAT.x, ISLAND_BOAT.y, ISLAND_BOAT.z);
+    this.islandBoat.root.rotation.y = ISLAND_BOAT.rotY;
+    caster(this.islandBoat.root);
+    this.islandBoat.fixed.setEnabled(false); // なおるまでオール・ランタンは出さない
+
+    // ---- v11 よるの入り江(別空間。島にいるあいだは消えている) ----
+    // ここまでに作ったメッシュ=島の見た目ぜんぶ。入り江にいるあいだはこれを丸ごと消す
+    // (逆に、島にいるあいだは入り江のrootを消す)。この1行より下で作るものは入り江のもの。
+    const islandMeshes = s.meshes.filter((m): m is Mesh => m instanceof Mesh);
+    this.cove = new CoveArea(s, this.water.seaMat, islandMeshes);
+    for (const c of COVE_CIRCLES) this.circles.push(c);
+    // 入り江の採取ノードも島と同じ nodes に入れる(InteractionSystemの道すじを1本にする)
+    for (const def of COVE_NODES) {
+      const root = this.cove.nodeMeshes.get(def.id);
+      if (root) this.nodes.set(def.id, { def, root, y: this.groundY(def.x, def.z) });
+    }
+
     this.dayNight.update(this.time.hour);
   }
 
-  /** 歩ける高さ(マイホームの床・桟橋・高台の観測デッキの上はその床の高さ) */
+  /** ふねが なおっているかを、島がわ・入り江がわの見た目へ反映する */
+  applyBoatRepaired(repaired: boolean): void {
+    this.islandBoat.broken.setEnabled(!repaired);
+    this.islandBoat.fixed.setEnabled(repaired);
+    this.cove.setBoatRepaired(repaired);
+  }
+
+  /** 航海の演出用: 島がわ/入り江がわの船を世界座標へ置く(SequenceDirectorが毎フレーム呼ぶ) */
+  placeBoat(side: 'island' | 'cove', x: number, y: number, z: number, rotY: number): void {
+    if (side === 'cove') {
+      this.cove.placeBoat(x, y, z, rotY);
+      return;
+    }
+    this.islandBoat.root.position.set(x, y, z);
+    this.islandBoat.root.rotation.y = rotY;
+  }
+
+  /** 歩ける高さ(別空間の床・桟橋・高台の観測デッキの上はその床の高さ) */
   groundY(x: number, z: number): number {
+    // 別空間(よるの入り江・マイホーム)を最優先で見る。
+    // こうしておくと、スタック自動脱出の近傍探索が原理的に別空間から島へ飛べない(教訓4)
+    const cove = coveGroundY(x, z);
+    if (cove !== null) return cove;
     const home = homeFloorY(x, z);
     if (home !== null) return home;
     if (onPier(x, z)) return PIER.y;
@@ -420,8 +472,10 @@ export class IslandScene {
     return terrainHeight(x, z);
   }
 
-  /** 移動可能か(マイホームの床・海・池・衝突) */
+  /** 移動可能か(別空間の床・海・池・衝突) */
   walkable(x: number, z: number): boolean {
+    // よるの入り江。まわりは自然な下りで海に沈むので、見えない壁なしに岸で止まる
+    if (insideCoveArea(x, z)) return coveWalkable(x, z);
     // マイホームの室内。部屋のまわりは島の規則どおり「海の中」なので外へは抜けられない
     if (insideHomeFloor(x, z)) return true;
     if (onPier(x, z)) return true;
@@ -461,6 +515,7 @@ export class IslandScene {
   update(dtSec: number): void {
     this.time.advance(dtSec);
     this.home.update(this.time.hour); // 室内灯(室内にいるときだけ効く)
+    this.cove.update(dtSec, this.time.hour); // 波うちぎわの燐光・草のゆれ(入り江にいるときだけ効く)
     // ほしのかけら: この関数はWorldPauseControllerが「凍っていないフレーム」だけ呼ぶので、
     // ポーズ・会話・見せ場のあいだは進まない。睡眠で朝6時へ飛んだ場合も「夜が終わった」として消える
     this.updateStars(dtSec);

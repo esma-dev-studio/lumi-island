@@ -107,6 +107,8 @@ export function buildTorso(rig, spec) {
 
 // ---------- 腕(左) → ミラーで右 ----------
 // spec.arm = { thick, hand } thick: 半径倍率
+// spec.arm.wing    : フクロウの翼腕(横へ広がる平たい羽)
+// spec.arm.flipper : ペンギンのつばさ(左右にうすく・前後に幅のある はね。先は丸くすぼむ)
 export function buildArms(rig, spec) {
   const H = rig.prop.height;
   const th = spec.arm?.thick ?? 1;
@@ -122,21 +124,32 @@ export function buildArms(rig, spec) {
     [0, 0.031 * th], [0.2, 0.027 * th], [0.46, 0.0245 * th], [0.7, 0.021 * th],
     [0.8, 0.02 * th], [0.87, 0.027 * th], [0.96, 0.024 * th], [1, 0.012 * th],
   ]);
+  // つばさ: 手のふくらみを作らず、根元から先まで1枚の板としてなだらかに細る
+  const flipProf = keys([
+    [0, 0.034 * th], [0.22, 0.037 * th], [0.5, 0.035 * th], [0.72, 0.030 * th],
+    [0.88, 0.022 * th], [1, 0.008 * th],
+  ]);
   const uA = rig.index.upperArmL, fA = rig.index.foreArmL, hA = rig.index.handL;
   const chest = rig.index.chest;
   const wing = spec.arm?.wing;
+  const flipper = spec.arm?.flipper;
   const armL = tube({
     path, steps: 16, seg: 12,
-    radiusFn: (t) => rProf(t) * H * (wing ? 1.1 : 1),
+    // 既存キャラの式は1文字も変えない(浮動小数の丸めが変わるとGLBが差分になるため)
+    radiusFn: (t) => (flipper ? flipProf(t) * H : rProf(t) * H * (wing ? 1.1 : 1)),
     // 手はミトン状に平たく。翼腕は全体を羽らしく平たく幅広に。
-    ellipseFn: (t) => (wing ? [1 + t * 1.1, 0.5] : t > 0.8 ? [1.05, 0.72] : [1, 1]),
+    // つばさは「体の外へ向く面が広い板」: x(左右)をうすく、z(前後)を広くする
+    ellipseFn: (t) =>
+      flipper
+        ? [0.42, 1.15 + 0.62 * Math.sin(Math.min(1, t * 1.15) * Math.PI)]
+        : wing ? [1 + t * 1.1, 0.5] : t > 0.8 ? [1.05, 0.72] : [1, 1],
     uvRegion: REG.arms.tb,
     weightFn: (p, t) => {
       if (t < 0.08) return duo(chest, uA, 0.4);
       return limbWeight(uA, fA, hA, t);
     },
   });
-  if (!wing) {
+  if (!wing && !flipper) {
     // 親指のふくらみ(体側・やや前)
     const thumbAt = add(wr, mul(dir, 0.018 * H));
     bump(armL, [thumbAt[0] - 0.02 * H, thumbAt[1], thumbAt[2] + 0.012 * H], 0.024 * H, 0.011 * H, [-0.6, -0.1, 0.8]);
@@ -146,7 +159,9 @@ export function buildArms(rig, spec) {
 }
 
 // ---------- 脚(左) → ミラーで右 ----------
-// spec.leg = { thick, bootFlare, bootLen }
+// spec.leg = { thick, bootFlare, bootLen, footEllipse }
+// footEllipse: 足先(t>0.72)の断面倍率 [幅, 奥行]。省略時は従来どおり [1.12, 1.0]。
+//   ペンギンのように「平たくて 横に広い足」にしたいときだけ指定する。
 export function buildLegs(rig, spec) {
   const H = rig.prop.height;
   const th = spec.leg?.thick ?? 1;
@@ -165,10 +180,11 @@ export function buildLegs(rig, spec) {
     [0.72, 0.033 * th * (spec.leg?.bootFlare ?? 1.1)], [0.86, 0.033 * th], [0.96, 0.028 * th], [1, 0.016 * th],
   ]);
   const uL = rig.index.upperLegL, lL = rig.index.lowerLegL, fL = rig.index.footL;
+  const foot = spec.leg?.footEllipse ?? [1.12, 1.0];
   const legL = tube({
     path, steps: 18, seg: 12,
     radiusFn: (t) => rProf(t) * H,
-    ellipseFn: (t) => (t > 0.72 ? [1.12, 1.0] : [1, 1]),
+    ellipseFn: (t) => (t > 0.72 ? foot : [1, 1]),
     uvRegion: REG.legs.tb,
     weightFn: (p, t) => limbWeight(uL, lL, fL, t),
     upHint: [0, 0, 1],

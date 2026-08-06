@@ -2,6 +2,10 @@
 // 睡眠はsetTimeoutを使わずタイムラインで処理し、多重実行できない。
 import { POIS } from '../data/island';
 import { homeShot } from './HomeInterior';
+import {
+  COVE_BOAT, COVE_BOAT_OFFSHORE, ISLAND_BOAT, ISLAND_BOAT_OFFSHORE, coveNightLevel, type BoatPose,
+} from './CoveArea';
+import { wrapAngle } from './CameraController';
 import { terrainHeight } from '../entities/terrain';
 import { burst } from '../entities/effects';
 import { toast } from '../ui/Toast';
@@ -9,7 +13,7 @@ import { sfx } from '../audio/AudioSystem';
 import { save } from '../save/SaveSystem';
 import type { GameScene } from './GameScene';
 
-export type SequenceState = 'idle' | 'sleeping' | 'intro' | 'bloom' | 'travel';
+export type SequenceState = 'idle' | 'sleeping' | 'intro' | 'bloom' | 'travel' | 'voyage';
 
 const SLEEP_FADE_IN = 0.45; // 暗転までの秒
 const SLEEP_TOTAL = 1.05; // 起床までの秒
@@ -17,6 +21,22 @@ const SLEEP_TOTAL = 1.05; // 起床までの秒
 const TRAVEL_FADE = 0.14; // 暗転しきるまで
 const TRAVEL_SWAP = 0.16; // 入れかえる瞬間(暗転しきったところ)
 const TRAVEL_TOTAL = 0.32; // 明転しきるまで
+
+// ---- v11 ふねの航海(島 ⇄ よるの入り江。全体で約10秒) ----
+// 出航(出発地の海を進む)→ 短い暗転で入れかえ → 入港(到着地の桟橋へ寄せる)の2場面。
+// 島と入り江は世界座標で80m以上はなれているので、1本の航路でつなぐことはできない。
+// 「暗転をはさんだ2つのカット」にすると、距離を見せずに『船で わたった』が伝わる。
+const VOYAGE_DEPART = 4.6; // 出航の場面がおわる
+const VOYAGE_FADE = 4.35; // 暗転をはじめる(フェード0.5秒がちょうど間に合う)
+const VOYAGE_SWAP = 4.85; // 島/入り江を入れかえる瞬間(暗転しきったところ)
+const VOYAGE_TOTAL = 9.7; // 入港までふくめた全体
+const VOYAGE_CAM_D0 = 8.5; // 追う距離(はじめ→おわり)
+const VOYAGE_CAM_D1 = 13.5;
+const VOYAGE_CAM_H0 = 4.6; // 追う高さ
+const VOYAGE_CAM_H1 = 7.2;
+/** 船のあとに残る白い波あわ・夜の星つぶを出す間かく(秒) */
+const WAKE_EVERY = 0.32;
+const STAR_EVERY = 0.85;
 
 export class SequenceDirector {
   private state: SequenceState = 'idle';
@@ -28,6 +48,12 @@ export class SequenceDirector {
   private travelApplied = false;
   private mossQueue: { x: number; y: number; z: number }[] = []; // 開花に呼応するコケ
   private npcReacted = false;
+  // ---- v11 航海 ----
+  private voyageTo: 'cove' | 'island' = 'cove';
+  private voyageFade: HTMLElement | null = null;
+  private voyageApplied = false;
+  private wakeT = 0;
+  private starT = 0;
 
   constructor(private gs: GameScene) {}
 
@@ -116,6 +142,97 @@ export class SequenceDirector {
     this.travelFade.style.opacity = '1';
   }
 
+  // ---------- v11 ふねの航海(島 ⇄ よるの入り江) ----------
+  /**
+   * ふねに のる/しまへ かえる。連打しても1回ぶん(ほかの演出中は動かさない)。
+   * @param to 行き先。'cove'=よるの入り江へ / 'island'=島へ
+   */
+  sail(to: 'cove' | 'island'): void {
+    if (this.state !== 'idle') return; // 排他: 演出・就寝中は動かさない
+    this.state = 'voyage';
+    this.t = 0;
+    this.voyageTo = to;
+    this.voyageApplied = false;
+    this.wakeT = 0;
+    this.starT = 0;
+    const gs = this.gs;
+    gs.restoreAllOcclusionImmediately();
+    gs.player.locked = true;
+    sfx('place'); // ともづなを ほどく音がわりの小さな木の音
+    if (!this.voyageFade) {
+      const el = document.createElement('div');
+      // CSS(src/ui/style.css)は触らずに、この演出ぶんだけ要素へ直接書く
+      el.style.cssText =
+        'position:absolute;inset:0;background:#0b1524;opacity:0;pointer-events:none;' +
+        'transition:opacity 0.5s ease;z-index:20';
+      document.getElementById('ui-root')!.appendChild(el);
+      this.voyageFade = el;
+    }
+    this.voyageFade.style.opacity = '0';
+  }
+
+  /** いま航海中か(検証・ボット用) */
+  get sailing(): boolean {
+    return this.state === 'voyage';
+  }
+
+  /** 出航の場面(いまいる側の海)と、入港の場面(行き先の海)の船の動き */
+  private voyageLeg(depart: boolean): { side: 'island' | 'cove'; from: BoatPose; to: BoatPose } {
+    // 出航は「いまいる側」、入港は「行き先の側」の船を動かす
+    const side: 'island' | 'cove' = depart ? (this.voyageTo === 'cove' ? 'island' : 'cove') : this.voyageTo;
+    const dock = side === 'island' ? ISLAND_BOAT : COVE_BOAT;
+    const off = side === 'island' ? ISLAND_BOAT_OFFSHORE : COVE_BOAT_OFFSHORE;
+    return depart ? { side, from: dock, to: off } : { side, from: off, to: dock };
+  }
+
+  /** 航海の1フレーム。船・カメラ・ミオの立ち位置・波あわ・星つぶをまとめて進める */
+  private updateVoyage(dt: number): void {
+    const gs = this.gs;
+    const depart = this.t < VOYAGE_SWAP;
+    const leg = this.voyageLeg(depart);
+    const k = depart
+      ? Math.min(1, this.t / VOYAGE_DEPART)
+      : Math.min(1, (this.t - VOYAGE_SWAP) / (VOYAGE_TOTAL - VOYAGE_SWAP));
+    // 出航はゆっくり出て加速、入港は減速して着ける
+    const e = depart ? k * k * (3 - 2 * k) * 0.92 : 1 - Math.pow(1 - k, 2.2);
+    const dx = leg.to.x - leg.from.x;
+    const dz = leg.to.z - leg.from.z;
+    const bx = leg.from.x + dx * e;
+    const bz = leg.from.z + dz * e;
+    const by = leg.from.y + Math.sin(this.t * 1.9) * 0.045; // ゆっくりした たてゆれ
+    // 船首の向き: 進む向きへ向け、桟橋を出る/着ける ところだけ もやいの向きへ寄せる
+    const head = Math.atan2(-dx, -dz);
+    const dockW = depart ? Math.max(0, 1 - k / 0.28) : Math.max(0, (k - 0.72) / 0.28);
+    const rot = head + wrapAngle(leg.from.rotY - head) * (depart ? dockW : 0) +
+      wrapAngle(leg.to.rotY - head) * (depart ? 0 : dockW);
+    gs.island.placeBoat(leg.side, bx, by, bz, rot + Math.sin(this.t * 1.35) * 0.035);
+    // ミオは船のゆか板の上に立たせる(船体の上ぶちがy=0、ゆか板が-0.44)
+    gs.playerView.root.position.set(bx, by - 0.38, bz);
+    gs.playerView.root.rotation.y = rot + Math.PI;
+    // カメラ: 船を追いながら、じわりと引く
+    const camK = depart ? k : 1 - k;
+    gs.camCtl.beginEvent(
+      bx, by, bz,
+      VOYAGE_CAM_D0 + (VOYAGE_CAM_D1 - VOYAGE_CAM_D0) * camK,
+      VOYAGE_CAM_H0 + (VOYAGE_CAM_H1 - VOYAGE_CAM_H0) * camK
+    );
+    // 波あわ(ともの後ろ)と、夜だけ流れる星つぶ
+    this.wakeT += dt;
+    if (this.wakeT >= WAKE_EVERY) {
+      this.wakeT = 0;
+      burst(bx + Math.sin(rot) * 1.7, 0.34, bz + Math.cos(rot) * 1.7, 'splash', 6);
+    }
+    const night = coveNightLevel(gs.island.time.hour);
+    if (night > 0.35) {
+      this.starT += dt;
+      if (this.starT >= STAR_EVERY) {
+        this.starT = 0;
+        const s = Math.sin(this.t * 2.3);
+        burst(bx + s * 2.6, by + 2.2 + s * 0.6, bz - 2.2 - s, 'ore', 4);
+      }
+    }
+  }
+
   /** 自宅ベッドで寝る。連打しても1回ぶんしか実行されない */
   sleep(): void {
     if (this.state !== 'idle') return; // 排他: sleeping中の再実行を防ぐ
@@ -150,6 +267,31 @@ export class SequenceDirector {
         if (this.travelFade) this.travelFade.style.opacity = '0';
       }
       if (this.t >= TRAVEL_TOTAL) this.state = 'idle';
+      return;
+    }
+
+    if (this.state === 'voyage') {
+      if (this.voyageFade && this.t >= VOYAGE_FADE && !this.voyageApplied) this.voyageFade.style.opacity = '1';
+      // 暗転しきったところで島/入り江を入れかえる(明るいまま海がすり替わるのを見せない)
+      if (!this.voyageApplied && this.t >= VOYAGE_SWAP) {
+        this.voyageApplied = true;
+        gs.applyCove(this.voyageTo === 'cove');
+        this.updateVoyage(0); // 入港の場面の船・カメラをこのフレームで作る
+        gs.camCtl.snapEvent(); // 80m先へ飛ぶので補間しない(追いつくまでの空の海を出さない)
+        if (this.voyageFade) this.voyageFade.style.opacity = '0';
+      }
+      this.updateVoyage(dt);
+      if (this.t >= VOYAGE_TOTAL) {
+        // 船をもやいの場所へ戻し、ミオを桟橋へおろす(演出のあいだに動かした分を必ず片づける)
+        for (const [side, pose] of [['island', ISLAND_BOAT], ['cove', COVE_BOAT]] as const) {
+          gs.island.placeBoat(side, pose.x, pose.y, pose.z, pose.rotY);
+        }
+        gs.player.teleport(gs.player.x, gs.player.z, gs.player.rotY); // 見た目を足もとへ戻す
+        this.state = 'idle';
+        gs.camCtl.endEvent();
+        gs.camCtl.snapTo(gs.player.x, gs.player.y, gs.player.z);
+        sfx('step_wood');
+      }
       return;
     }
 

@@ -41,6 +41,15 @@ export interface GiftLines {
 }
 
 /**
+ * アイテムごとの とくべつな反応(giftLinesByItem)。
+ * 「なぜ うれしいのか」が そのものにしか言えないとき だけ使う
+ * (例: ロカ×ひかりの貝=「とうだいの あかりの いろ」)。
+ * ここに書いたアイテムは、tier(love/like/ok)の文より こちらが優先される。
+ * なかよし度の増えかたは giftLoves / giftLikes のままで変わらない。
+ */
+export type GiftLinesByItem = Partial<Record<ItemId, string[]>>;
+
+/**
  * 家に遊びに来た日の「家をほめる」ことば(v10)。
  *   base    : かならず言う 1〜2行
  *   display : すいそう・むしかごに いきものが入っている
@@ -81,6 +90,8 @@ export interface NpcDef {
   /** よろこぶもの。+1 だが専用のことばで返す */
   giftLikes: ItemId[];
   giftLines: GiftLines;
+  /** そのものにしか言えない反応(省略可)。tierの文より優先される */
+  giftLinesByItem?: GiftLinesByItem;
   /** なかよし度5でとどく お礼の手紙(ちいさな詩のような1文) */
   thanksLetter: string;
   /** なかよし度5でおぼえる とくべつなレシピID(src/data/items.ts の RECIPES) */
@@ -91,6 +102,36 @@ export interface NpcDef {
   // 依頼の受注・報告相手になっている間は家に入らず、ここに居続ける(子どもを待たせない)
   questEntry: ScheduleEntry;
   greetings: [string[], string[], string[]]; // 親密度 低/中/高
+  /**
+   * あとから島へ来るNPCの「登場フラグ」(GameState.flags のキー)。
+   * 省略 = はじめからいる。指定したときは、そのフラグが true になるまで島に出てこない
+   * (実体を作るのは residentNpcs を通す src/systems/NPCSystem.ts だけ)。
+   */
+  debutFlag?: string;
+  /**
+   * ふだんの ひとこと(あいさつのあとに ときどき足す 雑談)。
+   * あいさつ(greetings)と分けてあるのは、なかよし度に関係なく その子の
+   * 「いま気にしていること」を伝えるため。取り出しは dailyLine(def, day)。
+   */
+  dailyLines?: string[];
+}
+
+/**
+ * あいさつの段階(なかよし度 0-2 / 3-6 / 7-10)。
+ * 会話側(src/scenes/QuestDialogueController.ts)も同じしきい値で greetings[tier] を選ぶ。
+ * ここに出しておくのは「データの決まりごとをデータの隣に置く」ため(テストもここを見る)。
+ */
+export function greetingTier(friendship: number): 0 | 1 | 2 {
+  const f = Number.isFinite(friendship) ? friendship : 0;
+  return f >= 7 ? 2 : f >= 3 ? 1 : 0;
+}
+
+/** ふだんの ひとこと(日付で決まる。乱数は使わないので同じ日は同じ話題) */
+export function dailyLine(def: NpcDef, day: number): string | null {
+  const lines = def.dailyLines;
+  if (!lines || lines.length === 0) return null;
+  const d = Number.isFinite(day) ? Math.floor(day) : 1;
+  return lines[((d % lines.length) + lines.length) % lines.length];
 }
 
 export const NPCS: NpcDef[] = [
@@ -195,13 +236,106 @@ export const NPCS: NpcDef[] = [
       ['あなたが来てから、島がにぎやかになったわ。', 'ベリージャム、こんど一緒に作りましょうよ。'],
     ],
   },
+  // ---------------------------------------------------------------------------
+  // v11第2章 ロカ(ペンギンの灯台守の子)。
+  // まだ島には出てこない: debutFlag('roka_arrived')が true になるまで NPCSystem は実体を作らない。
+  // ここに置いてあるのは「データだけ先に用意して、出す日を第2章の担当が決める」ため。
+  // 島へ出すときに必要なもの(このファイルの外・別担当):
+  //   - src/data/island.ts の NPC_SPOTS に 'roka' の立ち位置(下の schedule の spot キー)
+  //   - GameState.npcs に roka を足す処理(出会った時。newGameState には入れない)
+  //   - flags.roka_arrived を立てる進行
+  // ---------------------------------------------------------------------------
+  {
+    id: 'roka',
+    charId: 'roka',
+    name: 'ロカ',
+    debutFlag: 'roka_arrived',
+    // うみの子。ひかりの貝と さかなは 大好物。あまい木の実をよろこぶ。
+    giftLoves: ['lightshell', 'fish', 'nightfish', 'seafish', 'rarefish'],
+    giftLikes: ['berry'],
+    giftLines: {
+      love: [
+        'わあ、{item}! うみの ものは ぜんぶ すきなんだ。',
+        'ぼくの とうだいの ばんの ときに たべるね。ありがとう!',
+      ],
+      like: ['{item}だ。あまいと よるまで がんばれるんだ。', 'ありがとう。だいじに たべるね。'],
+      ok: ['{item}を ぼくに? ……ありがとう。', 'うれしいな。とうだいに かざっても いい?'],
+    },
+    // そのものにしか言えない反応(なぜ うれしいのか の理由つき)
+    giftLinesByItem: {
+      lightshell: [
+        'あ……{item}! この いろ、とうだいの あかりの いろだ!',
+        'ぼくの とうだいも、いつか こんなふうに 光るかな。',
+      ],
+    },
+    thanksLetter: 'きのうの よる、ひかりが きみの ほうを むいた気が したよ。',
+    // TODO(v11): ロカ専用のレシピ(とうだいの あかり など)が items.ts に入ったら差しかえる。
+    //   いまは あかりのレシピで いちばん ロカらしい「ほしのランタン」を借りている
+    //   (ほしのかけらの初入手でも ひらめくので、すでに知っていたら 手紙だけ とどく)。
+    thanksRecipe: 'r_starlantern',
+    visitPraise: {
+      base: ['おはよう。……あの、きみの家、見にきちゃった。', 'まどが 海のほうを むいてるんだね。いいなあ。'],
+      display: ['いきものを かざってる! ぼくも とうだいに かざりたいな。'],
+      many: ['ものが たくさんある。ひとつずつ 見ても いい?'],
+      bloom: ['にわの お花、まんかいだね。よるも ここは あかるいのかな。'],
+    },
+    // 立ち位置(spot)は NPC_SPOTS に 'roka' が入ってから有効になる。
+    // それまで NPCSystem は roka を作らないので、このスケジュールは まだ使われない。
+    schedule: [
+      { from: 6, to: 11, spot: 'pier', activity: 'watch' },
+      { from: 11, to: 15, spot: 'plaza', activity: 'stroll' },
+      { from: 15, to: 20, spot: 'pier', activity: 'fish' },
+      { from: 20, to: 24, spot: 'hill', activity: 'watch' },
+      { from: 24, to: 30, spot: 'home', activity: 'home' },
+    ],
+    questEntry: { from: 0, to: 30, spot: 'pier', activity: 'idle' },
+    greetings: [
+      // なかよし度 0〜2: はじめまして。ひかえめで、まだ ようすを見ている
+      [
+        'あ……こんにちは。ぼく、ロカ。とうだいの ばんを してるんだ。',
+        'ぼくの とうだい、いまは ひかってないんだ。……なおしたいな。',
+      ],
+      // 3〜6: 少し うちとけて、じぶんの しごとの話をする
+      [
+        'きみか! よかった。ひとりだと よるは ちょっと ながいんだ。',
+        'とうだいの ひかりって、ふねに「ここだよ」って おしえる あかりなんだよ。',
+      ],
+      // 7〜10: たよってくれる。いっしょに やろう、と言える
+      [
+        'きみが 来ると、とうだいの まわりが あかるくなる きが するよ。',
+        'いつか いっしょに、ぼくの とうだいに あかりを ともそうね。',
+      ],
+    ],
+    // ふだんの ひとこと(灯台・海・ひかりの話題)。日付で1つ選ぶ
+    dailyLines: [
+      'よるの うみはね、まっくらだけど おとが するんだ。ざざん、って。',
+      'ひかりは とおくまで とどくよ。ぼくの こえより ずっと とおく。',
+      'とうだいの かいだんは 42だん。ぜんぶ かぞえたんだ。',
+      'ふねが とおるとき、ぼく いつも 手を ふってるんだ。見えてるかな。',
+      'ひかりが ないと、ふねは 岩に ぶつかっちゃう。だから なおしたいんだ。',
+    ],
+  },
 ];
 
 export const NPC_BY_ID = Object.fromEntries(NPCS.map((n) => [n.id, n]));
 
+/**
+ * いま島にいるNPC(NPCSystemが実体を作る相手)。
+ * debutFlag を持つNPCは、そのフラグが立つまで島に出てこない。
+ * 「登場していないNPCのデータは持っているが、島には出さない」を1か所で決める。
+ */
+export function residentNpcs(flags: Record<string, boolean>): NpcDef[] {
+  return NPCS.filter((def) => !def.debutFlag || flags[def.debutFlag] === true);
+}
+
 // ツムギの家=工房(homeスポットはshopと同じ建物の裏手)
 export function npcSpot(npcId: string, key: string): { x: number; z: number; rotY?: number; wanderR?: number } {
   const spots = NPC_SPOTS[npcId];
+  // 島へ出したのに立ち位置が無い、という取りちがえを その場で分かる形にする
+  // (これまでは undefined を読んで「spots.home が読めない」という遠い場所で落ちていた)
+  if (!spots) {
+    throw new Error(`NPC_SPOTS に ${npcId} の立ち位置がありません(島へ出すなら src/data/island.ts に足す)`);
+  }
   if (key === 'home' && !spots.home) return spots[Object.keys(spots)[0]];
   return spots[key] ?? spots[Object.keys(spots)[0]];
 }

@@ -1,15 +1,16 @@
-// キャラクター定義と組み立て: ミオ(人間)/ミナモ(カワウソ)/ノクト(フクロウ)/ツムギ(ヤギ)
+// キャラクター定義と組み立て: ミオ(人間)/ミナモ(カワウソ)/ノクト(フクロウ)/ツムギ(ヤギ)/ロカ(ペンギン)
 import { buildRig, defaultProportions } from './rig.mjs';
 import { buildHead, buildNeck, buildTorso, buildArms, buildLegs, buildEyes } from './body.mjs';
 import {
   buildHair, buildRoundEars, buildFeatherHorns, buildLopEars, applyMuzzle,
-  buildBeak, buildBeard, buildGoatHorns, buildTailThick, buildTailFan, buildTailStub,
+  buildBeak, buildBeard, buildGoatHorns, buildTailThick, buildTailFan, buildTailStub, buildHeadTuft,
 } from './features.mjs';
 import {
   buildTunic, buildSleeves, buildOveralls, buildVest, buildApron, buildBackpack, buildTowel, buildGlasses,
+  buildScarf,
 } from './outfits.mjs';
 import { buildClips } from './anim.mjs';
-import { mergeMeshes, validateMesh, meshStats } from './geo.mjs';
+import { mergeMeshes, validateMesh, meshStats, weldSeamNormals } from './geo.mjs';
 import { paintTexture } from './paint.mjs';
 import { encodePNG } from './tex.mjs';
 
@@ -154,6 +155,53 @@ export function makeSpecs() {
     };
   }
 
+  // ---------- ロカ(ペンギン・灯台守の子) v11第2章 ----------
+  // ひと目でペンギンと分かる要素を4つ重ねる:
+  //   1) 白いおなか(前面だけ生成りの白)と こい青灰の背中 → テクスチャの前後ぬり分け
+  //   2) 小さい黄色のくちばし(ほぼ真横へ、少しだけ下がる)
+  //   3) ぱたぱたの短いつばさ(左右にうすく前後に広い板。手のふくらみを作らない)
+  //   4) よちよち体型(脚がとても短く、腰が下がり、おなかがふくらむ)
+  // 灯台守のしるしは マフラー1つだけ(おなかの白を かくさない位置・大きさにする)。
+  {
+    const prop = {
+      ...defaultProportions(), height: 0.86, legRatio: 0.2, torsoRatio: 0.39, headRatio: 0.385,
+      shoulderW: 0.115, hipsW: 0.075, armOut: 26, upperArm: 0.1, foreArm: 0.09,
+      tail: { y: 0.19, z: -0.08, len: 0.06, droop: 0.03 },
+    };
+    const hb = headBounds(prop);
+    const H = prop.height;
+    specs.roka = {
+      id: 'roka', speciesId: 'roka', prop,
+      head: {
+        rx: 0.176, rz: 0.171, ...hb, cheek: 0.055, flat: 0.038, jawForward: 0.011,
+        // 頭頂はまるく、あご側はすぼめすぎない(首なしのペンギン頭)
+        profile: [[0, 0.5], [0.12, 0.72], [0.3, 0.9], [0.5, 1.0], [0.72, 0.99], [0.88, 0.86], [0.96, 0.6], [1, 0.16]],
+      },
+      // out を小さめに: 白い顔の上では、浮かせた目のクアッドの ふちが 四角く見えやすい
+      eye: { thetaDeg: 26, y: hb.yBottom + (hb.yTop - hb.yBottom) * 0.5, w: 0.041, h: 0.047, out: 0.0026 },
+      face: { mouthT: 0.2 },
+      neckR: 0.085, // 首は太い(ペンギンは首が見えない)
+      body: {
+        yBottom: prop.legRatio * H - 0.05, yTop: prop.legRatio * H + prop.torsoRatio * H,
+        hipsR: 0.108, waistR: 0.122, chestR: 0.112, shoulderR: 0.088, belly: 0.5, sx: 1.0, sz: 0.94,
+      },
+      arm: { thick: 1, flipper: true },
+      leg: { thick: 1.05, bootFlare: 1.3, bootLen: 0.085, footEllipse: [1.5, 1.0] }, // 平たく大きい足
+      muzzle: { kind: 'penguin' },
+      beak: { len: 0.062, r: 0.0205, drop: 0.34, baseY: -0.02, taper: 0.78, ellipse: [1.2, 0.82] },
+      tuft: { len: 0.058, r: 0.0115 },
+      tailFan: { len: 0.075, wide: 0.115, drop: 0.9 },
+      outfit: { kind: 'scarf' },
+      clipOpts: { earMode: 'tuft', tailMode: 'fan' },
+      palette: {
+        fur: '#3d4e66', furLight: '#f2ece0', nose: '#2b3240',
+        cloth1: '#cf6242', cloth2: '#b34e33', accent: '#f0d7a6',
+        beak: '#e9b04b', foot: '#e29a3f',
+        eye: '#4a3a2c', hair: '#4a5c76', under: '#f2ece0', tail: '#37475d',
+      },
+    };
+  }
+
   return specs;
 }
 
@@ -204,11 +252,21 @@ export function buildCharacter(id) {
       parts.push(...buildSleeves(rig, spec, { len: 0.5, mult: 1.42, cuff: 1.18 }));
       break;
     }
+    case 'roka': {
+      parts.push(buildBeak(rig, spec));
+      parts.push(...buildHeadTuft(rig, spec));
+      parts.push(buildTailFan(rig, spec));
+      parts.push(...buildScarf(rig, spec));
+      break;
+    }
   }
 
   // 目(まばたきモーフ)は最後にマージして差分配列を作る
   const eyeParts = buildEyes(rig, spec);
   let mesh = mergeMeshes(parts);
+  // ロカだけ: UVの継ぎ目の法線をそろえる(背中のまん中に細い光の線が出るため)。
+  // 既存4体は見た目を変えないため対象外(呼ぶとGLBが作り直しになる)
+  if (spec.speciesId === 'roka') weldSeamNormals(mesh);
   const offset = mesh.pos.length;
   mesh = mergeMeshes([mesh, ...eyeParts.map((e) => e.mesh)]);
   const blinkDelta = new Float32Array(mesh.pos.length);

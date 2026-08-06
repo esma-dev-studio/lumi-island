@@ -12,6 +12,7 @@ import { selectInteraction } from '../systems/ObjectiveInteractionPolicy';
 import { canPlant, nearestPlot, stageOf } from '../systems/GardenSystem';
 import type { PlacedRuntime } from '../systems/PlacementSystem';
 import { HOME_DOOR, HOME_BED, HOME_ACT_R } from './HomeInterior';
+import { BOAT_ACT_R, COVE_ACT_R, COVE_DOOR, COVE_RETURN, ISLAND_BOAT_POINT, boatPrompt } from './CoveArea';
 import type { GameScene } from './GameScene';
 
 export const SHOP_POINT = { x: POIS.shop.x + 4.6, z: POIS.shop.z }; // 店カウンター(工房の正面)
@@ -59,6 +60,36 @@ function displayCandidate(gs: GameScene, near: PlacedRuntime, px: number, pz: nu
       else gs.openDisplay(near);
     },
   };
+}
+
+/**
+ * 採取ノードのE候補(島でも入り江でもまったく同じ規則)。
+ * 道具が足りないときは「表示だけの理由」も足す(押しても何も起きない)。
+ */
+function pushGatherCandidates(gs: GameScene, cands: InteractionCandidate[], px: number, pz: number): void {
+  if (!gs.inter.currentNode || !gs.inter.hint) return;
+  const n = gs.inter.currentNode;
+  const nodeItem = GATHER_RULES[n.def.kind].item; // このノードから採れる素材(目的との一致判定に使う)
+  cands.push({
+    id: `node_${n.def.id}`,
+    kind: 'gather',
+    targetId: n.def.id,
+    itemId: nodeItem,
+    priority: PRIORITY.gather,
+    distance: Math.hypot(px - n.def.x, pz - n.def.z),
+    enabled: gs.inter.hint.ok,
+    hint: gs.inter.hint.text,
+    run: () => void gs.inter.tryGather(gs.player, gs.playerView),
+  });
+  if (!gs.inter.hint.ok) {
+    // 道具不足の理由も候補として表示だけする(実行不可)
+    cands.push({
+      id: `node_reason`, kind: 'gather', targetId: n.def.id, itemId: nodeItem,
+      priority: PRIORITY.gather + 5,
+      distance: Math.hypot(px - n.def.x, pz - n.def.z),
+      enabled: true, hint: gs.inter.hint.text, run: () => {},
+    });
+  }
 }
 
 // 戻り値はホットヒント(1行)。E押下(gs.wantInteract)はここで消費する。
@@ -137,6 +168,43 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     return inBest.hint;
   }
 
+  // ---- v11 よるの入り江にいるときは、入り江のことだけ ----
+  // 島の候補(NPC・採取・店・釣り・自宅)はどれも80m以上はなれていて距離条件に入らないが、
+  // 「入り江では入り江のことだけ」を構造で保証するために早く返す。
+  //
+  // 候補の選びかたは自由探索(guided:false)にしてある。これは判定の緩和ではなく設計の意味論:
+  // 島の目的(依頼の報告・素材あつめ)は1つも入り江の中に無いので、誘導で絞ると
+  // 「入り江まで来たのに、ほしくさが1本もつめない」だけになる。帰りの桟橋は
+  // ALWAYS_ALLOWED の 'exit' なので、どちらの選びかたでも必ず押せる。
+  if (gs.inCove) {
+    pushGatherCandidates(gs, cands, px, pz);
+    // 帰りの桟橋の先: ふねで島へ帰る
+    const backD = Math.hypot(px - COVE_RETURN.x, pz - COVE_RETURN.z);
+    if (backD < COVE_ACT_R) {
+      cands.push({
+        id: 'cove_return', kind: 'exit', targetId: 'cove',
+        priority: PRIORITY.door, distance: backD, enabled: true,
+        hint: '<kbd>E</kbd>ふねで しまへ かえる',
+        run: () => gs.seq.sail('island'),
+      });
+    }
+    // こわれた灯台のとびら: 表示だけの候補(中は次のウェーブ)。
+    // kind='place' は ObjectiveSystem の preferredKinds に決して入らない種類なので、
+    // 将来 入り江に依頼を足しても、この案内が誘導を横取りすることはない
+    const doorD = Math.hypot(px - COVE_DOOR.x, pz - COVE_DOOR.z);
+    if (doorD < COVE_ACT_R) {
+      cands.push({
+        id: 'cove_lighthouse', kind: 'place', targetId: 'lighthouse',
+        priority: PRIORITY.door + 2, distance: doorD, enabled: true,
+        hint: 'とびらは しまっている', run: () => {},
+      });
+    }
+    const coveBest = selectInteraction(cands, { preferredKinds: [], guided: false });
+    if (!coveBest) return '';
+    if (want) coveBest.run();
+    return coveBest.hint;
+  }
+
   // NPC: 受注できる/報告できるときだけ最優先。進行中(話しても進まない)は採取より下げる。
   // ※これを最優先のままにすると、鉱石のそばに立つノクトが採取のEを毎回横取りして
   //   依頼が進まない(実測399秒の主因)
@@ -162,30 +230,7 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     });
   }
   // 採取ノード
-  if (gs.inter.currentNode && gs.inter.hint) {
-    const n = gs.inter.currentNode;
-    const nodeItem = GATHER_RULES[n.def.kind].item; // このノードから採れる素材(目的との一致判定に使う)
-    cands.push({
-      id: `node_${n.def.id}`,
-      kind: 'gather',
-      targetId: n.def.id,
-      itemId: nodeItem,
-      priority: PRIORITY.gather,
-      distance: Math.hypot(px - n.def.x, pz - n.def.z),
-      enabled: gs.inter.hint.ok,
-      hint: gs.inter.hint.text,
-      run: () => void gs.inter.tryGather(gs.player, gs.playerView),
-    });
-    if (!gs.inter.hint.ok) {
-      // 道具不足の理由も候補として表示だけする(実行不可)
-      cands.push({
-        id: `node_reason`, kind: 'gather', targetId: n.def.id, itemId: nodeItem,
-        priority: PRIORITY.gather + 5,
-        distance: Math.hypot(px - n.def.x, pz - n.def.z),
-        enabled: true, hint: gs.inter.hint.text, run: () => {},
-      });
-    }
-  }
+  pushGatherCandidates(gs, cands, px, pz);
   // v9 虫(虫あみが要る)。捕まえられるのは BugSystem の BUG_CATCH_R(2.6m)の内がわ。
   //
   // v11: 虫あみを持っているのに とどかないときは、BUG_HINT_R(5m)から
@@ -268,6 +313,28 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
         hint: `つりには ${fish.reason}`, run: () => {},
       });
     }
+  }
+  // v11 ミナモの桟橋のよこの小舟。
+  //   boat_repaired が立っていない(=いまのプレイヤー全員)ときは、表示だけの候補。
+  //   採取ノードの「道具がない理由」とまったく同じ流儀で、押しても何も起きない。
+  //   kind='place' は誘導中(guided)の preferredKinds に決して入らないので、
+  //   依頼のとちゅうで桟橋を通っても案内が横取りされることはない。
+  //   立ち位置は釣り場のはじまり(z>45.5)から3.9mはなしてあるので、釣りとも競合しない。
+  const boatD = Math.hypot(px - ISLAND_BOAT_POINT.x, pz - ISLAND_BOAT_POINT.z);
+  if (boatD < BOAT_ACT_R) {
+    const prompt = boatPrompt(gs.state.flags.boat_repaired === true);
+    cands.push({
+      id: prompt.ride ? 'boat_ride' : 'boat_broken',
+      kind: prompt.ride ? 'enter' : 'place',
+      targetId: prompt.ride ? 'cove' : 'boat',
+      priority: prompt.ride ? PRIORITY.door : PRIORITY.door + 2,
+      distance: boatD,
+      enabled: true,
+      hint: prompt.hint,
+      run: () => {
+        if (prompt.ride) gs.seq.sail('cove');
+      },
+    });
   }
   // 自宅のドア: 家の中へ入る(ねるのは室内のベッド)
   const homeD = Math.hypot(px - HOME_POINT.x, pz - HOME_POINT.z);

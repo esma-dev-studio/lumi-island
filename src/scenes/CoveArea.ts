@@ -1,0 +1,334 @@
+// v11 よるの入り江(第2章の舞台)。島から遠くはなれた世界座標に常設する「別空間」。
+//
+// 設計の要点(マイホームの室内 src/scenes/HomeInterior.ts と同じ流儀):
+//  - 入り江は世界座標(-56, 57)に建てる。セーブのロード時クランプ(±70)の内がわで、
+//    島でいちばん外にある桟橋の先(4,50.5)から約48mはなれている。
+//  - 歩ける・立てる高さの規則は entities/terrain.ts の coveWalkable / coveGroundY が唯一の情報源。
+//    IslandScene.walkable / groundY がこれを最優先で見るので、
+//    スタック自動脱出(半径3m)が原理的に島へ飛べない。
+//  - 島にいるあいだは入り江を丸ごと消し、入り江にいるあいだは島の見た目を丸ごと消す
+//    (islandMeshes は IslandScene が build の最後に撮ったスナップショット)。
+//  - 入り江の中には島の目的地が1つも無いので、Eの候補は自由探索としてあつかう
+//    (InteractionRouting の入り江ブロックを参照)。
+import { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { Color3 } from '@babylonjs/core/Maths/math.color';
+import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import type { Scene } from '@babylonjs/core/scene';
+import {
+  COVE, COVE_PIER, COVE_SEA_Y, coveGroundY, coveHeightLocal, coveWalkable,
+} from '../entities/terrain';
+import {
+  makeBoat, makeCoveGround, makeCovePier, makeCoveSea, makeLighthouse, makeLightShell,
+  makeRubble, makeShoreGlow, makeStarweed, type BoatMesh, type ShoreGlow,
+} from '../entities/cove';
+import { makeLamp } from '../entities/buildings';
+import { attachLightPool, registerGlowSource } from '../entities/effects';
+import type { GatherNodeDef } from '../data/island';
+import type { CircleCollider } from './IslandScene';
+
+/** 波うちぎわの燐光の色(島の発光3系統のうちミント) */
+const GLOW_TINT = Color3.FromHexString('#9fe8c8');
+
+/** ローカル座標(入り江の中心が原点)を世界座標へ */
+export const coveWorld = (lx: number, lz: number): { x: number; z: number } => ({ x: COVE.x + lx, z: COVE.z + lz });
+
+/** 船で着いたときの立ち位置(帰りの桟橋の上)。帰りのEの輪(1.7m)には入らない */
+export const COVE_SPAWN = coveWorld(4.8, 6.3);
+/** 帰りの桟橋の先。ここでEを押すと島へ帰る */
+export const COVE_RETURN = coveWorld(4.8, 9.8);
+/** こわれた灯台のとびらの前(中には入れない。表示だけの候補) */
+export const COVE_DOOR = coveWorld(-5.3, -1.6);
+/** Eがとどく距離。帰りの桟橋と灯台のとびらは 15m 以上はなれているので範囲は重ならない */
+export const COVE_ACT_R = 1.7;
+
+/** 小舟の置きかた(世界座標)。yは船体の上ぶちの高さ(そこは-0.46なので0.62で水に0.16m沈む) */
+export interface BoatPose {
+  x: number;
+  z: number;
+  y: number;
+  rotY: number; // へさきは -Z 向きに作ってあるので、南(+Z)へ向けるとπ
+}
+/**
+ * 島の桟橋のよこに もやってある小舟(世界座標)。
+ * 桟橋(x=4±1.2)の東がわの浅瀬で、地面の高さは0.20m=海面0.3の下(=水にうかぶ)。
+ * へさきは沖(南)を向けてある(出航のとき大きく回頭しないで済む)。
+ */
+export const ISLAND_BOAT: BoatPose = { x: 6.2, z: 41.6, y: 0.62, rotY: Math.PI + 0.06 };
+/** 航海の演出で、島がわの船が見えなくなる沖の点 */
+export const ISLAND_BOAT_OFFSHORE: BoatPose = { x: 12.5, z: 56.5, y: 0.62, rotY: Math.PI };
+/** 入り江の桟橋にもやってある小舟 */
+export const COVE_BOAT: BoatPose = { x: COVE.x + 6.7, z: COVE.z + 8.4, y: 0.62, rotY: Math.PI - 0.06 };
+/** 航海の演出で、入り江がわの船が現れる沖の点 */
+export const COVE_BOAT_OFFSHORE: BoatPose = { x: COVE.x + 15.5, z: COVE.z + 16.5, y: 0.62, rotY: Math.PI };
+/**
+ * 島がわで船に のりこむ立ち位置(桟橋の上)。
+ * 釣り場のはじまり(桟橋の z>45.5。src/systems/FishingCast.ts の fishingGate)から
+ * 3.9mはなしてあるので、Eの輪(1.5m)が釣りの候補と重なることはない。
+ */
+export const ISLAND_BOAT_POINT = { x: 4, z: 41.6 };
+/** 船のEがとどく距離 */
+export const BOAT_ACT_R = 1.5;
+
+/** 島の桟橋の小舟の、Eの案内。表示する文と「Eで実際に のれるか」を1か所で決める */
+export interface BoatPrompt {
+  hint: string;
+  ride: boolean; // true=Eで航海がはじまる / false=表示だけ(押しても何も起きない)
+}
+/**
+ * ふねのE候補は セーブフラグ boat_repaired だけで決まる。
+ * フラグの無いセーブ(=いまのプレイヤー全員)では ride:false なので、
+ * 桟橋に足されるのは「船の見た目」と「表示だけの1行」のふたつだけになる。
+ */
+export function boatPrompt(repaired: boolean): BoatPrompt {
+  return repaired
+    ? { hint: '<kbd>E</kbd>ふねに のる', ride: true }
+    : { hint: 'ふねは しゅうりちゅう みたい', ride: false };
+}
+
+/** こわれた灯台の立つ位置(ローカル) */
+const LIGHTHOUSE = { lx: -6.9, lz: -3.0, r: 1.55 };
+
+/**
+ * 入り江の採取ノード(決定論配置。Math.randomは使わない)。
+ * すべて coveWalkable な地面で、たがいに3m以上、帰りの桟橋・灯台のとびら・
+ * 着いたときの立ち位置からも3m以上はなしてある(tests/unit/cove.test.ts が機械検査)。
+ */
+const COVE_NODE_SPOTS: { kind: 'starweed' | 'lightshell'; lx: number; lz: number }[] = [
+  // ほしくさの野原(北がわの平場)
+  { kind: 'starweed', lx: -1.2, lz: -2.6 },
+  { kind: 'starweed', lx: 2.6, lz: -3.4 },
+  { kind: 'starweed', lx: -2.2, lz: 2.2 },
+  { kind: 'starweed', lx: 6.2, lz: -0.6 },
+  // ひかりの貝(南がわの砂浜)
+  { kind: 'lightshell', lx: -4.4, lz: 5.4 },
+  { kind: 'lightshell', lx: 0.6, lz: 7.0 },
+  { kind: 'lightshell', lx: 8.2, lz: 4.2 },
+];
+
+/** 採取ノードの定義(世界座標)。IslandScene が自分の nodes へ取りこむ */
+export const COVE_NODES: GatherNodeDef[] = COVE_NODE_SPOTS.map((s, i) => ({
+  id: `${s.kind}${i + 1}`,
+  kind: s.kind,
+  ...coveWorld(s.lx, s.lz),
+}));
+
+/** 入り江の岩・灯台の当たり判定(世界座標)。IslandScene.circles へ足す */
+const ROCK_SPOTS: [number, number, number][] = [
+  // [lx, lz, 大きさ] 灯台の足もとのがれきと、北がわの岩ばたのシルエット
+  // 岩は「岸ぎわに置いて水とのあいだを ふさがない」こと(1マスの袋小路ができる)。
+  // 実測で local(-10.0,-4.4) は岸と岩のあいだに2マスの孤立ができたので内がわへ寄せてある
+  [-4.6, -3.8, 0.55], [-8.7, -0.7, 0.7], [-3.6, -5.4, 0.45],
+  [-9.6, -3.8, 0.9], [7.6, -4.6, 0.8], [10.4, 1.6, 0.75], [-9.4, 4.2, 0.6],
+];
+export const COVE_CIRCLES: CircleCollider[] = [
+  { ...coveWorld(LIGHTHOUSE.lx, LIGHTHOUSE.lz), r: LIGHTHOUSE.r },
+  ...ROCK_SPOTS.map(([lx, lz, s]) => ({ ...coveWorld(lx, lz), r: 0.58 * s })),
+];
+
+/** ほしくさの野原の飾り(採取ノードとは別。決定論配置) */
+const MEADOW_CLUMPS: { lx: number; lz: number; spots: [number, number, number][] }[] = [
+  { lx: 0.4, lz: -1.4, spots: [[0, 0, 1], [0.7, 0.5, 0.85], [-0.6, 0.4, 0.9], [0.2, -0.8, 0.75]] },
+  { lx: -2.4, lz: -3.6, spots: [[0, 0, 0.95], [0.8, -0.4, 0.8], [-0.5, 0.6, 1.05]] },
+  { lx: 4.0, lz: -2.2, spots: [[0, 0, 0.9], [-0.7, 0.5, 1.0], [0.6, 0.7, 0.8], [0.1, -0.7, 0.85]] },
+  { lx: -5.2, lz: 1.6, spots: [[0, 0, 1.05], [0.7, 0.6, 0.85], [-0.6, -0.5, 0.9]] },
+  { lx: 2.0, lz: 1.0, spots: [[0, 0, 0.85], [0.6, -0.6, 1.0], [-0.7, 0.3, 0.8]] },
+  { lx: 7.4, lz: -2.4, spots: [[0, 0, 0.95], [-0.6, 0.6, 0.85], [0.5, 0.5, 0.9]] },
+  { lx: -8.0, lz: -1.2, spots: [[0, 0, 0.8], [0.7, 0.4, 0.95], [-0.4, -0.6, 0.85]] },
+  { lx: -1.6, lz: 2.6, spots: [[0, 0, 0.9], [0.8, 0.3, 0.8], [-0.5, 0.7, 1.0]] },
+  { lx: 9.0, lz: 0.8, spots: [[0, 0, 0.85], [-0.7, -0.4, 0.9]] },
+  { lx: -3.0, lz: -5.4, spots: [[0, 0, 0.9], [0.7, 0.4, 0.8], [-0.6, 0.5, 0.95]] },
+];
+
+/** 夜のふかさ(0=昼 1=まよなか)。DayNightの発光の立ち上がりとそろえてある */
+export function coveNightLevel(hour: number): number {
+  if (hour >= 19.6 || hour < 4.4) return 1;
+  if (hour >= 17.6) return (hour - 17.6) / 2;
+  if (hour < 6) return 1 - (hour - 4.4) / 1.6;
+  return 0;
+}
+
+/**
+ * 入り江ぜんたい(地面・海・波うちぎわ・野原・灯台・桟橋・小舟)。
+ * 島にいるあいだは丸ごと消してあるので、島から「海にうかぶ砂浜」が見えることはない。
+ */
+export class CoveArea {
+  /** 入り江ぜんたいの入れ物(位置だけを持つ空のメッシュ) */
+  readonly root: Mesh;
+  /** 帰りの桟橋にもやってある小舟(航海の演出でこれを動かす) */
+  readonly boat: BoatMesh;
+  private shore: ShoreGlow;
+  private clumps: Mesh[] = [];
+  /** 入り江にいるあいだ消す島の見た目(IslandSceneが build の最後に撮ったスナップショット) */
+  private islandMeshes: Mesh[];
+  private islandWasEnabled: boolean[] = [];
+  private active = false;
+  private t = 0;
+  /** 採取ノードの見た目(IslandSceneが自分の nodes へ取りこむ) */
+  readonly nodeMeshes = new Map<string, Mesh>();
+
+  constructor(scene: Scene, seaMat: StandardMaterial, islandMeshes: Mesh[]) {
+    this.islandMeshes = islandMeshes;
+    this.root = new Mesh('coveRoot', scene);
+    this.root.position.set(COVE.x, 0, COVE.z);
+    this.root.isPickable = false;
+
+    const put = (m: Mesh, lx = 0, lz = 0, y?: number, rotY = 0): Mesh => {
+      m.parent = this.root;
+      m.position.set(lx, y ?? coveHeightLocal(lx, lz), lz);
+      m.rotation.y = rotY;
+      m.isPickable = false;
+      return m;
+    };
+
+    // ---- 地面と海 ----
+    const ground = makeCoveGround(scene);
+    ground.parent = this.root;
+    ground.position.set(0, 0, 0);
+    ground.receiveShadows = true;
+    put(makeCoveSea(scene, seaMat), 0, 0, COVE_SEA_Y);
+
+    // ---- 光る砂浜(夜だけ波うちぎわが青緑にともる) ----
+    this.shore = makeShoreGlow(scene);
+    this.shore.glow.parent = this.root;
+    this.shore.glow.position.set(0, 0, 0);
+    this.shore.foam.parent = this.root;
+    this.shore.foam.position.set(0, 0, 0);
+    // 砂に落ちるやわらかい光だまり(明るさは DayNight が島の灯りと同じ表で決める)
+    for (const [lx, lz] of [[-5.4, 6.2], [1.2, 7.4], [7.2, 5.0]] as [number, number][]) {
+      this.addPool(lx, lz, 2.6, 'mint');
+    }
+
+    // ---- ほしくさの野原 ----
+    for (let i = 0; i < MEADOW_CLUMPS.length; i++) {
+      const c = MEADOW_CLUMPS[i];
+      const sw = makeStarweed(scene, 400 + i * 31, c.spots);
+      this.clumps.push(put(sw.root, c.lx, c.lz));
+    }
+
+    // ---- こわれた灯台 ----
+    put(makeLighthouse(scene), LIGHTHOUSE.lx, LIGHTHOUSE.lz);
+    for (let i = 0; i < ROCK_SPOTS.length; i++) {
+      const [lx, lz, s] = ROCK_SPOTS[i];
+      // 岩の底(平らにつぶした面)はメッシュの原点より 0.102×大きさ ぶん上にあるので、
+      // そのぶんまで沈めてから さらに10cm埋める。浅いと岩の下がすいて「黒いくぼみ」に見える
+      put(makeRubble(scene, 700 + i * 17, s), lx, lz, coveHeightLocal(lx, lz) - 0.1 - 0.11 * s, i * 1.13);
+    }
+
+    // ---- 帰りの桟橋とランタン(島と同じ灯りの流儀) ----
+    put(makeCovePier(scene), 0, 0, 0);
+    const lampL = { lx: COVE_PIER.x - COVE.x - 1.55, lz: COVE_PIER.z0 - COVE.z + 0.2 };
+    const lamp = makeLamp(scene);
+    const lampY = coveHeightLocal(lampL.lx, lampL.lz);
+    put(lamp.mesh, lampL.lx, lampL.lz, lampY - 0.02, Math.PI);
+    this.addPool(lampL.lx, lampL.lz + 0.3, 1.7, 'amber');
+    const lampW = coveWorld(lampL.lx, lampL.lz);
+    registerGlowSource(lampW.x, lampY + 1.77, lampW.z);
+
+    // ---- もやってある小舟(帰りの船) ----
+    // 船体は上ぶちが y=0、そこが y=-0.46。海面(0.3)へ0.16mだけ沈むように置く。
+    // 航海の演出では SequenceDirector がこの root を動かし、終わったら COVE_BOAT へ戻す
+    this.boat = makeBoat(scene, 91);
+    put(this.boat.root, COVE_BOAT.x - COVE.x, COVE_BOAT.z - COVE.z, COVE_BOAT.y, COVE_BOAT.rotY);
+    this.boat.broken.setEnabled(false); // 入り江の船はもう なおっている
+
+    // ---- 採取ノード ----
+    for (let i = 0; i < COVE_NODE_SPOTS.length; i++) {
+      const s = COVE_NODE_SPOTS[i];
+      const def = COVE_NODES[i];
+      const m =
+        s.kind === 'starweed'
+          ? makeStarweed(scene, 900 + i * 23, [[0, 0, 1.15], [0.42, 0.3, 0.95], [-0.38, 0.26, 1.0]]).root
+          : makeLightShell(scene, 900 + i * 23).root;
+      put(m, s.lx, s.lz, coveHeightLocal(s.lx, s.lz) - 0.03);
+      this.nodeMeshes.set(def.id, m);
+    }
+
+    this.root.setEnabled(false);
+  }
+
+  /**
+   * 地面に落ちる光だまりを1枚。
+   * attachLightPool は世界座標で組むので、そのままだと入り江を消しても消えない。
+   * 入り江の入れ物(root)の子にしなおして、位置をローカルへ置きかえる
+   * (rootは (COVE.x, 0, COVE.z) にあるので、ローカル=引数のlx/lzがそのまま使える)。
+   */
+  private addPool(lx: number, lz: number, radius: number, tint: 'amber' | 'mint' | 'blue'): void {
+    const y = coveHeightLocal(lx, lz);
+    const pool = attachLightPool(this.root, lx, lz, radius, tint, y);
+    if (!pool) return;
+    pool.parent = this.root;
+    pool.position.set(lx, y, lz);
+  }
+
+  /** その場所の接地高さ(範囲外はnull)。IslandScene.groundY がこれを最優先で見る */
+  groundY(x: number, z: number): number | null {
+    return coveGroundY(x, z);
+  }
+
+  /** 歩けるか(高さの規則だけ) */
+  walkable(x: number, z: number): boolean {
+    return coveWalkable(x, z);
+  }
+
+  /** いま入り江にいるか */
+  get isActive(): boolean {
+    return this.active;
+  }
+
+  /**
+   * 入り江へ入る/出るの切り替え。
+   * 入り江にいるあいだは島の見た目を丸ごと消し、出るときは消す前の状態へ戻す
+   * (もともと消えていたもの——マイホームの部屋・枯れた採取ノード——を勝手に出さない)。
+   */
+  setActive(inCove: boolean): void {
+    if (inCove === this.active) return;
+    this.active = inCove;
+    this.root.setEnabled(inCove);
+    if (inCove) {
+      this.islandWasEnabled = this.islandMeshes.map((m) => m.isEnabled(false));
+      for (const m of this.islandMeshes) m.setEnabled(false);
+    } else {
+      for (let i = 0; i < this.islandMeshes.length; i++) {
+        this.islandMeshes[i].setEnabled(this.islandWasEnabled[i] ?? true);
+      }
+      this.islandWasEnabled = [];
+    }
+  }
+
+  /** ふねが なおっているかを、島がわ・入り江がわの見た目へ反映する */
+  setBoatRepaired(repaired: boolean): void {
+    this.boat.fixed.setEnabled(repaired);
+  }
+
+  /**
+   * 航海の演出用: 入り江の船を世界座標へ置く。
+   * 船は入り江の入れ物(root)の子なので、ここでオフセットを引いて渡す
+   * (呼ぶ側が rootの位置を知らなくていいようにする)。
+   */
+  placeBoat(x: number, y: number, z: number, rotY: number): void {
+    this.boat.root.position.set(x - COVE.x, y, z - COVE.z);
+    this.boat.root.rotation.y = rotY;
+  }
+
+  /**
+   * 毎フレーム: 波うちぎわの燐光・白い泡・ほしくさのゆれ。
+   * 入り江にいないときは何もしない(島にいるあいだの負荷をゼロにする)。
+   */
+  update(dtSec: number, hour: number): void {
+    if (!this.active) return;
+    this.t += dtSec;
+    const night = coveNightLevel(hour);
+    // 燐光は「ゆっくり息をする」ように。昼はalpha=0でふつうの砂に見える。
+    // 強さは ART_DIRECTION の「にじむ淡い光」に合わせて ひかえめに(輪が光りすぎるとネオンになる)
+    this.shore.glowMat.alpha = 0.46 * night * (0.76 + 0.24 * Math.sin(this.t * 0.85));
+    this.shore.glowMat.emissiveColor.copyFrom(GLOW_TINT).scaleInPlace(0.55 + night * 0.45);
+    // 波の泡は昼夜を問わず寄せては返す
+    this.shore.foamMat.alpha = 0.26 + 0.13 * Math.sin(this.t * 0.72 + 1.1);
+    // ほしくさのゆれ(かたまりごとに位相をずらす)
+    for (let i = 0; i < this.clumps.length; i++) {
+      const p = i * 0.7;
+      this.clumps[i].rotation.z = Math.sin(this.t * 0.8 + p) * 0.045;
+      this.clumps[i].rotation.x = Math.sin(this.t * 0.63 + p * 1.4) * 0.03;
+    }
+  }
+}

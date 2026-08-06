@@ -2,7 +2,7 @@
 import { lathe, tube, patch, mirrorX, norm, add, mul } from './geo.mjs';
 import { solo, duo, torsoWeight } from './rig.mjs';
 import { keys } from './anim.mjs';
-import { REG } from './uvmap.mjs';
+import { REG, TEXSIZE } from './uvmap.mjs';
 import { makeMirrorRemap } from './body.mjs';
 
 // 胴の半径プロファイル(buildTorsoと同じ形)
@@ -327,6 +327,73 @@ export function buildTowel(rig, spec) {
     weightFn: () => solo(rig.index.chest),
   });
   return [ring, hang];
+}
+
+// ---------- マフラー(ロカ・灯台守のしるし) ----------
+// 首に1周まいて、前で むすんだ はしを1本たらす。
+// 白いおなかを かくさないよう、首もとだけに小さくまとめる(ペンギンだと分かる面を残す)。
+export function buildScarf(rig, spec) {
+  const H = rig.prop.height;
+  const neckY = rig.world.neck[1] + 0.012 * H;
+  const r = (spec.neckR ?? 0.05) * H + 0.019;
+  const parts = [];
+  // 首まわりの輪(前を少し太くして「まきもの」に見せる)
+  const ring = [];
+  for (let i = 0; i <= 10; i++) {
+    const a = (i / 10) * Math.PI * 2;
+    ring.push([Math.sin(a) * r * 1.1, neckY + Math.cos(a) * 0.008 - 0.004, Math.cos(a) * r]);
+  }
+  parts.push(
+    tube({
+      path: ring, steps: 20, seg: 8,
+      radiusFn: (t) => 0.019 + 0.006 * Math.cos(t * Math.PI * 2), // 前(t=0/1)が太い
+      ellipseFn: () => [1, 0.78],
+      uvRegion: REG.cloth1.tb,
+      // UVの継ぎ目(u=0/1)を 首がわ(内っかわ)へ回して見えなくする。
+      // 断面の th=0 は輪の外へ向くので、πずらすと 継ぎ目が首に かくれる
+      twistFn: () => Math.PI,
+      weightFn: () => duo(rig.index.neck, rig.index.chest, 0.55),
+      capStart: false, capEnd: false,
+    })
+  );
+  // むすび目
+  const knotC = [r * 0.44, neckY - 0.012, r * 0.86];
+  const knot = [];
+  for (let i = 0; i <= 6; i++) {
+    const t = i / 6;
+    knot.push({
+      y: knotC[1] - 0.017 + t * 0.034,
+      r: 0.017 * Math.sin(Math.PI * Math.max(0.12, Math.min(0.88, t))) + 0.006,
+      cx: knotC[0], cz: knotC[2], sz: 0.8,
+    });
+  }
+  parts.push(
+    lathe({
+      rings: knot, seg: 10, uvRegion: REG.cloth2.bt,
+      weightFn: () => duo(rig.index.neck, rig.index.chest, 0.5),
+    })
+  );
+  // 前へたらす はし(風に少しあおられて外へ)。
+  // UVは REG.cloth2 の左右のはしを またがないよう内側へ寄せる
+  // (はしは 継ぎ目対策の「のりしろ」で ぬりつぶしてある → paint.mjs の paintRokaSeamGuards)
+  const c2 = REG.cloth2.px;
+  const tailUV = [(c2.x + 8) / TEXSIZE, c2.y / TEXSIZE, (c2.x + c2.w - 8) / TEXSIZE, (c2.y + c2.h) / TEXSIZE];
+  const tail = patch({
+    cols: 4, rows: 6, thickness: 0.007,
+    uvRegion: tailUV,
+    surfaceFn: (u, v) => {
+      const w = 0.044 * (1 - v * 0.1);
+      const sway = v * v * 0.034;
+      return [
+        knotC[0] + (u - 0.5) * w + sway,
+        knotC[1] - 0.010 - v * 0.135 * H,
+        knotC[2] + 0.010 - v * 0.010 + (u - 0.5) ** 2 * 0.03,
+      ];
+    },
+    weightFn: () => solo(rig.index.chest),
+  });
+  parts.push(tail);
+  return parts;
 }
 
 // ---------- 丸めがね(ノクト) ----------

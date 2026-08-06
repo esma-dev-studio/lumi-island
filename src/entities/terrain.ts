@@ -171,6 +171,122 @@ export function walkableGround(x: number, z: number): boolean {
   return true;
 }
 
+// ===========================================================================
+// v11 よるの入り江(第2章の舞台)の地形。
+//
+// マイホームの室内(src/scenes/HomeInterior.ts)と同じ「別空間はオフセット方式」:
+//   - 島から十分はなれた世界座標に常設し、島にいるあいだは丸ごと消す。
+//   - 歩ける・立てる高さの規則は、この純関数だけを唯一の情報源にする
+//     (IslandScene.walkable / groundY がこれを最優先で見る)。
+//
+// 場所の決め方(この3つを同時に満たす座標を選んである):
+//   1) セーブのロード時クランプ(±70。src/save/SaveSystem.ts)の内がわ。
+//      入り江の歩ける範囲は x∈[-68.4,-43.6] / z∈[47.6,66.4]、桟橋の先でもz=67.6。
+//   2) 島の見た目からじゅうぶん遠い: 島でいちばん外にある桟橋の先(4,50.5)から、
+//      入り江のいちばん近い岸まで約48m(マイホームの部屋の約25mより ずっと遠い)。
+//   3) 島の地形の上でも「深い海の底」(実測 高さ約-4m)なので、
+//      島の地形・海を消したときに入り江の下から何も出てこない。
+// ---------------------------------------------------------------------------
+/** 入り江の中心と岸線(だ円)の半径(m)。世界座標 */
+export const COVE = { x: -56, z: 57, rx: 12.5, rz: 9.5 } as const;
+/** 入り江の海面。島の海面(entities/water.ts SEA_Y)と同じ値にそろえる(相互importを作らないため写している) */
+export const COVE_SEA_Y = 0.3;
+/** 入り江で歩ける高さのしきい値。島の SEA_WALK_Y と同じ考え方(海面+3cm) */
+export const COVE_WALK_Y = 0.33;
+/** 帰りの桟橋(世界座標)。島の桟橋(water.ts PIER)と同じ持ちかた */
+export const COVE_PIER = { x: COVE.x + 4.8, w: 2.2, z0: COVE.z + 4.6, z1: COVE.z + 10.8, y: 1.06 } as const;
+
+/** 岸から内へ上がりきる高さ(海面から)。これ以上は坂で上がらない=まん中は平ら */
+const COVE_RISE = 1.42;
+/** 南(浜)のこう配。ゆるいほど波うちぎわの砂が広くなる */
+const COVE_SLOPE_S = 0.105;
+/** 北・東西(岩ばた)のこう配。浜より急にして「入り江のふところ」に見せる */
+const COVE_SLOPE_N = 0.44;
+/** 岸線より外(海)へ落ちるこう配。見えない壁ではなく地形で止めるための下り */
+const COVE_DROP = 0.62;
+
+/** 入り江のローカル座標(中心が原点) */
+export function coveLocal(x: number, z: number): { lx: number; lz: number } {
+  return { lx: x - COVE.x, lz: z - COVE.z };
+}
+
+/**
+ * 岸線の半径(中心から見た方向ごと)。
+ * だ円のままだと「置いたリング」に見えるので、決定論ノイズで2段のゆらぎを足して
+ * 入り組んだ岸にする(池の岸線 pondShoreR と同じ考え方)。
+ * @param cx,cz 単位ベクトル(方向)
+ */
+export function coveShoreRadius(cx: number, cz: number): number {
+  const base = 1 / Math.hypot(cx / COVE.rx, cz / COVE.rz);
+  const wob =
+    (vnoise(cx * 2.6 + 61, cz * 2.6 + 37) - 0.5) * 0.3 +
+    (vnoise(cx * 6.1 + 13, cz * 6.1 + 91) - 0.5) * 0.13;
+  return base * (1 + wob);
+}
+
+/**
+ * 岸線までの符号つき距離(m)。中が+、海がわが-。
+ * 中心から見た方向の岸半径との差なので、岸線そのもの(t=0)は coveShoreRadius と厳密に一致する
+ * (地面メッシュ・波うちぎわの帯・歩ける判定が同じ線を共有する)。
+ */
+export function coveShoreDist(lx: number, lz: number): number {
+  const L = Math.hypot(lx, lz);
+  const cx = L < 1e-6 ? 1 : lx / L;
+  const cz = L < 1e-6 ? 0 : lz / L;
+  return coveShoreRadius(cx, cz) - L;
+}
+
+/** 入り江の地面の高さ(ローカル座標)。海面0.3を下回るところが海 */
+export function coveHeightLocal(lx: number, lz: number): number {
+  const t = coveShoreDist(lx, lz);
+  if (t <= 0) return COVE_SEA_Y + t * COVE_DROP; // 岸の外: そのまま海底へ下る
+  const L = Math.hypot(lx, lz);
+  const south = L < 1e-6 ? 0 : Math.max(0, lz / L); // 1=真南(+z)=浜 / 0=東西・北=岩ばた
+  const slope = COVE_SLOPE_N - (COVE_SLOPE_N - COVE_SLOPE_S) * Math.pow(south, 0.75);
+  let h = COVE_SEA_Y + COVE_RISE * (1 - Math.exp(-(slope * t) / COVE_RISE));
+  // 起伏。波うちぎわでは効かせない(小さな水たまりができて歩ける範囲が分断されるのを防ぐ)
+  const inland = sstep(Math.max(0, Math.min(1, (t - 0.6) / 4.4)));
+  h += (vnoise(lx * 0.19 + 53, lz * 0.19 + 29) - 0.5) * 0.42 * inland;
+  h += (vnoise(lx * 0.55 + 11, lz * 0.55 + 7) - 0.5) * 0.13 * inland;
+  // こわれた灯台の丘(北西)
+  h += 1.25 * g(lx, lz, -6.9, -3.2, 3.9);
+  // ほしくさの野原はゆるく平ら(草がゆれる面をつくる)
+  const pad = g(lx, lz, -0.4, -1.6, 4.2);
+  h = h * (1 - pad * 0.5) + 1.28 * pad * 0.5;
+  return h;
+}
+
+/** 入り江のはたらく範囲(この外は島の規則にまかせる)。桟橋の先までふくむ */
+export function insideCoveArea(x: number, z: number): boolean {
+  const { lx, lz } = coveLocal(x, z);
+  return Math.abs(lx) < COVE.rx + 4 && Math.abs(lz) < COVE.rz + 6;
+}
+
+/** 帰りの桟橋のデッキの上か(島の onPier と同じ判定のしかた) */
+export function onCovePier(x: number, z: number): boolean {
+  return (
+    Math.abs(x - COVE_PIER.x) < COVE_PIER.w / 2 + 0.1 &&
+    z > COVE_PIER.z0 - 0.2 &&
+    z < COVE_PIER.z1 + 0.2
+  );
+}
+
+/** 入り江の接地高さ(範囲の外はnull)。IslandScene.groundY が最優先で見る */
+export function coveGroundY(x: number, z: number): number | null {
+  if (!insideCoveArea(x, z)) return null;
+  if (onCovePier(x, z)) return COVE_PIER.y;
+  const { lx, lz } = coveLocal(x, z);
+  return coveHeightLocal(lx, lz);
+}
+
+/** 入り江で歩けるか(高さの規則だけ。コライダーは IslandScene.resolveCollision が足す) */
+export function coveWalkable(x: number, z: number): boolean {
+  if (!insideCoveArea(x, z)) return false;
+  if (onCovePier(x, z)) return true;
+  const { lx, lz } = coveLocal(x, z);
+  return coveHeightLocal(lx, lz) >= COVE_WALK_Y;
+}
+
 // ---- 頂点カラー ----
 const C_GRASS = new Color3(0.478, 0.663, 0.396);
 const C_GRASS2 = new Color3(0.42, 0.60, 0.36);

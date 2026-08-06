@@ -391,6 +391,47 @@ export function mirrorX(src, remap = (j) => j) {
   return m;
 }
 
+/**
+ * UVの継ぎ目にできる「照明の線」を消す(位置が同じ頂点の法線を平均する)。
+ *
+ * 回転体・チューブは u=0 と u=1 で頂点を複製する(UVが違うため)。複製された2頂点は
+ * それぞれ片側の面からしか法線をもらえないので、そこだけ法線が傾き、光の当たり方が変わる。
+ * 背中のように「1枚の広い面」の途中に継ぎ目が来ると、細い明るい線として見えてしまう。
+ * 位置・UV・インデックスはさわらず、法線だけをそろえる。
+ *
+ * 既存キャラのGLBを1バイトも変えないため、呼び出しは新しいキャラだけの「あと処理」にする。
+ */
+export function weldSeamNormals(m, eps = 1e-5) {
+  const groups = new Map();
+  const n = m.pos.length / 3;
+  const q = (v) => Math.round(v / eps);
+  for (let i = 0; i < n; i++) {
+    const k = `${q(m.pos[i * 3])},${q(m.pos[i * 3 + 1])},${q(m.pos[i * 3 + 2])}`;
+    const g = groups.get(k);
+    if (g) g.push(i);
+    else groups.set(k, [i]);
+  }
+  let welded = 0;
+  for (const g of groups.values()) {
+    if (g.length < 2) continue;
+    let nx = 0, ny = 0, nz = 0;
+    for (const i of g) {
+      nx += m.nrm[i * 3];
+      ny += m.nrm[i * 3 + 1];
+      nz += m.nrm[i * 3 + 2];
+    }
+    if (Math.hypot(nx, ny, nz) < 1e-6) continue; // 向かい合う面(板の表裏)は そのままにする
+    const v = norm([nx, ny, nz]);
+    for (const i of g) {
+      m.nrm[i * 3] = v[0];
+      m.nrm[i * 3 + 1] = v[1];
+      m.nrm[i * 3 + 2] = v[2];
+    }
+    welded += g.length;
+  }
+  return welded;
+}
+
 // メッシュ統計
 export function meshStats(m) {
   return { verts: m.pos.length / 3, tris: m.idx.length / 3 };

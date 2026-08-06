@@ -1,7 +1,7 @@
 {
   "completed": true,
   "homeRoundTrip": true,
-  "totalSec": 386,
+  "totalSec": 364,
   "timeline": [
     {
       "sec": 2,
@@ -24,173 +24,175 @@
       "label": "目標: q_wood_gather"
     },
     {
-      "sec": 25,
+      "sec": 19,
       "label": "はじめての採取"
     },
     {
-      "sec": 50,
+      "sec": 44,
       "label": "はじめての夜(発光を確認)"
     },
     {
-      "sec": 69,
+      "sec": 59,
       "label": "目標: q_wood_report"
     },
     {
-      "sec": 88,
+      "sec": 70,
       "label": "目標: q_fish_offer"
     },
     {
-      "sec": 98,
+      "sec": 80,
       "label": "目標: q_fish_mats_wood"
     },
     {
-      "sec": 119,
+      "sec": 101,
       "label": "目標: q_fish_mats_stone"
     },
     {
-      "sec": 123,
+      "sec": 105,
       "label": "目標: q_fish_craft_r_sickle"
     },
     {
-      "sec": 124,
+      "sec": 106,
       "label": "はじめてのクラフト"
     },
     {
-      "sec": 124,
+      "sec": 106,
       "label": "目標: q_fish_mats_wood"
     },
     {
-      "sec": 145,
+      "sec": 127,
       "label": "目標: q_fish_mats_fiber"
     },
     {
-      "sec": 154,
+      "sec": 136,
       "label": "目標: q_fish_craft_r_rod"
     },
     {
-      "sec": 156,
+      "sec": 137,
       "label": "目標: q_fish_fish"
     },
     {
-      "sec": 176,
+      "sec": 156,
       "label": "目標: q_fish_report"
     },
     {
-      "sec": 219,
+      "sec": 199,
       "label": "目標: q_ore_offer"
     },
     {
-      "sec": 231,
+      "sec": 212,
       "label": "目標: q_ore_gather"
     },
     {
-      "sec": 241,
+      "sec": 221,
       "label": "目標: q_ore_report"
     },
     {
-      "sec": 245,
+      "sec": 226,
       "label": "目標: q_lantern_offer"
     },
     {
-      "sec": 259,
+      "sec": 240,
       "label": "目標: q_lantern_mats_moss"
     },
     {
-      "sec": 273,
+      "sec": 254,
       "label": "目標: q_lantern_craft_r_lantern"
     },
     {
-      "sec": 275,
+      "sec": 255,
       "label": "目標: q_lantern_place"
     },
     {
-      "sec": 289,
+      "sec": 269,
       "label": "はじめての家具配置"
     },
     {
-      "sec": 289,
+      "sec": 269,
       "label": "目標: q_lantern_report"
     },
     {
-      "sec": 292,
+      "sec": 273,
       "label": "目標: q_lumi_offer"
     },
     {
-      "sec": 294,
+      "sec": 274,
+      "label": "目標: q_lumi_mats_stone"
+    },
+    {
+      "sec": 282,
+      "label": "目標: q_lumi_mats_ore"
+    },
+    {
+      "sec": 289,
+      "label": "目標: q_lumi_craft_r_stonelamp"
+    },
+    {
+      "sec": 291,
+      "label": "目標: q_lumi_place"
+    },
+    {
+      "sec": 305,
       "label": "目標: q_lumi_mats_wood"
     },
     {
-      "sec": 306,
+      "sec": 314,
       "label": "目標: q_lumi_mats_moss"
     },
     {
-      "sec": 317,
+      "sec": 325,
       "label": "目標: q_lumi_craft_r_lantern"
     },
     {
-      "sec": 318,
+      "sec": 326,
       "label": "目標: q_lumi_place"
     },
     {
-      "sec": 331,
-      "label": "目標: q_lumi_mats_moss"
-    },
-    {
-      "sec": 348,
-      "label": "目標: q_lumi_craft_r_lantern"
-    },
-    {
-      "sec": 349,
-      "label": "目標: q_lumi_place"
-    },
-    {
-      "sec": 361,
+      "sec": 339,
       "label": "目標: q_lumi_report"
     },
     {
-      "sec": 366,
+      "sec": 344,
       "label": "目標: free"
     },
     {
-      "sec": 366,
+      "sec": 344,
       "label": "ルミの木 開花!"
     },
     {
-      "sec": 385,
+      "sec": 364,
       "label": "マイホーム 入室→就寝→退出: OK"
     },
     {
-      "sec": 386,
-      "label": "終了(6分26秒)"
+      "sec": 364,
+      "label": "終了(6分4秒)"
     }
   ],
   "errors": 0,
   "errorSamples": [],
   "fps": [
-    129,
-    139,
-    146,
-    112,
-    124,
-    93,
-    104,
-    136,
-    73,
+    34,
+    118,
+    113,
+    89,
     158,
-    155,
+    125,
+    124,
+    140,
+    129,
+    111,
     136,
-    143,
-    138,
-    127,
-    150,
+    131,
+    135,
+    131,
+    129,
     132,
-    190,
-    127,
-    119,
-    159,
-    147,
-    156,
-    148
+    170,
+    106,
+    138,
+    139,
+    165,
+    146
   ],
   "quests": {
     "q_wood": "done",

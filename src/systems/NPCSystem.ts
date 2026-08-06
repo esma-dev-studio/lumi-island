@@ -2,7 +2,7 @@
 import type { Scene } from '@babylonjs/core/scene';
 import { CharacterView } from '../characters/CharacterView';
 import { CHARACTERS } from '../data/characters';
-import { NPCS, npcSpot, scheduleEntryAt, nextOutdoorEntry, type NpcDef, type ScheduleEntry } from '../data/npcs';
+import { residentNpcs, npcSpot, scheduleEntryAt, nextOutdoorEntry, type NpcDef, type ScheduleEntry } from '../data/npcs';
 import type { VisitPraiseFacts } from '../data/npcs';
 import { GATHER_NODES } from '../data/island';
 import type { GameState } from '../game/GameState';
@@ -173,7 +173,8 @@ export class NPCSystem {
 
   async init(): Promise<void> {
     this.measureVisitSpot();
-    for (const def of NPCS) {
+    // 登場フラグの立っていないNPC(v11のロカなど)は、モデルも読まず 島にも置かない
+    for (const def of residentNpcs(this.getFlags())) {
       const view = await CharacterView.load(this.scene, CHARACTERS[def.charId]);
       for (const m of view.meshes) this.island.shadows.addShadowCaster(m, true);
       const home = npcSpot(def.id, def.schedule[0].spot);

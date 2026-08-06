@@ -165,25 +165,73 @@ export function applyMuzzle(headMesh, rig, spec) {
     // 目の上の羽毛の眉(V字)
     bump(headMesh, [hs.rx * 0.3, c[1] + hs.rx * 0.22, front * 0.9], 0.052 * H, 0.016 * H, [0.15, 0.5, 1]);
     bump(headMesh, [-hs.rx * 0.3, c[1] + hs.rx * 0.22, front * 0.9], 0.052 * H, 0.016 * H, [-0.15, 0.5, 1]);
+  } else if (kind === 'penguin') {
+    // ペンギン: くちばしの付け根を少しだけ盛って顔から生えて見せる+のど〜あごをふっくらさせる。
+    // 目のまわりには何も盛らない(左右対称の出っぱりが「もう1組の目」に見えるのを避ける)。
+    const mouthY = hs.yBottom + (hs.yTop - hs.yBottom) * (spec.face?.mouthT ?? 0.22);
+    bump(headMesh, [0, c[1] - hs.rx * 0.14, front * 0.95], 0.062 * H, 0.020 * H, [0, -0.1, 1]);
+    bump(headMesh, [0, mouthY + 0.010, front * 0.86], 0.085 * H, 0.017 * H, [0, -0.35, 1]); // のど
+    // 頭のうしろを少しだけ後ろへ(まるい風船頭にしない)
+    bump(headMesh, [0, c[1] + (hs.yTop - hs.yBottom) * 0.14, c[2] - hs.rz * 0.98], 0.09 * H, 0.012 * H, [0, 0.1, -1]);
   }
   return headMesh;
 }
 
+// ---------- 頭のふわふわ毛(ペンギンのひな。crownボーンでゆれる) ----------
+export function buildHeadTuft(rig, spec) {
+  const hs = spec.head;
+  const c = headCenter(spec);
+  const ry = (hs.yTop - hs.yBottom) / 2;
+  const t = spec.tuft ?? { len: 0.055, r: 0.011 };
+  const crownI = rig.index.crown, headI = rig.index.head;
+  const parts = [];
+  // 3本を左右非対称に立てる(対称に2本だと「つの」「目」に見える)
+  const strands = [
+    { x: -0.012, z: -0.004, lean: [-0.30, 1, -0.34], scale: 1.0 },
+    { x: 0.006, z: -0.018, lean: [0.16, 1, -0.58], scale: 0.82 },
+    { x: 0.020, z: 0.004, lean: [0.52, 1, -0.10], scale: 0.66 },
+  ];
+  for (const s of strands) {
+    const base = [c[0] + s.x, c[1] + ry * 0.99, c[2] + s.z];
+    const dir = norm(s.lean);
+    const L = t.len * s.scale;
+    const path = [
+      base,
+      add(base, mul(dir, L * 0.55)),
+      add(add(base, mul(dir, L)), [dir[0] * L * 0.35, -L * 0.14, dir[2] * L * 0.35]),
+    ];
+    parts.push(
+      tube({
+        path, steps: 5, seg: 6,
+        radiusFn: (u) => t.r * s.scale * (1 - u * 0.86),
+        uvRegion: REG.hair.tb,
+        weightFn: (p, u) => (u < 0.4 ? duo(headI, crownI, 0.4) : solo(crownI)),
+        capStart: false, capEnd: true,
+      })
+    );
+  }
+  return parts;
+}
+
+// b = {len, r, drop, baseY, taper, ellipse}
+//   drop  : 先が下へさがる強さ(1=フクロウ。ペンギンは0.35くらいで ほぼまっすぐ前へ)
+//   baseY : 付け根の高さ(頭の半径に対する比。省略時 -0.1 = ややあご寄り)
 export function buildBeak(rig, spec) {
   const hs = spec.head;
   const c = headCenter(spec);
   const front = c[2] + hs.rz;
-  const b = spec.beak; // {len, r}
-  const base = [0, c[1] - hs.rx * 0.1, front * 0.985]; // めがねの下・顔から前へ出す
+  const b = spec.beak;
+  const drop = b.drop ?? 1;
+  const base = [0, c[1] + hs.rx * (b.baseY ?? -0.1), front * 0.985]; // めがねの下・顔から前へ出す
   const path = [
     base,
-    [0, base[1] - b.len * 0.25, base[2] + b.len * 0.7],
-    [0, base[1] - b.len * 0.72, base[2] + b.len * 0.92],
+    [0, base[1] - b.len * 0.25 * drop, base[2] + b.len * 0.7],
+    [0, base[1] - b.len * 0.72 * drop, base[2] + b.len * 0.92],
   ];
   return tube({
     path, steps: 6, seg: 8,
-    radiusFn: (t) => b.r * (1 - t * 0.85),
-    ellipseFn: () => [1.12, 0.85],
+    radiusFn: (t) => b.r * (1 - t * (b.taper ?? 0.85)),
+    ellipseFn: () => b.ellipse ?? [1.12, 0.85],
     uvRegion: REG.muzzle.tb,
     weightFn: () => solo(rig.index.head),
   });
@@ -252,18 +300,21 @@ export function buildTailThick(rig, spec) {
   });
 }
 
-export function buildTailFan(rig, _spec) {
+// spec.tailFan = { len, wide, drop } 省略時はフクロウの尾羽(従来値)
+export function buildTailFan(rig, spec) {
   const t1 = rig.world.tail1;
   const t1i = rig.index.tail1, t2i = rig.index.tail2;
+  const f = spec?.tailFan ?? {};
+  const LEN = f.len ?? 0.11, WIDE = f.wide ?? 0.12, DROP = f.drop ?? 0.55;
   return patch({
     cols: 6, rows: 4, thickness: 0.008,
     uvRegion: REG.tail.tb,
     surfaceFn: (u, v) => {
       const spread = (u - 0.5) * (0.5 + v * 0.9);
-      const lenv = v * 0.11;
+      const lenv = v * LEN;
       return [
-        t1[0] + spread * 0.12,
-        t1[1] + 0.01 - lenv * 0.55 - Math.abs(spread) * 0.02,
+        t1[0] + spread * WIDE,
+        t1[1] + 0.01 - lenv * DROP - Math.abs(spread) * 0.02,
         t1[2] - 0.01 - lenv * 1.15,
       ];
     },

@@ -119,6 +119,34 @@ export function paintTexture(spec) {
       const ry0 = hp.y + 8 + ((i * 53) % Math.round(hp.h * 0.55));
       tex.bezier(rx0 - 3, ry0, rx0, ry0 + 3, rx0 + 3, ry0, 1.2, shade(P.fur, 0.88), 0.5);
     }
+  } else if (sp === 'roka') {
+    // ペンギン(コウテイペンギンのひな): こい青灰の頭 + 前面だけ ひとつづきの白い顔。
+    // 白は「目のまわり2つ」に分けない。分けると 顔の上に もう1組の目があるように見える(顔の錯視)。
+    // 目・くちばし・のどを ぜんぶ 1つの白い面の中に入れて、そのまま おなかの白へ つなげる。
+    tex.vgrad(hp.x, hp.y, hp.w, Math.round(hp.h * 0.3), shade(P.fur, 0.88), P.fur); // 頭頂は少し暗く
+    const [fx, fy] = headPx(spec, 0, mouthY + 0.05);
+    tex.ellipse(fx, fy - 10, 47, 58, P.furLight); // 顔の白(両目とくちばしを ふくむ ひとつづきの面)
+    tex.ellipse(fx, fy - 34, 22, 22, P.furLight); // ひたい側へ とがらせる(帽子のような水平の境目にしない)
+    tex.ellipse(fx, fy + 34, 34, 26, P.furLight); // あご〜のど(下の白へ つなげる)
+    tex.rect(Math.round(fx - 30), Math.round(fy + 30), 60, Math.round(hp.h - (fy + 30) + hp.y), P.furLight);
+    // 白と青灰の境目を ぼかす(切り絵・布の帽子に見せない)。羽のような細かい入り組みにする
+    for (let i = 0; i < 64; i++) {
+      const a = (i / 64) * Math.PI * 2;
+      const rr = 0.82 + 0.32 * Math.sin(i * 2.4);
+      const ex = fx + Math.sin(a) * 47 * rr;
+      const ey = fy - 10 + Math.cos(a) * 58 * rr;
+      tex.ellipse(ex, ey, 4.5, 4.5, mix(P.fur, P.furLight, 0.5 + 0.35 * Math.cos(i * 1.7)), 0.55);
+    }
+    // 目のくぼみ: 目のクアッドの四角い継ぎ目を、やわらかい影の中に かくす
+    for (const sx of [-1, 1]) {
+      const [ex, ey] = headPx(spec, sx * spec.eye.thetaDeg, eyeY);
+      tex.ellipse(ex, ey + 1, 20, 19, shade(P.furLight, 0.94), 0.85);
+      tex.ellipse(ex, ey - 5, 15, 10, shade(P.furLight, 0.9), 0.5); // まぶたの影
+    }
+    // くちばしの付け根の影(顔から生えて見せる)
+    const [bx, by] = headPx(spec, 0, mouthY + 0.052);
+    tex.ellipse(bx, by + 3, 15, 8, shade(P.furLight, 0.86), 0.6);
+    // ほおの ほんのりした赤みは 入れない(ほっぺは おもちゃ感の原因)
   } else if (sp === 'tsumugi') {
     const [cx0, cy0] = headPx(spec, 0, mouthY + 0.005);
     tex.ellipse(cx0, cy0 + 2, 25, 19, mix(P.fur, P.muzzlePink, 0.42));
@@ -141,17 +169,28 @@ export function paintTexture(spec) {
   tex.strokes(hr.x, hr.y, hr.w, hr.h, shade(hairC, 1.18), 40, 22, 3, 7, 0.16);
 
   // ---- 目 ----
-  const eyeBg = sp === 'nokto' ? P.facialDisc : sp === 'mio' ? P.skin : sp === 'minamo' ? P.furLight : mix(P.fur, P.muzzlePink ?? P.fur, 0.2);
+  const eyeBg =
+    sp === 'nokto' ? P.facialDisc
+      : sp === 'mio' ? P.skin
+        : sp === 'minamo' || sp === 'roka' ? P.furLight
+          : mix(P.fur, P.muzzlePink ?? P.fur, 0.2);
   const eyeOpts =
     sp === 'nokto'
       ? { pupil: hex('#2e2620'), rx: 11, ry: 12 }
       : sp === 'tsumugi'
         ? { pupilBar: true, pupil: hex('#3a2c20'), rx: 9, ry: 10 }
-        : {};
+        : sp === 'roka'
+          ? { pupil: hex('#221e1a'), rx: 9.5, ry: 10.5 } // 小さくて まるい黒目
+          : {};
   paintEyeOpen(tex, REG.eyeOpenL, eyeBg, P.eye, eyeOpts);
   paintEyeOpen(tex, REG.eyeOpenR, eyeBg, P.eye, eyeOpts);
   paintEyeClosed(tex, REG.eyeClosedL, eyeBg, shade(eyeBg, 0.5));
   paintEyeClosed(tex, REG.eyeClosedR, eyeBg, shade(eyeBg, 0.5));
+  if (sp === 'roka') {
+    // 白い顔に のせる目は、地がのっぺりだと クアッドの四角い縁が見えてしまう。
+    // 頭と同じ粒(ノイズ)を のせて なじませる(ほかのキャラは既存の見た目を変えないため対象外)。
+    for (const r of [REG.eyeOpenL, REG.eyeOpenR, REG.eyeClosedL, REG.eyeClosedR]) noiseReg(tex, r, 0.05, 12);
+  }
 
   // ---- 耳内側 ----
   if (P.earInner) {
@@ -164,6 +203,22 @@ export function paintTexture(spec) {
 
   // ---- 胴の地 ----
   fillReg(tex, REG.torso, P.under ?? headBase);
+  if (sp === 'roka') {
+    // 胴(と首)は服でかくれないので、ここで前後をぬり分ける。
+    // 胴のUVは1周ぶん(u=0.5が正面)。まん中に白いおなか、まわりは こい青灰の背中。
+    const tr = REG.torso.px;
+    fillReg(tex, REG.torso, P.fur);
+    tex.vgrad(tr.x, tr.y, tr.w, tr.h, shade(P.fur, 1.05), shade(P.fur, 0.9));
+    const cx = tr.x + tr.w / 2;
+    tex.ellipse(cx, tr.y + tr.h * 0.52, tr.w * 0.2, tr.h * 0.62, P.furLight); // 白いおなか(約140度ぶん)
+    tex.ellipse(cx, tr.y + tr.h * 0.2, tr.w * 0.155, tr.h * 0.22, P.furLight); // のど側へ つなげる
+    // 境目のぼかし(白と青灰の あいだに 中間色の点をちらす)
+    for (const sx of [-1, 1]) {
+      for (let i = 0; i < 9; i++) {
+        tex.ellipse(cx + sx * (tr.w * 0.2 - 1), tr.y + tr.h * (0.1 + i * 0.1), 3.5, 6, mix(P.fur, P.furLight, 0.5), 0.55);
+      }
+    }
+  }
   noiseReg(tex, REG.torso, 0.04, 31);
 
   // ---- 服メイン ----
@@ -180,11 +235,26 @@ export function paintTexture(spec) {
     // ベストのボタン
     for (let i = 0; i < 3; i++) tex.ellipse(c1.x + c1.w / 2, c1.y + 30 + i * 34, 3, 3, P.accent ?? hex('#c9a86b'));
   }
+  if (sp === 'roka') {
+    // マフラーの あみ目と ふとい しま(1色ののっぺりした帯にしない)
+    for (let i = 0; i < 5; i++) tex.rect(c1.x, c1.y + 14 + i * 30, c1.w, 7, P.accent);
+    for (let i = 0; i < 26; i++) {
+      tex.line(c1.x + i * 5, c1.y, c1.x + i * 5 + 3, c1.y + c1.h, 1.1, shade(P.cloth1, 0.86), 0.35);
+    }
+  }
   noiseReg(tex, REG.cloth1, 0.05, 41);
 
   // ---- 服サブ(袖・裾) ----
   fillReg(tex, REG.cloth2, P.cloth2 ?? shade(P.cloth1, 0.94));
   bandBottom(tex, REG.cloth2, 0.16, shade(P.cloth2 ?? P.cloth1, 0.85));
+  if (sp === 'roka') {
+    // マフラーの たれ: 先に しまと ふさ
+    const c2 = REG.cloth2.px;
+    for (let i = 0; i < 3; i++) tex.rect(c2.x, c2.y + 62 + i * 16, c2.w, 6, P.accent);
+    for (let i = 0; i < 10; i++) {
+      tex.line(c2.x + 3 + i * 6, c2.y + c2.h - 14, c2.x + 3 + i * 6, c2.y + c2.h, 1.8, P.accent, 0.9);
+    }
+  }
   noiseReg(tex, REG.cloth2, 0.05, 43);
 
   // ---- 脚 ----
@@ -205,6 +275,13 @@ export function paintTexture(spec) {
     tex.rect(lr.x, lr.y + Math.round(lr.h * 0.78), lr.w, 3, shade(P.talon, 0.8));
   } else if (sp === 'tsumugi') {
     bandBottom(tex, REG.legs, 0.12, P.hooves); // ひづめ
+  } else if (sp === 'roka') {
+    // 脚は羽毛にうもれて短い。足首から下だけ だいだい色の みずかき足
+    bandBottom(tex, REG.legs, 0.34, P.foot);
+    tex.rect(lr.x, lr.y + Math.round(lr.h * 0.66), lr.w, 3, shade(P.foot, 0.78));
+    for (let i = 1; i < 3; i++) {
+      tex.line(lr.x + (lr.w * i) / 3, lr.y + lr.h * 0.82, lr.x + (lr.w * i) / 3, lr.y + lr.h, 1.6, shade(P.foot, 0.8), 0.7);
+    }
   }
   noiseReg(tex, REG.legs, 0.05, 51);
 
@@ -225,6 +302,16 @@ export function paintTexture(spec) {
     }
   } else if (sp === 'minamo') {
     bandBottom(tex, REG.arms, 0.18, shade(P.fur, 0.85)); // 手先
+  } else if (sp === 'roka') {
+    // つばさ: 外っかわは背中と同じ こい青灰、内っかわ(体に向く面)は おなかと同じ白。
+    // チューブのuは断面を1周する。u=0.25 が体がわの面になる(u=0.75は外がわ)。
+    tex.rect(ar.x + Math.round(ar.w * 0.12), ar.y, Math.round(ar.w * 0.26), ar.h, P.furLight);
+    for (let i = 0; i < 4; i++) {
+      const x = ar.x + Math.round(ar.w * (0.12 + i * 0.005));
+      tex.rect(x, ar.y, 1, ar.h, mix(P.fur, P.furLight, i / 4), 0.8); // 境目をぼかす
+      tex.rect(ar.x + Math.round(ar.w * (0.38 - i * 0.005)), ar.y, 1, ar.h, mix(P.fur, P.furLight, i / 4), 0.8);
+    }
+    bandBottom(tex, REG.arms, 0.12, shade(P.fur, 0.86)); // はねの先
   }
   noiseReg(tex, REG.arms, 0.05, 61);
 
@@ -268,5 +355,37 @@ export function paintTexture(spec) {
     tex.vgrad(mr.x, mr.y, mr.w, mr.h, shade(P.beak, 1.1), shade(P.beak, 0.82));
   }
 
+  if (sp === 'roka') paintRokaSeamGuards(tex, P);
+
   return tex;
+}
+
+/**
+ * ロカだけの継ぎ目対策(v11)。
+ *
+ * 回転体・チューブのUVは 1周して u=0 と u=1 が同じ線でぶつかる。glTFの既定サンプラーは
+ * くり返し(REPEAT)なので、u=0 は「アトラスの反対の端」を、u=1 は「となりの領域の1列目」を
+ * 半分ずつ拾ってしまう。ほかのキャラは胴が服でかくれていて見えなかったが、
+ * ロカは胴がむき出し(白いおなか)なので、背中のまん中に マフラーの赤い線が1本出た。
+ *
+ * 直し方は「ぶつかる相手の色を 背中の色にそろえる」こと(UVそのものは変えない。
+ * 変えると既存4体のGLBまで作り直しになる)。ロカが使っていない領域は まるごとぬりつぶす。
+ * ミップマップでにじむぶんを見こんで、のりしろは4px取る。
+ */
+function paintRokaSeamGuards(tex, P) {
+  const GUARD = 10; // ミップマップでにじむぶんを見こむ(4pxだと縮小時に となりの色を拾う)
+  const back = P.fur; // 背中・後頭部の色
+  // 1) u=0 側: アトラスの右はし(x=511)を拾う。胴の高さは accessory、頭の高さは accent/accent2。
+  for (const r of [REG.accessory, REG.accent, REG.accent2]) fillReg(tex, r, back); // ロカは未使用
+  // 2) u=1 側: となりの領域の左はしを 背中の色にする
+  //    胴(REG.torso)のとなり = REG.cloth1(マフラー)、頭(REG.head)のとなり = REG.hair / REG.muzzle
+  const c1 = REG.cloth1.px, hr = REG.hair.px, mr = REG.muzzle.px;
+  tex.rect(c1.x, c1.y, GUARD, c1.h, back);
+  tex.rect(hr.x, hr.y, GUARD, hr.h, back);
+  tex.rect(mr.x, mr.y, GUARD, mr.h, back);
+  //    脚(REG.legs)の u=0 のとなり = REG.cloth2 の右はし。ここを直さないと 脚の前に赤い線が出る
+  //    (マフラーの たれは この のりしろを またがないUVで作ってある → outfits.mjs の buildScarf)
+  const c2 = REG.cloth2.px, ar = REG.arms.px;
+  tex.rect(c2.x + c2.w - GUARD, c2.y, GUARD, c2.h, back);
+  tex.rect(ar.x, ar.y, GUARD, ar.h, back); // つばさ(REG.arms)の u=0 側
 }

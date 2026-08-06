@@ -1,9 +1,9 @@
 // 依頼リスト(Q)。下部に「なかよし度」(おくりもので上がる)をハートで小さく出す。
 import type { GameState } from '../game/GameState';
 import { activeQuests } from '../systems/QuestSystem';
-import { NPCS, NPC_BY_ID } from '../data/npcs';
+import { NPC_BY_ID } from '../data/npcs';
 import { QUESTS } from '../data/quests';
-import { FRIEND_BEST, HEART_MAX, friendshipHearts, friendshipText } from '../systems/GiftSystem';
+import { FRIEND_BEST, HEART_MAX, friendshipHearts, friendshipText, metNpcs } from '../systems/GiftSystem';
 import { icon } from './icons';
 import { byInput } from './inputMode';
 
@@ -28,13 +28,17 @@ export class QuestLogUI {
   }
 
   /**
-   * なかよし度の1行 × NPC人数。ハートは HEART_MAX 個で、1つ=なかよし度2。
+   * なかよし度の1行 × 出会ったNPCの数。ハートは HEART_MAX 個で、1つ=なかよし度2。
    * 形(ハート)と 数字(7/10)の両方を出す。ハートだけだと 1つ ふえるまで見た目が変わらず、
    * 「あげても 上がっていない」と 見えてしまうため(数字は 1回ごとに かならず動く)。
    * 見た目のクラスは他のパネルと同じものを使い、CSSは足さない(inlineで小さくする)。
+   *
+   * 人数は数え打ちしない: 出す相手は metNpcs(=セーブに記録のあるNPC)から取る。
+   * いまの3人は最初から記録があるので表示は変わらず、あとから来るNPC(ロカ)は
+   * 出会った日から自動で1行ふえる。
    */
   private friendRows(s: GameState): string {
-    return NPCS.map((def) => {
+    return metNpcs(s).map((def) => {
       const f = s.npcs[def.id]?.friendship ?? 0;
       const filled = friendshipHearts(f);
       const hearts = Array.from({ length: HEART_MAX }, (_, i) => icon(i < filled ? 'heart' : 'heart_off')).join('');

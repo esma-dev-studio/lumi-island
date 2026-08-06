@@ -1,0 +1,39 @@
+ゲーム開始(新規・debug=1)
+島の桟橋: {"x":4,"z":41.6,"inCove":false,"seq":"idle","hour":11,"hint":"ふねは しゅうりちゅう みたい","inv":"{}"}
+  撮影 01_island_boat_broken_day.png
+  撮影 02_island_boat_broken_night.png
+ふね しゅうり後: {"x":4,"z":41.6,"inCove":false,"seq":"idle","hour":21.1,"hint":"Eふねに のる","inv":"{}"}
+  撮影 03_island_boat_fixed_night.png
+  撮影 04_voyage_depart.png
+  撮影 05_voyage_offshore.png
+  撮影 06_voyage_arrive.png
+  撮影 06b_voyage_dock.png
+到着: {"x":-51.2,"z":63.3,"inCove":true,"seq":"idle","hour":21.2,"hint":"","inv":"{}"}
+  撮影 07_cove_arrived_night.png
+  撮影 08_cove_meadow_night.png
+  撮影 09_cove_shore_glow_night.png
+  撮影 10_cove_lighthouse_night.png
+  撮影 11_cove_shore_day.png
+  撮影 12_cove_meadow_day.png
+  撮影 13_cove_lighthouse_day.png
+灯台のとびら前: {"x":-61.3,"z":55.4,"inCove":true,"seq":"idle","hour":12.3,"hint":"とびらは しまっている","inv":"{}"}
+  撮影 14_cove_door_hint.png
+ほしくさのそば: {"x":-57.2,"z":55.6,"inCove":true,"seq":"idle","hour":12.4,"hint":"Eほしくさをつむ","inv":"{}"}
+  撮影 15_cove_starweed_hint.png
+ひかりの貝のそば: {"x":-55.4,"z":62.8,"inCove":true,"seq":"idle","hour":21,"hint":"Eひかりの貝をひろう","inv":"{\"starweed\":2}"}
+  撮影 16_cove_lightshell_hint.png
+採取後のもちもの: {"starweed":2,"lightshell":1}
+  撮影 17_cove_after_gather.png
+帰りの桟橋: {"x":-51.2,"z":66.8,"inCove":true,"seq":"idle","hour":21.2,"hint":"Eふねで しまへ かえる","inv":"{\"starweed\":2,\"lightshell\":1}"}
+  撮影 18_cove_return_hint.png
+  撮影 19_return_voyage.png
+  撮影 19b_return_offshore.png
+  撮影 19c_return_arrive.png
+帰着: {"x":4,"z":41.6,"inCove":false,"seq":"idle","hour":21.4,"hint":"Eふねに のる","inv":"{\"starweed\":2,\"lightshell\":1}"}
+  撮影 20_island_back.png
+  撮影 21_cove_wide_night.png
+  撮影 22_cove_wide_day.png
+  撮影 23_cove_lighthouse_wide_day.png
+  撮影 24_cove_lighthouse_wide_night.png
+  撮影 25_island_pier_boat_context.png
+consoleエラー: 0件

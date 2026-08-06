@@ -12,7 +12,7 @@ export function buildShowcaseUI(sc: ShowcaseScene): void {
     <div class="sc-row" id="sc-anims"></div>
     <div class="sc-row" id="sc-toggles">
       <button data-t="night">夜にする</button>
-      <button data-t="lineup">4人ならべる</button>
+      <button data-t="lineup">みんな ならべる</button>
       <button data-t="turntable" class="on">回転</button>
     </div>
     <div class="sc-stats" id="sc-stats"></div>

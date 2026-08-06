@@ -6,6 +6,7 @@ import { CameraController } from './CameraController';
 import { SequenceDirector } from './SequenceDirector';
 import { routeInteraction, HOME_EXIT } from './InteractionRouting';
 import { homeShot, HOME_SPAWN, HOME_BED, insideHomeFloor, setHomeExpandedLayout } from './HomeInterior';
+import { COVE_SPAWN, ISLAND_BOAT_POINT } from './CoveArea';
 import { WorldMarkerController, type MarkerNpc } from './WorldMarkerController';
 import { QuestDialogueController } from './QuestDialogueController';
 import { DialogueCameraPlanner, leanToward } from './DialogueCameraPlanner';
@@ -91,6 +92,12 @@ export class GameScene {
   paused = false;
   /** いま家の中にいるか(セーブは state.flags.indoor)。E候補・カメラ・室内の表示がこれで切り替わる */
   indoor = false;
+  /**
+   * いま「よるの入り江」にいるか(セーブは state.flags.in_cove)。
+   * indoor と同じあつかいで、E候補・誘導マーカー・天気の見た目がこれで切り替わる。
+   * 両方が同時に true になることはない(入り江へは島の桟橋からしか行けない)。
+   */
+  inCove = false;
   wantInteract = false;
   input: InputState = { up: false, down: false, left: false, right: false, run: false };
   private shownHint = ''; // HUDに出ている操作ヒント(タッチの行動ボタンが同じ内容を出す)
@@ -243,6 +250,14 @@ export class GameScene {
     // 保存位置が室内の床から外れていたら入口へ戻す(壊れたセーブで海に立たせない)
     this.indoor = this.state.flags.indoor === true;
     this.island.home.setActive(this.indoor);
+    // v11 よるの入り江で保存したセーブは入り江から始める(in_coveが無い旧セーブは島あつかい)。
+    // 室内フラグとぶつかったら室内を優先する(両方立つことはないが、壊れたセーブで海に立たせない)
+    this.inCove = !this.indoor && this.state.flags.in_cove === true;
+    this.island.cove.setActive(this.inCove);
+    this.island.applyBoatRepaired(this.state.flags.boat_repaired === true);
+    if (this.inCove && !this.island.cove.walkable(this.player.x, this.player.z)) {
+      this.player.teleport(COVE_SPAWN.x, COVE_SPAWN.z); // 保存位置が入り江の外なら桟橋へ戻す
+    }
     if (this.indoor) {
       if (!insideHomeFloor(this.player.x, this.player.z)) {
         this.player.teleport(HOME_SPAWN.x, HOME_SPAWN.z);
@@ -299,8 +314,9 @@ export class GameScene {
       if (p && !p.hidden) marks.push({ id: obj.target.id, x: p.x, y: p.y, z: p.z, kind: reportMode ? 'report' : 'target' });
     }
     // 会話・達成バナー・見せ場の最中は誘導を消し、視線を演出に集める(P1-1)。
-    // 室内(6×5mの部屋)でも消す: 矢印・光の柱は地形の高さに置くので、島の外では足もとが合わない
-    if (this.modalOpen || this.seq.active || this.indoor) {
+    // 室内(6×5mの部屋)・よるの入り江でも消す: 矢印・光の柱は島の地形の高さに置くので、
+    // 島の外では足もとが合わない(目的地はどれも島の上にある)
+    if (this.modalOpen || this.seq.active || this.indoor || this.inCove) {
       this.markers.hideAll();
     } else {
       this.markers.update(tp, tp?.isNpc ?? false, this.player.x, this.player.z, marks, reportMode);
@@ -320,7 +336,7 @@ export class GameScene {
   private routeWithSnail(uiOpen: boolean): string {
     const want = this.wantInteract;
     const snail =
-      !uiOpen && !this.indoor && !this.seq.active && !this.inter.busy &&
+      !uiOpen && !this.indoor && !this.inCove && !this.seq.active && !this.inter.busy &&
       !this.fishing.locksPlayer && !this.placement.active
         ? this.weather.snailWithinReach(this.player.x, this.player.z)
         : null;
@@ -518,6 +534,25 @@ export class GameScene {
     save(this.state);
   }
 
+  // ---------- v11 よるの入り江の出入り ----------
+  /**
+   * 入り江/島を入れかえる。航海の演出(SequenceDirector)が暗転しきった一瞬に1回だけ呼ぶ。
+   * 位置・表示・セーブをここでまとめて そろえる(applyIndoor と同じ考え方)。
+   * カメラは屋外と同じ追従カメラのままなので、ここでは何も切りかえない。
+   */
+  applyCove(inCove: boolean): void {
+    this.inCove = inCove;
+    this.state.flags.in_cove = inCove;
+    this.island.cove.setActive(inCove);
+    this.restoreAllOcclusionImmediately(); // 半透明のまま画がすり替わらないように
+    const p = inCove ? COVE_SPAWN : ISLAND_BOAT_POINT;
+    this.player.teleport(p.x, p.z);
+    this.player.face(p.x, p.z - 4); // どちらも桟橋の付け根(北)を向いて降りる
+    this.island.dayNight.update(this.island.time.hour, this.player.x, this.player.z);
+    this.state.player = { x: this.player.x, z: this.player.z, rotY: this.player.rotY };
+    save(this.state);
+  }
+
   // ---------- カメラ遮蔽 ----------
   /** 透明化中・回復途中のメッシュを即座に全復元する(会話・イベントカメラ開始前に呼ぶ) */
   restoreAllOcclusionImmediately(): void {
@@ -549,10 +584,14 @@ export class GameScene {
         // (ほしのかけら・うみどりと同じあつかい)。雨脚そのものはBabylon側で降りつづける
         const wx = this.weather.update(frozen ? 0 : dt, this.island.time.day, this.island.time.hour);
         this.island.dayNight.setCold(wx.cold);
-        updateWeatherFx(wx, this.player.x, this.player.y, this.player.z, !this.indoor);
-        setRain(this.indoor ? wx.rain * 0.4 : wx.rain);
+        // 天気の見た目(雨脚・水たまり・虹・カタツムリ)は島の座標に置いてあるので、
+        // 別空間(室内・よるの入り江)では出さない。屋根のない入り江でも同じあつかいにして、
+        // 「島の水たまりが海の上に浮かぶ」ような絵が出ないようにする
+        const sheltered = this.indoor || this.inCove;
+        updateWeatherFx(wx, this.player.x, this.player.y, this.player.z, !sheltered);
+        setRain(sheltered ? wx.rain * 0.4 : wx.rain);
         // 虹は見おろしカメラだと画面に入らないので、出た瞬間に1回だけ「見上げるあそび」へ誘う
-        if (wx.rainbow > 0.05 && !this.rainbowToldToday && !this.indoor) {
+        if (wx.rainbow > 0.05 && !this.rainbowToldToday && !sheltered) {
           this.rainbowToldToday = true;
           toast('あめが あがって にじが でた! カメラを うごかして そらを さがしてみよう', 'lumina');
         }
