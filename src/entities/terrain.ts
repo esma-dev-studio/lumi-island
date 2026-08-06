@@ -120,14 +120,55 @@ export function terrainHeight(x: number, z: number): number {
   return h;
 }
 
-// 水面下かどうか(移動制限に使用)
-export function isWater(x: number, z: number): boolean {
+/** 水のたまり(池か海か)。水面下かどうかの判定はこの1本にまとめる */
+export type WaterBody = 'pond' | 'sea';
+
+/**
+ * その地点がどちらの水につかっているか(つかっていなければnull)。
+ * 「地面が水面より低い=水」なので、見た目の水ぎわとずれない。
+ * 池の範囲は岸線pondShoreRベース(入り江の分まで含める)。
+ */
+export function waterBodyAt(x: number, z: number): WaterBody | null {
   const h = terrainHeight(x, z);
   const pdx = x - POND.x, pdz = z - POND.z;
   const pdist = Math.hypot(pdx, pdz);
-  // 池の判定も岸線pondShoreRベース(入り江の分まで含める)
-  if (pdist < 16 && pdist < pondShoreR(Math.atan2(pdz, pdx)) + 1.5 && h < POND.waterY) return true;
-  return h < 0.18;
+  if (pdist < 16 && pdist < pondShoreR(Math.atan2(pdz, pdx)) + 1.5 && h < POND.waterY) return 'pond';
+  return h < 0.18 ? 'sea' : null;
+}
+
+// 水面下かどうか(移動制限に使用)
+export function isWater(x: number, z: number): boolean {
+  return waterBodyAt(x, z) !== null;
+}
+
+// ---- 歩ける地面かの判定(しきい値と規則の唯一の情報源) ----
+// 見た目の水ぎわより手前に「見えない壁」を作らないための値。ゆるめすぎると水に立てるので、
+// どちらも「水面のすぐ上」で止める(海面SEA_Y=0.3 / 池POND.waterY=0.42)。
+/** 海: この高さより低い地面は歩けない(海面+3cm)。以前は0.45で、波うちぎわの1.2〜3.5m手前で止まっていた */
+export const SEA_WALK_Y = 0.33;
+/** 池: 水面よりこのぶん高ければ歩ける(+5cm)。以前は+0.15で、水面より15cm高い泥の岸まで歩けなかった。
+ * この値なら「水面より低い地面」には決して立てず(実測: 水面下の歩行可セル0)、
+ * 見た目の水ぎわの15〜25cm手前で止まる */
+export const POND_WALK_MARGIN = 0.05;
+/** 池の判定を効かせる範囲(岸線から外側へこのぶん)。その外は海・浜の規則にまかせる */
+export const POND_EDGE_PAD = 1.2;
+
+/**
+ * 地面として歩けるか(高さの規則だけ。桟橋・室内の床・コライダーはIslandScene.walkableが足す)。
+ * 池: 「水面より低い地面は水の中」で判定する。
+ * 旧: 岸線pondShoreR-0.6mの内側かつ水面+15cm以下 → 水面より高い泥の岸まで歩けず、
+ *     ミナモの小屋の南に「出口のない帯」ができていた(池と家のコライダーが両端でくっつく)。
+ * 岸線は「池の判定を効かせる範囲」を決めるためだけに使い、入り江も同じ規則で扱う。
+ */
+export function walkableGround(x: number, z: number): boolean {
+  const h = terrainHeight(x, z);
+  if (h < SEA_WALK_Y) return false;
+  const pdx = x - POND.x, pdz = z - POND.z;
+  const pdist = Math.hypot(pdx, pdz);
+  if (pdist < 16 && h < POND.waterY + POND_WALK_MARGIN) {
+    if (pdist < pondShoreR(Math.atan2(pdz, pdx)) + POND_EDGE_PAD) return false;
+  }
+  return true;
 }
 
 // ---- 頂点カラー ----

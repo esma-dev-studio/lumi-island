@@ -1,16 +1,26 @@
 // 虫(v9): 出現・ただよい・逃走・捕獲判定の純ロジック。描画・Babylonに依存しない。
 //
 // 仕様:
-//   - 昼(5時〜19時)は4〜5匹、夜(19時〜翌5時)は3〜4匹が同時に出る。
+//   - 昼(5時〜19時)は6〜7匹、夜(19時〜翌5時)は4〜5匹が同時に出る。
 //     種類は時間帯で入れかわる(昼=チョウ・テントウ・カブト / 夜=ホタル・スズムシ)。
 //   - 虫はスポット(花・草むら・木・池)のまわりを ただよう / とまる。
-//   - プレイヤーが近づくと警戒し(BUG_WARY_R)、
-//       走って近づかれた → その虫の runFlee で逃げる(チョウはとくに敏感)
-//       歩いて近づかれた → walkFlee まで寄れる(必ず捕獲圏 BUG_CATCH_R より内がわ)
-//     逃げ始めた虫は BUG_FLEE_SEC のあいだ飛び去る演出をしてから消え、
-//     しばらくすると「別のスポット」に出なおす(同じ場所には すぐ出ない)。
+//   - プレイヤーが近づくと警戒し(BUG_WARY_R)、近すぎる状態が BUG_SPOOK_SEC つづくと にげる。
+//       走って近づかれた → その虫の runFlee でそわそわしはじめる(チョウはとくに敏感)
+//       歩いて近づかれた → walkFlee まで寄っても平気
+//     どちらの距離も捕獲圏 BUG_CATCH_R よりずっと内がわなので、
+//     「走って近づいて E」でも かならず1回は つかまえる機会がある(下のテストで固定)。
+//   - にげた虫は消えてしまわず、BUG_FLEE_SEC の演出のあと近くのスポットへ「とまり直す」。
+//     とまり直した直後は BUG_SETTLE_SEC のあいだ もう にげない(追いかけた子が つかまえられる)。
 //   - 捕獲は虫あみ(net)が要る。判定は呼び出し側(InteractionRouting)が行い、
 //     ここは「いちばん近い、逃げていない虫」を返すだけ。
+//
+// 【v11で子ども向けにゆるめた理由】
+//   v9は runFlee(1.8〜3.2m) > BUG_CATCH_R(1.6m) だったため、走っているプレイヤーは
+//   捕獲圏に入る前に必ず逃げられた。iPadのスティックは55%倒すと走り(3.6m/s)なので、
+//   実プレイヤーはほぼ常に「走り」判定 = 構造的に1匹も捕れない状態だった。
+//   さらに捕獲圏に入らないとヒントも出ないので、「Eで捕る」ことを知る手がかりも無かった。
+//   そこで runFlee をすべて捕獲圏の内がわへ入れ、にげるまでに「ためらい」を挟み、
+//   にげても近くにとまり直すようにした。
 //
 // 乱数(Math.random)を使わないのは、デバッグ走行・自動テストを決定的に保つため。
 // 日付・時間帯・出した順番からハッシュで選ぶので、日ごとに顔ぶれは変わる
@@ -19,20 +29,36 @@ import type { BugSpotKind } from '../data/island';
 
 export type BugId = 'b_shiro' | 'b_ageha' | 'b_tento' | 'b_kabuto' | 'b_hotaru' | 'b_suzu';
 
-/** 捕獲できる距離(m)。すべての虫の walkFlee より大きい(近づいて捕れる余地を必ず残す) */
-export const BUG_CATCH_R = 1.6;
+/** 捕獲できる距離(m)。むしあみを ふる範囲。すべての虫の runFlee より大きい */
+export const BUG_CATCH_R = 2.6;
+/** 「むしが いる!」の予告ヒントが出る距離(m)。近づけば捕れることを先に知らせる */
+export const BUG_HINT_R = 5.0;
 /** 警戒しはじめる距離(m)。見た目(はばたきが速くなる)だけに使う */
-export const BUG_WARY_R = 3.0;
+export const BUG_WARY_R = 4.2;
 /** この速さ以上で動いていたら「走っている」(ミオ: 歩き1.7 / 走り3.6 m/s) */
 export const BUG_RUN_SPEED = 2.4;
-/** 逃げ始めてから消えるまで(実秒)。このあいだは捕まえられない */
-export const BUG_FLEE_SEC = 0.9;
+/**
+ * 近づかれてから 実際に にげ出すまでの「ためらい」(実秒)。
+ * 走り(3.6m/s)で runFlee に入ってから この秒数のあいだは まだ そこに居るので、
+ * 子どもの反応速度(0.5〜1秒)でも E を押しきれる。
+ */
+export const BUG_SPOOK_SEC = 1.5;
+/** はなれた/歩きに戻ったとき、ためらいが冷める速さ(倍) */
+export const BUG_CALM_RATE = 2;
+/** にげる演出(飛び上がって小さくなる)の長さ(実秒)。このあいだは捕まえられない */
+export const BUG_FLEE_SEC = 0.6;
+/** にげた虫が とまり直す先を さがす半径(m)。見えている範囲に居なおすので追いかけられる */
+export const BUG_HOP_R = 22;
+/** とまり直す先が プレイヤーに近すぎると すぐ また にげる。この距離より近い所は選ばない */
+export const BUG_HOP_SAFE_R = 4.0;
+/** とまり直した直後、この秒数は もう にげない(追いついた子が つかまえられる) */
+export const BUG_SETTLE_SEC = 2.0;
 /** 1匹減ってから次の1匹が出るまで(実秒) */
-export const BUG_RESPAWN_SEC = 5;
+export const BUG_RESPAWN_SEC = 2.5;
 /** 時間帯が変わった直後、最初の1匹が出るまで(実秒) */
-export const BUG_FIRST_DELAY_SEC = 1.2;
-/** 逃げた/つかまえたスポットを使わない時間(実秒)。同じ場所に湧きなおさない */
-export const BUG_SPOT_COOLDOWN_SEC = 25;
+export const BUG_FIRST_DELAY_SEC = 1.0;
+/** つかまえた/にげたスポットを使わない時間(実秒)。同じ場所に湧きなおさない */
+export const BUG_SPOT_COOLDOWN_SEC = 6;
 
 /** 夜(虫の顔ぶれが変わる境目)。ほしのかけら・夜釣りと同じ19時〜翌5時 */
 export function isBugNight(hour: number): boolean {
@@ -53,9 +79,9 @@ export interface BugDef {
   night: boolean;
   /** 抽選の重み(大きいほど よく出る) */
   weight: number;
-  /** 走って近づかれたら逃げる距離(m) */
+  /** 走って近づかれたら そわそわしはじめる距離(m)。BUG_CATCH_Rより必ず小さい */
   runFlee: number;
-  /** 歩いて近づかれても逃げる距離(m)。BUG_CATCH_Rより必ず小さい */
+  /** 歩いて近づかれても そわそわしはじめる距離(m)。runFleeより必ず小さい */
   walkFlee: number;
   /** 地面(または みきの根もと)からの高さ(m) */
   hoverY: number;
@@ -68,34 +94,36 @@ export interface BugDef {
 }
 
 /**
- * 虫6種。walkFlee はどれも BUG_CATCH_R(1.6m)より小さいので、
- * 「歩いて近づけば必ず捕獲圏に入れる」ことが構造で保証される(テストで固定)。
+ * 虫6種。runFlee はどれも BUG_CATCH_R(2.6m)より小さいので、
+ * 「走って近づいても、にげる前に必ず捕獲圏へ入れる」ことが構造で保証される(テストで固定)。
+ * 種類ごとの差は「どこまで近づくと そわそわしはじめるか」だけになり、
+ * チョウ=敏感 / カブトムシ=どんかん という手ざわりは残る。
  * カブトムシは みきに とまっているので いちばん にぶい(木のそばまで寄れる)。
  */
 export const BUG_DEFS: BugDef[] = [
   {
     id: 'b_shiro', spots: ['flower'], night: false, weight: 4,
-    runFlee: 3.0, walkFlee: 0.9, hoverY: 0.78, hoverR: 0.42, speed: 0.85, glow: false,
+    runFlee: 1.5, walkFlee: 0.55, hoverY: 0.78, hoverR: 0.42, speed: 0.85, glow: false,
   },
   {
     id: 'b_ageha', spots: ['flower'], night: false, weight: 1.6,
-    runFlee: 3.2, walkFlee: 1.0, hoverY: 0.95, hoverR: 0.52, speed: 0.62, glow: false,
+    runFlee: 1.6, walkFlee: 0.6, hoverY: 0.95, hoverR: 0.52, speed: 0.62, glow: false,
   },
   {
     id: 'b_tento', spots: ['grass'], night: false, weight: 3,
-    runFlee: 2.2, walkFlee: 0.7, hoverY: 0.12, hoverR: 0.24, speed: 0.4, glow: false,
+    runFlee: 1.1, walkFlee: 0.4, hoverY: 0.12, hoverR: 0.24, speed: 0.4, glow: false,
   },
   {
     id: 'b_kabuto', spots: ['tree'], night: false, weight: 0.8,
-    runFlee: 1.8, walkFlee: 0.3, hoverY: 0.55, hoverR: 0, speed: 0.2, glow: false,
+    runFlee: 0.8, walkFlee: 0.25, hoverY: 0.55, hoverR: 0, speed: 0.2, glow: false,
   },
   {
     id: 'b_hotaru', spots: ['pond'], night: true, weight: 3,
-    runFlee: 2.6, walkFlee: 0.8, hoverY: 0.72, hoverR: 0.6, speed: 0.5, glow: true,
+    runFlee: 1.3, walkFlee: 0.5, hoverY: 0.72, hoverR: 0.6, speed: 0.5, glow: true,
   },
   {
     id: 'b_suzu', spots: ['grass'], night: true, weight: 2.5,
-    runFlee: 2.4, walkFlee: 0.7, hoverY: 0.11, hoverR: 0.2, speed: 0.28, glow: false,
+    runFlee: 1.2, walkFlee: 0.4, hoverY: 0.11, hoverR: 0.2, speed: 0.28, glow: false,
   },
 ];
 
@@ -116,6 +144,10 @@ export interface ActiveBug {
   t: number;
   /** 逃げ始めてからの経過(実秒)。0なら まだ逃げていない */
   fleeT: number;
+  /** 近すぎる状態が つづいている時間(実秒)。BUG_SPOOK_SECをこえたら にげる */
+  spook: number;
+  /** とまり直した直後の無敵時間(実秒)。0より大きいあいだは にげない */
+  settle: number;
   /** プレイヤーが近い(見た目のはばたきを速める) */
   wary: boolean;
   /** 見た目のばらつき用 */
@@ -138,6 +170,8 @@ export interface BugOffset {
   wing: number;
   /** 明滅の強さ 0..1(ホタルだけ使う) */
   blink: number;
+  /** 見た目の大きさ 1..0.05(にげているあいだ だんだん小さくなって飛び去って見える) */
+  scale: number;
 }
 
 export function bugOffset(def: BugDef, b: { t: number; fleeT: number; wary: boolean; seed: number }): BugOffset {
@@ -159,6 +193,9 @@ export function bugOffset(def: BugDef, b: { t: number; fleeT: number; wary: bool
     rotY: Math.atan2(-Math.sin(a) * def.hoverR, Math.cos(a * 1.7 + ph) * def.hoverR * 0.72 * 1.7) + ph * 0.1,
     wing: wingSpeed > 0 ? Math.sin(b.t * wingSpeed + ph) * 0.7 : 0,
     blink: def.glow ? Math.max(0, Math.sin(b.t * 2.1 + ph * 2.3)) ** 2 : 0,
+    // にげる演出のあいだだけ小さくなる。とまり直したら fleeT が0に戻るので自動で1へ復帰する
+    // (表示側で「戻し忘れ」が起きないよう、大きさもここで決めきる)
+    scale: f > 0 ? Math.max(0.05, 1 - f / BUG_FLEE_SEC) : 1,
   };
 }
 
@@ -240,13 +277,26 @@ export class BugScheduler {
       if (b.fleeT > 0) {
         b.fleeT += dt;
         if (b.fleeT >= BUG_FLEE_SEC) {
-          this.bugs.splice(i, 1);
-          removed.push(b.key);
+          // 消してしまわず、近くのスポットへ とまり直す(子どもが追いかけて捕れるように)。
+          // 行き先が無いときだけ、これまでどおり消えて別の場所に出なおす。
+          const next = this.rehomeSpot(b, player);
+          if (next === null) {
+            this.bugs.splice(i, 1);
+            removed.push(b.key);
+          } else {
+            b.spot = next;
+            b.fleeT = 0;
+            b.spook = 0;
+            b.settle = BUG_SETTLE_SEC;
+            b.wary = false;
+          }
         }
         continue;
       }
+      if (b.settle > 0) b.settle = Math.max(0, b.settle - dt);
       if (!player) {
         b.wary = false;
+        b.spook = 0;
         continue;
       }
       const def = BUG_BY_ID[b.bug];
@@ -254,9 +304,18 @@ export class BugScheduler {
       const d = Math.hypot(player.x - p.x, player.z - p.z);
       b.wary = d < BUG_WARY_R;
       const running = player.speed >= BUG_RUN_SPEED;
-      if ((running && d < def.runFlee) || d < def.walkFlee) {
-        b.fleeT = 1e-4; // 逃げ始め(0のままだと「逃げていない」と区別できない)
-        this.cooldown.set(b.spot, BUG_SPOT_COOLDOWN_SEC);
+      const tooClose = (running && d < def.runFlee) || d < def.walkFlee;
+      // すぐには にげない。近すぎる状態が BUG_SPOOK_SEC つづいて はじめて にげる
+      // (走って突っこんできた子にも「E を押す ひと呼吸」を必ず残すため)。
+      if (tooClose && b.settle <= 0) {
+        b.spook += dt;
+        if (b.spook >= BUG_SPOOK_SEC) {
+          b.fleeT = 1e-4; // 逃げ始め(0のままだと「逃げていない」と区別できない)
+          b.spook = 0;
+          this.cooldown.set(b.spot, BUG_SPOT_COOLDOWN_SEC);
+        }
+      } else {
+        b.spook = Math.max(0, b.spook - dt * BUG_CALM_RATE);
       }
     }
     // 足りないぶんを、間をおいて1匹ずつ出す
@@ -287,22 +346,55 @@ export class BugScheduler {
     if (this.timer < BUG_RESPAWN_SEC) this.timer = BUG_RESPAWN_SEC;
   }
 
-  /** 捕獲できる いちばん近い虫(逃げ始めた虫は対象外)。無ければnull */
-  nearestCatchable(px: number, pz: number): { bug: ActiveBug; distance: number } | null {
+  /**
+   * 捕獲できる いちばん近い虫(逃げ始めた虫は対象外)。無ければnull。
+   * @param r さがす半径(m)。既定は捕獲圏。予告ヒント用に BUG_HINT_R で呼ぶこともある
+   */
+  nearestCatchable(px: number, pz: number, r: number = BUG_CATCH_R): { bug: ActiveBug; distance: number } | null {
     let best: { bug: ActiveBug; distance: number } | null = null;
     for (const b of this.bugs) {
       if (b.fleeT > 0) continue;
       const p = this.positionOf(b);
       const d = Math.hypot(px - p.x, pz - p.z);
-      if (d < BUG_CATCH_R && (best === null || d < best.distance)) best = { bug: b, distance: d };
+      if (d < r && (best === null || d < best.distance)) best = { bug: b, distance: d };
     }
     return best;
   }
 
-  /** その時間帯に出す数(昼4〜5・夜3〜4)。日付で決まるので走行ごとに同じ */
+  /**
+   * にげた虫の とまり直し先。近くの空きスポットのうち、
+   *   - 同じ種類の虫が とまれる場所
+   *   - ほかの虫が いない場所
+   *   - BUG_HOP_R(22m)以内 = 画面や島の見わたせる範囲
+   *   - プレイヤーの目の前(BUG_HOP_SAFE_R)ではない場所(着地した瞬間に また にげるのを防ぐ)
+   * をいちばん近い順に選ぶ。1つも無ければ もとのスポットに戻る(消えるのは最後の手段)。
+   * 距離だけで決めるので Math.random は要らない(決定的)。
+   */
+  private rehomeSpot(b: ActiveBug, player: BugPlayer | null): number | null {
+    const def = BUG_BY_ID[b.bug];
+    const from = this.spots[b.spot];
+    if (!from) return null;
+    const used = new Set(this.bugs.filter((x) => x !== b).map((x) => x.spot));
+    let best: { i: number; d: number } | null = null;
+    for (let i = 0; i < this.spots.length; i++) {
+      if (i === b.spot || used.has(i)) continue;
+      const s = this.spots[i];
+      if (!def.spots.includes(s.kind)) continue;
+      const d = Math.hypot(s.x - from.x, s.z - from.z);
+      if (d > BUG_HOP_R) continue;
+      if (player && Math.hypot(player.x - s.x, player.z - s.z) < BUG_HOP_SAFE_R) continue;
+      if (best === null || d < best.d) best = { i, d };
+    }
+    if (best) return best.i;
+    // 行き先が無ければ もとの場所へ とまり直す(ひらひら舞ってから同じ花に戻る絵)。
+    // BUG_SETTLE_SEC のあいだは にげないので、追いついた子が つかまえられる
+    return b.spot;
+  }
+
+  /** その時間帯に出す数(昼6〜7・夜4〜5)。日付で決まるので走行ごとに同じ */
   private pickTarget(day: number, key: string): number {
     const night = key.startsWith('n');
-    const base = night ? 3 : 4;
+    const base = night ? 4 : 6;
     return base + (hash3(day, night ? 1 : 0, 977) < 0.5 ? 0 : 1);
   }
 
@@ -327,7 +419,7 @@ export class BugScheduler {
       const spot = this.pickSpot(def, day, n + attempt, used);
       if (spot === null) continue;
       return {
-        key: this.nextKey++, bug: def.id, spot, t: 0, fleeT: 0, wary: false,
+        key: this.nextKey++, bug: def.id, spot, t: 0, fleeT: 0, spook: 0, settle: 0, wary: false,
         seed: Math.floor(hash3(day, n, spot * 13 + 5) * 997),
       };
     }

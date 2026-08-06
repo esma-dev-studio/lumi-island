@@ -4,7 +4,7 @@ import type { Engine } from '@babylonjs/core/Engines/engine';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { CascadedShadowGenerator } from '@babylonjs/core/Lights/Shadows/cascadedShadowGenerator';
 import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
-import { buildTerrain, terrainHeight, pondShoreR, type Terrain } from '../entities/terrain';
+import { buildTerrain, terrainHeight, walkableGround, type Terrain } from '../entities/terrain';
 import { initEffects, attachLightPool, registerGlowSource, unregisterGlowSource, burst } from '../entities/effects';
 import { buildWater, onPier, updatePond, PIER, SEA_Y, type WaterRefs } from '../entities/water';
 import {
@@ -42,17 +42,8 @@ import { DigScheduler } from '../systems/DigSystem';
 export interface CircleCollider { x: number; z: number; r: number }
 export interface RectCollider { x: number; z: number; w: number; d: number; rot: number }
 
-// ---- 歩ける範囲のしきい値 ----
-// 見た目の水ぎわより手前に「見えない壁」を作らないための値。ゆるめすぎると水に立てるので、
-// どちらも「水面のすぐ上」で止める(海面SEA_Y=0.3 / 池POND.waterY=0.42)。
-/** 海: この高さより低い地面は歩けない(海面+3cm)。以前は0.45で、波うちぎわの1.2〜3.5m手前で止まっていた */
-const SEA_WALK_Y = 0.33;
-/** 池: 水面よりこのぶん高ければ歩ける(+5cm)。以前は+0.15で、水面より15cm高い泥の岸まで歩けなかった。
- * この値なら「水面より低い地面」には決して立てず(実測: 水面下の歩行可セル0)、
- * 見た目の水ぎわの15〜25cm手前で止まる */
-const POND_WALK_MARGIN = 0.05;
-/** 池の判定を効かせる範囲(岸線から外側へこのぶん)。その外は海・浜の規則にまかせる */
-const POND_EDGE_PAD = 1.2;
+// 歩ける範囲のしきい値(海SEA_WALK_Y・池POND_WALK_MARGIN/POND_EDGE_PAD)と地面の規則は
+// entities/terrain.ts の walkableGround が唯一の情報源。釣りの水面判定も同じ関数群を見る。
 /** 建物コライダーの余白(片側)。壁の見た目+これだけ内側に近づける(軒・屋根は入れない) */
 const HOUSE_PAD = 0.125;
 
@@ -434,18 +425,7 @@ export class IslandScene {
     // マイホームの室内。部屋のまわりは島の規則どおり「海の中」なので外へは抜けられない
     if (insideHomeFloor(x, z)) return true;
     if (onPier(x, z)) return true;
-    const h = terrainHeight(x, z);
-    if (h < SEA_WALK_Y) return false;
-    // 池: 「水面より低い地面は水の中」で判定する。
-    // 旧: 岸線pondShoreR-0.6mの内側かつ水面+15cm以下 → 水面より高い泥の岸まで歩けず、
-    //     ミナモの小屋の南に「出口のない帯」ができていた(池と家のコライダーが両端でくっつく)。
-    // 岸線は「池の判定を効かせる範囲」を決めるためだけに使い、入り江も同じ規則で扱う。
-    const pdx = x - POND.x, pdz = z - POND.z;
-    const pdist = Math.hypot(pdx, pdz);
-    if (pdist < 16 && h < POND.waterY + POND_WALK_MARGIN) {
-      if (pdist < pondShoreR(Math.atan2(pdz, pdx)) + POND_EDGE_PAD) return false;
-    }
-    return true;
+    return walkableGround(x, z); // 高さの規則はterrain.tsに1本化(釣りの水面判定と同じ情報源)
   }
 
   /** 円・矩形コライダーの押し出し */
@@ -621,9 +601,12 @@ export class IslandScene {
       return { key: b.key, bug: b.bug, x: p.x, z: p.z, wary: b.wary, fleeing: b.fleeT > 0 };
     });
   }
-  /** 捕獲できる いちばん近い虫。無ければnull(InteractionRoutingが使う) */
-  nearestBug(px: number, pz: number): { bug: ActiveBug; distance: number; x: number; z: number } | null {
-    const hit = this.bugs.nearestCatchable(px, pz);
+  /**
+   * いちばん近い虫。無ければnull(InteractionRoutingが使う)。
+   * @param r さがす半径(m)。省略すると捕獲圏。予告ヒント用に BUG_HINT_R で呼ぶ
+   */
+  nearestBug(px: number, pz: number, r?: number): { bug: ActiveBug; distance: number; x: number; z: number } | null {
+    const hit = this.bugs.nearestCatchable(px, pz, r);
     if (!hit) return null;
     const p = this.bugs.positionOf(hit.bug);
     return { bug: hit.bug, distance: hit.distance, x: p.x, z: p.z };
@@ -664,8 +647,10 @@ export class IslandScene {
         m.glowPart.setEnabled(o.blink > 0.05);
         m.glowPart.scaling.setAll(0.4 + o.blink * 0.95);
       }
-      // 逃げているあいだは小さくなって消える(空へ飛び去って見える)
-      if (b.fleeT > 0) m.root.scaling.setAll(Math.max(0.05, 1 - b.fleeT * 1.1));
+      // 逃げているあいだは小さくなって飛び去って見える。
+      // とまり直した虫は fleeT が0に戻るので、bugOffset の scale が自動で1へ復帰する
+      // (ここで毎フレーム入れきるので「大きさの戻し忘れ」が構造的に起きない)
+      m.root.scaling.setAll(o.scale);
     }
   }
 

@@ -43,13 +43,16 @@ export function statCount(s: GameState, key: string): number {
 
 /**
  * マイホームの室内の範囲(世界座標のかこみ)。
- * src/scenes/HomeInterior.ts の HOME_ROOM(中心 58, -58)+ 拡張後の内寸 ROOM_EXPANDED を
- * すっぽり包む大きさにしてある。数値をここに持つのは、実績を「描画に依存しない純ロジック」の
- * ままにするため(HomeInterior は Babylon のメッシュを読みこむ)。
- * 島は半径46m以内にあるので、この かこみに屋外の家具が入ることは無い。
- * HomeInterior とずれていないことは tests/unit/display_v10.test.ts が機械で確かめる。
+ * src/scenes/HomeInterior.ts の HOME_ROOM(中心 58, -58)+ こうじで広がる先の内寸
+ * (ROOM_STAGES のいちばん大きいもの=12×9m)を すっぽり包む大きさにしてある。
+ * 数値をここに持つのは、実績を「描画に依存しない純ロジック」のままにするため
+ * (HomeInterior は Babylon のメッシュを読みこむ)。
+ * 島は半径46m以内で、この かこみのいちばん島よりのかどでも原点から66m以上あるので、
+ * かこみに屋外の家具が入ることは無い。
+ * HomeInterior とずれていないことは tests/unit/display_v10.test.ts と
+ * tests/unit/home_expand_v11.test.ts が機械で確かめる。
  */
-const HOME_AREA = { minX: 51.6, maxX: 61.4, minZ: -60.9, maxZ: -53.1 } as const;
+const HOME_AREA = { minX: 48.6, maxX: 61.4, minZ: -60.9, maxZ: -51.1 } as const;
 
 /** 置いてある家具(壊れた古い状態でも空配列であつかう) */
 function placedFurniture(s: GameState): { item: string; x: number; z: number; content?: string }[] {

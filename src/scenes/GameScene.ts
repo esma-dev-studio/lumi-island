@@ -30,7 +30,7 @@ import { currentObjective, type Objective } from '../systems/ObjectiveSystem';
 import { questFor } from '../systems/QuestSystem';
 import { NpcAvailabilityService } from '../systems/NpcAvailabilityService';
 import { sharedWeather, type Weather } from '../systems/WeatherSystem';
-import { finishHomeExpansion, isHomeExpanded, shouldFinishConstruction } from '../systems/HomeExpansion';
+import { finishHomeExpansion, homeExpandStage, shouldFinishConstruction } from '../systems/HomeExpansion';
 import { GARDEN_PLOTS, HARVEST_YIELD, harvestPlot, plantFlower } from '../systems/GardenSystem';
 import { Hud } from '../ui/Hud';
 import { ObjectiveHud } from '../ui/ObjectiveHud';
@@ -125,9 +125,9 @@ export class GameScene {
   }
 
   async init(): Promise<void> {
-    // 部屋の間取り(6×5m / こうじずみ9×7m)は、歩行可否・接地高さ・配置判定・カメラ構図の
-    // 唯一の情報源なので、部屋を建てるより先に決める
-    setHomeExpandedLayout(isHomeExpanded(this.state));
+    // 部屋の間取り(6×5m / こうじ1回で9×7m / 2回で12×9m)は、歩行可否・接地高さ・
+    // 配置判定・カメラ構図の唯一の情報源なので、部屋を建てるより先に決める
+    setHomeExpandedLayout(homeExpandStage(this.state));
     this.island.build();
     this.playerView = await CharacterView.load(this.scene, CHARACTERS.mio);
     for (const m of this.playerView.meshes) this.island.shadows.addShadowCaster(m, true);
@@ -400,7 +400,9 @@ export class GameScene {
     if (this.indoor) return;
     if (!shouldFinishConstruction(this.state, this.island.time.day, this.island.time.hour)) return;
     if (!finishHomeExpansion(this.state)) return;
-    this.island.home.applyExpanded(true);
+    // 段階(1回目=9×7m / 2回目=12×9m)は状態から取る。見た目・歩ける範囲・カメラは
+    // ここで setHomeExpandedLayout ごと入れかわる(HomeInterior.applyExpanded の中)
+    this.island.home.applyExpanded(homeExpandStage(this.state));
     this.island.home.applyStyle(this.state.homeStyle); // 新しい壁・床にも かべがみ/ゆかいたを貼る
     toast('こうじが おわった! へやが ひろくなったよ', 'lumina');
     sfx('quest');
@@ -563,12 +565,16 @@ export class GameScene {
         // 進行まわり
         if (this.island.time.day !== this.lastDay) {
           this.lastDay = this.island.time.day;
-          resetNpcDaily(this.state); // talkedToday と giftedToday(おくりもの1日1回)
+          resetNpcDaily(this.state); // talkedToday と giftedToday(きょう あげたかの記録)
           this.island.applyGarden(this.state.garden, this.island.time.day); // 花だんが1段そだつ
         }
         // 家の拡張こうじ(たのんだ翌朝6時に完成。就寝で朝へ飛んだ場合もここで拾う)
         this.tryFinishConstruction();
-        if (Object.keys(this.state.inventory).length > 0) this.tutorial.onFirstItem();
+        if (Object.keys(this.state.inventory).length > 0) {
+          this.tutorial.onFirstItem();
+          // かざる遊びの入口(すいそう・むしかご)。1種につき1回だけ出る
+          this.tutorial.onDisplayHint();
+        }
         this.updateAchievements(dt);
         this.saveTimer += dt;
         if (this.saveTimer > 20) {

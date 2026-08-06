@@ -6,6 +6,8 @@ import {
 import { acceptQuest } from '../../src/systems/QuestSystem';
 import { TutorialSystem } from '../../src/systems/TutorialSystem';
 import { QUEST_BY_ID } from '../../src/data/quests';
+import { matchesObjective, selectInteraction } from '../../src/systems/ObjectiveInteractionPolicy';
+import { PRIORITY, type InteractionCandidate } from '../../src/systems/InteractionResolver';
 
 describe('ObjectiveSystem(いまやること)', () => {
   it('開始直後は「ツムギの話を聞こう」', () => {
@@ -208,14 +210,15 @@ describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
     expect(o?.id).toBe('tut_move');
     expect(objectiveActionContext(o).guided).toBe(false);
   });
-  it('NPC不在のベッド誘導中は「ねる」と自宅の出入りだけ(ベッドは家の中にある)', () => {
+  it('NPC不在のベッド誘導中は「ねる」と自宅の出入り(と虫とり)だけ', () => {
     const s = newGameState();
     acceptQuest(s, QUEST_BY_ID.q_wood);
     invAdd(s, 'wood', 5);
     const o = currentObjective(s, 'tsumugi', { tsumugi: { hidden: true } });
     const ctx = objectiveActionContext(o);
     expect(ctx.guided).toBe(true);
-    expect(ctx.preferredKinds).toEqual(['sleep', 'enter', 'exit']);
+    // v11: 虫とり(catch)も常時許可に入った(ObjectiveSystem の ALWAYS_ALLOWED のコメント参照)
+    expect(ctx.preferredKinds).toEqual(['sleep', 'enter', 'exit', 'catch']);
     expect(ctx.preferredKinds).not.toContain('gather');
     expect(ctx.targetPoiId).toBe('bed');
   });
@@ -251,5 +254,67 @@ describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
     s.quests = { q_wood: 'done', q_fish: 'done', q_ore: 'done', q_lantern: 'done', q_lumi: 'done' };
     expect(objectiveActionContext(currentObjective(s)).guided).toBe(false);
     expect(objectiveActionContext(null).guided).toBe(false);
+  });
+});
+
+/**
+ * v11: 依頼の誘導中でも虫あみが使えること(子どもが「虫がぜんぜんつかまえられない」と
+ * 言った原因のひとつ)。虫は数秒でとまり直して動き、ホタルは夜しか出ないので、
+ * 依頼を受けているあいだ封じると「見えているのに捕れない」になる。
+ * 同時に「誘導を横取りしない」ことも優先度で確かめる(ここが崩れると採取が進まない)。
+ */
+describe('虫とり(catch)は誘導中でも使える。ただし採取を横取りしない', () => {
+  const bugCand = (distance: number): InteractionCandidate => ({
+    id: 'bug_1', kind: 'catch', targetId: '1', itemId: 'b_shiro',
+    priority: PRIORITY.catch, distance, enabled: true,
+    hint: '<kbd>E</kbd>むしあみでつかまえる', run: () => {},
+  });
+  const gatherCand = (distance: number, itemId: 'wood' | 'fiber'): InteractionCandidate => ({
+    id: 'node_1', kind: 'gather', targetId: 'n1', itemId,
+    priority: PRIORITY.gather, distance, enabled: true,
+    hint: '<kbd>E</kbd>木をきる', run: () => {},
+  });
+  const woodCtx = () => {
+    const s = newGameState();
+    acceptQuest(s, QUEST_BY_ID.q_wood);
+    return objectiveActionContext(currentObjective(s));
+  };
+
+  it('もくざい採取の誘導中でも catch は文脈に合う(表示もEも通る)', () => {
+    const ctx = woodCtx();
+    expect(ctx.guided).toBe(true);
+    expect(ctx.preferredKinds).toContain('catch');
+    expect(matchesObjective(bugCand(1.2), ctx)).toBe(true);
+  });
+
+  it('報告の誘導中でも catch は通る(ホタルは夜しか出ないので待たせない)', () => {
+    const s = newGameState();
+    acceptQuest(s, QUEST_BY_ID.q_wood);
+    invAdd(s, 'wood', 5);
+    const ctx = objectiveActionContext(currentObjective(s));
+    expect(ctx.preferredKinds).toContain('catch');
+    expect(matchesObjective(bugCand(1.2), ctx)).toBe(true);
+  });
+
+  it('ほりあと(dig)は従来どおり誘導中は出ない(1日そこに残るので待てる)', () => {
+    const ctx = woodCtx();
+    expect(ctx.preferredKinds).not.toContain('dig');
+    expect(matchesObjective({
+      id: 'dig_1', kind: 'dig', targetId: '1', priority: PRIORITY.dig,
+      distance: 1, enabled: true, hint: '<kbd>E</kbd>ほる', run: () => {},
+    }, ctx)).toBe(false);
+  });
+
+  it('採取ノードが射程内なら、虫より採取が勝つ(依頼が止まらない)', () => {
+    const ctx = woodCtx();
+    // 虫のほうが近くても、優先度(採取30 < 虫32)で採取が選ばれる
+    const best = selectInteraction([bugCand(0.3), gatherCand(2.0, 'wood')], ctx);
+    expect(best?.kind).toBe('gather');
+  });
+
+  it('目的と関係ない素材の採取は従来どおり隠れる(虫だけが例外)', () => {
+    const ctx = woodCtx();
+    const best = selectInteraction([bugCand(1.0), gatherCand(0.4, 'fiber')], ctx);
+    expect(best?.kind, '関係ない採取は候補から外れ、虫が残る').toBe('catch');
   });
 });

@@ -105,6 +105,13 @@ describe('categorizeHint(ホットヒント)', () => {
     expect(categorizeHint('<kbd>E</kbd>ほる')).toBe('dig');
     expect(categorizeHint('<kbd>E</kbd>ランタンを もちかえる')).toBe('carry');
   });
+  it('v11 虫の予告ヒントも catch にそろう(理由表示は blocked のまま)', () => {
+    expect(categorizeHint('<kbd>E</kbd>むしあみでつかまえる')).toBe('catch');
+    expect(categorizeHint('むしあみでつかまえる')).toBe('catch'); // タッチの行動ボタンのラベル
+    expect(categorizeHint('むしが いる! ちかづいて つかまえよう')).toBe('catch');
+    // 「つかまえるには 虫あみが ひつよう」は理由表示なので blocked が先に当たる
+    expect(categorizeHint('つかまえるには 虫あみが ひつよう')).toBe('blocked');
+  });
 });
 
 describe('isSemanticMatch(既知の矛盾を検出する)', () => {
@@ -139,6 +146,17 @@ describe('isSemanticMatch(既知の矛盾を検出する)', () => {
     expect(isSemanticMatch('talk', 'shop')).toBe(true);
     expect(isSemanticMatch('talk', 'carry')).toBe(true);
     expect(isSemanticMatch('talk', 'sleep')).toBe(true);
+  });
+  it('v11 虫とりは常時許可(ObjectiveSystemのALWAYS_ALLOWEDに合わせた較正)', () => {
+    // 虫は数秒でとまり直して動き、ホタルは夜しか出ない「あとで戻れない相手」。
+    // 依頼中に虫あみを封じると「見えているのに捕れない」になるため、設計として常時許可にした。
+    expect(isSemanticMatch('gatherWood', 'catch')).toBe(true);
+    expect(isSemanticMatch('report', 'catch')).toBe(true);
+    expect(isSemanticMatch('fish', 'catch')).toBe(true);
+    expect(isSemanticMatch('sleep', 'catch')).toBe(true);
+    // シャベル(dig)は同じ場所に1日残るので従来どおり厳格のまま
+    expect(isSemanticMatch('gatherWood', 'dig')).toBe(false);
+    expect(isSemanticMatch('report', 'dig')).toBe(false);
   });
   it('受注済みの段階(guided)は較正後も厳格なまま', () => {
     // 報告は「はなす」だけがtrue。ここを緩めると「報告に行かず釣り続ける」が見逃される

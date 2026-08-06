@@ -1,10 +1,12 @@
 // おくりもの(なかよし度)の純ロジック。描画・DOMに依存しない(ユニットテスト対象)。
 //
 // 考え方:
-//   - なかよし度は NpcState.friendship(セーブ済み)をそのまま使う。会話でも +1 されるので、
-//     おくりものは「その日いちばんの一歩」だけを足す係にする(1日1回/NPC)。
-//   - 1日1回の制限は NpcState.giftedToday。talkedToday と同じ日次リセットに乗せる
-//     (resetNpcDaily を GameScene の日またぎで呼ぶ。リセット箇所を2つに増やさない)。
+//   - なかよし度は NpcState.friendship(セーブ済み)をそのまま使う。会話でも +1 される。
+//   - おくりものは 1日に なんどでも わたせる(v11で「1日1回」の制限をやめた)。
+//     「あげたぶんだけ ちゃんと ふえる」ほうが 子どもには わかりやすいため。
+//     かわりに FRIEND_MAX(=FRIEND_BEST)で カンストさせて、青天井にはしない。
+//   - NpcState.giftedToday は「きょう あげたか」の記録として のこす(セーブ互換)。
+//     talkedToday と同じ日次リセットに乗せる(resetNpcDaily を GameScene の日またぎで呼ぶ)。
 //   - しきい値のごほうびは stats に記録する。セーブの stats はキー[A-Za-z0-9_]で通るので
 //     新しいセーブ項目を増やさずに「1回だけ」を保証できる(実績と同じ考え方)。
 import type { GameState } from '../game/GameState';
@@ -22,6 +24,11 @@ export const GIFT_GAIN: Record<GiftTier, number> = { love: 2, like: 1, ok: 1 };
 export const FRIEND_THANKS = 5;
 /** 「しんゆうのあかし」の なかよし度 */
 export const FRIEND_BEST = 10;
+/**
+ * なかよし度の上限。ここでカンストする(おくりものを何回あげても これ以上は ふえない)。
+ * ハートが ぜんぶ うまる値=しんゆうの値と そろえる(見えている最大値と 中の最大値を ずらさない)。
+ */
+export const FRIEND_MAX = FRIEND_BEST;
 /** なかよし度の見える化: ハート1つぶんの なかよし度 */
 export const HEARTS_PER = 2;
 /** ハートの数(FRIEND_BEST で ぜんぶ うまる) */
@@ -57,15 +64,18 @@ export function giftableItems(s: GameState): ItemId[] {
   );
 }
 
-/** きょう そのNPCに もう あげたか */
+/** きょう そのNPCに もう あげたか(回数の制限ではなく、記録として のこしている) */
 export function giftedToday(s: GameState, npcId: string): boolean {
   return s.npcs[npcId]?.giftedToday === true;
 }
 
-/** いま「おくりものをする」ボタンを出してよいか(その日未贈答+あげられる物を1つ以上もっている) */
+/**
+ * いま「おくりものをする」ボタンを出してよいか。
+ * 条件は「あげられる物を1つ以上もっている」だけ(1日の回数は みない)。
+ * なかよし度が 上限に とどいていても、あげること自体は できる(セリフは 見られる)。
+ */
 export function canGift(s: GameState, npcId: string): boolean {
   if (!s.npcs[npcId] || !NPC_BY_ID[npcId]) return false;
-  if (giftedToday(s, npcId)) return false;
   return giftableItems(s).length > 0;
 }
 
@@ -75,6 +85,17 @@ export function resetNpcDaily(s: GameState): void {
     n.talkedToday = false;
     n.giftedToday = false;
   }
+}
+
+/** 表示用の なかよし度(0〜FRIEND_MAX にそろえる。会話・依頼で上限をこえていても 10に見せる) */
+export function friendshipValue(friendship: number): number {
+  const f = Number.isFinite(friendship) ? Math.floor(friendship) : 0;
+  return Math.max(0, Math.min(FRIEND_MAX, f));
+}
+
+/** なかよし度の数字表示(例: 「7/10」) */
+export function friendshipText(friendship: number): string {
+  return `${friendshipValue(friendship)}/${FRIEND_MAX}`;
 }
 
 /** ハート表示(なかよし度 → うまっているハートの数) */
@@ -97,30 +118,34 @@ export interface GiftReward {
 
 export interface GiftResult {
   tier: GiftTier;
+  /** じっさいに ふえた なかよし度(上限に とどいているときは 0) */
   gain: number;
   /** あげたあとの なかよし度 */
   friendship: number;
+  /** なかよし度が 上限(FRIEND_MAX)に とどいているか。トーストの文言を切りかえる */
+  atMax: boolean;
   /** NPCの反応セリフ({item}をアイテム名に置きかえ済み) */
   lines: string[];
   reward: GiftReward;
 }
 
 /**
- * おくりものを1つ わたす。
- * 渡せない場合(不明なNPC・きょうはもうあげた・持っていない)は null を返し、状態は変えない。
+ * おくりものを1つ わたす。1日に なんどでも わたせる(回数の制限はない)。
+ * 渡せない場合(不明なNPC・持っていない・模様替え用のもの)は null を返し、状態は変えない。
+ * なかよし度は FRIEND_MAX でカンストする。ただし会話・依頼ですでに上限をこえている値は
+ * 下げない(あげたのに数字が減る、という理不尽を作らない)。
  */
 export function applyGift(s: GameState, npcId: string, item: ItemId): GiftResult | null {
   const def = NPC_BY_ID[npcId];
   const rt = s.npcs[npcId];
   if (!def || !rt) return null;
-  if (rt.giftedToday === true) return null;
   if (!ITEMS[item] || ITEMS[item].kind === 'decor') return null;
   if (!invRemove(s, item, 1)) return null;
 
   const tier = giftTier(npcId, item);
-  const gain = GIFT_GAIN[tier];
   const before = Number.isFinite(rt.friendship) ? rt.friendship : 0;
-  rt.friendship = before + gain;
+  rt.friendship = Math.max(before, Math.min(FRIEND_MAX, before + GIFT_GAIN[tier]));
+  const gain = rt.friendship - before;
   rt.giftedToday = true;
   statAdd(s, GIFT_TOTAL_KEY);
 
@@ -145,7 +170,7 @@ export function applyGift(s: GameState, npcId: string, item: ItemId): GiftResult
     reward.best = true;
   }
 
-  return { tier, gain, friendship: rt.friendship, lines, reward };
+  return { tier, gain, friendship: rt.friendship, atMax: rt.friendship >= FRIEND_MAX, lines, reward };
 }
 
 /** データ整合性チェック(起動時に呼ぶ): 好み・お礼レシピが実在するか */

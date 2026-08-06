@@ -1,0 +1,72 @@
+{
+  "result": "PASS",
+  "phase": "day_quest",
+  "need": 3,
+  "limitSec": 120,
+  "elapsedSec": 32.3,
+  "total": 3,
+  "catches": [
+    {
+      "sec": 4.6,
+      "total": 1,
+      "hintSeen": true
+    },
+    {
+      "sec": 26.2,
+      "total": 2,
+      "hintSeen": true
+    },
+    {
+      "sec": 32.3,
+      "total": 3,
+      "hintSeen": true
+    }
+  ],
+  "hints": [
+    "むしが いる! ちかづいて つかまえよう",
+    "Eむしあみでつかまえる"
+  ],
+  "errors": [],
+  "log": [
+    {
+      "sec": 3.5,
+      "label": "ゲーム開始(新規)"
+    },
+    {
+      "sec": 4.3,
+      "label": "支度おわり: 昼 hour=10.0 虫=0匹 いち=(-3.0,6.0)"
+    },
+    {
+      "sec": 4.3,
+      "label": "いまやること: q_wood_gather 「もくざいを あつめよう」"
+    },
+    {
+      "sec": 4.6,
+      "label": "ねらう: b_ageha (7.3,16.4) 14.6m"
+    },
+    {
+      "sec": 8.9,
+      "label": "つかまえた! (1匹目) ヒントを見てから=true"
+    },
+    {
+      "sec": 9,
+      "label": "ねらう: b_kabuto (-14.0,-37.8) 55.6m"
+    },
+    {
+      "sec": 30.5,
+      "label": "つかまえた! (2匹目) ヒントを見てから=true"
+    },
+    {
+      "sec": 30.5,
+      "label": "ねらう: b_kabuto (-28.0,-25.8) 17.1m"
+    },
+    {
+      "sec": 36.6,
+      "label": "つかまえた! (3匹目) ヒントを見てから=true"
+    },
+    {
+      "sec": 36.6,
+      "label": "PASS: 32.3秒で 3匹(合格は120秒で3匹)"
+    }
+  ]
+}

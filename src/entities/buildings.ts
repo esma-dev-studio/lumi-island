@@ -387,10 +387,13 @@ export function buildHomeRoom(scene: Scene, dim: RoomDims): { mesh: Mesh; glow: 
     for (let i = 0; i < 4; i++) G.col.push(1, 1, 1, 1);
     G.idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
   };
+  // 窓は2.7mおきに1つ。こうじで壁が伸びたぶんだけ足していく(無地の白い壁を作らない)
   northWindow(-2.0, 1.1, 0.85); // ベッドの上(位置は拡張前後で変わらない)
   eastWindow(-0.55, 1.0, 0.85); // つくえの上(同上)
-  if (minX <= -5) northWindow(-4.7, 1.1, 0.85); // 拡張で伸びた西がわの北壁
-  if (maxZ >= 3.5) eastWindow(2.9, 1.0, 0.85); // 拡張で伸びた南がわの東壁
+  if (minX <= -5) northWindow(-4.7, 1.1, 0.85); // 1回目のこうじで伸びた西がわの北壁
+  if (maxZ >= 3.5) eastWindow(2.9, 1.0, 0.85); // 1回目のこうじで伸びた南がわの東壁
+  if (minX <= -8) northWindow(-7.4, 1.1, 0.85); // 2回目のこうじで さらに伸びた北壁
+  if (maxZ >= 5.5) eastWindow(5.3, 1.0, 0.85); // 2回目のこうじで さらに伸びた東壁
 
   // ---- ドア(北の壁。ここでEを押すと外へ出る) ----
   const dx = 1.6, doorW = 0.92, doorH = 1.98;

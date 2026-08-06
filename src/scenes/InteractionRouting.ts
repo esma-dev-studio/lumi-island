@@ -2,6 +2,7 @@
 // いまの目的との突き合わせ(ObjectiveInteractionPolicy)→優先度・距離(InteractionResolver)で1つに決める。
 import { POIS } from '../data/island';
 import { ITEMS } from '../data/items';
+import { BUG_CATCH_R, BUG_HINT_R } from '../systems/BugSystem';
 import { hasTool } from '../game/GameState';
 import { questFor } from '../systems/QuestSystem';
 import { GATHER_RULES, toolReason } from '../systems/GatherSystem';
@@ -185,23 +186,41 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
       });
     }
   }
-  // v9 虫(虫あみが要る)。判定はBugSystemのBUG_CATCH_R(1.6m)。
-  // 走って近づくと逃げるので、そもそも候補にならない = ヒントも出ない
-  const bug = gs.island.nearestBug(px, pz);
+  // v9 虫(虫あみが要る)。捕まえられるのは BugSystem の BUG_CATCH_R(2.6m)の内がわ。
+  //
+  // v11: 虫あみを持っているのに とどかないときは、BUG_HINT_R(5m)から
+  // 「むしが いる! ちかづいて つかまえよう」を先に出す。
+  // ——v9は捕獲圏に入らないとヒントが出ず、しかも走って近づくと捕獲圏の手前で
+  //   逃げられたので、「Eで捕れる」ことを知る手がかりが1度も画面に出なかった
+  //   (子どもが「ぜんぜんつかまえられない」と言った直接の原因のひとつ)。
+  // 予告ヒントは PRIORITY.catchNear(いちばん弱い)なので、採取・釣り・店・家具など
+  // ほかにやることがある場面では出ない。
+  const bug = gs.island.nearestBug(px, pz, BUG_HINT_R);
   if (bug) {
     const hasNet = hasTool(gs.state, 'net');
-    cands.push({
-      id: `bug_${bug.bug.key}`, kind: 'catch', targetId: String(bug.bug.key), itemId: bug.bug.bug,
-      priority: PRIORITY.catch, distance: bug.distance, enabled: hasNet,
-      hint: hasNet ? '<kbd>E</kbd>むしあみでつかまえる' : `つかまえるには ${toolReason('net')}`,
-      run: () => void gs.inter.tryCatchBug(gs.player, gs.playerView, bug.bug, bug.x, bug.z),
-    });
-    if (!hasNet) {
-      // 道具不足の理由も候補として表示だけする(実行不可)。採取ノードと同じ流儀
+    const inRange = bug.distance < BUG_CATCH_R;
+    if (inRange) {
       cands.push({
-        id: 'bug_reason', kind: 'catch', targetId: String(bug.bug.key), itemId: bug.bug.bug,
-        priority: PRIORITY.catch + 5, distance: bug.distance, enabled: true,
-        hint: `つかまえるには ${toolReason('net')}`, run: () => {},
+        id: `bug_${bug.bug.key}`, kind: 'catch', targetId: String(bug.bug.key), itemId: bug.bug.bug,
+        priority: PRIORITY.catch, distance: bug.distance, enabled: hasNet,
+        hint: hasNet ? '<kbd>E</kbd>むしあみでつかまえる' : `つかまえるには ${toolReason('net')}`,
+        run: () => void gs.inter.tryCatchBug(gs.player, gs.playerView, bug.bug, bug.x, bug.z),
+      });
+      if (!hasNet) {
+        // 道具不足の理由も候補として表示だけする(実行不可)。採取ノードと同じ流儀
+        cands.push({
+          id: 'bug_reason', kind: 'catch', targetId: String(bug.bug.key), itemId: bug.bug.bug,
+          priority: PRIORITY.catch + 5, distance: bug.distance, enabled: true,
+          hint: `つかまえるには ${toolReason('net')}`, run: () => {},
+        });
+      }
+    } else if (hasNet) {
+      // まだ とどかない。表示だけの予告(押しても何も起きない=採取ノードの理由表示と同じ流儀)。
+      // <kbd>E</kbd>を入れないのは、タッチでキー表示が消えても文がそのまま読めるようにするため
+      cands.push({
+        id: 'bug_near', kind: 'catch', targetId: String(bug.bug.key), itemId: bug.bug.bug,
+        priority: PRIORITY.catchNear, distance: bug.distance, enabled: true,
+        hint: 'むしが いる! ちかづいて つかまえよう', run: () => {},
       });
     }
   }

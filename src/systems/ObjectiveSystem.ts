@@ -50,7 +50,16 @@ export interface ObjectiveActionContext {
 // 「ねる」はゲーム内時間を進めるだけで、どの目的とも衝突しない(夜に詰まらせない)。
 // 自宅の出入り(enter/exit)も同じあつかい: ベッドは家の中にあるので、
 // 誘導中でも家に入れないと「ねて待つ」が実行できなくなる。出るほうも塞がない(室内に閉じこめない)。
-const ALWAYS_ALLOWED: InteractionKind[] = ['sleep', 'enter', 'exit'];
+//
+// v11で虫とり(catch)も常時許可に加えた。判定の緩和ではなく、設計の意味論への較正:
+//   - 虫は「あとで戻ってくる」ができない相手。目の前のチョウは数秒でとまり直して動くし、
+//     ホタルは夜(19時〜翌5時)にしか出ない。依頼を受けているあいだ虫あみが一切使えないと、
+//     「見えているのに、なにをしても捕れない」体験になる(子どもの苦情の一因だった)。
+//   - ほりあと(dig)は同じ場所に1日残るので、この理由は立たない。だから catch だけを足す。
+//   - 誘導を横取りしない: 優先度は catch=32 で 採取(30)・庭(29)・報告相手のNPC(10)より弱く、
+//     BUG_SPOTS は既存の判定帯から3m以上はなして置いてある(src/data/island.ts)。
+//     「採取のEを虫が奪う」ことは起きない(tests/unit/objective.test.ts が機械検査)。
+const ALWAYS_ALLOWED: InteractionKind[] = ['sleep', 'enter', 'exit', 'catch'];
 const FREE_CONTEXT = (): ObjectiveActionContext => ({ preferredKinds: [], guided: false });
 
 /** NPCの在/不在。GameSceneがNPCSystemから作って渡す。不在ならベッドへ誘導する */

@@ -23,7 +23,7 @@ import { getStyleMaterial, makeStylePanel } from '../entities/homeStyle';
 import { DEFAULT_HOME_STYLE, isStyleFor, type DecorId, type HomeStyle } from '../data/items';
 import type { CircleCollider, RectCollider } from './IslandScene';
 
-/** 部屋の位置と大きさ(中心・床の高さ・はじめの内寸) */
+/** 部屋の位置と大きさ(中心・床の高さ・はじめの内寸。こうじで広がる先は ROOM_STAGES) */
 export const HOME_ROOM = {
   x: 58,
   z: -58,
@@ -39,10 +39,20 @@ const EDGE_IN = 0.35;
 /**
  * 部屋の内寸(部屋の原点=HOME_ROOM.x/z からのローカル範囲)。
  *
- * 拡張こうじ(ツムギに たのむ)で 6×5m → 9×7m になるが、
- * **北(-Z)の壁と東(+X)の壁は動かさない**。広がるのは開いている西(-X)と南(+Z)だけ。
+ * 拡張こうじ(ツムギに たのむ)で 6×5m → 9×7m → 12×9m と2段階に広がるが、
+ * **北(-Z)の壁と東(+X)の壁は どの段階でも動かさない**。広がるのは開いている西(-X)と南(+Z)だけ。
  * こうしておくと ドア・窓・作りつけ家具(ベッド・つくえ・いす・ラグ)のローカル座標が
  * 変わらないので、既存セーブの「室内に置いた家具」の世界座標がそのまま有効になる。
+ *
+ * 12×9m を上限にした理由(これ以上ひろげない根拠):
+ *   - 部屋は「南から見おろすドールハウス構図」なので、ひろげるほどカメラを引くことになる。
+ *     12×9m は、出荷ずみの9×7mと同じ見えかたを保てる最大(実測は HOME_SHOT_HUGE のコメント)。
+ *   - 実績「かざりつけめいじん」が室内の家具を数える かこみ(AchievementSystem.HOME_AREA)は、
+ *     この12×9mを包んでも島(半径46m)から60m以上はなれたままでいられる。
+ *   - セーブのロード時クランプ(±70)・家具座標の検証(|x|,|z|<=70)も、
+ *     世界座標 x∈[49,61] / z∈[-60.5,-51.5] で じゅうぶん内側。
+ *   - ドア(局所 x=1.6)・ベッド(-1.2,-1.2)・つくえ・いすは北と東の壁ぎわなので、
+ *     どの段階でも「Eが届く輪」と歩いて行ける道すじが変わらない。
  */
 export interface RoomBounds {
   minX: number;
@@ -52,21 +62,36 @@ export interface RoomBounds {
 }
 export const ROOM_BASE: RoomBounds = { minX: -3, maxX: 3, minZ: -2.5, maxZ: 2.5 };
 export const ROOM_EXPANDED: RoomBounds = { minX: -6, maxX: 3, minZ: -2.5, maxZ: 4.5 };
+export const ROOM_EXPANDED_2: RoomBounds = { minX: -9, maxX: 3, minZ: -2.5, maxZ: 6.5 };
+
+/** 段階(0=6×5m / 1=9×7m / 2=12×9m)ごとの内寸。添字がそのまま段階 */
+export const ROOM_STAGES: readonly RoomBounds[] = [ROOM_BASE, ROOM_EXPANDED, ROOM_EXPANDED_2];
 
 /**
- * いまの間取り(拡張ずみか)。歩行可否・接地高さ・配置判定・カメラ構図の
+ * いまの間取り(こうじの段階)。歩行可否・接地高さ・配置判定・カメラ構図の
  * 唯一の情報源にするため、モジュール変数を1つだけ置く(GameSceneが起動時と
  * こうじ完成時に setHomeExpandedLayout で書きこむ)。
  */
-let expandedLayout = false;
-export function setHomeExpandedLayout(v: boolean): void {
-  expandedLayout = v;
+let layoutStage = 0;
+/**
+ * 間取りを切りかえる。
+ * boolean も受けるのは v10 からの呼び出し(false=もとの部屋 / true=1回目のこうじ後)を
+ * そのまま生かすため。範囲外の数は近いほうの段階へ丸める(壊れた値で部屋を消さない)。
+ */
+export function setHomeExpandedLayout(v: boolean | number): void {
+  const n = typeof v === 'boolean' ? (v ? 1 : 0) : Math.round(v);
+  layoutStage = Math.min(ROOM_STAGES.length - 1, Math.max(0, Number.isFinite(n) ? n : 0));
 }
+/** いまの段階(0/1/2) */
+export function homeLayoutStage(): number {
+  return layoutStage;
+}
+/** 1回でも ひろくなっているか(v10から使っている名前) */
 export function isHomeExpandedLayout(): boolean {
-  return expandedLayout;
+  return layoutStage >= 1;
 }
 export function roomBounds(): RoomBounds {
-  return expandedLayout ? ROOM_EXPANDED : ROOM_BASE;
+  return ROOM_STAGES[layoutStage];
 }
 /** いまの内寸(m) */
 export function roomSize(): { w: number; d: number } {
@@ -105,9 +130,32 @@ export const HOME_SHOT_BIG = {
   height: 5.9,
 } as const;
 
+/**
+ * 2回目のこうじ後(12×9m)の構図。
+ *
+ * dist=11.6 / height=7.4 は「出荷ずみの9×7m(HOME_SHOT_BIG)と同じ見えかたを保つ」値。
+ * 部屋の四隅と壁の上端を画面座標へ投影して、9×7mと突きあわせて決めた(実機・1280×720):
+ *   - 部屋の中央に立つとき : 四隅ぜんぶが画面の中。下の余白は 31px → 59px とむしろ ひろがる
+ *   - 東のはしに立つとき   : 西南の床のかどが画面の右へ 43px(9×7m)→ 50px はみ出す(ほぼ同じ)
+ *   - 西のはしに立つとき   : 東南の床のかどが 222px(9×7m)→ 174px と、むしろ ひろがる
+ * つまり「いちばん遠い床のかどは、反対がわのはしに立つと少し切れる」という9×7mからの
+ * ふるまいが そのまま保たれている。これ以上ひろげると そのはみ出しが目に見えて増え、
+ * これ以上カメラを引くと人が小さくなりすぎるので、12×9mを上限にしている。
+ */
+export const HOME_SHOT_HUGE = {
+  cx: HOME_ROOM.x + (ROOM_EXPANDED_2.minX + ROOM_EXPANDED_2.maxX) / 2,
+  cy: HOME_ROOM.floorY,
+  cz: HOME_ROOM.z + (ROOM_EXPANDED_2.minZ + ROOM_EXPANDED_2.maxZ) / 2,
+  dist: 11.6,
+  height: 7.4,
+} as const;
+
+/** 段階ごとの室内カメラ構図(添字=段階。ROOM_STAGESと必ず同じ並び) */
+export const HOME_SHOTS = [HOME_SHOT, HOME_SHOT_BIG, HOME_SHOT_HUGE] as const;
+
 /** いまの部屋にあわせた室内カメラの構図 */
-export function homeShot(): typeof HOME_SHOT | typeof HOME_SHOT_BIG {
-  return expandedLayout ? HOME_SHOT_BIG : HOME_SHOT;
+export function homeShot(): (typeof HOME_SHOTS)[number] {
+  return HOME_SHOTS[layoutStage];
 }
 
 /** 作りつけ家具の当たり判定(矩形)。ベッドとつくえ */
@@ -404,16 +452,21 @@ export class HomeInterior {
       HOME_ROOM.floorY + 2.15,
       HOME_ROOM.z + (b.minZ + b.maxZ) / 2 + 0.1
     );
+    // とどく範囲は部屋の対角線にあわせる。6×5m・9×7mでは既定の12のまま(見た目を変えない)で、
+    // 12×9mのときだけ のびる(すみが暗く沈まないように)
+    this.light.range = Math.max(12, Math.hypot(w, d));
     this.onShellBuilt?.(this.shell, replacing);
   }
 
   /**
    * こうじの完成を見た目へ反映する(部屋を作りなおす)。
    * 置いた家具(rootの子のうち作りつけ以外)は触らないので、拡張後もそのまま残る。
+   * 引数は こうじの段階(0/1/2)。boolean も受けるのは v10 からの呼び出し互換のため。
    */
-  applyExpanded(expanded: boolean): void {
-    if (expanded === isHomeExpandedLayout() && this.shell) return;
-    setHomeExpandedLayout(expanded);
+  applyExpanded(expanded: boolean | number): void {
+    const stage = typeof expanded === 'boolean' ? (expanded ? 1 : 0) : Math.round(expanded);
+    if (stage === homeLayoutStage() && this.shell) return;
+    setHomeExpandedLayout(stage);
     // 共有マテリアルを道連れにしない(第2引数を省略=false)
     for (const m of this.builtins) m.dispose();
     this.builtins = [];

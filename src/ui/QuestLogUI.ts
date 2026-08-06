@@ -3,7 +3,7 @@ import type { GameState } from '../game/GameState';
 import { activeQuests } from '../systems/QuestSystem';
 import { NPCS, NPC_BY_ID } from '../data/npcs';
 import { QUESTS } from '../data/quests';
-import { FRIEND_BEST, HEART_MAX, friendshipHearts } from '../systems/GiftSystem';
+import { FRIEND_BEST, HEART_MAX, friendshipHearts, friendshipText } from '../systems/GiftSystem';
 import { icon } from './icons';
 import { byInput } from './inputMode';
 
@@ -29,7 +29,8 @@ export class QuestLogUI {
 
   /**
    * なかよし度の1行 × NPC人数。ハートは HEART_MAX 個で、1つ=なかよし度2。
-   * 数字ではなく形で見せる(まだ数を読めない子でも「増えた」が分かる)。
+   * 形(ハート)と 数字(7/10)の両方を出す。ハートだけだと 1つ ふえるまで見た目が変わらず、
+   * 「あげても 上がっていない」と 見えてしまうため(数字は 1回ごとに かならず動く)。
    * 見た目のクラスは他のパネルと同じものを使い、CSSは足さない(inlineで小さくする)。
    */
   private friendRows(s: GameState): string {
@@ -41,6 +42,7 @@ export class QuestLogUI {
       return `<div class="quest-row" style="display:flex;align-items:center;gap:10px;padding:6px 12px">
         <span class="q-title" style="min-width:4.5em">${def.name}</span>
         <span style="display:inline-flex;gap:2px;font-size:0.95rem;line-height:0">${hearts}</span>
+        <span class="q-status" style="margin-top:0;font-weight:900;min-width:3.2em" data-friend="${def.id}">${friendshipText(f)}</span>
         <span class="q-status" style="margin-top:0">${best}</span>
       </div>`;
     }).join('');

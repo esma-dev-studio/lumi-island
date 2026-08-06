@@ -26,7 +26,7 @@ export type QuestState = 'locked' | 'open' | 'done';
 export interface NpcState {
   friendship: number;
   talkedToday: boolean;
-  /** きょう おくりものを あげたか(1日1回まで)。talkedTodayと同じ日次リセットに乗る */
+  /** きょう おくりものを あげたか(回数の制限ではなく記録)。talkedTodayと同じ日次リセットに乗る */
   giftedToday?: boolean;
   questTalked?: boolean;
 }

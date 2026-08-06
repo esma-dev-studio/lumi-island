@@ -6,9 +6,7 @@ import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { Scene } from '@babylonjs/core/scene';
 import { A0, appendBlob, appendTrunk, toMesh } from '../entities/flora';
-import { onPier, PIER, SEA_Y } from '../entities/water';
-import { pondShoreR } from '../entities/terrain';
-import { POND } from '../data/island';
+import { findCastPoint, fishingGate, type CastPlan, type FishZone } from './FishingCast';
 import type { GameState } from '../game/GameState';
 import { hasTool, invAddRecorded } from '../game/GameState';
 import type { PlayerController } from './PlayerController';
@@ -18,7 +16,7 @@ import { sfx } from '../audio/AudioSystem';
 import { sharedWeather } from './WeatherSystem';
 import { ITEMS, type ItemId } from '../data/items';
 
-export type FishZone = 'sea' | 'pond' | null;
+export type { FishZone }; // 実体は FishingCast.ts(水面の判定と同じ場所に置く)
 
 // ---- 何がつれるかの抽選(純ロジック。描画・状態機械から切り離してテストできるようにする) ----
 /** 夜の時間帯(この間は光る魚が出る) */
@@ -126,15 +124,28 @@ export class FishingSystem {
     this.rod.setEnabled(false);
   }
 
-  /** その場所で釣りができるか */
+  /**
+   * その場所で釣りができるか(=ウキを落とせる水面が近くにあるか)。
+   * 岸線からの距離ではなく「実際の水面」で決める: 池の東がわのように、
+   * 岸線の内がわでも地面が水面より高い泥の岸では釣りをさせない(ウキが陸に落ちるため)。
+   */
   zoneAt(x: number, z: number): FishZone {
-    if (onPier(x, z) && z > PIER.z1 - 5) return 'sea';
-    // 池は岸線pondShoreRからの相対距離で判定(入り江の先端でも釣れる)
-    const dx = x - POND.x, dz = z - POND.z;
-    const d = Math.hypot(dx, dz);
-    const sr = pondShoreR(Math.atan2(dz, dx));
-    if (d > sr - 2.0 && d < sr + 1.0) return 'pond';
-    return null;
+    const gate = fishingGate(x, z); // 池・桟橋の近くだけ、この先の探索をする
+    if (!gate) return null;
+    return this.planFor(x, z, gate)?.zone ?? null;
+  }
+
+  /**
+   * 立ち位置ごとの「投げ先があるか」をおぼえておく(毎フレーム探索しないため)。
+   * 水面の形は変わらないので、少し動くまでは前の結果を使ってよい。
+   */
+  private planCache: { x: number; z: number; plan: CastPlan | null } | null = null;
+  private planFor(x: number, z: number, zone: 'sea' | 'pond'): CastPlan | null {
+    const c = this.planCache;
+    if (c && Math.abs(c.x - x) < 0.15 && Math.abs(c.z - z) < 0.15) return c.plan;
+    const plan = findCastPoint(x, z, { anyMatch: true, zone }); // 有無だけ見るので最初の1点でよい
+    this.planCache = { x, z, plan };
+    return plan;
   }
 
   canFish(x: number, z: number): { zone: FishZone; ok: boolean; reason?: string } {
@@ -153,27 +164,20 @@ export class FishingSystem {
 
   start(player: PlayerController, view: CharacterView): void {
     const check = this.canFish(player.x, player.z); // idle以外はここでok:falseになる
-    if (!check.ok) return;
-    this.zone = check.zone;
+    if (!check.ok || !check.zone) return;
+    // 投げ先は「体の向きに近い水面点」をあらためて選びなおす(canFishは有無だけを見ている)
+    const plan = findCastPoint(player.x, player.z, { rotY: player.rotY, zone: check.zone });
+    if (!plan) return; // 水面が見つからない場所では始めない(canFishと同じ規則なので、ふつうは起きない)
+    this.zone = plan.zone;
     player.locked = true;
     this.spotX = player.x;
     this.spotZ = player.z;
-    // 水面へ向く
-    let tx: number, tz: number, wy: number;
-    if (this.zone === 'sea') {
-      tx = player.x;
-      tz = Math.max(player.z + 3, PIER.z1 + 1.6); // 桟橋の先の海面へ
-      wy = SEA_Y;
-    } else {
-      const dx = POND.x - player.x, dz = POND.z - player.z;
-      const L = Math.hypot(dx, dz) || 1;
-      tx = player.x + (dx / L) * 2.4;
-      tz = player.z + (dz / L) * 2.4;
-      wy = POND.waterY;
-    }
-    player.face(tx, tz);
+    // 走りこんだ勢いで滑ると、そのあいだ体の向きが進行方向へ上書きされて水面を向かなくなる。
+    // 速さを0にしてから向きを決める(PlayerControllerは速さ0のフレームでは向きを変えない)
+    player.speed = 0;
+    player.face(plan.x, plan.z); // 水面のほうを向く
     // ウキの落下地点だけ決めて、着水するまでは見せない
-    this.bobber.position.set(tx, wy + 0.02, tz);
+    this.bobber.position.set(plan.x, plan.y + 0.02, plan.z);
     this.bobber.setEnabled(false);
     // 竿を右手に
     const hand = view.getJoint('handR');

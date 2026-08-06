@@ -18,6 +18,14 @@ export interface MarkerNpc {
 
 const AMBER = '#e8c890';
 
+/**
+ * 方向矢印+距離を消す距離(m)。「もう手がとどく」ところまでは必ず出しつづける。
+ * 島でいちばん狭い操作圏(採取1.9m / NPC会話1.8m / ベッド・ドア1.4m)より大きい値にして、
+ * 「矢印が消えた=Eのヒントが出ているはず」が成り立つようにしてある
+ * (tests/unit/guidance.test.ts が ObjectiveHud の距離表示ともども機械検査する)。
+ */
+export const ARROW_ARRIVE_R = 2.6;
+
 export class WorldMarkerController {
   private arrowEl: HTMLElement;
   private npcEls = new Map<string, HTMLElement>();
@@ -104,11 +112,19 @@ export class WorldMarkerController {
     if (targetPos) {
       const dist = Math.hypot(playerX - targetPos.x, playerZ - targetPos.z);
       const y = targetIsNpc ? terrainHeight(targetPos.x, targetPos.z) + 1.2 : terrainHeight(targetPos.x, targetPos.z) + 1.5;
-      const onScreen = this.project(targetPos.x, y, targetPos.z, this.proj);
-      if (dist < 2.6 || (onScreen && !this.proj.behind)) {
+      this.project(targetPos.x, y, targetPos.z, this.proj);
+      // v11: 「目的地が画面に入ったら矢印を消す」のをやめ、手がとどく距離(ARROW_ARRIVE_R)まで出しつづける。
+      // 画面に入っていても、林の木も岩も見た目はどれも同じで「どれ?」は分からない。
+      // 実害: 誘導が消えた3〜15mの帯で行き先を見失い、目的地のまわりを行ったり来たりする
+      //   (UXボットの停滞ログ: v10「もくざい 0/5 →15m 63秒」「いし 0/1 63秒」、
+      //    v10.1「ヒカリゴケ 0/2 →3m 62秒」「もくざい 2/5 →3m 64秒」。
+      //    どれも「目的地に着いたのに採取のヒントが出ない」→ 周回、が同じ形で出ている)。
+      // 画面内では矢印は目的地の上に重なる=「ここだよ」の目印になり、距離も読める。
+      // 消えるのは「もうEで届く」ときだけなので、誘導が切れる空白が構造的に無くなる。
+      if (dist < ARROW_ARRIVE_R) {
         this.arrowEl.classList.add('hidden');
       } else {
-        // 画面端へクランプして方向を示す
+        // 画面外なら画面端へクランプ、画面内ならその場所に重ねて方向を示す
         const cx = window.innerWidth / 2;
         const cy = window.innerHeight / 2;
         let dx = this.proj.sx - cx;

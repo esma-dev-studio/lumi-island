@@ -1,14 +1,15 @@
 // @vitest-environment jsdom
 // v9 おくりもの(なかよし度)。守りたいのは次の6点:
 //   1. 好みの判定(だいすき/うれしい/ありがとう)と なかよし度の増えかた
-//   2. 1日1回/NPC の制限と、日またぎのリセット
+//   2. v11 1日に なんかいでも あげられる(毎回ふえる)/ 上限 FRIEND_MAX でカンストする
 //   3. giftedToday がセーブ・ロードを往復する(旧セーブでも壊れない)
 //   4. しきい値のごほうび(5=手紙+とくべつなレシピ、10=しんゆうのあかし)が1回だけ
 //   5. 実績2種(a_gift_first / a_friend10)
-//   6. UI: 選択パネルの動きと、「会話をEで送るだけ」の従来の遊びを壊さないこと
+//   6. UI: 選択パネルの動き・なかよし度の数字表示と、「会話をEで送るだけ」の従来の遊びを壊さないこと
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   FRIEND_BEST,
+  FRIEND_MAX,
   FRIEND_THANKS,
   GIFT_TOTAL_KEY,
   HEART_MAX,
@@ -16,6 +17,8 @@ import {
   bestKey,
   canGift,
   friendshipHearts,
+  friendshipText,
+  friendshipValue,
   giftGain,
   giftTier,
   giftableItems,
@@ -118,6 +121,7 @@ describe('おくりものを渡す', () => {
     const r = applyGift(s, 'tsumugi', 'flower')!;
     expect(r.tier).toBe('love');
     expect(r.gain).toBe(2);
+    expect(r.atMax).toBe(false);
     expect(s.npcs.tsumugi.friendship).toBe(2);
     expect(s.inventory.flower).toBe(1);
     expect(r.lines[0]).toContain('のばな'); // {item}がアイテム名に置きかわる
@@ -162,25 +166,45 @@ describe('おくりものを渡す', () => {
   });
 });
 
-describe('1日1回/NPC', () => {
-  it('同じ日の2回目は渡せない(もちものも減らない)', () => {
+describe('1日に なんかいでも あげられる(v11で回数制限を撤廃)', () => {
+  it('同じ日に同じ相手へ2回あげられて、2回とも なかよし度が上がる', () => {
     const s = withItems({ flower: 2 });
-    expect(applyGift(s, 'tsumugi', 'flower')).not.toBeNull();
-    expect(giftedToday(s, 'tsumugi')).toBe(true);
-    expect(canGift(s, 'tsumugi')).toBe(false);
-    expect(applyGift(s, 'tsumugi', 'flower')).toBeNull();
-    expect(s.inventory.flower).toBe(1);
-    expect(s.npcs.tsumugi.friendship).toBe(2);
+    const r1 = applyGift(s, 'tsumugi', 'flower')!;
+    expect(r1.gain).toBe(2);
+    expect(r1.friendship).toBe(2);
+    expect(giftedToday(s, 'tsumugi')).toBe(true); // 記録は のこる
+    expect(canGift(s, 'tsumugi')).toBe(true); // でも ボタンは 出たまま
+    const r2 = applyGift(s, 'tsumugi', 'flower')!;
+    expect(r2.gain).toBe(2);
+    expect(r2.friendship).toBe(4);
+    expect(s.npcs.tsumugi.friendship).toBe(4);
+    expect(s.inventory.flower).toBeUndefined(); // 2つとも 消費されている
+    expect(s.stats[GIFT_TOTAL_KEY]).toBe(2);
   });
 
-  it('別のNPCには同じ日でも渡せる(制限はNPCごと)', () => {
+  it('同じ日でも すきなものは多め(だいすき+2、ほかは+1)', () => {
+    const s = withItems({ flower: 1, wood: 1, stone: 1 });
+    expect(applyGift(s, 'tsumugi', 'flower')!.gain).toBe(2); // だいすき
+    expect(applyGift(s, 'tsumugi', 'wood')!.gain).toBe(1); // うれしい
+    expect(applyGift(s, 'tsumugi', 'stone')!.gain).toBe(1); // ふつう
+    expect(s.npcs.tsumugi.friendship).toBe(4);
+  });
+
+  it('あげられる物がある限り 何回でも続けられる(5回で 上限にとどく)', () => {
+    const s = withItems({ fish: 6 });
+    const got: number[] = [];
+    for (let i = 0; i < 6; i++) got.push(applyGift(s, 'minamo', 'fish')!.friendship);
+    expect(got).toEqual([2, 4, 6, 8, 10, 10]); // さいごは カンスト
+  });
+
+  it('別のNPCにも同じ日に渡せる', () => {
     const s = withItems({ flower: 1, fish: 1 });
     applyGift(s, 'tsumugi', 'flower');
     expect(canGift(s, 'minamo')).toBe(true);
     expect(applyGift(s, 'minamo', 'fish')).not.toBeNull();
   });
 
-  it('日がかわると また渡せる(talkedTodayと同じリセットに乗る)', () => {
+  it('日がかわると giftedToday はリセットされる(talkedTodayと同じリセットに乗る)', () => {
     const s = withItems({ flower: 2 });
     s.npcs.tsumugi.talkedToday = true;
     applyGift(s, 'tsumugi', 'flower');
@@ -214,12 +238,51 @@ describe('1日1回/NPC', () => {
   });
 });
 
+describe('上限でカンストする', () => {
+  it('上限(10)をこえない。こえる大きさの おくりものでも ちょうど10で止まる', () => {
+    const s = withItems({ fish: 1 });
+    s.npcs.minamo.friendship = FRIEND_MAX - 1; // 9 に だいすき(+2)
+    const r = applyGift(s, 'minamo', 'fish')!;
+    expect(r.friendship).toBe(FRIEND_MAX);
+    expect(r.gain).toBe(1); // ふえたぶんは 1 だけ
+    expect(r.atMax).toBe(true);
+  });
+
+  it('上限に とどいたあとは gain が0。もちものは減り、セリフとお礼のセリフは出る', () => {
+    const s = withItems({ fish: 2 });
+    s.npcs.minamo.friendship = FRIEND_MAX;
+    const r = applyGift(s, 'minamo', 'fish')!;
+    expect(r.gain).toBe(0);
+    expect(r.friendship).toBe(FRIEND_MAX);
+    expect(r.atMax).toBe(true);
+    expect(r.tier).toBe('love');
+    expect(r.lines.length).toBeGreaterThan(0);
+    expect(s.inventory.fish).toBe(1);
+    expect(canGift(s, 'minamo')).toBe(true); // 上限でも あげること自体は できる
+  });
+
+  it('会話・依頼で上限をこえている値は 下げない(あげたのに減る、をしない)', () => {
+    const s = withItems({ wood: 1 });
+    s.npcs.nokto.friendship = 20;
+    const r = applyGift(s, 'nokto', 'wood')!;
+    expect(r.friendship).toBe(20);
+    expect(r.gain).toBe(0);
+    expect(s.npcs.nokto.friendship).toBe(20);
+  });
+
+  it('カンストしても 来訪のしきい値(なかよし5)より上のまま', () => {
+    const s = withItems({ fish: 6 });
+    for (let i = 0; i < 6; i++) applyGift(s, 'minamo', 'fish');
+    expect(s.npcs.minamo.friendship).toBe(FRIEND_MAX);
+    expect(FRIEND_MAX).toBeGreaterThanOrEqual(5);
+  });
+});
+
 describe('しきい値のごほうび', () => {
   /** なかよし度をしきい値の1歩手前にして、大好物で越えさせる */
   function giveUntil(s: GameState, npcId: string, item: ItemId, times: number): void {
     for (let i = 0; i < times; i++) {
       invAdd(s, item, 1);
-      s.npcs[npcId].giftedToday = false;
       applyGift(s, npcId, item);
     }
   }
@@ -231,7 +294,6 @@ describe('しきい値のごほうび', () => {
     expect(s.stats[thanksKey('tsumugi')]).toBeUndefined();
 
     invAdd(s, 'wood', 1);
-    s.npcs.tsumugi.giftedToday = false;
     const r = applyGift(s, 'tsumugi', 'wood')!; // 5
     expect(s.npcs.tsumugi.friendship).toBe(FRIEND_THANKS);
     expect(r.reward.letter).toBe(NPC_BY_ID.tsumugi.thanksLetter);
@@ -241,7 +303,6 @@ describe('しきい値のごほうび', () => {
 
     // 2回目以降は出ない
     invAdd(s, 'wood', 1);
-    s.npcs.tsumugi.giftedToday = false;
     const r2 = applyGift(s, 'tsumugi', 'wood')!;
     expect(r2.reward.letter).toBeUndefined();
     expect(r2.reward.recipeName).toBeUndefined();
@@ -252,14 +313,12 @@ describe('しきい値のごほうび', () => {
     giveUntil(s, 'minamo', 'fish', 4); // 8
     expect(s.npcs.minamo.friendship).toBe(8);
     invAdd(s, 'fish', 1);
-    s.npcs.minamo.giftedToday = false;
     const r = applyGift(s, 'minamo', 'fish')!; // 10
     expect(s.npcs.minamo.friendship).toBe(FRIEND_BEST);
     expect(r.reward.best).toBe(true);
     expect(s.stats[bestKey('minamo')]).toBe(1);
 
     invAdd(s, 'fish', 1);
-    s.npcs.minamo.giftedToday = false;
     expect(applyGift(s, 'minamo', 'fish')!.reward.best).toBeUndefined();
   });
 
@@ -284,14 +343,16 @@ describe('しきい値のごほうび', () => {
 
 describe('セーブ・ロード', () => {
   it('giftedToday と なかよし度が往復する', () => {
-    const s = withItems({ flower: 1 });
+    const s = withItems({ flower: 2 });
     applyGift(s, 'tsumugi', 'flower');
     expect(save(s)).toBe(true);
     const back = load()!;
     expect(back.npcs.tsumugi.giftedToday).toBe(true);
     expect(back.npcs.tsumugi.friendship).toBe(2);
     expect(back.npcs.minamo.giftedToday).toBe(false);
-    expect(canGift(back, 'tsumugi')).toBe(false);
+    // 読みこみ直後も おなじ日に つづけて あげられる(v11で回数制限を撤廃)
+    expect(canGift(back, 'tsumugi')).toBe(true);
+    expect(applyGift(back, 'tsumugi', 'flower')!.friendship).toBe(4);
   });
 
   it('giftedTodayが無い旧セーブは「まだあげていない」あつかい', () => {
@@ -321,7 +382,6 @@ describe('セーブ・ロード', () => {
     save(s);
     const back = load()!;
     expect(back.stats[thanksKey('tsumugi')]).toBe(1);
-    back.npcs.tsumugi.giftedToday = false;
     invAdd(back, 'wood', 1);
     expect(applyGift(back, 'tsumugi', 'wood')!.reward.letter).toBeUndefined();
   });
@@ -362,7 +422,7 @@ describe('実績', () => {
   });
 });
 
-describe('ハート表示', () => {
+describe('ハート表示と 数字表示', () => {
   it('なかよし度2ごとに1つ、10でぜんぶ うまる', () => {
     expect(friendshipHearts(0)).toBe(0);
     expect(friendshipHearts(1)).toBe(0);
@@ -373,9 +433,21 @@ describe('ハート表示', () => {
     expect(friendshipHearts(Number.NaN)).toBe(0);
   });
 
-  it('おねがいパネルに3人ぶんのハートが出る(10以上は「しんゆう」)', () => {
+  it('数字表示は 0〜10 にそろえる(こわれた値でも 0/10)', () => {
+    expect(friendshipValue(0)).toBe(0);
+    expect(friendshipValue(7)).toBe(7);
+    expect(friendshipValue(999)).toBe(FRIEND_MAX);
+    expect(friendshipValue(-3)).toBe(0);
+    expect(friendshipValue(Number.NaN)).toBe(0);
+    expect(friendshipText(7)).toBe('7/10');
+    expect(friendshipText(0)).toBe('0/10');
+    expect(friendshipText(20)).toBe('10/10');
+  });
+
+  it('おねがいパネルに3人ぶんのハート+数字が出る(10以上は「しんゆう」)', () => {
     const s = newGameState();
     s.npcs.tsumugi.friendship = 10;
+    s.npcs.minamo.friendship = 3;
     const ui = new QuestLogUI(() => s);
     ui.toggle();
     const el = document.querySelector('.quest-panel') as HTMLElement;
@@ -384,6 +456,21 @@ describe('ハート表示', () => {
     expect(el.textContent).toContain('しんゆう');
     // ハートは絵文字ではなくSVG(3人 × HEART_MAX 個)
     expect(el.querySelectorAll('svg').length).toBeGreaterThanOrEqual(HEART_MAX * 3);
+    // 数字も 出る(ハートは2ごとにしか動かないので、1回ぶんの変化が見えるように)
+    expect(el.querySelector('[data-friend="tsumugi"]')?.textContent).toBe('10/10');
+    expect(el.querySelector('[data-friend="minamo"]')?.textContent).toBe('3/10');
+    expect(el.querySelector('[data-friend="nokto"]')?.textContent).toBe('0/10');
+  });
+
+  it('おねがいパネルは 開くたびに いまの値を出しなおす', () => {
+    const s = withItems({ flower: 1 });
+    const ui = new QuestLogUI(() => s);
+    ui.toggle();
+    expect(document.querySelector('[data-friend="tsumugi"]')?.textContent).toBe('0/10');
+    ui.toggle();
+    applyGift(s, 'tsumugi', 'flower');
+    ui.toggle();
+    expect(document.querySelector('[data-friend="tsumugi"]')?.textContent).toBe('2/10');
   });
 });
 
@@ -393,7 +480,7 @@ describe('UI(選択パネルと会話ボタン)', () => {
     const ui = new GiftUI(() => s);
     const chosen: ItemId[] = [];
     ui.onChoose = (id) => chosen.push(id);
-    ui.show('ツムギ');
+    ui.show('tsumugi');
     const el = document.querySelector('.gift-panel') as HTMLElement;
     expect(ui.open).toBe(true);
     expect(el.classList.contains('hidden')).toBe(false);
@@ -403,12 +490,38 @@ describe('UI(選択パネルと会話ボタン)', () => {
     expect(chosen).toEqual(['flower']);
   });
 
+  it('パネルに いまのなかよし度が 数字で出る(あげた あと 開きなおすと 増えている)', () => {
+    const s = withItems({ flower: 2 });
+    s.npcs.tsumugi.friendship = 3;
+    const ui = new GiftUI(() => s);
+    ui.show('tsumugi');
+    const el = document.querySelector('.gift-panel') as HTMLElement;
+    expect(el.querySelector('[data-friend-num]')?.textContent).toBe('3/10');
+    expect(el.textContent).toContain('なんかいでも あげられるよ'); // 1日1回の案内は もう出さない
+    expect(el.textContent).not.toContain('1日に 1人1回');
+    applyGift(s, 'tsumugi', 'flower');
+    ui.close();
+    ui.show('tsumugi'); // 「もういちど おくる」で 開きなおしたときと同じ経路
+    expect(el.querySelector('[data-friend-num]')?.textContent).toBe('5/10');
+  });
+
+  it('なかよし度が さいこうのときは 案内文が かわる(でも あげられる)', () => {
+    const s = withItems({ flower: 1 });
+    s.npcs.tsumugi.friendship = FRIEND_MAX;
+    const ui = new GiftUI(() => s);
+    ui.show('tsumugi');
+    const el = document.querySelector('.gift-panel') as HTMLElement;
+    expect(el.querySelector('[data-friend-num]')?.textContent).toBe('10/10');
+    expect(el.textContent).toContain('さいこう');
+    expect(el.querySelector('[data-give="flower"]')).not.toBeNull();
+  });
+
   it('「やめる」で閉じ、onCancelが呼ばれる(アイテムは減らない)', () => {
     const s = withItems({ flower: 1 });
     const ui = new GiftUI(() => s);
     let cancelled = 0;
     ui.onCancel = () => cancelled++;
-    ui.show('ツムギ');
+    ui.show('tsumugi');
     (document.querySelector('.gift-panel [data-close]') as HTMLElement).click();
     expect(ui.open).toBe(false);
     expect(cancelled).toBe(1);

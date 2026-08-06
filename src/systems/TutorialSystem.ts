@@ -1,11 +1,55 @@
 // チュートリアル: 段階的な操作解放と、迷子検知の自動ヒント(純ロジック+トースト)
 import type { GameState } from '../game/GameState';
 import type { Objective } from './ObjectiveSystem';
+import { DISPLAY_FURNITURE, type DisplayFurnitureId, type ItemId } from '../data/items';
 import { toast } from '../ui/Toast';
 import { byInput } from '../ui/inputMode';
 
 const HINT_COOLDOWN = 60; // 秒
 const STUCK_TIME = 60; // 進展なしでヒントを出すまで
+
+/**
+ * v11 「かざる遊び」への入口の案内(1種につき1回だけ)。
+ *
+ * つった さかな・つかまえた 虫を持っているのに、入れもの(すいそう・むしかご)を
+ * まだ1つも持っていない子には、そもそも「かざれる」ことが見えない。
+ * 気づいてもらうのに新しいしくみは足さず、解放の案内(onFirstItem など)とまったく同じ
+ * 「flagsのbooleanで1回だけ・トーストで出す」形にそろえてある。
+ *
+ * 文は指示形(「〜しよう」)にしない。画面の「いまやること」だけが指示の場所で、
+ * かざる遊びは いつやってもよい寄り道だから(「〜できるよ」のお知らせにとどめる)。
+ */
+export interface DisplayHint {
+  /** 出したことを覚えておく flags のキー(booleanなのでセーブの検証は増えない) */
+  flag: string;
+  /** 入れもののItemId(トーストのアイコンにも使う) */
+  furniture: DisplayFurnitureId;
+  text: string;
+}
+export const DISPLAY_HINTS: readonly DisplayHint[] = [
+  { flag: 'hint_aquarium', furniture: 'f_aquarium', text: 'つった さかなは すいそうに いれて かざれるよ' },
+  { flag: 'hint_bugcage', furniture: 'f_bugcage', text: 'つかまえた むしは むしかごに いれて かざれるよ' },
+];
+
+/** その入れものを もう持っている(もちもの・置いてある家具のどちらか)か */
+function hasDisplayFurniture(s: GameState, furniture: DisplayFurnitureId): boolean {
+  if ((s.inventory?.[furniture] ?? 0) > 0) return true;
+  return Array.isArray(s.furniture) && s.furniture.some((f) => f.item === furniture);
+}
+
+/**
+ * いま出すべき案内(なければ null)。純関数なので単体でテストできる。
+ * 条件: いきものを持っている / 入れものは まだ持っていない / まだ出していない。
+ */
+export function nextDisplayHint(s: GameState): DisplayHint | null {
+  for (const h of DISPLAY_HINTS) {
+    if (s.flags?.[h.flag] === true) continue;
+    if (hasDisplayFurniture(s, h.furniture)) continue;
+    const accepts = DISPLAY_FURNITURE[h.furniture].accepts as readonly ItemId[];
+    if (accepts.some((id) => (s.inventory?.[id] ?? 0) > 0)) return h;
+  }
+  return null;
+}
 
 export interface KeyGates {
   inventory: boolean;
@@ -85,6 +129,16 @@ export class TutorialSystem {
       this.state.flags.unlock_place = true;
       toast('「もちもの」から家具を「おく」で配置できるよ', 'f_lantern');
     }
+  }
+  /**
+   * かざる遊びの案内(すいそう・むしかご)。onFirstItem と同じ場所から毎フレーム呼ばれるが、
+   * 出すのは1種につき1回だけ。1フレームに出すのも1つだけ(トーストを重ねない)。
+   */
+  onDisplayHint(): void {
+    const h = nextDisplayHint(this.state);
+    if (!h) return;
+    this.state.flags[h.flag] = true;
+    toast(h.text, h.furniture);
   }
 
   /**

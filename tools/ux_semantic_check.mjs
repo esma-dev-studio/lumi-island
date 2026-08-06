@@ -130,10 +130,15 @@ export const HINT_RULES = [
   { cat: 'gatherSnail', re: /カタツムリをひろう/, src: 'GameScene.routeWithSnail: <kbd>E</kbd>カタツムリをひろう(snail)' },
   // v9: カマ→わら。「わらをかる」は「草をかる」「かりくさをかる」と重ならない別の文言
   { cat: 'gatherStraw', re: /わらをかる/, src: 'GatherSystem verb: わらをかる(tallgrass)' },
-  // v9: 虫あみ・シャベルの行動。どちらも依頼の目的にはならないので、
-  // 誘導中(guided)はそもそもヒントに出ない(出たら矛盾として検出される)。
-  // 「こうせきをほる」(gatherOre)より後ろに置くこと(「ほる」が横取りしないように)
-  { cat: 'catch', re: /むしあみでつかまえる|つかまえる/, src: 'InteractionRouting: <kbd>E</kbd>むしあみでつかまえる' },
+  // v9: 虫あみ・シャベルの行動。シャベル(dig)は依頼の目的にならないので誘導中は出ない。
+  // 虫あみ(catch)は v11 から「常時許可」になった(下の isSemanticMatch を参照)。
+  // 「こうせきをほる」(gatherOre)より後ろに置くこと(「ほる」が横取りしないように)。
+  // v11の予告ヒント「むしが いる! ちかづいて つかまえよう」も同じ catch にそろえる
+  // (「つかまえるには 虫あみが ひつよう」は上の blocked が先に当たるので混ざらない)
+  {
+    cat: 'catch', re: /むしあみでつかまえる|つかまえ/,
+    src: 'InteractionRouting: <kbd>E</kbd>むしあみでつかまえる / むしが いる! ちかづいて つかまえよう',
+  },
   { cat: 'dig', re: /ほる/, src: 'InteractionRouting: <kbd>E</kbd>ほる(ほりあと)' },
   // v10: 展示家具(すいそう・むしかご)の出し入れ。「もちかえる」(carry)とは別の行動なので別カテゴリ。
   // catch(/つかまえる/)・dig(/ほる/)より後ろでよい(文言が重ならない)。
@@ -216,11 +221,18 @@ export function isShopPanelTitle(title) {
  *    候補の kind は 'pickup' なので ObjectiveSystem の preferredKinds には決して入らず、
  *    誘導中(guided)は表示されない設計。出ていたら候補の絞りこみが壊れたということなので、
  *    sleep/enter/exit のような「常時許可」にはしない(GATHER_CATEGORIES にも入れない)。
- *  - hint=catch / dig(v9の虫あみ・シャベル): どちらも依頼の目的にはならないので、
- *    ObjectiveSystem の preferredKinds に入ることが決してない。
- *    つまり誘導中(guided)は表示されない設計であり、出ていたら候補の絞りこみが
- *    壊れたということ。sleep/enter/exit のような「常時許可」にはしない
+ *  - hint=dig(v9のシャベル): 依頼の目的にならないので ObjectiveSystem の preferredKinds に
+ *    入ることが決してない。つまり誘導中(guided)は表示されない設計であり、
+ *    出ていたら候補の絞りこみが壊れたということ。sleep/enter/exit のような「常時許可」にはしない
  *    (GATHER_CATEGORIESにも入れないので、craft/place目的中でも矛盾として検出される)。
+ *
+ * v11で常時許可に足したもの(判定の緩和ではなく、設計の意味論への較正):
+ *  - hint=catch(虫あみ): src/systems/ObjectiveSystem.ts の ALWAYS_ALLOWED に 'catch' が入り、
+ *    誘導中(guided)のどの文脈にも意図的に混ざるようになった。虫は数秒でとまり直して動き、
+ *    ホタルは夜しか出ない「あとで戻れない相手」なので、依頼中に虫あみを完全に封じると
+ *    「見えているのに捕れない」になるため(子どもの苦情の一因)。
+ *    誘導の横取りは優先度で防いでいる(catch=32 < 採取30・庭29・報告NPC10)。
+ *    なお dig は同じ場所に1日残るので、この理由は立たない = 従来どおり厳格のまま。
  */
 export function isSemanticMatch(objCat, hintCat) {
   if (!hintCat || hintCat === 'none') return true;
@@ -228,8 +240,9 @@ export function isSemanticMatch(objCat, hintCat) {
   if (ANYTHING_OK_OBJ.has(objCat)) return true;
   if (hintCat === 'blocked') return true;
   if (hintCat === 'dialogue') return true;
-  // ねる・自宅の出入りは ObjectiveSystem の ALWAYS_ALLOWED で全誘導文脈に意図的に混ぜてある補助導線
-  if (hintCat === 'sleep' || hintCat === 'enter' || hintCat === 'exit') return true;
+  // ねる・自宅の出入り・虫とりは ObjectiveSystem の ALWAYS_ALLOWED で
+  // 全誘導文脈に意図的に混ぜてある補助導線(上のコメントに根拠あり)
+  if (hintCat === 'sleep' || hintCat === 'enter' || hintCat === 'exit' || hintCat === 'catch') return true;
   if (hintCat === 'unknown') return true;
   if (hintCat === 'shop') return false;
   if (objCat === hintCat) return true;

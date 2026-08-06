@@ -1,6 +1,16 @@
 // 「いまやること」HUD(左上・常時1アクションのみ)
 import type { Objective } from '../systems/ObjectiveSystem';
 
+/**
+ * 「→ Nm」を出さなくなる距離(m)。これ以下は「もう目の前」なので数字を消す。
+ * v11で 3 → 1.8 にした: 3mで消すと、そこから操作圏(採取1.9m / NPC会話1.8m)までの
+ * 1mちょっとが「進捗も距離も出ない」空白になり、あと少しなのか行きすぎたのか分からなかった。
+ * 採取・会話の操作圏以下にそろえてあるので「数字が消えた=Eのヒントが出ている」が成り立つ。
+ * 矢印(ARROW_ARRIVE_R=2.6m)→この数字→Eのヒント、と切れ目なく手わたす
+ * (tests/unit/guidance.test.ts が機械検査する)。
+ */
+export const SUB_DIST_MIN = 1.8;
+
 export class ObjectiveHud {
   private el: HTMLElement;
   private headEl: HTMLElement;
@@ -32,7 +42,7 @@ export class ObjectiveHud {
     }
     let sub = '';
     if (o.progress) sub = `${o.progress.cur} / ${o.progress.max}`;
-    if (dist !== null && dist > 3) sub += (sub ? '　' : '') + `→ ${Math.round(dist)}m`;
+    if (dist !== null && dist > SUB_DIST_MIN) sub += (sub ? '　' : '') + `→ ${Math.round(dist)}m`;
     if (this.lastSub !== sub) {
       this.lastSub = sub;
       this.subEl.textContent = sub;

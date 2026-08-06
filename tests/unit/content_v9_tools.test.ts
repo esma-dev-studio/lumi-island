@@ -15,7 +15,8 @@ import { canCraft, craft } from '../../src/systems/CraftingSystem';
 import { terrainHeight, pondShoreR, pathDist } from '../../src/entities/terrain';
 import {
   BugScheduler, BUG_DEFS, BUG_BY_ID, BUG_IDS, bugOffset, isBugNight, bugPhaseKey,
-  BUG_CATCH_R, BUG_RUN_SPEED, BUG_FLEE_SEC, BUG_FIRST_DELAY_SEC, BUG_RESPAWN_SEC,
+  BUG_CATCH_R, BUG_HINT_R, BUG_RUN_SPEED, BUG_FLEE_SEC, BUG_FIRST_DELAY_SEC, BUG_RESPAWN_SEC,
+  BUG_SPOOK_SEC, BUG_SETTLE_SEC, BUG_HOP_R, BUG_WARY_R,
   type BugPlayer,
 } from '../../src/systems/BugSystem';
 import {
@@ -352,6 +353,21 @@ describe('v9 虫あみ→虫6種(データ)', () => {
     }
   });
 
+  /**
+   * v11で捕獲圏を1.6→2.6mにひろげたので、「採取ノードの判定(1.9m)と重なって
+   * 採取(優先度30)が虫(32)のEを横取りする」ことが起きないかを機械で確かめる。
+   * 虫の実際の位置(スポット+ただよい最大0.6m)が どの採取ノードからも1.9mより遠ければ、
+   * 「虫のところまで行けば かならず虫のヒントが出る」が構造で保証される。
+   */
+  it('虫の真上に立てば、採取ノードにEを横取りされない(捕獲圏をひろげた副作用の検査)', () => {
+    const GATHER_REACH = 1.9; // InteractionSystem の最寄りノード判定
+    const HOVER_MAX = Math.max(...BUG_DEFS.map((d) => d.hoverR));
+    for (const p of BUG_SPOTS) {
+      const d = minD(p.x, p.z, GATHER_NODES);
+      expect(d - HOVER_MAX, `(${p.x},${p.z})`).toBeGreaterThan(GATHER_REACH);
+    }
+  });
+
   it('スポットの種類は、その虫が出る場所と かみ合っている', () => {
     const kinds = new Set(BUG_SPOTS.map((p) => p.kind));
     for (const def of BUG_DEFS) {
@@ -373,12 +389,42 @@ describe('v9 虫のふるまい(BugSystem)', () => {
     return s;
   };
 
-  it('歩いて近づける距離は、かならず捕獲圏の内がわ(構造で保証する)', () => {
+  /**
+   * v11の いちばん大事な保証。
+   * v9は runFlee(1.8〜3.2m) > BUG_CATCH_R(1.6m) だったため、
+   * 「走って近づく」プレイヤー(iPadはスティック55%で走り=実プレイヤーはほぼ常時これ)は
+   * 捕獲圏に入る前に必ず逃げられ、1匹も捕れなかった。
+   * ここを反転させ、走っていても かならず捕獲圏に入れる形を構造で固定する。
+   */
+  it('走って近づいても、にげる距離より先に捕獲圏へ入れる(構造で保証する)', () => {
     for (const def of BUG_DEFS) {
-      expect(def.walkFlee, def.id).toBeLessThan(BUG_CATCH_R);
+      expect(def.runFlee, def.id).toBeLessThan(BUG_CATCH_R);
+      // 捕獲圏に入ってから にげ出す距離までに1m以上の余裕(走り3.6m/sで0.28秒ぶん)
+      expect(BUG_CATCH_R - def.runFlee, def.id).toBeGreaterThanOrEqual(1.0);
       expect(def.walkFlee, def.id).toBeGreaterThan(0);
       expect(def.runFlee, def.id).toBeGreaterThan(def.walkFlee);
     }
+  });
+
+  it('距離のしきい値は 予告5m > 警戒4.2m > 捕獲2.6m の順(ヒントが先に出る)', () => {
+    expect(BUG_HINT_R).toBeGreaterThan(BUG_WARY_R);
+    expect(BUG_WARY_R).toBeGreaterThan(BUG_CATCH_R);
+    expect(BUG_CATCH_R).toBe(2.6);
+    expect(BUG_HINT_R).toBe(5.0);
+  });
+
+  it('走って突っこんでも すぐには にげない(Eを押すための ためらいが1秒以上ある)', () => {
+    // 子どもの反応(0.5〜1秒)+捕獲モーションが入るだけの猶予を数字で固定する
+    expect(BUG_SPOOK_SEC).toBeGreaterThanOrEqual(1.0);
+    expect(BUG_SETTLE_SEC).toBeGreaterThanOrEqual(1.0);
+  });
+
+  it('「走り」の判定はミオの歩き1.7と走り3.6のあいだ(iPadは常に走り判定になる)', () => {
+    // iPadのスティックは55%倒すと走り(3.6m/s)。つまり実プレイヤーはほぼ常に「走り」。
+    // v9はこの走り判定に「捕獲圏より外で逃げる」を結びつけていたのが不成立の原因だった。
+    // ここは残しつつ、逃げる距離のほうを捕獲圏の内がわへ入れて解決している。
+    expect(BUG_RUN_SPEED).toBeGreaterThan(1.7);
+    expect(BUG_RUN_SPEED).toBeLessThan(3.6);
   });
 
   it('夜の区切りは19時〜翌5時(ほしのかけら・夜釣りと同じ)', () => {
@@ -391,19 +437,29 @@ describe('v9 虫のふるまい(BugSystem)', () => {
     expect(bugPhaseKey(4, 2)).toBe('n3'); // 3日目の夜のつづき
   });
 
-  it('昼は4〜5匹・チョウ/テントウ/カブトだけ', () => {
+  // v11: 島は広いので、4〜5匹だと「そもそも見つからない」。昼6〜7・夜4〜5にふやした
+  it('昼は6〜7匹・チョウ/テントウ/カブトだけ', () => {
     const s = fresh(3, DAY);
-    expect(s.activeCount).toBeGreaterThanOrEqual(4);
-    expect(s.activeCount).toBeLessThanOrEqual(5);
+    expect(s.activeCount).toBeGreaterThanOrEqual(6);
+    expect(s.activeCount).toBeLessThanOrEqual(7);
     expect(s.activeCount).toBe(s.targetCount);
     for (const b of s.active) expect(BUG_BY_ID[b.bug].night, b.bug).toBe(false);
   });
 
-  it('夜は3〜4匹・ホタル/スズムシだけ', () => {
+  it('夜は4〜5匹・ホタル/スズムシだけ', () => {
     const s = fresh(3, NIGHT);
-    expect(s.activeCount).toBeGreaterThanOrEqual(3);
-    expect(s.activeCount).toBeLessThanOrEqual(4);
+    expect(s.activeCount).toBeGreaterThanOrEqual(4);
+    expect(s.activeCount).toBeLessThanOrEqual(5);
     for (const b of s.active) expect(BUG_BY_ID[b.bug].night, b.bug).toBe(true);
+  });
+
+  it('どの日でも 目標の数だけ そろう(スポットが足りずに出そこなわない)', () => {
+    for (let day = 1; day <= 20; day++) {
+      for (const hour of [DAY, NIGHT]) {
+        const s = fresh(day, hour);
+        expect(s.activeCount, `day${day} hour${hour}`).toBe(s.targetCount);
+      }
+    }
   });
 
   it('昼夜が入れかわると顔ぶれが総入れかえになる', () => {
@@ -445,30 +501,88 @@ describe('v9 虫のふるまい(BugSystem)', () => {
     }
   });
 
-  it('走って近づくと逃げる(逃げたあと消えて、別のスポットに出なおす)', () => {
-    const s = fresh(3, DAY);
-    const target = s.active[0];
-    const p = s.positionOf(target);
-    const before = s.activeCount;
-    // 走っている(速さ>=BUG_RUN_SPEED)まま2.5mまで寄る
-    s.update(0.25, 3, DAY, { x: p.x + 2.5, z: p.z, speed: BUG_RUN_SPEED });
-    const fleeing = s.active.find((b) => b.key === target.key);
-    expect(fleeing, '走ると逃げはじめる').toBeDefined();
-    expect(fleeing!.fleeT).toBeGreaterThan(0);
-    expect(s.nearestCatchable(p.x, p.z)?.bug.key).not.toBe(target.key); // 逃げた虫は捕れない
-    run(s, BUG_FLEE_SEC + 0.5, 3, DAY, null);
-    expect(s.active.some((b) => b.key === target.key), '逃げきったら消える').toBe(false);
-    // しばらくすると別のスポットに出なおす
-    run(s, BUG_RESPAWN_SEC + 1, 3, DAY, null);
-    expect(s.activeCount).toBe(before);
-    expect(s.active.some((b) => b.spot === target.spot), '同じスポットには すぐ出ない').toBe(false);
+  /**
+   * 実プレイヤーの操作(走ったまま虫へ直進してEを押す)の再現。
+   * v9はここで必ず「捕獲圏に入る前に逃げられる」ので、この試験は成立しなかった。
+   */
+  it('走ったまま近づいても、にげる前に つかまえられる(子どもの実操作)', () => {
+    for (let day = 1; day <= 12; day++) {
+      const s = fresh(day, DAY);
+      for (const target of [...s.active]) {
+        const t0 = s.positionOf(target);
+        // 6mの手前から、走り(3.6m/s)でまっすぐ虫のほうへ寄っていく
+        let dist = 6;
+        let caught = false;
+        for (let step = 0; step < 40 && dist > 0.5; step++) {
+          const q = s.positionOf(target);
+          const px = q.x + dist, pz = q.z;
+          s.update(1 / 30, day, DAY, { x: px, z: pz, speed: 3.6 });
+          const cur = s.active.find((b) => b.key === target.key);
+          if (!cur || cur.fleeT > 0) break;
+          if (s.nearestCatchable(px, pz)?.bug.key === target.key) {
+            caught = true;
+            break;
+          }
+          dist -= 3.6 / 30;
+        }
+        expect(caught, `day${day} ${target.bug}@(${t0.x.toFixed(1)},${t0.z.toFixed(1)})`).toBe(true);
+      }
+    }
   });
 
-  it('歩いて近づけば逃げない。捕獲圏(1.6m)に入れる', () => {
+  it('近すぎる状態が つづくと にげる。にげても近くに とまり直して 消えない', () => {
     const s = fresh(3, DAY);
     const target = s.active[0];
     const def = BUG_BY_ID[target.bug];
-    const p = s.positionOf(target);
+    const before = s.activeCount;
+    const fromSpot = target.spot;
+    const at = () => s.positionOf(target);
+    // 走ったまま runFlee の内がわに 居すわりつづける
+    for (let i = 0; i < Math.ceil((BUG_SPOOK_SEC + 0.3) / 0.1); i++) {
+      const q = at();
+      s.update(0.1, 3, DAY, { x: q.x + def.runFlee * 0.5, z: q.z, speed: 3.6 });
+    }
+    const fleeing = s.active.find((b) => b.key === target.key);
+    expect(fleeing, 'にげても消えない').toBeDefined();
+    expect(fleeing!.fleeT, `${BUG_SPOOK_SEC}秒 近すぎたら にげはじめる`).toBeGreaterThan(0);
+    expect(s.nearestCatchable(at().x, at().z)?.bug.key).not.toBe(target.key); // にげ中は捕れない
+    // にげ終わったら「近くのスポットへ とまり直す」。数は減らない
+    run(s, BUG_FLEE_SEC + 0.4, 3, DAY, null);
+    const landed = s.active.find((b) => b.key === target.key);
+    expect(landed, 'とまり直すので消えない').toBeDefined();
+    expect(landed!.fleeT).toBe(0);
+    expect(s.activeCount, '数は減らない').toBe(before);
+    if (landed!.spot !== fromSpot) {
+      const a = BUG_SPOTS[fromSpot], b2 = BUG_SPOTS[landed!.spot];
+      expect(Math.hypot(a.x - b2.x, a.z - b2.z), '追いかけられる距離に とまり直す')
+        .toBeLessThanOrEqual(BUG_HOP_R);
+    }
+  });
+
+  it('とまり直した直後は もう にげない(追いついた子が つかまえられる)', () => {
+    const s = fresh(3, DAY);
+    const target = s.active[0];
+    const def = BUG_BY_ID[target.bug];
+    for (let i = 0; i < Math.ceil((BUG_SPOOK_SEC + 0.3) / 0.1); i++) {
+      const q = s.positionOf(target);
+      s.update(0.1, 3, DAY, { x: q.x + def.runFlee * 0.5, z: q.z, speed: 3.6 });
+    }
+    run(s, BUG_FLEE_SEC + 0.4, 3, DAY, null);
+    // 着地点に走って追いつき、そのまま張りつく
+    for (let i = 0; i < Math.ceil((BUG_SETTLE_SEC - 0.4) / 0.1); i++) {
+      const q = s.positionOf(target);
+      s.update(0.1, 3, DAY, { x: q.x + def.runFlee * 0.5, z: q.z, speed: 3.6 });
+    }
+    const b = s.active.find((x) => x.key === target.key);
+    expect(b!.fleeT, 'とまり直した直後は にげない').toBe(0);
+    const q = s.positionOf(b!);
+    expect(s.nearestCatchable(q.x + def.runFlee * 0.5, q.z)?.bug.key, '捕獲圏の中').toBe(target.key);
+  });
+
+  it('歩いて近づけば逃げない。捕獲圏(2.6m)に入れる', () => {
+    const s = fresh(3, DAY);
+    const target = s.active[0];
+    const def = BUG_BY_ID[target.bug];
     // 歩き(速さ1.4 m/s)で、その虫の walkFlee のすぐ外がわに立つ
     const stand = def.walkFlee + 0.15;
     for (let i = 0; i < 8; i++) {
@@ -478,12 +592,11 @@ describe('v9 虫のふるまい(BugSystem)', () => {
     const still = s.active.find((b) => b.key === target.key);
     expect(still, '歩きでは逃げない').toBeDefined();
     expect(still!.fleeT).toBe(0);
-    expect(still!.wary, '3m以内なので警戒はする').toBe(true);
+    expect(still!.wary, '警戒圏の内がわなので警戒はする').toBe(true);
     const q = s.positionOf(target);
     const hit = s.nearestCatchable(q.x + stand, q.z);
     expect(hit?.bug.key, '捕獲圏に入っている').toBe(target.key);
     expect(hit!.distance).toBeLessThan(BUG_CATCH_R);
-    void p;
   });
 
   it('遠くにいるあいだは警戒しない', () => {
@@ -491,6 +604,15 @@ describe('v9 虫のふるまい(BugSystem)', () => {
     s.update(0.25, 3, DAY, { x: 200, z: 200, speed: 3.6 });
     for (const b of s.active) expect(b.wary).toBe(false);
     expect(s.nearestCatchable(200, 200)).toBeNull();
+  });
+
+  it('予告ヒント用に、捕獲圏の外の虫も半径をひろげれば拾える', () => {
+    const s = fresh(3, DAY);
+    const target = s.active[0];
+    const q = s.positionOf(target);
+    const stand = (BUG_CATCH_R + BUG_HINT_R) / 2; // 捕獲圏の外・予告圏の中
+    expect(s.nearestCatchable(q.x + stand, q.z), '既定では拾わない').toBeNull();
+    expect(s.nearestCatchable(q.x + stand, q.z, BUG_HINT_R)?.bug.key, '予告圏では拾う').toBe(target.key);
   });
 
   it('つかまえると消えて、そのスポットは すぐには使われない', () => {

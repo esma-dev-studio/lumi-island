@@ -121,7 +121,7 @@ export function load(): GameState | null {
           s.npcs[id].friendship = Math.floor(numIn(n.friendship, 0, 99999, 0));
           s.npcs[id].talkedToday = n.talkedToday === true;
           // 項目が無い旧セーブ・壊れた値は false(=きょうはまだあげていない)。
-          // 1日1回の制限を「甘い側」に倒すので、読みこみで詰まることはない
+          // v11以降は回数の制限がないので、これは「きょう あげたか」の記録にすぎない
           s.npcs[id].giftedToday = n.giftedToday === true;
         }
       }

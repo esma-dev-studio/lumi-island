@@ -5,8 +5,11 @@ import { questFor, acceptQuest, completeQuest } from '../systems/QuestSystem';
 import { currentObjective } from '../systems/ObjectiveSystem';
 import { NPC_BY_ID } from '../data/npcs';
 import type { ItemId } from '../data/items';
-import { applyGift, canGift } from '../systems/GiftSystem';
-import { HOME_EXPAND_COST, canOrderHomeExpansion, orderHomeExpansion } from '../systems/HomeExpansion';
+import { applyGift, canGift, friendshipText, type GiftResult } from '../systems/GiftSystem';
+import { burst } from '../entities/effects';
+import {
+  canOrderHomeExpansion, homeExpandStage, homeExpandTalkLine, nextHomeExpandCost, orderHomeExpansion,
+} from '../systems/HomeExpansion';
 import type { NPCSystem } from '../systems/NPCSystem';
 import type { PlayerController } from '../systems/PlayerController';
 import type { DialogueUI } from '../ui/DialogueUI';
@@ -88,6 +91,17 @@ export class QuestDialogueController {
       const variants = npcDef.greetings[tier];
       lines = [variants[(d.state.time.day + f) % variants.length]];
     }
+    // 依頼の受注(offer)と報告(done)は、会話の終わりに状態が変わる大事な場面。
+    // そこには寄り道の入口(おくりもの・こうじ)も、こうじの案内も足さない
+    // (ふだんのあいさつと、進行中の雑談にだけ足す)。
+    const questCritical = q !== null && (q.mode === 'offer' || q.mode === 'done');
+    // v11 「へやを ひろくできる」ことを、大工(ツムギ)の会話で かならず教える。
+    // ボタンを押さなくても読める「1行の案内」にしてあるので、お金が足りない子にも
+    // 「300ルミナ ためればいい」と伝わる(文面は HomeExpansion.homeExpandTalkLine)。
+    if (!questCritical && npcId === HOME_BUILDER_NPC) {
+      const talk = homeExpandTalkLine(d.state);
+      if (talk) lines = [...lines, talk];
+    }
     if (!rtNpc.talkedToday) {
       rtNpc.talkedToday = true;
       rtNpc.friendship += 1;
@@ -98,14 +112,13 @@ export class QuestDialogueController {
       after?.();
     };
     d.dialogue.show(npcDef.name, lines, endConversation);
-    // 「おくりものをする」は、依頼の受注(offer)と報告(done)の会話には出さない。
-    // その2つは会話の終わりに状態が変わる大事な場面なので、寄り道の入口を作らない
-    // (進行中の雑談とふだんのあいさつには出す。押さなければ何も起きない任意ボタン)。
-    const questCritical = q !== null && (q.mode === 'offer' || q.mode === 'done');
+    // 「おくりものをする」も下の「こうじを たのむ」も、押さなければ何も起きない任意ボタン。
+    // questCritical(受注・報告)の会話には出さない(理由は上の questCritical のところ)。
     // v10 家の拡張こうじ。おくりものと同じ「最終行の任意ボタン」の仕組みで足す。
     // 大工はツムギだけ・未発注・お金が足りているときにだけ出る(発注すると消える)
-    if (!questCritical && npcId === HOME_BUILDER_NPC && canOrderHomeExpansion(d.state)) {
-      d.dialogue.addExtraAction(`こうじを たのむ(${HOME_EXPAND_COST}ルミナ)`, () =>
+    const cost = nextHomeExpandCost(d.state);
+    if (!questCritical && npcId === HOME_BUILDER_NPC && cost !== null && canOrderHomeExpansion(d.state)) {
+      d.dialogue.addExtraAction(`こうじを たのむ(${cost}ルミナ)`, () =>
         this.openHomeOrder(npcId, endConversation)
       );
     }
@@ -122,6 +135,10 @@ export class QuestDialogueController {
   private openHomeOrder(npcId: string, endConversation: () => void): void {
     const d = this.deps;
     const name = NPC_BY_ID[npcId].name;
+    // 代金は「いまの段階のつぎ」を1か所から取る(1回目=300 / 2回目=800)。
+    // 押せる状態でしかここへ来ないので、null にはならない
+    const cost = nextHomeExpandCost(d.state) ?? 0;
+    const second = homeExpandStage(d.state) >= 1; // 2回目のこうじ(もう1回ひろげる)
     const back = (line: string): void => {
       d.dialogue.blockAdvance = false;
       d.dialogue.onBlockedAdvance = null;
@@ -133,11 +150,14 @@ export class QuestDialogueController {
         return;
       }
       sfx('coin');
-      toast(`こうじを たのんだ(-${HOME_EXPAND_COST}ルミナ)`, 'lumina');
+      toast(`こうじを たのんだ(-${cost}ルミナ)`, 'lumina');
       back('あしたの あさには できあがるわ。たのしみに していてね!');
       save(d.state);
     };
-    d.dialogue.show(name, [`へやを ひろく する こうじ。${HOME_EXPAND_COST}ルミナで いい?`], endConversation);
+    const ask = second
+      ? `へやを もっと ひろく する こうじ。${cost}ルミナで いい?`
+      : `へやを ひろく する こうじ。${cost}ルミナで いい?`;
+    d.dialogue.show(name, [ask], endConversation);
     d.dialogue.blockAdvance = true;
     d.dialogue.onBlockedAdvance = (): void => back('そう? きが かわったら いつでも 言ってね。');
     d.dialogue.setExtraActions([
@@ -166,18 +186,46 @@ export class QuestDialogueController {
       sfx('coin');
       // 反応セリフは同じ会話のつづき。終わりかたは元の会話と同じ(カメラ・依頼処理を1本にする)
       d.dialogue.show(npcDef.name, r.lines, endConversation);
-      toast(`${npcDef.name}と なかよし +${r.gain}`, 'heart');
-      if (r.reward.letter) {
-        toast(`${npcDef.name}から お礼の手紙: 「${r.reward.letter}」`, 'heart');
-        sfx('quest');
+      // v11 おくりものは1日に なんどでも わたせる。会話をやり直させず、
+      // 反応セリフの最終行に そのまま「もういちど」の入口を出す(あげられる物がある間だけ)。
+      if (canGift(d.state, npcId)) {
+        d.dialogue.addExtraAction('もういちど おくる', () => this.openGift(npcId, endConversation));
       }
-      if (r.reward.recipeName) toast(`とくべつなレシピ「${r.reward.recipeName}」を おぼえた!`, r.reward.recipeIcon);
-      if (r.reward.best) {
-        toast(`${npcDef.name}から 「しんゆうのあかし」を もらった!`, 'heart');
-        sfx('quest');
-      }
+      this.announceGift(npcId, r);
       save(d.state);
     };
-    this.giftUI.show(npcDef.name);
+    this.giftUI.show(npcId);
+  }
+
+  /**
+   * おくりものの結果を知らせる。なかよし度は「+いくつ」と「いまいくつ/さいだい」の
+   * 両方を数字で出す(ハートだけでは 1回ぶんの変化が 見た目に出ないことがある)。
+   */
+  private announceGift(npcId: string, r: GiftResult): void {
+    const name = NPC_BY_ID[npcId].name;
+    if (r.gain > 0) {
+      toast(`${name}と なかよし +${r.gain} → ${friendshipText(r.friendship)}`, 'heart');
+      this.sparkleAt(npcId); // 上がった瞬間の きらめき
+    } else if (r.atMax) {
+      toast(`${name}と なかよし ${friendshipText(r.friendship)} もう さいこう!`, 'heart');
+    } else {
+      toast(`${name}と なかよし ${friendshipText(r.friendship)}`, 'heart');
+    }
+    if (r.reward.letter) {
+      toast(`${name}から お礼の手紙: 「${r.reward.letter}」`, 'heart');
+      sfx('quest');
+    }
+    if (r.reward.recipeName) toast(`とくべつなレシピ「${r.reward.recipeName}」を おぼえた!`, r.reward.recipeIcon);
+    if (r.reward.best) {
+      toast(`${name}から 「しんゆうのあかし」を もらった!`, 'heart');
+      sfx('quest');
+    }
+  }
+
+  /** なかよし度が上がった瞬間の小さなきらめき(既存の粒バーストを そのまま使う) */
+  private sparkleAt(npcId: string): void {
+    const p = this.deps.npcs.positionOf(npcId);
+    if (!p || p.hidden) return;
+    burst(p.x, p.y + 1.35, p.z, 'berry', 12); // ハートに近い ももいろの粒
   }
 }
