@@ -96,10 +96,12 @@ describe('新レシピ4種', () => {
     expect(ITEMS.f_flowerbed.glow).toBeUndefined();
     expect(ITEMS.f_shelldeco.glow).toBeUndefined();
     const glowing = (Object.keys(ITEMS) as ItemId[]).filter((k) => ITEMS[k].glow);
-    // v7-P2で「はなかざり」(室内向け・弱い光)、v8で「うみのモビール」(弱い光)が加わった。
+    // v7-P2で「はなかざり」(室内向け・弱い光)、v8で「うみのモビール」(弱い光)、
+    // v11第2章で「とうだいのランタン」(ロカのお礼レシピ)が加わった。
     // 数え方(ITEMSのglowフラグ)は変えていない
     expect(glowing.sort()).toEqual([
-      'f_flowervase', 'f_lantern', 'f_mushlamp', 'f_seamobile', 'f_starlantern', 'f_stonelamp',
+      'f_flowervase', 'f_lantern', 'f_lighthouse_lantern', 'f_mushlamp', 'f_seamobile',
+      'f_starlantern', 'f_stonelamp',
     ]);
   });
 

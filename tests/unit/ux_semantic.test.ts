@@ -449,11 +449,14 @@ describe('v6の新しい採取ヒント(4種)', () => {
     expect(GATHER_CATEGORIES).toContain('gatherShell');
     expect(GATHER_CATEGORIES).toContain('gatherStar');
     // v6の6+4=10に、v8の拾いもの4種(こえだ・かりくさ・ねんど・うきだま)を足して14、
-    // v9のカタツムリ(雨の日だけ・手でひろう)と わら(カマでかる)を足して16
+    // v9のカタツムリ(雨の日だけ・手でひろう)と わら(カマでかる)を足して16、
+    // v11第2章の入り江の2種(ほしくさ・ひかりの貝)を足して18
     expect(GATHER_CATEGORIES).toContain('gatherSnail');
     expect(GATHER_CATEGORIES).toContain('gatherStraw');
+    expect(GATHER_CATEGORIES).toContain('gatherStarweed');
+    expect(GATHER_CATEGORIES).toContain('gatherLightshell');
     expect(new Set(GATHER_CATEGORIES).size).toBe(GATHER_CATEGORIES.length); // 同じ名前を二重に足していない
-    expect(GATHER_CATEGORIES.length).toBe(16);
+    expect(GATHER_CATEGORIES.length).toBe(18);
   });
 
   it('v9: カタツムリをひろう は採取あつかい(unknownにしない)', () => {

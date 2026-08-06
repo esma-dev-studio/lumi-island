@@ -92,7 +92,9 @@ describe('ロカのデータ整合(src/data/npcs.ts)', () => {
     }
     expect(dailyLine(ROKA, Number.NaN)).not.toBeNull(); // 壊れた値でも落ちない
     expect(dailyLine({ ...ROKA, dailyLines: [] }, 3)).toBeNull();
-    expect(dailyLine(NPC_BY_ID.minamo, 3)).toBeNull(); // 持っていないNPCはnull
+    // 持っていないNPCはnull(v11第2章で ミナモとノクトには伏線の ひとことが入ったので、
+    // ここは まだ持っていない ツムギで確かめる)
+    expect(dailyLine(NPC_BY_ID.tsumugi, 3)).toBeNull();
   });
 
   it('一人称は「ぼく」。「わたし」「おれ」は使わない', () => {

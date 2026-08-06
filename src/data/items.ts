@@ -15,6 +15,8 @@ export type ItemId =
   | 'shard_pot' | 'shiny_stone' | 'gold_piece' | 'straw'
   // v11 よるの入り江でとれる2種(道具はいらない)
   | 'starweed' | 'lightshell'
+  // v11第2章 とうだいの あかりを ともす「ひかりのレンズ」(クラフトで作る だいじなもの)
+  | 'lens'
   | 'f_bench' | 'f_lantern' | 'f_stonelamp' | 'f_table' | 'f_planter'
   | 'f_chair' | 'f_shelf' | 'f_rug' | 'f_pot' | 'f_sign'
   | 'f_flowerbed' | 'f_mushlamp' | 'f_shelldeco' | 'f_starlantern'
@@ -28,6 +30,8 @@ export type ItemId =
   | 'f_aquarium'
   // v9 おくりもの: なかよし度5でおしえてもらう とくべつな家具3種(NPC1人につき1つ)
   | 'f_finetable' | 'f_fishtrophy' | 'f_starmap'
+  // v11第2章 ロカのお礼レシピで作る「とうだいのランタン」(家に かざれる 小さな灯台)
+  | 'f_lighthouse_lantern'
   // v7-P2 模様替え(かべがみ・ゆかいた)。使っても無くならないので、各1個あれば足りる
   | 'wall_cream' | 'wall_sky' | 'wall_leaf'
   | 'floor_wood' | 'floor_tile' | 'floor_rug';
@@ -41,6 +45,12 @@ export interface ItemDef {
   kind: 'material' | 'food' | 'furniture' | 'decor';
   desc: string;
   glow?: boolean; // 置いたとき夜に光る家具
+  /**
+   * だいじなもの(依頼で使う道具)。売る・おくりものにする ができない。
+   * 「うっかり手ばなして 依頼が進められなくなる」を構造で防ぐための印で、
+   * 売値は 0 にそろえる(src/data/items.ts validateItemData が機械検査する)。
+   */
+  keyItem?: boolean;
 }
 
 export const ITEMS: Record<ItemId, ItemDef> = {
@@ -83,6 +93,11 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   // ---- v11 よるの入り江の2種(ふねで わたった先の 野原と砂浜でとれる) ----
   starweed: { id: 'starweed', name: 'ほしくさ', sell: 12, kind: 'material', desc: 'よるの入り江の野原にゆれる 銀いろの草。穂が ほしくずのように光る' },
   lightshell: { id: 'lightshell', name: 'ひかりの貝', sell: 20, kind: 'material', desc: '入り江の砂浜でひろえる貝。夜は 中がわが あお白く光る' },
+  // ---- v11第2章 ひかりのレンズ(とうだいに つける だいじなもの) ----
+  lens: {
+    id: 'lens', name: 'ひかりのレンズ', sell: 0, kind: 'material', keyItem: true,
+    desc: 'ひかりの貝と ほしくさと こうせきで つくった、とうだいの あかりの レンズ。うることは できない',
+  },
   f_bench: { id: 'f_bench', name: 'ウッドベンチ', sell: 30, kind: 'furniture', desc: 'すわってひと休みできるベンチ' },
   f_lantern: { id: 'f_lantern', name: 'ランタン', sell: 40, kind: 'furniture', desc: '夜をやさしく照らす', glow: true },
   f_stonelamp: { id: 'f_stonelamp', name: 'いしのランプ', sell: 55, kind: 'furniture', desc: 'ルミナこうせきの明かり', glow: true },
@@ -118,6 +133,11 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   f_finetable: { id: 'f_finetable', name: 'こだわりのテーブル', sell: 70, kind: 'furniture', desc: 'ツムギが おしえてくれた、木めを えらんで 組んだ とくべつなテーブル' },
   f_fishtrophy: { id: 'f_fishtrophy', name: 'さかなのトロフィー', sell: 65, kind: 'furniture', desc: 'ミナモが おしえてくれた、木の台に つった魚を かざる トロフィー' },
   f_starmap: { id: 'f_starmap', name: 'ほしぞらのちず', sell: 80, kind: 'furniture', desc: 'ノクトが おしえてくれた、夜空の 星のならびを うつしとった ちず' },
+  // ---- v11第2章 ロカのお礼レシピ。とうだいの形をした 小さなランプ(夜に光る) ----
+  f_lighthouse_lantern: {
+    id: 'f_lighthouse_lantern', name: 'とうだいのランタン', sell: 62, kind: 'furniture', glow: true,
+    desc: 'ロカが おしえてくれた、小さな とうだいの あかり。夜になると てっぺんが ぽうっと ともる',
+  },
   // ---- v10 展示家具: つった魚を 入れて かざる ----
   f_aquarium: { id: 'f_aquarium', name: 'すいそう', sell: 48, kind: 'furniture', desc: 'つった魚を えらんで 入れられる ガラスの水そう。中を 魚が およぐ' },
   // ---- v7-P2 模様替え(室内で「つかう」。何度でも かえられる) ----
@@ -264,6 +284,12 @@ export const RECIPES: RecipeDef[] = [
   { id: 'r_woodtable_fine', name: 'こだわりのテーブル', out: 'f_finetable', outKind: 'item', cost: { wood: 4, shard_pot: 1 } },
   { id: 'r_fishtrophy', name: 'さかなのトロフィー', out: 'f_fishtrophy', outKind: 'item', cost: { fish: 1, shell: 2 } },
   { id: 'r_starmap', name: 'ほしぞらのちず', out: 'f_starmap', outKind: 'item', cost: { starshard: 1, straw: 2, moss: 2 } },
+  // ---- v11第2章 ----
+  // ひかりのレンズ: ロカの「ひらめき」でだけ おぼえる(INITIAL_RECIPES にも RECIPE_DISCOVERY にも入れない)。
+  // 材料は入り江でとれる2種+島のこうせき=「島と入り江の両方をめぐった証」になる組み合わせ。
+  { id: 'r_lens', name: 'ひかりのレンズ', out: 'lens', outKind: 'item', cost: { lightshell: 3, starweed: 2, ore: 2 } },
+  // とうだいのランタン: ロカと なかよし度5の お礼でおぼえる(ほかの3人と同じ流儀)
+  { id: 'r_lighthouse_lantern', name: 'とうだいのランタン', out: 'f_lighthouse_lantern', outKind: 'item', cost: { lightshell: 2, wood: 2 } },
 ];
 
 // 最初から知っているレシピ。
@@ -311,6 +337,11 @@ export function validateItemData(): string[] {
   }
   for (const s of SHOP_STOCK) {
     if (!(s.item in ITEMS)) problems.push(`店の品${s.item}が存在しない`);
+  }
+  // だいじなもの(keyItem)は うれない・あげられない。売値は0にそろえる
+  // (0でないと「うる」画面から消したのに値段だけ残っている、というちぐはぐが起きる)
+  for (const [id, def] of Object.entries(ITEMS)) {
+    if (def.keyItem && def.sell !== 0) problems.push(`だいじなもの${id}の売値が0でない`);
   }
   // 模様替え: 表とITEMSのkindが食い違うと「つかう」が出ない/出すぎるので、両方向を見る
   for (const id of Object.keys(DECOR_SLOT)) {

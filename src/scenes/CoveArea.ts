@@ -18,8 +18,8 @@ import {
   COVE, COVE_PIER, COVE_SEA_Y, coveGroundY, coveHeightLocal, coveWalkable,
 } from '../entities/terrain';
 import {
-  makeBoat, makeCoveGround, makeCovePier, makeCoveSea, makeLighthouse, makeLightShell,
-  makeRubble, makeShoreGlow, makeStarweed, type BoatMesh, type ShoreGlow,
+  makeBoat, makeCoveGround, makeCovePier, makeCoveSea, makeLighthouse, makeLighthouseLight, makeLightShell,
+  makeRubble, makeShoreGlow, makeStarweed, LIGHTHOUSE_LAMP_Y, type BoatMesh, type LighthouseLight, type ShoreGlow,
 } from '../entities/cove';
 import { makeLamp } from '../entities/buildings';
 import { attachLightPool, registerGlowSource } from '../entities/effects';
@@ -28,6 +28,13 @@ import type { CircleCollider } from './IslandScene';
 
 /** 波うちぎわの燐光の色(島の発光3系統のうちミント) */
 const GLOW_TINT = Color3.FromHexString('#9fe8c8');
+/** とうだいの あかりの色(島の発光3系統のうちアンバー) */
+const LAMP_TINT = Color3.FromHexString('#ffe0a8');
+/**
+ * ビームの まわる速さ(ラジアン/秒)。1周およそ12秒。
+ * 本物の灯台のように「ゆっくり」まわす: 速いと おもちゃのパトランプに見える。
+ */
+const BEAM_SPEED = (Math.PI * 2) / 12;
 
 /** ローカル座標(入り江の中心が原点)を世界座標へ */
 export const coveWorld = (lx: number, lz: number): { x: number; z: number } => ({ x: COVE.x + lx, z: COVE.z + lz });
@@ -83,6 +90,27 @@ export function boatPrompt(repaired: boolean): BoatPrompt {
   return repaired
     ? { hint: '<kbd>E</kbd>ふねに のる', ride: true }
     : { hint: 'ふねは しゅうりちゅう みたい', ride: false };
+}
+
+/**
+ * こわれた灯台のとびらの、Eの案内。
+ * ふねの案内(boatPrompt)と同じ流儀で、「出す文」と「Eで実際に起きること」を1か所で決める。
+ */
+export interface LighthousePrompt {
+  hint: string;
+  attach: boolean; // true=Eでレンズを つける(点灯の見せ場がはじまる)
+}
+/**
+ * @param lit      もう ともっているか(flags.lighthouse_lit)
+ * @param onQuest  「とうだいに レンズを つけよう」を引き受けているか
+ * @param hasLens  ひかりのレンズを 持っているか
+ */
+export function lighthousePrompt(lit: boolean, onQuest: boolean, hasLens: boolean): LighthousePrompt {
+  if (lit) return { hint: 'とうだいの あかりが まわっている', attach: false };
+  if (!onQuest) return { hint: 'とびらは しまっている', attach: false };
+  // 依頼中にレンズが無い場合は「理由の表示」だけ(採取の道具不足とまったく同じ流儀)
+  if (!hasLens) return { hint: 'つけるには ひかりのレンズが ひつよう', attach: false };
+  return { hint: '<kbd>E</kbd>とうだいに レンズを つける', attach: true };
 }
 
 /** こわれた灯台の立つ位置(ローカル) */
@@ -156,6 +184,14 @@ export class CoveArea {
   readonly root: Mesh;
   /** 帰りの桟橋にもやってある小舟(航海の演出でこれを動かす) */
   readonly boat: BoatMesh;
+  /** v11第2章 とうだいの あかり(ランタン室・光る球・回るビーム) */
+  readonly light: LighthouseLight;
+  /** あかりが ともっているか(セーブは flags.lighthouse_lit) */
+  private lit = false;
+  /** 点灯の見せ場のあいだだけ 0→1 へ上げる強さ(ふだんは1) */
+  private litLevel = 0;
+  /** ビームの向き(ラジアン)。乱数を使わず、時間で決まる */
+  private beamAngle = 0;
   private shore: ShoreGlow;
   private clumps: Mesh[] = [];
   /** 入り江にいるあいだ消す島の見た目(IslandSceneが build の最後に撮ったスナップショット) */
@@ -206,7 +242,16 @@ export class CoveArea {
     }
 
     // ---- こわれた灯台 ----
-    put(makeLighthouse(scene), LIGHTHOUSE.lx, LIGHTHOUSE.lz);
+    const tower = put(makeLighthouse(scene), LIGHTHOUSE.lx, LIGHTHOUSE.lz);
+    // v11第2章 レンズを つけたあとに出てくる あかり。塔の子にして、位置を1か所で決める
+    this.light = makeLighthouseLight(scene);
+    this.light.room.parent = tower;
+    this.light.room.isPickable = false;
+    this.light.lamp.parent = tower;
+    this.light.pivot.parent = tower;
+    this.light.room.setEnabled(false);
+    this.light.lamp.setEnabled(false);
+    this.light.pivot.setEnabled(false);
     for (let i = 0; i < ROCK_SPOTS.length; i++) {
       const [lx, lz, s] = ROCK_SPOTS[i];
       // 岩の底(平らにつぶした面)はメッシュの原点より 0.102×大きさ ぶん上にあるので、
@@ -301,6 +346,49 @@ export class CoveArea {
   }
 
   /**
+   * とうだいの あかりを ともす/消す。
+   * @param lit ともっているか(セーブの flags.lighthouse_lit)
+   * @param animate true=見せ場(0からゆっくり立ち上げる) / false=セーブからの復元(すぐ全開)
+   */
+  setLighthouseLit(lit: boolean, animate = false): void {
+    this.lit = lit;
+    this.litLevel = lit && !animate ? 1 : 0;
+    this.light.room.setEnabled(lit);
+    this.light.lamp.setEnabled(lit);
+    this.light.pivot.setEnabled(lit);
+    if (!lit) {
+      this.light.beamMat.alpha = 0;
+      this.beamAngle = 0;
+      this.light.pivot.rotation.y = 0;
+    }
+  }
+
+  /** いま あかりが ともっているか(検証・撮影用に読めるようにしておく) */
+  get lighthouseLit(): boolean {
+    return this.lit;
+  }
+
+  /** ビームの向き(ラジアン。回っていることを機械で確かめられるようにする) */
+  get beamRotation(): number {
+    return this.light.pivot.rotation.y;
+  }
+
+  /** 点灯の見せ場のあいだの立ち上がり(0=まだ暗い 1=全開)。SequenceDirectorが進める */
+  setLitLevel(level: number): void {
+    this.litLevel = Math.max(0, Math.min(1, level));
+  }
+
+  /** ランタンの世界座標(見せ場のカメラが見上げる点) */
+  lampWorldY(): number {
+    return coveHeightLocal(LIGHTHOUSE.lx, LIGHTHOUSE.lz) + LIGHTHOUSE_LAMP_Y;
+  }
+
+  /** 灯台の世界座標(x,z) */
+  get lighthouseWorld(): { x: number; z: number } {
+    return coveWorld(LIGHTHOUSE.lx, LIGHTHOUSE.lz);
+  }
+
+  /**
    * 航海の演出用: 入り江の船を世界座標へ置く。
    * 船は入り江の入れ物(root)の子なので、ここでオフセットを引いて渡す
    * (呼ぶ側が rootの位置を知らなくていいようにする)。
@@ -330,5 +418,23 @@ export class CoveArea {
       this.clumps[i].rotation.z = Math.sin(this.t * 0.8 + p) * 0.045;
       this.clumps[i].rotation.x = Math.sin(this.t * 0.63 + p * 1.4) * 0.03;
     }
+    this.tickLight(dtSec, hour);
+  }
+
+  /**
+   * とうだいの あかりの1フレーム(ゆっくり回るビームと、球の明るさ)。
+   *
+   * update() とは別の入口にしてあるのは、点灯の見せ場のあいだ WorldPauseController が
+   * ワールドを凍らせて island.update を呼ばないため。SequenceDirector がここだけを直接呼ぶ
+   * (「見せ場でビームが止まっている」を構造的に起こさない)。
+   */
+  tickLight(dtSec: number, hour: number): void {
+    if (!this.lit) return;
+    this.beamAngle = (this.beamAngle + dtSec * BEAM_SPEED) % (Math.PI * 2);
+    this.light.pivot.rotation.y = this.beamAngle;
+    const k = this.litLevel;
+    // 昼は うすく、夜は はっきり。強さは litLevel(見せ場の立ち上がり)と かけ合わせる
+    this.light.beamMat.alpha = 0.19 * k * (0.5 + 0.5 * coveNightLevel(hour));
+    this.light.lampMat.emissiveColor.copyFrom(LAMP_TINT).scaleInPlace(0.35 + 0.65 * k);
   }
 }

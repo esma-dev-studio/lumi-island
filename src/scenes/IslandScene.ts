@@ -2,10 +2,11 @@
 import { Scene } from '@babylonjs/core/scene';
 import type { Engine } from '@babylonjs/core/Engines/engine';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
+import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { CascadedShadowGenerator } from '@babylonjs/core/Lights/Shadows/cascadedShadowGenerator';
 import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
 import {
-  buildTerrain, coveGroundY, coveWalkable, insideCoveArea, terrainHeight, walkableGround, type Terrain,
+  buildTerrain, COVE, coveGroundY, coveWalkable, insideCoveArea, terrainHeight, walkableGround, type Terrain,
 } from '../entities/terrain';
 import { initEffects, attachLightPool, registerGlowSource, unregisterGlowSource, burst } from '../entities/effects';
 import { buildWater, onPier, updatePond, PIER, SEA_Y, type WaterRefs } from '../entities/water';
@@ -29,8 +30,8 @@ import {
 } from '../data/island';
 import { DayNight } from './DayNight';
 import { HomeInterior, homeFloorY, insideHomeFloor, HOME_RECTS, HOME_CIRCLES } from './HomeInterior';
-import { CoveArea, COVE_CIRCLES, COVE_NODES, ISLAND_BOAT } from './CoveArea';
-import { makeBoat, type BoatMesh } from '../entities/cove';
+import { CoveArea, COVE_CIRCLES, COVE_NODES, ISLAND_BOAT, coveNightLevel } from './CoveArea';
+import { makeBoat, makeHorizonSpark, type BoatMesh } from '../entities/cove';
 import { buildGarden, type GardenView } from '../entities/garden';
 import { gardenFenceColliders } from '../systems/GardenSystem';
 import type { GardenPlot } from '../game/GameState';
@@ -81,6 +82,12 @@ export class IslandScene {
   home!: HomeInterior; // マイホームの室内(屋外にいるあいだは消えている)
   cove!: CoveArea; // v11 よるの入り江(島にいるあいだは消えている)
   islandBoat!: BoatMesh; // 島の桟橋によこづけしてある小舟(しゅうり前は こわれた部品つき)
+  /** v11第2章 島から見える 水平線のきらめき(とうだいが ともってからの夜だけ出る) */
+  horizonSpark!: Mesh;
+  private horizonSparkMat!: StandardMaterial;
+  /** とうだいが ともっているか(セーブの flags.lighthouse_lit) */
+  private lighthouseLit = false;
+  private sparkT = 0;
   garden!: GardenView; // 自宅のお庭(柵・門・花だん)
   shadows!: CascadedShadowGenerator;
   circles: CircleCollider[] = [];
@@ -426,11 +433,28 @@ export class IslandScene {
     caster(this.islandBoat.root);
     this.islandBoat.fixed.setEnabled(false); // なおるまでオール・ランタンは出さない
 
+    // ---- v11第2章 島から見える 夜の水平線のきらめき(とうだいの あかり) ----
+    // 入り江の方角(原点から見た COVE の向き)へ100mの海上に置く。
+    // 島でいちばん外にある桟橋の先からでも50m以上あるので「遠くの点」に見える。
+    // ここで作るのは「この行より上=島の見た目」に入れて、入り江にいるあいだ自動で消えるようにするため
+    const spark = makeHorizonSpark(s);
+    const dir = Math.hypot(COVE.x, COVE.z);
+    this.horizonSpark = spark.mesh;
+    this.horizonSparkMat = spark.mat;
+    this.horizonSpark.position.set((COVE.x / dir) * 100, 5.0, (COVE.z / dir) * 100);
+    // 100m先の「点」に見える大きさ(実測で決めた: 大きいと のぼる月に見える)
+    this.horizonSpark.scaling.setAll(0.55);
+    this.horizonSpark.setEnabled(false);
+
     // ---- v11 よるの入り江(別空間。島にいるあいだは消えている) ----
     // ここまでに作ったメッシュ=島の見た目ぜんぶ。入り江にいるあいだはこれを丸ごと消す
     // (逆に、島にいるあいだは入り江のrootを消す)。この1行より下で作るものは入り江のもの。
     const islandMeshes = s.meshes.filter((m): m is Mesh => m instanceof Mesh);
     this.cove = new CoveArea(s, this.water.seaMat, islandMeshes);
+    // ビームは34mの大きな半透明面。発光レイヤーに焼くと画面ぜんたいがにじみ、負荷も上がるので外す
+    // (水面を発光レイヤーから外しているのと同じ理由)
+    this.dayNight.glow.addExcludedMesh(this.cove.light.beam);
+    this.dayNight.glow.addExcludedMesh(this.horizonSpark);
     for (const c of COVE_CIRCLES) this.circles.push(c);
     // 入り江の採取ノードも島と同じ nodes に入れる(InteractionSystemの道すじを1本にする)
     for (const def of COVE_NODES) {
@@ -446,6 +470,48 @@ export class IslandScene {
     this.islandBoat.broken.setEnabled(!repaired);
     this.islandBoat.fixed.setEnabled(repaired);
     this.cove.setBoatRepaired(repaired);
+  }
+
+  /**
+   * とうだいの あかりを 見た目へ反映する(入り江のビーム+島から見える水平線の点)。
+   * @param animate true=点灯の見せ場(0からゆっくり立ち上げる) / false=セーブからの復元
+   */
+  applyLighthouseLit(lit: boolean, animate = false): void {
+    this.lighthouseLit = lit;
+    this.cove.setLighthouseLit(lit, animate);
+    if (!lit) {
+      this.horizonSpark.setEnabled(false);
+      this.horizonSparkMat.alpha = 0;
+    }
+  }
+
+  /** とうだいが ともっているか(検証・撮影用) */
+  get isLighthouseLit(): boolean {
+    return this.lighthouseLit;
+  }
+
+  /**
+   * 島から見える 水平線のきらめき。
+   * 夜だけ・入り江の外にいるときだけ出す。ゆっくり明滅させて「回っている あかり」に見せる
+   * (実際のビームの回転と同じ12秒周期。ぴったり合わせると "同じもの" だと伝わる)。
+   */
+  private updateHorizonSpark(dt: number): void {
+    if (!this.lighthouseLit || this.cove.isActive) {
+      if (this.horizonSpark.isEnabled(false)) this.horizonSpark.setEnabled(false);
+      return;
+    }
+    const night = coveNightLevel(this.time.hour);
+    if (night <= 0.02) {
+      if (this.horizonSpark.isEnabled(false)) this.horizonSpark.setEnabled(false);
+      return;
+    }
+    this.sparkT = (this.sparkT + dt) % 12;
+    if (!this.horizonSpark.isEnabled(false)) this.horizonSpark.setEnabled(true);
+    // 12秒に1回、こちらを向いた瞬間だけ強く光る(sinの4乗で「ぱっ…ぱっ」にする)
+    const s = Math.max(0, Math.sin((this.sparkT / 12) * Math.PI * 2));
+    const pulse = s * s * s * s;
+    this.horizonSparkMat.alpha = night * (0.16 + 0.74 * pulse);
+    this.horizonSpark.scaling.setAll(0.55 + 0.35 * pulse);
   }
 
   /** 航海の演出用: 島がわ/入り江がわの船を世界座標へ置く(SequenceDirectorが毎フレーム呼ぶ) */
@@ -516,6 +582,7 @@ export class IslandScene {
     this.time.advance(dtSec);
     this.home.update(this.time.hour); // 室内灯(室内にいるときだけ効く)
     this.cove.update(dtSec, this.time.hour); // 波うちぎわの燐光・草のゆれ(入り江にいるときだけ効く)
+    this.updateHorizonSpark(dtSec); // 島から見える とうだいの あかり(点いていなければ即return)
     // ほしのかけら: この関数はWorldPauseControllerが「凍っていないフレーム」だけ呼ぶので、
     // ポーズ・会話・見せ場のあいだは進まない。睡眠で朝6時へ飛んだ場合も「夜が終わった」として消える
     this.updateStars(dtSec);

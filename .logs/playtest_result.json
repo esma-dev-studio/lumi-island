@@ -1,10 +1,10 @@
 {
   "completed": true,
   "homeRoundTrip": true,
-  "totalSec": 364,
+  "totalSec": 361,
   "timeline": [
     {
-      "sec": 2,
+      "sec": 3,
       "label": "タイトル表示"
     },
     {
@@ -24,15 +24,15 @@
       "label": "目標: q_wood_gather"
     },
     {
-      "sec": 19,
+      "sec": 24,
       "label": "はじめての採取"
     },
     {
-      "sec": 44,
+      "sec": 50,
       "label": "はじめての夜(発光を確認)"
     },
     {
-      "sec": 59,
+      "sec": 50,
       "label": "目標: q_wood_report"
     },
     {
@@ -44,162 +44,168 @@
       "label": "目標: q_fish_mats_wood"
     },
     {
-      "sec": 101,
+      "sec": 86,
       "label": "目標: q_fish_mats_stone"
     },
     {
-      "sec": 105,
+      "sec": 91,
       "label": "目標: q_fish_craft_r_sickle"
     },
     {
-      "sec": 106,
+      "sec": 92,
       "label": "はじめてのクラフト"
     },
     {
-      "sec": 106,
+      "sec": 92,
       "label": "目標: q_fish_mats_wood"
     },
     {
-      "sec": 127,
+      "sec": 120,
       "label": "目標: q_fish_mats_fiber"
     },
     {
-      "sec": 136,
+      "sec": 129,
       "label": "目標: q_fish_craft_r_rod"
     },
     {
-      "sec": 137,
+      "sec": 130,
       "label": "目標: q_fish_fish"
     },
     {
-      "sec": 156,
+      "sec": 151,
       "label": "目標: q_fish_report"
     },
     {
-      "sec": 199,
+      "sec": 195,
       "label": "目標: q_ore_offer"
     },
     {
-      "sec": 212,
+      "sec": 208,
       "label": "目標: q_ore_gather"
     },
     {
-      "sec": 221,
+      "sec": 218,
       "label": "目標: q_ore_report"
     },
     {
-      "sec": 226,
+      "sec": 222,
       "label": "目標: q_lantern_offer"
     },
     {
-      "sec": 240,
+      "sec": 236,
       "label": "目標: q_lantern_mats_moss"
     },
     {
-      "sec": 254,
+      "sec": 251,
       "label": "目標: q_lantern_craft_r_lantern"
     },
     {
-      "sec": 255,
+      "sec": 252,
       "label": "目標: q_lantern_place"
     },
     {
-      "sec": 269,
+      "sec": 266,
       "label": "はじめての家具配置"
     },
     {
-      "sec": 269,
+      "sec": 266,
       "label": "目標: q_lantern_report"
     },
     {
-      "sec": 273,
+      "sec": 270,
       "label": "目標: q_lumi_offer"
     },
     {
-      "sec": 274,
+      "sec": 271,
       "label": "目標: q_lumi_mats_stone"
     },
     {
-      "sec": 282,
+      "sec": 279,
       "label": "目標: q_lumi_mats_ore"
     },
     {
-      "sec": 289,
+      "sec": 288,
       "label": "目標: q_lumi_craft_r_stonelamp"
     },
     {
-      "sec": 291,
+      "sec": 289,
       "label": "目標: q_lumi_place"
     },
     {
-      "sec": 305,
-      "label": "目標: q_lumi_mats_wood"
+      "sec": 303,
+      "label": "目標: q_lumi_mats_stone"
     },
     {
-      "sec": 314,
-      "label": "目標: q_lumi_mats_moss"
+      "sec": 312,
+      "label": "目標: q_lumi_mats_ore"
     },
     {
-      "sec": 325,
-      "label": "目標: q_lumi_craft_r_lantern"
+      "sec": 323,
+      "label": "目標: q_lumi_craft_r_stonelamp"
     },
     {
-      "sec": 326,
+      "sec": 324,
       "label": "目標: q_lumi_place"
     },
     {
-      "sec": 339,
+      "sec": 337,
       "label": "目標: q_lumi_report"
     },
     {
-      "sec": 344,
-      "label": "目標: free"
+      "sec": 342,
+      "label": "目標: q2_boat_offer"
     },
     {
-      "sec": 344,
+      "sec": 342,
       "label": "ルミの木 開花!"
     },
     {
-      "sec": 364,
+      "sec": 361,
       "label": "マイホーム 入室→就寝→退出: OK"
     },
     {
-      "sec": 364,
-      "label": "終了(6分4秒)"
+      "sec": 361,
+      "label": "終了(6分1秒)"
     }
   ],
   "errors": 0,
   "errorSamples": [],
   "fps": [
-    34,
-    118,
-    113,
-    89,
-    158,
-    125,
-    124,
-    140,
-    129,
-    111,
-    136,
-    131,
-    135,
-    131,
-    129,
+    116,
+    119,
+    108,
+    116,
     132,
-    170,
-    106,
-    138,
+    121,
+    120,
+    122,
     139,
-    165,
-    146
+    136,
+    133,
+    116,
+    137,
+    126,
+    121,
+    162,
+    153,
+    112,
+    138,
+    123,
+    127,
+    143
   ],
   "quests": {
     "q_wood": "done",
     "q_fish": "done",
     "q_ore": "done",
     "q_lantern": "done",
-    "q_lumi": "done"
+    "q_lumi": "done",
+    "q2_boat": "open",
+    "q2_meet": "locked",
+    "q2_shell": "locked",
+    "q2_starweed": "locked",
+    "q2_lens": "locked",
+    "q2_light": "locked"
   },
   "day": 3
 }

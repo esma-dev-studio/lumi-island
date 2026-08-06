@@ -6,6 +6,7 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { CreateDisc } from '@babylonjs/core/Meshes/Builders/discBuilder';
+import { Constants } from '@babylonjs/core/Engines/constants';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 import { A0, appendBlob, appendBox, appendTrunk, applyArrays, getGlowMats, jitterColor, toMesh } from './flora';
@@ -367,6 +368,175 @@ export function makeLighthouse(scene: Scene): Mesh {
   stones.parent = tower;
   stones.isPickable = false;
   return tower;
+}
+
+// ---------------------------------------------------------------------------
+// v11第2章 とうだいの あかり(レンズを つけたあとに出てくる部品)
+// ---------------------------------------------------------------------------
+/** 折れた塔のてっぺん(makeLighthouse の塔の上端)。ランタン室はここに乗る */
+export const LIGHTHOUSE_TOP = { x: 0.14, y: 5.1, z: 0.06 } as const;
+/** 光る球の高さ(塔の足もとからの高さ)。海をなめるビームもここから出る */
+export const LIGHTHOUSE_LAMP_Y = 5.78;
+/**
+ * ビームの断面(灯りからの距離・半径・不透明度)。
+ * 先へ行くほど太く・うすくして、遠くで自然に消えるようにする
+ * (円柱メッシュのままだと、先っぽの ふたが「灰色の板」に見える。実機で確認)。
+ */
+const BEAM_RINGS: [number, number, number][] = [
+  [0.25, 0.3, 1.0], [3.5, 1.0, 0.9], [10, 2.1, 0.58], [20, 3.2, 0.26], [30, 3.9, 0.06], [34, 4.1, 0],
+];
+/** 先を少し下げる角度(ラジアン)。34m先で約2.6m下がり、海面すれすれを なめる */
+const BEAM_TILT = 0.075;
+
+/**
+ * 光のすじ(+Z方向へのばした細長い円すい)。
+ * 頂点カラーのアルファで先を消し、加算合成にして「面」ではなく「光」に見せる。
+ */
+function makeBeamMesh(scene: Scene): { beam: Mesh; beamMat: StandardMaterial } {
+  const SEG = 18;
+  const positions: number[] = [];
+  const colors: number[] = [];
+  const indices: number[] = [];
+  for (const [dist, r, a] of BEAM_RINGS) {
+    for (let i = 0; i <= SEG; i++) {
+      const th = (i / SEG) * Math.PI * 2;
+      positions.push(Math.cos(th) * r, Math.sin(th) * r, dist);
+      // ふちほど うすく(中心の芯が明るい すじに見える)
+      colors.push(1, 1, 1, a);
+    }
+  }
+  const cols = SEG + 1;
+  for (let ring = 0; ring < BEAM_RINGS.length - 1; ring++) {
+    for (let i = 0; i < SEG; i++) {
+      const p = ring * cols + i;
+      indices.push(p, p + cols, p + 1, p + 1, p + cols, p + cols + 1);
+    }
+  }
+  const vd = new VertexData();
+  vd.positions = positions;
+  vd.indices = indices;
+  vd.colors = colors;
+  vd.normals = positions.map((_, i) => (i % 3 === 1 ? 1 : 0)); // 発光専用なので法線は使わない
+  const beam = new Mesh('coveLighthouseBeam', scene);
+  vd.applyToMesh(beam);
+  beam.hasVertexAlpha = true;
+  beam.isPickable = false;
+  beam.alphaIndex = 3; // 波うちぎわの燐光(2)より後ろに描く
+  const beamMat = new StandardMaterial('coveLighthouseBeamMat', scene);
+  beamMat.diffuseColor = Color3.Black();
+  beamMat.specularColor = Color3.Black();
+  beamMat.emissiveColor = Color3.FromHexString('#ffd08a');
+  beamMat.disableLighting = true;
+  beamMat.backFaceCulling = false; // ビームの中に入っても消えない
+  // 加算合成: 暗い海と空の上に「光を足す」。ふつうの半透明だと灰色の板に見えてしまう
+  beamMat.alphaMode = Constants.ALPHA_ADD;
+  beamMat.alpha = 0;
+  beam.material = beamMat;
+  return { beam, beamMat };
+}
+
+export interface LighthouseLight {
+  /** ランタン室の枠(柱と屋根)。灯台メッシュの子にする */
+  room: Mesh;
+  /** 中の光る球 */
+  lamp: Mesh;
+  /** ビームを回すための入れ物(これのrotation.yを回す) */
+  pivot: Mesh;
+  /** 海をなめる光のすじ(pivotの子) */
+  beam: Mesh;
+  beamMat: StandardMaterial;
+  lampMat: StandardMaterial;
+}
+
+/**
+ * とうだいの あかり(ランタン室+光る球+回るビーム)。
+ *
+ * ランタン室は「四すみの柱+屋根」の枠にしてある。
+ * 箱で囲うと中の光る球が見えなくなる(教訓1: 発光オブジェクトを不透明な箱に入れない)。
+ * ビームは半透明の細長い円すいで、pivot を回すことで海をなめる。
+ * 追加されるメッシュは3つだけ・パーティクルも増やさないので、入り江の負荷はほぼ変わらない。
+ */
+export function makeLighthouseLight(scene: Scene): LighthouseLight {
+  const cx = LIGHTHOUSE_TOP.x;
+  const cz = LIGHTHOUSE_TOP.z;
+  // ---- ランタン室の枠 ----
+  const A = A0();
+  // 床(折れ口の上にかぶせる薄い円板がわりの太い円柱)
+  appendTrunk(A, [[cx, 5.12, cz], [cx, 5.26, cz]], 0.86, 0.8, C_TOWER_STONE, 61);
+  // 四すみの柱(4本)。細くして、中の球が どの向きからも見えるようにする
+  for (let i = 0; i < 4; i++) {
+    const th = (i / 4) * Math.PI * 2 + 0.4;
+    appendBox(A, cx + Math.cos(th) * 0.6, 5.72, cz + Math.sin(th) * 0.6, 0.09, 0.94, 0.09, C_TOWER_WOOD, th, 70 + i);
+  }
+  // 屋根(2段の円すい)と てっぺんの かざり
+  appendTrunk(A, [[cx, 6.19, cz], [cx, 6.34, cz]], 0.84, 0.66, C_TOWER_BAND, 63);
+  appendTrunk(A, [[cx, 6.34, cz], [cx, 6.72, cz]], 0.64, 0.06, C_TOWER_BAND, 65);
+  appendTrunk(A, [[cx, 6.72, cz], [cx, 6.9, cz]], 0.05, 0.04, C_TOWER_WOOD, 67);
+  const room = toMesh(scene, 'coveLighthouseRoom', A, 'keep');
+
+  // ---- 光る球 ----
+  const G = A0();
+  appendBlob(G, cx, LIGHTHOUSE_LAMP_Y, cz, 0.34, 0.4, 0.34, Color3.FromHexString('#ffeec4'), { segs: 9, noise: 0.02 });
+  const lamp = new Mesh('coveLighthouseLamp', scene);
+  applyArrays(lamp, G);
+  const lampMat = new StandardMaterial('coveLighthouseLampMat', scene);
+  lampMat.diffuseColor = Color3.Black();
+  lampMat.specularColor = Color3.Black();
+  lampMat.emissiveColor = Color3.FromHexString('#ffe0a8');
+  lampMat.disableLighting = true;
+  lamp.material = lampMat;
+  lamp.isPickable = false;
+
+  // ---- 回るビーム ----
+  const { beam, beamMat } = makeBeamMesh(scene);
+  beam.rotation.x = BEAM_TILT; // 先を少し下げて、海面をなめる高さにする
+
+  const pivot = new Mesh('coveLighthouseBeamPivot', scene);
+  pivot.position.set(cx, LIGHTHOUSE_LAMP_Y, cz);
+  pivot.isPickable = false;
+  beam.parent = pivot;
+  return { room, lamp, pivot, beam, beamMat, lampMat };
+}
+
+// ---------------------------------------------------------------------------
+// v11第2章 島から見える「夜の水平線のきらめき」
+// ---------------------------------------------------------------------------
+/**
+ * 島がわに置く、遠くの あかりの点。
+ * 入り江そのものは島から80m以上はなれていて描かれないので、
+ * 「あそこに 灯台が ある」と分かる小さな点だけを 水平線に置く。
+ *
+ * メッシュは1つ・パーティクルなし・当たり判定なし。ふだんは setEnabled(false) なので、
+ * 点いていない間の負荷はゼロ(教訓1の「動く要素だけ毎フレームに分離する」と同じ考え方)。
+ */
+export function makeHorizonSpark(scene: Scene): { mesh: Mesh; mat: StandardMaterial } {
+  const A = A0();
+  // 芯(小さくて明るい)+ かさ(大きくて うすい)の2枚がさね。
+  // 1枚だけだと「遠くの灰色のたま」に見えて、あかりに見えない(実機で確認)
+  const withAlpha = (a: number, build: () => void): void => {
+    const from = A.col.length;
+    build();
+    for (let i = from + 3; i < A.col.length; i += 4) A.col[i] = a;
+  };
+  withAlpha(0.16, () => appendBlob(A, 0, 0, 0, 2.2, 2.2, 2.2, Color3.FromHexString('#ffd9a0'), { segs: 8, noise: 0 }));
+  withAlpha(1, () => appendBlob(A, 0, 0, 0, 1, 1, 1, Color3.FromHexString('#fff2d8'), { segs: 8, noise: 0 }));
+  const mesh = new Mesh('lighthouseHorizonSpark', scene);
+  applyArrays(mesh, A);
+  mesh.hasVertexAlpha = true;
+  const mat = new StandardMaterial('lighthouseHorizonSparkMat', scene);
+  mat.diffuseColor = Color3.Black();
+  mat.specularColor = Color3.Black();
+  mat.emissiveColor = Color3.FromHexString('#ffdca8');
+  mat.disableLighting = true;
+  // 加算合成にして、暗い海と空の上に「光を足す」(ビームと同じ理由)
+  mat.alphaMode = Constants.ALPHA_ADD;
+  mat.alpha = 0;
+  mesh.material = mat;
+  mesh.isPickable = false;
+  mesh.alphaIndex = 4;
+  // 100m先なので、そのままだと霧に飲まれて灰色になる。あかりの色をそのまま出す
+  mesh.applyFog = false;
+  return { mesh, mat };
 }
 
 /**

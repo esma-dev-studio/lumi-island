@@ -71,10 +71,12 @@ export function giftGain(npcId: string, item: ItemId): number {
 /**
  * あげられるもの(もちもののうち、おくりものにできるもの)。
  * かべがみ・ゆかいた(decor)は「貼る見た目」であって手わたす品ではないので外す。
+ * だいじなもの(ITEMS の keyItem。v11第2章の「ひかりのレンズ」など)も外す:
+ * あげてしまうと依頼が進められなくなるので、選べる一覧にそもそも出さない。
  */
 export function giftableItems(s: GameState): ItemId[] {
   return (Object.keys(s.inventory) as ItemId[]).filter(
-    (id) => ITEMS[id] && ITEMS[id].kind !== 'decor' && invCount(s, id) > 0
+    (id) => ITEMS[id] && ITEMS[id].kind !== 'decor' && !ITEMS[id].keyItem && invCount(s, id) > 0
   );
 }
 
@@ -153,7 +155,7 @@ export function applyGift(s: GameState, npcId: string, item: ItemId): GiftResult
   const def = NPC_BY_ID[npcId];
   const rt = s.npcs[npcId];
   if (!def || !rt) return null;
-  if (!ITEMS[item] || ITEMS[item].kind === 'decor') return null;
+  if (!ITEMS[item] || ITEMS[item].kind === 'decor' || ITEMS[item].keyItem) return null;
   if (!invRemove(s, item, 1)) return null;
 
   const tier = giftTier(npcId, item);

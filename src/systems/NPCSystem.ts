@@ -2,7 +2,10 @@
 import type { Scene } from '@babylonjs/core/scene';
 import { CharacterView } from '../characters/CharacterView';
 import { CHARACTERS } from '../data/characters';
-import { residentNpcs, npcSpot, scheduleEntryAt, nextOutdoorEntry, type NpcDef, type ScheduleEntry } from '../data/npcs';
+import {
+  NPC_BY_ID, residentNpcs, npcSpot, scheduleEntryAt, nextOutdoorEntry,
+  type NpcArea, type NpcDef, type ScheduleEntry,
+} from '../data/npcs';
 import type { VisitPraiseFacts } from '../data/npcs';
 import { GATHER_NODES } from '../data/island';
 import type { GameState } from '../game/GameState';
@@ -89,6 +92,16 @@ const NPC_BODY_R = 0.3; // NPCSystem.update の resolveCollision と同じ
 
 export class NPCSystem {
   npcs = new Map<string, NpcRuntime>();
+  /**
+   * いまプレイヤーがいる場所('island' | 'cove')。
+   * ここに住んでいないNPCは 見た目を消し、話しかけの候補にもしない。
+   *
+   * なぜ要るか: 入り江(CoveArea)は「島の見た目を丸ごと消す」やりかたで作ってあるが、
+   * その消す一覧(islandMeshes)は IslandScene.build の時点のスナップショットで、
+   * あとから読みこむNPCのモデルは そこに入っていない。
+   * 場所での出し分けを NPCSystem 側に持たせて、島の人が海の上に立つ絵を構造的に無くす。
+   */
+  private area: NpcArea = 'island';
   /** 庭先の立ち位置(init で島の当たり判定から実測して決める) */
   private visitSpot = { x: HOME_DOOR_OUT.x + VISIT_DIST, z: HOME_DOOR_OUT.z, rotY: 0, wanderR: 0.9 };
   /** きょう遊びに来ているNPC(いない日は null)。day が変わるまで結果を変えない */
@@ -108,6 +121,60 @@ export class NPCSystem {
   /** 来訪の判定に使う「なかよし度と依頼状況」を渡す(GameSceneがGameStateから作る) */
   setVisitProbe(probe: () => { id: string; friendship: number; questCritical: boolean }[]): void {
     this.visitProbe = probe;
+  }
+
+  /** そのNPCが住んでいる場所(省略=島) */
+  private areaOf(rt: NpcRuntime): NpcArea {
+    return rt.def.area ?? 'island';
+  }
+
+  /** いまいる場所を切りかえる(GameSceneが 島⇄入り江 の入れかえのたびに呼ぶ) */
+  setArea(area: NpcArea): void {
+    if (this.area === area) return;
+    this.area = area;
+    for (const rt of this.npcs.values()) this.apply(rt);
+  }
+
+  /**
+   * あとから登場するNPCを その場で島(または入り江)へ出す。
+   * init のあとに debutFlag が立ったときに1回だけ呼ぶ(すでにいれば何もしない)。
+   */
+  async addNpc(id: string): Promise<void> {
+    if (this.npcs.has(id)) return;
+    const def = NPC_BY_ID[id];
+    if (!def) return;
+    const view = await CharacterView.load(this.scene, CHARACTERS[def.charId]);
+    for (const m of view.meshes) this.island.shadows.addShadowCaster(m, true);
+    const home = npcSpot(def.id, def.schedule[0].spot);
+    const rt: NpcRuntime = {
+      def, view,
+      x: home.x, z: home.z, y: this.island.groundY(home.x, home.z),
+      rotY: home.rotY ?? 0,
+      hidden: false, talking: false, entry: null,
+      subTarget: null, subTimer: 2, workTimer: 1, stuck: 0,
+    };
+    view.play('idle');
+    this.apply(rt);
+    this.npcs.set(def.id, rt);
+  }
+
+  /** そのNPCを 指定スポットへ すぐ動かす(見せ場のあいだ かならず そばにいてもらう) */
+  snapTo(id: string, spotKey: string): void {
+    const spot = npcSpot(id, spotKey);
+    this.placeAt(id, spot.x, spot.z, spot.rotY);
+  }
+
+  /** そのNPCを 指定の世界座標へ すぐ動かす(見せ場のツーショットで となりに立ってもらう) */
+  placeAt(id: string, x: number, z: number, rotY?: number): void {
+    const rt = this.npcs.get(id);
+    if (!rt) return;
+    rt.x = x;
+    rt.z = z;
+    rt.y = this.island.groundY(x, z);
+    if (rotY !== undefined) rt.rotY = rotY;
+    rt.subTarget = null;
+    rt.hidden = false;
+    this.apply(rt);
   }
 
   /**
@@ -241,6 +308,7 @@ export class NPCSystem {
     let bestD = range;
     for (const rt of this.npcs.values()) {
       if (rt.hidden) continue;
+      if (this.areaOf(rt) !== this.area) continue; // 別の場所の人には話しかけられない
       const d = Math.hypot(px - rt.x, pz - rt.z);
       if (d < bestD) {
         bestD = d;
@@ -317,10 +385,13 @@ export class NPCSystem {
           }
           if (spot.rotY !== undefined) rt.rotY = spot.rotY;
         } else {
-          // idle / watch / stroll: ときどき歩きまわる
+          // idle / watch / stroll: ときどき歩きまわる。
+          // wanderR:0 のスポット(v11 入り江のロカ)は その場から動かない。
+          // 乱数(Math.random)を1度も引かないので、入り江の行動は完全に決定論になる
+          // ——「時刻で行き先が変わるぶんだけ歩く」だけの動き。
+          const radius = entry.activity === 'stroll' ? 4 : (spot.wanderR ?? 2.2);
           rt.subTimer -= dt;
-          if (rt.subTimer <= 0) {
-            const radius = entry.activity === 'stroll' ? 4 : (spot.wanderR ?? 2.2);
+          if (radius > 0 && rt.subTimer <= 0) {
             rt.subTimer = entry.activity === 'stroll' ? 4 + Math.random() * 4 : 6 + Math.random() * 5;
             const a = Math.random() * Math.PI * 2;
             const tx = spot.x + Math.cos(a) * radius * (0.4 + Math.random() * 0.6);
@@ -396,7 +467,7 @@ export class NPCSystem {
   }
 
   private apply(rt: NpcRuntime): void {
-    rt.view.setEnabled(!rt.hidden);
+    rt.view.setEnabled(!rt.hidden && this.areaOf(rt) === this.area);
     rt.view.root.position.set(rt.x, rt.y, rt.z);
     rt.view.root.rotation.y = rt.rotY + Math.PI;
   }

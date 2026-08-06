@@ -10,6 +10,8 @@ import { BUG_IDS } from './BugSystem';
 
 /** 達成の記録に使う stats のキーの接頭辞 */
 export const ACH_PREFIX = 'ach_';
+/** とうだいに あかりを ともした回数(v11第2章。GameScene.onLighthouseLit が1だけ足す) */
+export const LIGHTHOUSE_LIT_KEY = 'lighthouse_lit';
 
 export interface AchievementDef {
   id: string;
@@ -168,6 +170,13 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   {
     id: 'a_room10', name: 'かざりつけめいじん', desc: '家の中に 家具を 10こ かざろう',
     target: 10, icon: 'f_bookcase', progress: indoorFurnitureCount,
+  },
+  // ---- v11第2章 とうだいの ひかり ----
+  // flags は数値カウンタではないので、点灯のときに立つ stats のキーを見る
+  // (GameScene.onLighthouseLit → completeQuest が quest_done を増やすのとは別の1件)。
+  {
+    id: 'a_lighthouse', name: 'とうだいの ひかり', desc: 'よるの入り江の とうだいに あかりを ともそう',
+    target: 1, icon: 'f_lighthouse_lantern', progress: (s) => statCount(s, LIGHTHOUSE_LIT_KEY),
   },
   {
     id: 'a_all_quests', name: 'おねがいマスター', desc: '島のみんなの おねがいを 5つ かなえよう',

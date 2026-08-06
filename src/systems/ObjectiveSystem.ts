@@ -14,10 +14,30 @@ import type { InteractionKind } from './InteractionResolver';
 /** 報告待ちの見出し(この文字列で「報告段階」を判定する) */
 export const REPORT_HEADLINE = 'できた!';
 
+// ---------------------------------------------------------------------------
+// v11第2章で増えた目的地のキー。島の POIS(src/data/island.ts)には無い場所なので、
+// 座標への読みかえは GameScene.targetPosOf が1か所でやる。
+// ---------------------------------------------------------------------------
+/** 入り江の帰りの桟橋の先(ここでEを押すと島へ帰る) */
+export const COVE_RETURN_POI = 'coveReturn';
+/** 島の桟橋のよこの小舟(ここでEを押すと入り江へわたる) */
+export const ISLAND_BOAT_POI = 'islandBoat';
+/** こわれた灯台のとびらの前 */
+export const COVE_LIGHTHOUSE_POI = 'coveLighthouse';
+
 export interface ObjectiveTarget {
   kind: 'npc' | 'poi' | 'none';
   id?: string;
 }
+
+/**
+ * その目的を進められる場所。
+ *   island : 島(第1章のすべて)
+ *   cove   : よるの入り江(第2章の採取・ロカ・灯台)
+ *   any    : どこでもよい(クラフト・自由行動・チュートリアル)
+ * ちがう場所にいるときは withAreaTravel が「ふねで もどろう」に差しかえる。
+ */
+export type ObjectiveArea = 'island' | 'cove' | 'any';
 
 export interface Objective {
   id: string; // 変化検知・ヒント抑制用の一意キー
@@ -26,11 +46,17 @@ export interface Objective {
   target: ObjectiveTarget;
   progress?: { cur: number; max: number };
   lostHint?: string;
+  /** 進められる場所(省略=island)。島と入り江のまたぎを1か所で判断するための印 */
+  area?: ObjectiveArea;
   // 回帰ボット・Eの候補選別用の構造情報(表示はlabelを使う)
   gatherItem?: ItemId;
   craftRecipe?: string;
   fishItems?: ItemId[]; // 釣りで達成できるアイテム(釣り段階の目印)
   placeFurniture?: boolean; // 家具を島に置く段階の目印
+  /** ルミナをためる段階(v11第2章 ふねの修理代)。行動は絞らない */
+  money?: boolean;
+  /** ふねで わたる段階(場所ちがいの案内)。行動は絞らない */
+  sail?: boolean;
 }
 
 /**
@@ -71,11 +97,21 @@ export interface NpcAvailability {
 const R_LANTERN = RECIPES.find((r) => r.id === 'r_lantern')!;
 const R_STONELAMP = RECIPES.find((r) => r.id === 'r_stonelamp')!;
 const R_ROD = RECIPES.find((r) => r.id === 'r_rod')!;
+const R_LENS = RECIPES.find((r) => r.id === 'r_lens')!;
 
 // 素材→採取エリア(目的地表示用)
 const GATHER_POI: Partial<Record<ItemId, string>> = {
   wood: 'forest', moss: 'forest', stone: 'meadow', fiber: 'meadow', ore: 'hill', berry: 'meadow',
 };
+/**
+ * 素材→とれる場所。よるの入り江でしかとれない2種だけ 'cove'。
+ * 「レシピ駆動の案内(craftStep)が、島の素材と入り江の素材を1歩ずつ切りかえる」ための表で、
+ * ここに書いておけば ひかりのレンズのような混ざったレシピでも 誘導が正しく行き先を変える。
+ */
+const ITEM_AREA: Partial<Record<ItemId, ObjectiveArea>> = { starweed: 'cove', lightshell: 'cove' };
+const areaOfItem = (item: ItemId): ObjectiveArea => ITEM_AREA[item] ?? 'island';
+/** そのNPCが くらしている場所(ロカだけ入り江) */
+const areaOfNpc = (id: string): ObjectiveArea => NPC_BY_ID[id]?.area ?? 'island';
 // 素材→必要な道具(道具がなければ先に道具のレシピへ誘導する)
 const TOOL_FOR: Partial<Record<ItemId, ToolId>> = {
   wood: 'axe', stone: 'pickaxe', ore: 'pickaxe', fiber: 'sickle',
@@ -104,6 +140,8 @@ function craftStep(
         `ざいりょうが そろったよ! 右上の「クラフト」ボタンで ${recipe.name}を作ろう`
       ),
       target: { kind: 'none' },
+      // クラフトは どこにいてもできる(入り江でも島でも Cを押すだけ)
+      area: 'any',
       craftRecipe: recipe.id,
     };
   }
@@ -113,12 +151,15 @@ function craftStep(
     const toolRecipe = RECIPES.find((r) => r.outKind === 'tool' && r.out === tool);
     if (toolRecipe) return craftStep(state, toolRecipe, qid, base, depth + 1);
   }
+  const area = areaOfItem(first.item);
   return {
     ...base, id: `${qid}_mats_${first.item}`, headline: 'いまやること',
     label: `${ITEMS[first.item].name}を あつめよう`,
-    target: { kind: 'poi', id: GATHER_POI[first.item] ?? 'meadow' },
+    // 入り江の素材は島のPOIを指さない(採取目標は最寄りノードを指すので target は使われない)
+    target: area === 'cove' ? { kind: 'none' } : { kind: 'poi', id: GATHER_POI[first.item] ?? 'meadow' },
     progress: { cur: first.owned, max: first.required },
     gatherItem: first.item,
+    area,
   };
 }
 
@@ -178,6 +219,50 @@ function inProgressObjective(state: GameState, q: QuestDef): Objective {
       o.progress ??= { cur: q.count - rem, max: q.count };
       return o;
     }
+    // ---- 第2章 ----
+    case 'q2_boat': {
+      // もくざい → ルミナ の順に、足りないほうだけを1つずつ案内する
+      const have = invCount(state, 'wood');
+      if (have < q.count) {
+        return {
+          ...base, id: 'q2_boat_wood', headline: 'いまやること',
+          label: 'もくざいを あつめよう',
+          target: { kind: 'poi', id: 'forest' },
+          progress: { cur: have, max: q.count },
+          gatherItem: 'wood', area: 'island',
+        };
+      }
+      const price = q.price ?? 0;
+      return {
+        ...base, id: 'q2_boat_lumina', headline: 'いまやること',
+        // 金額は かならず画面に出す(あと いくら ためればいいか が読める)
+        label: `しゅうり代の ${price}ルミナを ためよう(ツムギ工房で もちものを うろう)`,
+        target: { kind: 'poi', id: 'shop' },
+        progress: { cur: Math.min(state.lumina, price), max: price },
+        area: 'island', money: true,
+      };
+    }
+    case 'q2_shell':
+    case 'q2_starweed': {
+      const item = q.item!;
+      return {
+        ...base, id: `${q.id}_gather`, headline: 'いまやること',
+        label: `${ITEMS[item].name}を あつめよう`,
+        target: { kind: 'none' },
+        progress: { cur: q.count - rem, max: q.count },
+        gatherItem: item, area: 'cove',
+      };
+    }
+    case 'q2_lens':
+      // レンズはクラフト。不足素材(入り江の貝・草/島のこうせき)はレシピから1歩ずつ案内する
+      return craftStep(state, R_LENS, 'q2_lens', base);
+    case 'q2_light':
+      return {
+        ...base, id: 'q2_light_attach', headline: 'いまやること',
+        label: 'とうだいに レンズを つけよう',
+        target: { kind: 'poi', id: COVE_LIGHTHOUSE_POI },
+        area: 'cove',
+      };
     default:
       return { ...base, id: `${q.id}_progress`, headline: 'いまやること', label: q.progress, target: { kind: 'none' } };
   }
@@ -192,6 +277,7 @@ function withAvailability(o: Objective, avail?: Record<string, NpcAvailability>)
     id: `${o.id}_wait`, headline: 'いまやること',
     label: a.waitLabel ?? `${npcName(o.target.id)}は いまは いないよ<br>家に はいって ベッドで ねよう`,
     target: { kind: 'poi', id: 'bed' },
+    area: 'island', // ベッドは島の自宅にある
     lostHint: byInput(
       'じぶんの家の ドアの前で <kbd>E</kbd>を おすと 家に はいれるよ。中のベッドで あさまで ねよう。',
       'じぶんの家の ドアの前で 右下の 大きいボタンを おすと 家に はいれるよ。中のベッドで あさまで ねよう。'
@@ -217,6 +303,7 @@ export function currentObjective(
         id: `${q.id}_report`, headline: REPORT_HEADLINE,
         label: `${npcName(npc)}に ほうこくしよう`,
         target: { kind: 'npc', id: npc },
+        area: areaOfNpc(npc),
         lostHint: `${npcName(npc)}を さがして 話しかけよう。矢印を追ってね。`,
       }, npcAvail);
     }
@@ -232,12 +319,16 @@ export function currentObjective(
     const npc = q.npc === 'any' ? anyNpcFallback : q.npc;
     return withAvailability({
       id: `${q.id}_offer`, headline: 'いまやること',
-      label: `${npcName(npc)}の はなしを聞こう`,
+      // offerLabel を持つ依頼(v11 ロカとの であい)は その文を使う
+      label: q.offerLabel ?? `${npcName(npc)}の はなしを聞こう`,
       target: { kind: 'npc', id: npc },
-      lostHint: byInput(
-        `${npcName(npc)}に 近づいて <kbd>E</kbd>で話しかけよう。`,
-        `${npcName(npc)}に 近づいて 右下の 大きいボタンで話しかけよう。`
-      ),
+      area: areaOfNpc(npc),
+      lostHint: q.offerLabel
+        ? q.lostHint
+        : byInput(
+            `${npcName(npc)}に 近づいて <kbd>E</kbd>で話しかけよう。`,
+            `${npcName(npc)}に 近づいて 右下の 大きいボタンで話しかけよう。`
+          ),
     }, npcAvail);
   }
   // 4) 全部クリア
@@ -245,7 +336,55 @@ export function currentObjective(
     id: 'free', headline: 'クリア!',
     label: '島で じゆうに くらそう',
     target: { kind: 'none' },
+    area: 'any',
   };
+}
+
+// ---------------------------------------------------------------------------
+// v11第2章 島 ⇄ よるの入り江 のまたぎ
+// ---------------------------------------------------------------------------
+/** 入り江にいるのに、目的が島にあるとき */
+export const SAIL_TO_ISLAND_LABEL = 'ふねで しまへ もどろう';
+/** 島にいるのに、目的が入り江にあるとき */
+export const SAIL_TO_COVE_LABEL = 'ふねで よるの入り江へ わたろう';
+
+/**
+ * いる場所と目的の場所がちがうときに、「ふねの のりば」へ案内しなおす。
+ *
+ * こうしないと、入り江にいるあいだ 左上の目標が島の目的地までの距離を出しつづけ、
+ * 矢印は海のむこうを指したままになる(第1章の申し送り事項)。
+ * 逆に、島にいるのに入り江の素材を案内されても どこへ行けばよいか分からない。
+ *
+ * どちらの向きでも「行動は絞らない」(guided:false)。船着き場までの道すがら
+ * 採取や釣りをするのは寄り道ではなく ふつうの遊びかたなので、
+ * objectiveActionContext は sail をそのまま自由あつかいにする。
+ */
+export function withAreaTravel(o: Objective, inCove: boolean): Objective {
+  const want = o.area ?? 'island';
+  if (want === 'any') return o;
+  const here: ObjectiveArea = inCove ? 'cove' : 'island';
+  if (want === here) return o;
+  return inCove
+    ? {
+        id: `${o.id}_sail_island`, headline: 'いまやること',
+        label: SAIL_TO_ISLAND_LABEL,
+        target: { kind: 'poi', id: COVE_RETURN_POI },
+        area: 'cove', sail: true,
+        lostHint: byInput(
+          '帰りの さんばしの先で <kbd>E</kbd>を おすと しまへ もどれるよ。',
+          '帰りの さんばしの先で 右下の 大きいボタンを おすと しまへ もどれるよ。'
+        ),
+      }
+    : {
+        id: `${o.id}_sail_cove`, headline: 'いまやること',
+        label: SAIL_TO_COVE_LABEL,
+        target: { kind: 'poi', id: ISLAND_BOAT_POI },
+        area: 'island', sail: true,
+        lostHint: byInput(
+          '南の さんばしの ふねの ところで <kbd>E</kbd>を おすと わたれるよ。',
+          '南の さんばしの ふねの ところで 右下の 大きいボタンを おすと わたれるよ。'
+        ),
+      };
 }
 
 /**
@@ -257,6 +396,13 @@ export function currentObjective(
  */
 export function objectiveActionContext(obj: Objective | null): ObjectiveActionContext {
   if (!obj) return FREE_CONTEXT();
+  // v11第2章の2つの段階は「ゲームが行動を絞っていない場面」なので自由あつかいにする。
+  // これは判定の緩和ではなく、設計の意味論への較正:
+  //   money : しゅうり代のためかたは1つではない(うる・つる・ほる・虫をとる…)。
+  //           1つの行動だけを許すと、お金のためかたを ゲームが決めつけることになる。
+  //   sail  : ふねの のりばまでは ただの移動。道すがら採取や釣りをするのは寄り道ではない。
+  //           のりばのEは ALWAYS_ALLOWED の enter/exit なので、自由あつかいでも必ず押せる。
+  if (obj.money || obj.sail) return FREE_CONTEXT();
   if (obj.target.kind === 'npc' && obj.target.id) {
     // 報告だけを誘導する。未受注のオファーはまだ何も引き受けていないので自由に遊べる
     if (obj.headline !== REPORT_HEADLINE) return FREE_CONTEXT();
@@ -266,6 +412,11 @@ export function objectiveActionContext(obj: Objective | null): ObjectiveActionCo
   // ベッドは家の中なので、出入り(enter/exit)も許可しないと誘導どおりに動けない
   if (obj.target.kind === 'poi' && obj.target.id === 'bed') {
     return { preferredKinds: [...ALWAYS_ALLOWED], targetPoiId: 'bed', guided: true };
+  }
+  // v11第2章 とうだいに レンズを つける段階。とびらのE候補は kind='place' なので
+  // それだけを通す(採取・釣りは この場面では出さない=見せ場の直前で寄り道させない)
+  if (obj.target.kind === 'poi' && obj.target.id === COVE_LIGHTHOUSE_POI) {
+    return { preferredKinds: ['place', ...ALWAYS_ALLOWED], targetPoiId: COVE_LIGHTHOUSE_POI, guided: true };
   }
   if (obj.gatherItem) {
     return { preferredKinds: ['gather', ...ALWAYS_ALLOWED], targetItemIds: [obj.gatherItem], guided: true };

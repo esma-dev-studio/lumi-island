@@ -69,7 +69,13 @@ export function newGameState(): GameState {
     recipes: [...INITIAL_RECIPES],
     furniture: [],
     furnitureSeq: 1,
-    quests: { q_wood: 'open', q_fish: 'locked', q_ore: 'locked', q_lantern: 'locked', q_lumi: 'locked' },
+    // 第1章の5件+第2章の6件。第2章は requires(ルミの木の開花・入り江への上陸)がそろうまで locked。
+    // 旧セーブも SaveSystem がここを土台に読みこむので、キーを足すだけで第2章が使えるようになる
+    quests: {
+      q_wood: 'open', q_fish: 'locked', q_ore: 'locked', q_lantern: 'locked', q_lumi: 'locked',
+      q2_boat: 'locked', q2_meet: 'locked', q2_shell: 'locked',
+      q2_starweed: 'locked', q2_lens: 'locked', q2_light: 'locked',
+    },
     npcs: {
       minamo: { friendship: 0, talkedToday: false, giftedToday: false },
       nokto: { friendship: 0, talkedToday: false, giftedToday: false },

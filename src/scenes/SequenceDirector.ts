@@ -13,7 +13,7 @@ import { sfx } from '../audio/AudioSystem';
 import { save } from '../save/SaveSystem';
 import type { GameScene } from './GameScene';
 
-export type SequenceState = 'idle' | 'sleeping' | 'intro' | 'bloom' | 'travel' | 'voyage';
+export type SequenceState = 'idle' | 'sleeping' | 'intro' | 'bloom' | 'travel' | 'voyage' | 'lighthouse';
 
 const SLEEP_FADE_IN = 0.45; // 暗転までの秒
 const SLEEP_TOTAL = 1.05; // 起床までの秒
@@ -38,6 +38,21 @@ const VOYAGE_CAM_H1 = 7.2;
 const WAKE_EVERY = 0.32;
 const STAR_EVERY = 0.85;
 
+/** なめらかな 0→1(見せ場のカメラの寄り引きに使う) */
+const smooth = (t: number): number => t * t * (3 - 2 * t);
+
+// ---- v11第2章 とうだいの点灯(全体で約9.2秒) ----
+// 見上げる(0→1.8s) → あかりが ともる(1.8→3.6s) → ビームが海をなめる(3.6→9.2s)。
+// カメラは「灯台の南がわ・低いところ」から見上げる(イベントカメラは +Z 側に立つ)。
+/** 見上げきるまで */
+const LIGHT_RISE = 1.8;
+/** あかりが ともりきるまで(ここで litLevel が1になる) */
+const LIGHT_KINDLE = 3.6;
+/** ぜんぶ終わるまで */
+const LIGHT_TOTAL = 9.2;
+/** ともるあいだ、光の粒を出す間かく(秒) */
+const LIGHT_SPARK_EVERY = 0.18;
+
 export class SequenceDirector {
   private state: SequenceState = 'idle';
   private t = 0; // 現在の状態の経過秒
@@ -54,6 +69,9 @@ export class SequenceDirector {
   private voyageApplied = false;
   private wakeT = 0;
   private starT = 0;
+  // ---- v11第2章 とうだいの点灯 ----
+  private lightSparkT = 0;
+  private lightDone = false;
 
   constructor(private gs: GameScene) {}
 
@@ -233,6 +251,84 @@ export class SequenceDirector {
     }
   }
 
+  // ---------- v11第2章 とうだいの点灯 ----------
+  /**
+   * とうだいに レンズを つけた瞬間の見せ場。
+   * 呼ぶ前に GameScene がレンズを消費してフラグを立てている(見た目と状態を1か所でそろえる)。
+   * 連打しても1回ぶん(ほかの演出中は動かさない)。
+   */
+  lightLighthouse(): void {
+    if (this.state !== 'idle') return;
+    this.state = 'lighthouse';
+    this.t = 0;
+    this.lightSparkT = 0;
+    this.lightDone = false;
+    const gs = this.gs;
+    gs.restoreAllOcclusionImmediately();
+    gs.player.locked = true;
+    // ロカを灯台のふもとへ。どの時刻でも いっしょに見上げてもらう
+    gs.npcs.snapTo('roka', 'lighthouse');
+    // 入り江のビームと、島から見える水平線のきらめきを まとめて「ともった」状態にする
+    // (IslandScene を通すこと。CoveArea だけに入れると、島へ帰ったときに点がつかない)
+    gs.island.applyLighthouseLit(true, true); // 0から立ち上げる
+    sfx('place');
+  }
+
+  /** いま点灯の見せ場の最中か(検証・ボット用) */
+  get lighting(): boolean {
+    return this.state === 'lighthouse';
+  }
+
+  /** 点灯の1フレーム: カメラ・あかりの立ち上がり・光の粒 */
+  private updateLighthouse(dt: number): void {
+    const gs = this.gs;
+    const lh = gs.island.cove.lighthouseWorld;
+    const lampY = gs.island.cove.lampWorldY();
+    const baseY = lampY - 5.78; // 塔の足もと(entities/cove.ts LIGHTHOUSE_LAMP_Y ぶん下)
+    const t = this.t;
+    // ---- あかりの立ち上がり ----
+    const k = t <= LIGHT_RISE ? 0 : Math.min(1, (t - LIGHT_RISE) / (LIGHT_KINDLE - LIGHT_RISE));
+    gs.island.cove.setLitLevel(k * k * (3 - 2 * k));
+    // 世界が凍っているあいだも ビームだけは回す(CoveArea.tickLight の説明を参照)
+    gs.island.cove.tickLight(dt, gs.island.time.hour);
+    // ---- カメラ ----
+    // 見上げ: 注視点を とびら(足もと+1.0m)から ランタン(足もと+5.8m)へ。
+    // 高さはマイナスまで下げて「下から見上げる」画にする(地表より下へは行かない)
+    let tgtY: number, dist: number, height: number;
+    if (t < LIGHT_RISE) {
+      const e = smooth(t / LIGHT_RISE);
+      tgtY = baseY + 1.0 + (3.6 - 1.0) * e;
+      dist = 13 - 2 * e;
+      height = 4.2 - 5.4 * e;
+    } else if (t < LIGHT_KINDLE) {
+      tgtY = baseY + 3.6;
+      dist = 11;
+      height = -1.2;
+    } else {
+      const e = smooth(Math.min(1, (t - LIGHT_KINDLE) / (LIGHT_TOTAL - LIGHT_KINDLE)));
+      tgtY = baseY + 3.6 - 0.9 * e;
+      dist = 11 + 10 * e; // ゆっくり引いて、海をなめるビームを見せる
+      height = -1.2 + 5.0 * e;
+    }
+    gs.camCtl.beginEvent(lh.x, tgtY, lh.z, dist, height);
+    if (t < dt * 2) gs.camCtl.snapEvent(); // 1フレーム目だけ補間しない(足もとからの寄りを出さない)
+    // ---- 光の粒(ともる瞬間) ----
+    if (t >= LIGHT_RISE && t < LIGHT_KINDLE + 1.2) {
+      this.lightSparkT += dt;
+      if (this.lightSparkT >= LIGHT_SPARK_EVERY) {
+        this.lightSparkT = 0;
+        // 乱数は使わず、経過時間から位置を決める(決定論)
+        const a = t * 2.7;
+        burst(lh.x + Math.cos(a) * 0.9, lampY + Math.sin(a * 1.7) * 0.5, lh.z + Math.sin(a) * 0.9, 'bloom', 6);
+      }
+    }
+    if (!this.lightDone && t >= LIGHT_RISE) {
+      this.lightDone = true;
+      sfx('bloom');
+      burst(lh.x, lampY, lh.z, 'bloom', 14);
+    }
+  }
+
   /** 自宅ベッドで寝る。連打しても1回ぶんしか実行されない */
   sleep(): void {
     if (this.state !== 'idle') return; // 排他: sleeping中の再実行を防ぐ
@@ -291,6 +387,17 @@ export class SequenceDirector {
         gs.camCtl.endEvent();
         gs.camCtl.snapTo(gs.player.x, gs.player.y, gs.player.z);
         sfx('step_wood');
+      }
+      return;
+    }
+
+    if (this.state === 'lighthouse') {
+      this.updateLighthouse(dt);
+      if (this.t >= LIGHT_TOTAL) {
+        this.state = 'idle';
+        gs.camCtl.endEvent();
+        gs.camCtl.snapTo(gs.player.x, gs.player.y, gs.player.z);
+        gs.onLighthouseLit(); // 依頼の達成・ロカのよろこびの会話・じっせき
       }
       return;
     }

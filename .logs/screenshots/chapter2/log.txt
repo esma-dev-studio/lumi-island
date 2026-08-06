@@ -1,0 +1,62 @@
+ゲーム開始(新規・debug=1)
+第1章クリア後: {"x":-3,"z":6,"inCove":false,"seq":"idle","hour":18.6,"obj":"q2_boat_offer / ミナモの はなしを聞こう","hint":"","lumina":640,"lit":false,"beam":0,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"open\",\"q2_meet\":\"locked\",\"q2_shell\":\"locked\",\"q2_starweed\":\"locked\",\"q2_lens\":\"locked\",\"q2_light\":\"locked\"}","inv":"{\"wood\":8}"}
+ノクトの雑談: あの あかりはな、ふねに「ここだよ」と おしえておったのじゃ。
+  撮影 01_foreshadow_nokto.png
+ミナモの雑談: 桟橋の よこの ふね、おぼえてる? あれ、ぼくの ふねなんだ。ずっと なおしたくてね。
+  撮影 02_foreshadow_minamo.png
+修理の依頼: もくざい6つと 500ルミナを あつめよう。もくざいは 北の林の 木から。ルミナは もちものを ツムギ工房で うると たまるよ。
+  撮影 03_boat_quest_offer_500lumina.png
+受注後: {"x":22.5,"z":15.4,"inCove":false,"seq":"idle","hour":14.2,"obj":"q2_boat_lumina / しゅうり代の 500ルミナを ためよう(ツムギ工房で もちものを うろう)","hint":"つりには ツリザオが ひつよう","lumina":120,"lit":false,"beam":0,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"open\",\"q2_meet\":\"locked\",\"q2_shell\":\"locked\",\"q2_starweed\":\"locked\",\"q2_lens\":\"locked\",\"q2_light\":\"locked\"}","inv":"{\"wood\":8}"}
+お金をためる目標: {"x":-3,"z":6,"inCove":false,"seq":"idle","hour":14.2,"obj":"q2_boat_lumina / しゅうり代の 500ルミナを ためよう(ツムギ工房で もちものを うろう)","hint":"","lumina":120,"lit":false,"beam":0,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"open\",\"q2_meet\":\"locked\",\"q2_shell\":\"locked\",\"q2_starweed\":\"locked\",\"q2_lens\":\"locked\",\"q2_light\":\"locked\"}","inv":"{\"wood\":8}"}
+  撮影 05_objective_save_500.png
+不足時: ルミナが あと380 だね。まってるよ!
+  撮影 04_boat_quest_shortfall.png
+修理完了: {"x":19.6,"z":22.4,"inCove":false,"seq":"idle","hour":14.3,"obj":"free / 島で じゆうに くらそう","hint":"Eミナモと はなす","lumina":140,"lit":false,"beam":0,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"locked\",\"q2_shell\":\"locked\",\"q2_starweed\":\"locked\",\"q2_lens\":\"locked\",\"q2_light\":\"locked\"}","inv":"{\"wood\":2}"}
+  撮影 06_boat_repaired_banner.png
+桟橋の ふね: {"x":4,"z":41.6,"inCove":false,"seq":"idle","hour":20.5,"obj":"free / 島で じゆうに くらそう","hint":"Eふねに のる","lumina":140,"lit":false,"beam":0,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"locked\",\"q2_shell\":\"locked\",\"q2_starweed\":\"locked\",\"q2_lens\":\"locked\",\"q2_light\":\"locked\"}","inv":"{\"wood\":2}"}
+  撮影 07_board_boat_hint.png
+入り江に到着: {"x":-51.2,"z":63.3,"inCove":true,"seq":"idle","hour":20.6,"obj":"q2_meet_offer / ロカと はなそう","hint":"","lumina":140,"lit":false,"beam":0,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"open\",\"q2_shell\":\"locked\",\"q2_starweed\":\"locked\",\"q2_lens\":\"locked\",\"q2_light\":\"locked\"}","inv":"{\"wood\":2}"}
+  撮影 08_cove_arrived_roka_objective.png
+ロカの位置: {"x":-64.49604382774177,"y":1.291818341252173,"z":58.42894330511152,"hidden":false}
+ロカのそば: {"x":-63.5,"z":59.3,"inCove":true,"seq":"idle","hour":20.7,"obj":"q2_meet_offer / ロカと はなそう","hint":"Eロカと はなす","lumina":140,"lit":false,"beam":0,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"open\",\"q2_shell\":\"locked\",\"q2_starweed\":\"locked\",\"q2_lens\":\"locked\",\"q2_light\":\"locked\"}","inv":"{\"wood\":2}"}
+  撮影 09_roka_talk_hint.png
+  撮影 10_roka_meeting.png
+出会いのあと: {"x":-63.5,"z":59.3,"inCove":true,"seq":"idle","hour":20.8,"obj":"q2_shell_offer / ロカの はなしを聞こう","hint":"Eロカと はなす","lumina":140,"lit":false,"beam":0,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"done\",\"q2_shell\":\"open\",\"q2_starweed\":\"locked\",\"q2_lens\":\"locked\",\"q2_light\":\"locked\"}","inv":"{\"wood\":2}"}
+  撮影 11_roka_meeting_done.png
+レンズの受注後: {"x":-63.5,"z":59.3,"inCove":true,"seq":"idle","hour":21,"obj":"q2_lens_craft_r_lens / ざいりょうが そろったよ! Cで ひかりのレンズを作ろう","hint":"","lumina":140,"lit":false,"beam":0,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"done\",\"q2_shell\":\"done\",\"q2_starweed\":\"done\",\"q2_lens\":\"open\",\"q2_light\":\"locked\"}","inv":"{\"wood\":2,\"lightshell\":3,\"starweed\":4,\"ore\":2}"}
+  撮影 12_lens_quest_offer.png
+  撮影 13_lens_craft_panel.png
+クラフト: clicked
+  撮影 14_lens_crafted.png
+レンズ作成後: {"x":-63.5,"z":59.3,"inCove":true,"seq":"idle","hour":21.1,"obj":"q2_lens_report / ロカに ほうこくしよう","hint":"Eロカと はなす","lumina":140,"lit":false,"beam":0,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"done\",\"q2_shell\":\"done\",\"q2_starweed\":\"done\",\"q2_lens\":\"open\",\"q2_light\":\"locked\"}","inv":"{\"wood\":2,\"starweed\":2,\"lens\":1}"}
+点灯の依頼まで: {"x":-63.5,"z":59.3,"inCove":true,"seq":"idle","hour":21.2,"obj":"q2_light_attach / とうだいに レンズを つけよう","hint":"","lumina":240,"lit":false,"beam":0,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"done\",\"q2_shell\":\"done\",\"q2_starweed\":\"done\",\"q2_lens\":\"done\",\"q2_light\":\"open\"}","inv":"{\"wood\":2,\"starweed\":2,\"lens\":1}"}
+とびらの前: {"x":-61.3,"z":55.4,"inCove":true,"seq":"idle","hour":21.2,"obj":"q2_light_attach / とうだいに レンズを つけよう","hint":"Eとうだいに レンズを つける","lumina":240,"lit":false,"beam":0,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"done\",\"q2_shell\":\"done\",\"q2_starweed\":\"done\",\"q2_lens\":\"done\",\"q2_light\":\"open\"}","inv":"{\"wood\":2,\"starweed\":2,\"lens\":1}"}
+  撮影 15_lighthouse_door_attach_hint.png
+  撮影 16_finale_lookup.png
+  撮影 17_finale_kindle.png
+  撮影 18_finale_beam.png
+  撮影 19_finale_roka_joy.png
+  撮影 20_finale_banner.png
+点灯後: {"x":-61.3,"z":55.4,"inCove":true,"seq":"idle","hour":21.4,"obj":"free / 島で じゆうに くらそう","hint":"とうだいの あかりが まわっている","lumina":440,"lit":true,"beam":0.37,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"done\",\"q2_shell\":\"done\",\"q2_starweed\":\"done\",\"q2_lens\":\"done\",\"q2_light\":\"done\"}","inv":"{\"wood\":2,\"starweed\":2}"}
+  撮影 21_after_lit.png
+島へ帰着: {"x":4,"z":41.6,"inCove":false,"seq":"idle","hour":21.5,"obj":"free / 島で じゆうに くらそう","hint":"Eふねに のる","lumina":440,"lit":true,"beam":1.55,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"done\",\"q2_shell\":\"done\",\"q2_starweed\":\"done\",\"q2_lens\":\"done\",\"q2_light\":\"done\"}","inv":"{\"wood\":2,\"starweed\":2}"}
+  撮影 22_island_night_beach.png
+  撮影 23_home_lantern_placing.png
+家の中の家具: [{"id":1,"item":"f_lighthouse_lantern","x":57,"z":-57.5,"rotY":0}]
+置いたあとのヒント: Eとうだいのランタンを もちかえる
+  撮影 24_home_lighthouse_lantern_night.png
+  撮影 25_home_lighthouse_lantern_day.png
+  撮影 26_island_horizon_spark_0.png
+  撮影 26_island_horizon_spark_1.png
+  撮影 26_island_horizon_spark_2.png
+  撮影 26_island_horizon_spark_3.png
+  撮影 26_island_horizon_spark_4.png
+  撮影 26_island_horizon_spark_5.png
+  撮影 26_island_horizon_spark_6.png
+  撮影 26_island_horizon_spark_7.png
+水平線のきらめき: {"enabled":true,"alpha":0.16,"pos":[-70.08217572776736,5,71.3336431514775]}
+  撮影 27_cove_beam_wide_a.png
+  撮影 28_cove_beam_wide_b.png
+ビームの向き: 2.62 → 5.08(回っていれば値が変わる)
+  撮影 29_cove_beam_wide_c.png
+consoleエラー: 0件

@@ -77,7 +77,9 @@ export class ShopUI {
     const s = this.getState();
     let body = '';
     if (this.tab === 'sell') {
-      const entries = Object.entries(s.inventory) as [ItemId, number][];
+      // だいじなもの(依頼で使う道具。ITEMS の keyItem)は「うる」欄に出さない。
+      // うっかり手ばなして依頼が進められなくなるのを、画面に出さないことで構造的に防ぐ
+      const entries = (Object.entries(s.inventory) as [ItemId, number][]).filter(([id]) => !ITEMS[id]?.keyItem);
       body = entries.length
         ? entries
             .map(([id, n]) => {

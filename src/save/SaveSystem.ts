@@ -2,6 +2,7 @@
 import { newGameState, SAVE_VERSION, type GameState, type PlacedFurniture, type QuestState } from '../game/GameState';
 import { ITEMS, TOOLS, RECIPES, DEFAULT_HOME_STYLE, isStyleFor, type ItemId, type ToolId } from '../data/items';
 import { QUESTS } from '../data/quests';
+import { NPCS } from '../data/npcs';
 
 const KEY = 'lumi_save';
 const OPTS_KEY = 'lumi_opts';
@@ -113,17 +114,22 @@ export function load(): GameState | null {
       }
     }
 
-    // NPC(既知IDのみ)
+    // NPC(既知IDのみ)。
+    // 見るのは newGameState の3人ではなく NPCS 全員: v11第2章のロカのように
+    // 「出会ってから GameState.npcs に足される」NPCの なかよし度も 読みこめるようにする。
+    // 記録が無いNPCは足さない(= metNpcs の「出会った人だけ一覧に出す」がそのまま成り立つ)。
     if (typeof raw.npcs === 'object' && raw.npcs !== null) {
-      for (const id of Object.keys(s.npcs)) {
+      for (const def of NPCS) {
+        const id = def.id;
         const n = (raw.npcs as Record<string, { friendship?: unknown; talkedToday?: unknown; giftedToday?: unknown }>)[id];
-        if (n) {
-          s.npcs[id].friendship = Math.floor(numIn(n.friendship, 0, 99999, 0));
-          s.npcs[id].talkedToday = n.talkedToday === true;
+        if (!n || typeof n !== 'object') continue;
+        s.npcs[id] = {
+          friendship: Math.floor(numIn(n.friendship, 0, 99999, 0)),
+          talkedToday: n.talkedToday === true,
           // 項目が無い旧セーブ・壊れた値は false(=きょうはまだあげていない)。
           // v11以降は回数の制限がないので、これは「きょう あげたか」の記録にすぎない
-          s.npcs[id].giftedToday = n.giftedToday === true;
-        }
+          giftedToday: n.giftedToday === true,
+        };
       }
     }
 

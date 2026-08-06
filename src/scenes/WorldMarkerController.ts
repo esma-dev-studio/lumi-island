@@ -34,7 +34,13 @@ export class WorldMarkerController {
   private tmp = new Vector3();
   private idMatrix = Matrix.Identity();
 
-  constructor(private scene: Scene) {
+  /**
+   * @param heightAt 目的地の足もとの高さ。省略すると島の地形の高さ。
+   *   v11第2章で入り江の目的地(灯台・帰りの桟橋)にも矢印と光の柱を出すようになったので、
+   *   別空間の床を知っている関数(IslandScene.groundY)を渡せるようにした。
+   *   島の上では従来どおり terrainHeight と同じ値になる(桟橋・観測デッキの上だけ床の高さ)。
+   */
+  constructor(private scene: Scene, private heightAt: (x: number, z: number) => number = terrainHeight) {
     this.arrowEl = document.createElement('div');
     this.arrowEl.className = 'dir-arrow hidden';
     this.arrowEl.innerHTML = `<svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 2 L19 16 L12 12.5 L5 16 Z" fill="currentColor"/></svg><span class="dir-dist"></span>`;
@@ -99,7 +105,7 @@ export class WorldMarkerController {
       const dist = Math.hypot(playerX - targetPos.x, playerZ - targetPos.z);
       if (dist > 7) {
         this.beacon.setEnabled(true);
-        this.beacon.position.set(targetPos.x, terrainHeight(targetPos.x, targetPos.z) + 2.6, targetPos.z);
+        this.beacon.position.set(targetPos.x, this.heightAt(targetPos.x, targetPos.z) + 2.6, targetPos.z);
         this.beaconMat.alpha = 0.1 + Math.min(0.1, (dist - 7) * 0.004);
       } else {
         this.beacon.setEnabled(false);
@@ -111,7 +117,7 @@ export class WorldMarkerController {
     // ---- 方向矢印 ----
     if (targetPos) {
       const dist = Math.hypot(playerX - targetPos.x, playerZ - targetPos.z);
-      const y = targetIsNpc ? terrainHeight(targetPos.x, targetPos.z) + 1.2 : terrainHeight(targetPos.x, targetPos.z) + 1.5;
+      const y = this.heightAt(targetPos.x, targetPos.z) + (targetIsNpc ? 1.2 : 1.5);
       this.project(targetPos.x, y, targetPos.z, this.proj);
       // v11: 「目的地が画面に入ったら矢印を消す」のをやめ、手がとどく距離(ARROW_ARRIVE_R)まで出しつづける。
       // 画面に入っていても、林の木も岩も見た目はどれも同じで「どれ?」は分からない。

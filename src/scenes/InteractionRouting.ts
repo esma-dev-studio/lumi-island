@@ -7,12 +7,14 @@ import { hasTool } from '../game/GameState';
 import { questFor } from '../systems/QuestSystem';
 import { GATHER_RULES, toolReason } from '../systems/GatherSystem';
 import { PRIORITY, type InteractionCandidate } from '../systems/InteractionResolver';
-import { objectiveActionContext } from '../systems/ObjectiveSystem';
+import { COVE_LIGHTHOUSE_POI, objectiveActionContext } from '../systems/ObjectiveSystem';
 import { selectInteraction } from '../systems/ObjectiveInteractionPolicy';
 import { canPlant, nearestPlot, stageOf } from '../systems/GardenSystem';
 import type { PlacedRuntime } from '../systems/PlacementSystem';
 import { HOME_DOOR, HOME_BED, HOME_ACT_R } from './HomeInterior';
-import { BOAT_ACT_R, COVE_ACT_R, COVE_DOOR, COVE_RETURN, ISLAND_BOAT_POINT, boatPrompt } from './CoveArea';
+import {
+  BOAT_ACT_R, COVE_ACT_R, COVE_DOOR, COVE_RETURN, ISLAND_BOAT_POINT, boatPrompt, lighthousePrompt,
+} from './CoveArea';
 import type { GameScene } from './GameScene';
 
 export const SHOP_POINT = { x: POIS.shop.x + 4.6, z: POIS.shop.z }; // 店カウンター(工房の正面)
@@ -90,6 +92,36 @@ function pushGatherCandidates(gs: GameScene, cands: InteractionCandidate[], px: 
       enabled: true, hint: gs.inter.hint.text, run: () => {},
     });
   }
+}
+
+/**
+ * いちばん近いNPCとの会話候補(島でも入り江でもまったく同じ規則)。
+ *
+ * 受注できる/報告できるときだけ最優先。進行中(話しても進まない)は採取より下げる。
+ * ※これを最優先のままにすると、鉱石のそばに立つノクトが採取のEを毎回横取りして
+ *   依頼が進まない(実測399秒の主因)。
+ */
+function pushNpcCandidate(gs: GameScene, cands: InteractionCandidate[], px: number, pz: number): void {
+  const npc = gs.npcs.nearest(px, pz);
+  if (!npc) return;
+  const rt = npc as unknown as { def: { id: string; name: string }; x: number; z: number };
+  const q = questFor(gs.state, rt.def.id);
+  const actionable = q !== null && (q.mode === 'offer' || q.mode === 'done');
+  // v10 朝の来訪中(依頼が1つも動いていない日にしか起きない)は「家をほめる」会話にする。
+  // ヒントの文言はふつうの会話と同じ「◯◯と はなす」のまま
+  // (押す前から中身を分ける必要はなく、意味カテゴリの表も増やさずに済む)
+  const visiting = q === null && gs.npcs.isVisiting(rt.def.id, gs.island.time.day, gs.island.time.hour);
+  cands.push({
+    id: `npc_${rt.def.id}`,
+    kind: 'talk',
+    targetId: rt.def.id,
+    questActionable: actionable,
+    priority: actionable ? PRIORITY.npcQuest : PRIORITY.gather + 5,
+    distance: Math.hypot(px - rt.x, pz - rt.z),
+    enabled: true,
+    hint: `<kbd>E</kbd>${rt.def.name}と はなす`,
+    run: () => (visiting ? gs.startVisitTalk(rt.def.id) : gs.questDlg.talkTo(rt.def.id)),
+  });
 }
 
 // 戻り値はホットヒント(1行)。E押下(gs.wantInteract)はここで消費する。
@@ -172,12 +204,20 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
   // 島の候補(NPC・採取・店・釣り・自宅)はどれも80m以上はなれていて距離条件に入らないが、
   // 「入り江では入り江のことだけ」を構造で保証するために早く返す。
   //
-  // 候補の選びかたは自由探索(guided:false)にしてある。これは判定の緩和ではなく設計の意味論:
-  // 島の目的(依頼の報告・素材あつめ)は1つも入り江の中に無いので、誘導で絞ると
-  // 「入り江まで来たのに、ほしくさが1本もつめない」だけになる。帰りの桟橋は
-  // ALWAYS_ALLOWED の 'exit' なので、どちらの選びかたでも必ず押せる。
+  // 候補の絞りこみは島とまったく同じ規則(objectiveActionContext)にしてある。
+  // v11第2章で入り江の中にも目的(ひかりの貝・ほしくさ・ロカ・灯台)ができたので、
+  // 島だけ厳格で入り江だけ自由、という二重の規則を持たないようにするため。
+  //
+  // 「入り江まで来たのに何も採れない」は起きない: 目的が島にあるあいだは
+  // ObjectiveSystem.withAreaTravel が「ふねで しまへ もどろう」に差しかえ、
+  // その段階は guided:false(自由探索)なので、寄り道の採取はこれまでどおり全部出る。
+  // 帰りの桟橋は ALWAYS_ALLOWED の 'exit' なので、どの段階でも必ず押せる。
   if (gs.inCove) {
     pushGatherCandidates(gs, cands, px, pz);
+    // 入り江の住人(ロカ)との会話。島の候補づくりとまったく同じ規則にする
+    // ——ここを忘れると「目の前に立っているのに話しかけられない」になる(実機で発生した)。
+    // NPCSystem.nearest は場所ちがいのNPCを返さないので、島の3人がここに出てくることはない
+    pushNpcCandidate(gs, cands, px, pz);
     // 帰りの桟橋の先: ふねで島へ帰る
     const backD = Math.hypot(px - COVE_RETURN.x, pz - COVE_RETURN.z);
     if (backD < COVE_ACT_R) {
@@ -188,47 +228,37 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
         run: () => gs.seq.sail('island'),
       });
     }
-    // こわれた灯台のとびら: 表示だけの候補(中は次のウェーブ)。
-    // kind='place' は ObjectiveSystem の preferredKinds に決して入らない種類なので、
-    // 将来 入り江に依頼を足しても、この案内が誘導を横取りすることはない
+    // こわれた灯台のとびら。
+    // ふだんは「しまっている」の表示だけ。第2章の最後の依頼(q2_light)を引き受けていて
+    // ひかりのレンズを持っているときだけ、Eで点灯の見せ場がはじまる。
+    // kind='place' は ObjectiveSystem の preferredKinds に ふつうは入らない種類なので、
+    // 入り江で素材をあつめている最中に この案内が誘導を横取りすることはない
+    // (レンズを つける段階だけ、objectiveActionContext が 'place' を通す)。
     const doorD = Math.hypot(px - COVE_DOOR.x, pz - COVE_DOOR.z);
     if (doorD < COVE_ACT_R) {
+      const flags = gs.state.flags ?? {};
+      const quests = gs.state.quests ?? {};
+      const inv = (gs.state.inventory ?? {}) as Partial<Record<string, number>>;
+      const onQuest = quests.q2_light === 'open' && flags.q2_light_accepted === true;
+      const prompt = lighthousePrompt(flags.lighthouse_lit === true, onQuest, (inv.lens ?? 0) > 0);
       cands.push({
-        id: 'cove_lighthouse', kind: 'place', targetId: 'lighthouse',
+        id: prompt.attach ? 'cove_lighthouse_attach' : 'cove_lighthouse',
+        kind: 'place', targetId: COVE_LIGHTHOUSE_POI,
         priority: PRIORITY.door + 2, distance: doorD, enabled: true,
-        hint: 'とびらは しまっている', run: () => {},
+        hint: prompt.hint,
+        run: () => {
+          if (prompt.attach) gs.attachLighthouseLens();
+        },
       });
     }
-    const coveBest = selectInteraction(cands, { preferredKinds: [], guided: false });
+    const coveBest = selectInteraction(cands, objectiveActionContext(gs.lastObjective));
     if (!coveBest) return '';
     if (want) coveBest.run();
     return coveBest.hint;
   }
 
-  // NPC: 受注できる/報告できるときだけ最優先。進行中(話しても進まない)は採取より下げる。
-  // ※これを最優先のままにすると、鉱石のそばに立つノクトが採取のEを毎回横取りして
-  //   依頼が進まない(実測399秒の主因)
-  const npc = gs.npcs.nearest(px, pz);
-  if (npc) {
-    const rt = npc as unknown as { def: { id: string; name: string }; x: number; z: number };
-    const q = questFor(gs.state, rt.def.id);
-    const actionable = q !== null && (q.mode === 'offer' || q.mode === 'done');
-    // v10 朝の来訪中(依頼が1つも動いていない日にしか起きない)は「家をほめる」会話にする。
-    // ヒントの文言はふつうの会話と同じ「◯◯と はなす」のまま
-    // (押す前から中身を分ける必要はなく、意味カテゴリの表も増やさずに済む)
-    const visiting = q === null && gs.npcs.isVisiting(rt.def.id, gs.island.time.day, gs.island.time.hour);
-    cands.push({
-      id: `npc_${rt.def.id}`,
-      kind: 'talk',
-      targetId: rt.def.id,
-      questActionable: actionable,
-      priority: actionable ? PRIORITY.npcQuest : PRIORITY.gather + 5,
-      distance: Math.hypot(px - rt.x, pz - rt.z),
-      enabled: true,
-      hint: `<kbd>E</kbd>${rt.def.name}と はなす`,
-      run: () => (visiting ? gs.startVisitTalk(rt.def.id) : gs.questDlg.talkTo(rt.def.id)),
-    });
-  }
+  // NPC(島の3人)
+  pushNpcCandidate(gs, cands, px, pz);
   // 採取ノード
   pushGatherCandidates(gs, cands, px, pz);
   // v9 虫(虫あみが要る)。捕まえられるのは BugSystem の BUG_CATCH_R(2.6m)の内がわ。

@@ -23,6 +23,8 @@ export const GATHER_CATEGORIES = [
   'gatherSnail',
   // v9: カマでかる「背の高い草」。既存の草むら(クサツル)とは別の素材なので別カテゴリ
   'gatherStraw',
+  // v11第2章: よるの入り江でしかとれない2種。道具は要らず、島の拾いものと同じあつかい
+  'gatherStarweed', 'gatherLightshell',
 ];
 const GATHER = new Set(GATHER_CATEGORIES);
 /**
@@ -41,8 +43,18 @@ const GATHER = new Set(GATHER_CATEGORIES);
  * (受注前に採取や売買を塞ぐと、依頼と依頼のあいだの自由時間が死んでしまう)。
  * 引き受けたあとの段階(報告'report'・採取・釣り・クラフト・配置・ベッド待ち)は guided:true なので、
  * 従来どおり厳格に判定する。特に'report'は talk系のヒントだけをtrueにする。
+ *
+ * v11第2章で足した2つも、同じ「設計の意味論への較正」:
+ *   money : ふねの しゅうり代(500ルミナ)をためる段階。
+ *           ためかたは1つではない(うる・つる・ほる・虫をとる…)ので、
+ *           src/systems/ObjectiveSystem.ts の objectiveActionContext は
+ *           obj.money を FREE_CONTEXT() にして 行動を絞らない。
+ *           とくに「Eお店をみる」は お金をためる ど真ん中の行動で、矛盾どころか正解。
+ *   sail  : 島と入り江のあいだで「ふねの のりばへ行こう」と案内している段階
+ *           (withAreaTravel が作る目的)。のりばまでは ただの移動なので、
+ *           道すがらの採取・釣りは寄り道ではない。こちらも FREE_CONTEXT()。
  */
-const ANYTHING_OK_OBJ = new Set(['free', 'tutorial', 'talk']);
+const ANYTHING_OK_OBJ = new Set(['free', 'tutorial', 'talk', 'money', 'sail']);
 
 /** HTML片(kbdタグ等)と全角スペースをならして、素の1行にする */
 function normalize(text) {
@@ -61,7 +73,14 @@ export const OBJ_RULES = [
   // NPC不在の待ち案内。「ほうこくしよう」より先に見る(不在時は報告ではなく就寝が次の行動)
   { cat: 'sleep', re: /ねているよ|ねて まとう|ベッドで .*ねよう/, src: 'ObjectiveSystem/NpcAvailabilityService: ◯◯は もう ねているよ<br>家のベッドで 朝まで ねよう / 家に はいって ベッドで ねよう' },
   { cat: 'report', re: /ほうこくしよう/, src: 'ObjectiveSystem: ◯◯に ほうこくしよう(headline=できた!)' },
-  { cat: 'talk', re: /はなしを聞こう|話しかけよう/, src: 'ObjectiveSystem: ◯◯の はなしを聞こう' },
+  // 「◯◯と はなそう」は v11第2章の offerLabel(ロカとの であい)。未受注の提案なので talk と同じ
+  { cat: 'talk', re: /はなしを聞こう|話しかけよう|と はなそう/, src: 'ObjectiveSystem: ◯◯の はなしを聞こう / quests.ts offerLabel: ロカと はなそう' },
+  // v11第2章 ふねの しゅうり代をためる段階。ためかたを絞らないので ANYTHING_OK_OBJ に入れてある
+  { cat: 'money', re: /ルミナを ためよう/, src: 'ObjectiveSystem: しゅうり代の 500ルミナを ためよう(ツムギ工房で もちものを うろう)' },
+  // v11第2章 島 ⇄ よるの入り江 のまたぎ(withAreaTravel)
+  { cat: 'sail', re: /ふねで .*(もどろう|わたろう)/, src: 'ObjectiveSystem: ふねで しまへ もどろう / ふねで よるの入り江へ わたろう' },
+  // v11第2章 とうだいに レンズを つける段階
+  { cat: 'lighthouse', re: /とうだいに .*つけよう/, src: 'ObjectiveSystem: とうだいに レンズを つけよう' },
   { cat: 'craft', re: /ざいりょうが そろった|Cで .+を作ろう/, src: 'ObjectiveSystem: ざいりょうが そろったよ! <kbd>C</kbd>で ◯◯を作ろう' },
   { cat: 'place', re: /島に .*置こう|島に置こう|置こう/, src: 'ObjectiveSystem: ランタンを 島に置こう(もちもの→おく) / 光る家具を 島に置こう' },
   { cat: 'fish', re: /つろう|つりあげよう/, src: 'ObjectiveSystem: 桟橋で サカナをつろう / quests.ts: サカナを 1匹 つろう' },
@@ -86,6 +105,9 @@ export const OBJ_RULES = [
   // v9: 雨の日だけの素材。同じ理由(将来のcraftStepでunknownにしない)
   { cat: 'gatherSnail', re: /カタツムリ.*(あつめよう|見つけよう)/, src: 'ObjectiveSystem craftStep: カタツムリを あつめよう(ITEMS.snail.name)' },
   { cat: 'gatherStraw', re: /わら.*あつめよう/, src: 'ObjectiveSystem craftStep: わらを あつめよう(ITEMS.straw.name)' },
+  // v11第2章 よるの入り江の2種。「ほしくさ」は「ほしのかけら」とも「わら」とも重ならない別の文言
+  { cat: 'gatherStarweed', re: /ほしくさ.*あつめよう/, src: 'ObjectiveSystem: ほしくさを あつめよう(ITEMS.starweed.name)' },
+  { cat: 'gatherLightshell', re: /ひかりの貝.*あつめよう/, src: 'ObjectiveSystem: ひかりの貝を あつめよう(ITEMS.lightshell.name)' },
 ];
 
 // ---- ホットヒント(.hud-hint)のカテゴリ表。上から順に最初に当たったものを採用 ----
@@ -95,6 +117,22 @@ export const HINT_RULES = [
   { cat: 'dialogue', re: /つぎへ|おわる/, src: 'DialogueUI: <kbd>E</kbd>つぎへ / <kbd>E</kbd>おわる' },
   // 「◯◯には △△が ひつよう」は行動を促すヒントではなく理由表示。fishより先に見る
   { cat: 'blocked', re: /には .*(ひつよう|まってから)/, src: 'InteractionRouting: つりには ツリザオが ひつよう / つりには すこし まってから / InteractionSystem: ◯◯には オノが ひつよう' },
+  // v11 「いまは できない理由・いまの ようす」だけを出す表示(押しても何も起きない)。
+  // 行動をうながすヒントではないので、上の blocked とまったく同じあつかいにする
+  {
+    cat: 'blocked', re: /しゅうりちゅう|しまっている|まわっている/,
+    src: 'CoveArea: ふねは しゅうりちゅう みたい / とびらは しまっている / とうだいの あかりが まわっている',
+  },
+  // v11第2章 ふねに のる・ふねで しまへ かえる(島 ⇄ よるの入り江)
+  {
+    cat: 'sail', re: /ふねに のる|ふねで しまへ かえる/,
+    src: 'InteractionRouting: <kbd>E</kbd>ふねに のる / <kbd>E</kbd>ふねで しまへ かえる',
+  },
+  // v11第2章 とうだいに レンズを つける(点灯の見せ場がはじまる)
+  {
+    cat: 'lighthouse', re: /とうだいに .*つける/,
+    src: 'InteractionRouting: <kbd>E</kbd>とうだいに レンズを つける',
+  },
   { cat: 'fish', re: /つりをする|つりあげる|まってる/, src: 'InteractionRouting: <kbd>E</kbd>つりをする / FishingSystem: まってる… <kbd>Esc</kbd>やめる / !! <kbd>E</kbd>つりあげる' },
   { cat: 'shop', re: /お店をみる|うる・かう/, src: 'InteractionRouting: <kbd>E</kbd>お店をみる(うる・かう)' },
   { cat: 'sleep', re: /ねる[((]あさまで/, src: 'InteractionRouting: <kbd>E</kbd>ねる(あさまで)' },
@@ -130,6 +168,11 @@ export const HINT_RULES = [
   { cat: 'gatherSnail', re: /カタツムリをひろう/, src: 'GameScene.routeWithSnail: <kbd>E</kbd>カタツムリをひろう(snail)' },
   // v9: カマ→わら。「わらをかる」は「草をかる」「かりくさをかる」と重ならない別の文言
   { cat: 'gatherStraw', re: /わらをかる/, src: 'GatherSystem verb: わらをかる(tallgrass)' },
+  // v11第2章 よるの入り江の2種(道具は要らない拾いもの)。
+  // 「ほしくさをつむ」は「ベリーをつむ」と、「ひかりの貝をひろう」は「かいがらをひろう」と
+  // 文言が重ならないので、この位置(既存の採取ヒントのあと)で取り違えは起きない
+  { cat: 'gatherStarweed', re: /ほしくさをつむ/, src: 'GatherSystem verb: ほしくさをつむ(starweed)' },
+  { cat: 'gatherLightshell', re: /ひかりの貝をひろう/, src: 'GatherSystem verb: ひかりの貝をひろう(lightshell)' },
   // v9: 虫あみ・シャベルの行動。シャベル(dig)は依頼の目的にならないので誘導中は出ない。
   // 虫あみ(catch)は v11 から「常時許可」になった(下の isSemanticMatch を参照)。
   // 「こうせきをほる」(gatherOre)より後ろに置くこと(「ほる」が横取りしないように)。

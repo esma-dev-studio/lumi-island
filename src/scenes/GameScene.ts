@@ -6,7 +6,7 @@ import { CameraController } from './CameraController';
 import { SequenceDirector } from './SequenceDirector';
 import { routeInteraction, HOME_EXIT } from './InteractionRouting';
 import { homeShot, HOME_SPAWN, HOME_BED, insideHomeFloor, setHomeExpandedLayout } from './HomeInterior';
-import { COVE_SPAWN, ISLAND_BOAT_POINT } from './CoveArea';
+import { COVE_DOOR, COVE_RETURN, COVE_SPAWN, ISLAND_BOAT_POINT } from './CoveArea';
 import { WorldMarkerController, type MarkerNpc } from './WorldMarkerController';
 import { QuestDialogueController } from './QuestDialogueController';
 import { DialogueCameraPlanner, leanToward } from './DialogueCameraPlanner';
@@ -17,7 +17,7 @@ import { CharacterView } from '../characters/CharacterView';
 import { CHARACTERS } from '../data/characters';
 import { POIS } from '../data/island';
 import { ITEMS, validateItemData } from '../data/items';
-import { applyHomeStyle, invAddRecorded, newGameState, type GameState } from '../game/GameState';
+import { applyHomeStyle, invAddRecorded, invRemove, newGameState, statAdd, type GameState } from '../game/GameState';
 import { PlayerController, type InputState } from '../systems/PlayerController';
 import { InteractionSystem } from '../systems/InteractionSystem';
 import { FishingSystem } from '../systems/FishingSystem';
@@ -25,10 +25,15 @@ import { PlacementSystem, type PlacedRuntime } from '../systems/PlacementSystem'
 import { NPCSystem, visitPraiseFacts } from '../systems/NPCSystem';
 import { NPC_BY_ID, visitPraiseLines } from '../data/npcs';
 import { TutorialSystem } from '../systems/TutorialSystem';
-import { evaluate as evaluateAchievements } from '../systems/AchievementSystem';
+import {
+  LIGHTHOUSE_LIT_KEY, evaluate as evaluateAchievements, statCount,
+} from '../systems/AchievementSystem';
 import { resetNpcDaily, validateGiftData } from '../systems/GiftSystem';
-import { currentObjective, type Objective } from '../systems/ObjectiveSystem';
-import { questFor } from '../systems/QuestSystem';
+import {
+  COVE_LIGHTHOUSE_POI, COVE_RETURN_POI, ISLAND_BOAT_POI, currentObjective, withAreaTravel, type Objective,
+} from '../systems/ObjectiveSystem';
+import { completeQuest, questFor, syncQuestUnlocks } from '../systems/QuestSystem';
+import { QUEST_BY_ID } from '../data/quests';
 import { NpcAvailabilityService } from '../systems/NpcAvailabilityService';
 import { sharedWeather, type Weather } from '../systems/WeatherSystem';
 import { finishHomeExpansion, homeExpandStage, shouldFinishConstruction } from '../systems/HomeExpansion';
@@ -109,6 +114,8 @@ export class GameScene {
   private occAcc = 0;
   private achAcc = 0; // じっせき判定のスロットル(1秒に1回)
   lastObjective: Objective | null = null; // 回帰ボット・デバッグAPIが読む
+  /** 点灯の見せ場の あとに出す達成バナーの中身(レンズを つけた瞬間に確定させる) */
+  private lighthouseRewardLines: string[] = [];
 
   constructor(
     public engine: Engine,
@@ -145,7 +152,9 @@ export class GameScene {
     // ここで読み取り口を1つだけ差しこむ)。src/systems/BugSystem.ts を参照
     this.island.playerProbe = () => ({ x: this.player.x, z: this.player.z, speed: this.player.speed });
     this.camCtl = new CameraController(this.scene);
-    this.markers = new WorldMarkerController(this.scene);
+    // 矢印・光の柱の足もとの高さは「別空間もふくむ床の高さ」から取る
+    // (入り江の目的地=灯台・帰りの桟橋にも 正しい高さで誘導を出すため)
+    this.markers = new WorldMarkerController(this.scene, (x, z) => this.island.groundY(x, z));
     this.dialogueCam = new DialogueCameraPlanner(this.island, this.player);
     this.occlusion = new OcclusionController(this.island, this.player, this.camCtl);
 
@@ -171,13 +180,17 @@ export class GameScene {
       // 依頼の受注・報告相手のNPCは家に入らない(子どもを待たせない)
       (id) => questFor(this.state, id) !== null
     );
-    // v10 来訪の判定材料(なかよし度と依頼状況)。依頼が動いている日はだれも来ない
+    // v10 来訪の判定材料(なかよし度と依頼状況)。依頼が動いている日はだれも来ない。
+    // v11: 島にくらすNPCだけを対象にする。ロカは入り江の住人なので、朝の庭先には来ない
+    // (来訪の立ち位置は自宅の庭先=島の座標なので、入り江の住人を入れると海をわたって来てしまう)
     this.npcs.setVisitProbe(() =>
-      Object.entries(this.state.npcs).map(([id, n]) => ({
-        id,
-        friendship: n.friendship,
-        questCritical: questFor(this.state, id) !== null,
-      }))
+      Object.entries(this.state.npcs)
+        .filter(([id]) => (NPC_BY_ID[id]?.area ?? 'island') === 'island')
+        .map(([id, n]) => ({
+          id,
+          friendship: n.friendship,
+          questCritical: questFor(this.state, id) !== null,
+        }))
     );
     await this.npcs.init();
     this.seq = new SequenceDirector(this);
@@ -202,6 +215,7 @@ export class GameScene {
       onDialogueCamera: (npcId) => this.focusDialogueCamera(npcId),
       onIslandLevel: (lv) => this.island.applyIslandLevel(lv),
       onCelebrate: () => this.seq.start('bloom'),
+      onBoatRepaired: () => this.island.applyBoatRepaired(true),
     });
 
     // イベント連携
@@ -254,7 +268,11 @@ export class GameScene {
     // 室内フラグとぶつかったら室内を優先する(両方立つことはないが、壊れたセーブで海に立たせない)
     this.inCove = !this.indoor && this.state.flags.in_cove === true;
     this.island.cove.setActive(this.inCove);
+    this.npcs.setArea(this.inCove ? 'cove' : 'island'); // 別の場所の住人は出さない
     this.island.applyBoatRepaired(this.state.flags.boat_repaired === true);
+    this.island.applyLighthouseLit(this.state.flags.lighthouse_lit === true);
+    // 第1章を終えているセーブ・入り江へ行ったことのあるセーブは、ここで第2章が開く
+    syncQuestUnlocks(this.state);
     if (this.inCove && !this.island.cove.walkable(this.player.x, this.player.z)) {
       this.player.teleport(COVE_SPAWN.x, COVE_SPAWN.z); // 保存位置が入り江の外なら桟橋へ戻す
     }
@@ -291,6 +309,10 @@ export class GameScene {
     if (o.target.kind === 'poi' && o.target.id) {
       // 「ベッドでねよう」の目的地は、室内にいるあいだは室内のベッド(距離表示を正しくする)
       if (o.target.id === 'bed' && this.indoor) return { x: HOME_BED.x, z: HOME_BED.z, isNpc: false };
+      // v11第2章 島のPOIS には無い、ふねの のりばと灯台のとびら
+      if (o.target.id === COVE_RETURN_POI) return { x: COVE_RETURN.x, z: COVE_RETURN.z, isNpc: false };
+      if (o.target.id === ISLAND_BOAT_POI) return { x: ISLAND_BOAT_POINT.x, z: ISLAND_BOAT_POINT.z, isNpc: false };
+      if (o.target.id === COVE_LIGHTHOUSE_POI) return { x: COVE_DOOR.x, z: COVE_DOOR.z, isNpc: false };
       const poi = POIS[o.target.id];
       if (poi) return { x: poi.x, z: poi.z, isNpc: false };
     }
@@ -298,14 +320,23 @@ export class GameScene {
   }
 
   private updateObjective(dt: number): void {
+    // 第2章の解放条件(ルミの木の開花・入り江への上陸)がそろっていれば ここで開く。
+    // 条件が変わる場所は複数(依頼の完了・船での上陸)なので、判断を1か所にまとめてある
+    syncQuestUnlocks(this.state);
     const nearestNpc = this.npcs.nearest(this.player.x, this.player.z, 999) as unknown as { def: { id: string } } | null;
-    const obj =
+    // いる場所(島/入り江)と目的の場所がちがえば、ふねの のりばへの案内に差しかえる
+    const obj = withAreaTravel(
       this.tutorial.overrideObjective() ??
-      currentObjective(this.state, nearestNpc?.def.id ?? 'tsumugi', this.npcAvail.compute());
+        currentObjective(this.state, nearestNpc?.def.id ?? 'tsumugi', this.npcAvail.compute()),
+      this.inCove
+    );
     this.lastObjective = obj;
     const tp = this.targetPosOf(obj);
     const dist = tp ? Math.hypot(this.player.x - tp.x, this.player.z - tp.z) : null;
-    this.objHud.update(obj, dist);
+    // 点灯の見せ場のあいだは 左上を そのままにしておく。
+    // 達成はレンズを つけた瞬間に確定しているので、ここで更新すると見せ場の最中に
+    // 「クリア!」へ切りかわり、目が そちらへ行ってしまう(実機のスクショで確認)
+    if (this.seq.current !== 'lighthouse') this.objHud.update(obj, dist);
     // NPCマーカー: 目標NPC(!)+報告先(✓)
     const marks: MarkerNpc[] = [];
     const reportMode = obj.headline === 'できた!';
@@ -314,9 +345,11 @@ export class GameScene {
       if (p && !p.hidden) marks.push({ id: obj.target.id, x: p.x, y: p.y, z: p.z, kind: reportMode ? 'report' : 'target' });
     }
     // 会話・達成バナー・見せ場の最中は誘導を消し、視線を演出に集める(P1-1)。
-    // 室内(6×5mの部屋)・よるの入り江でも消す: 矢印・光の柱は島の地形の高さに置くので、
-    // 島の外では足もとが合わない(目的地はどれも島の上にある)
-    if (this.modalOpen || this.seq.active || this.indoor || this.inCove) {
+    // 室内(6×5mの1部屋)でも消す: ベッドとドアしかなく、迷いようがないため。
+    // よるの入り江では v11第2章から出す: 目的地(灯台・ロカ・素材・帰りの桟橋)が
+    // 入り江の中にあり、足もとの高さも WorldMarkerController の heightAt が
+    // 別空間ごと知っているので、島と同じ精度で矢印と距離が出せる
+    if (this.modalOpen || this.seq.active || this.indoor) {
       this.markers.hideAll();
     } else {
       this.markers.update(tp, tp?.isNpc ?? false, this.player.x, this.player.z, marks, reportMode);
@@ -544,13 +577,114 @@ export class GameScene {
     this.inCove = inCove;
     this.state.flags.in_cove = inCove;
     this.island.cove.setActive(inCove);
+    this.npcs.setArea(inCove ? 'cove' : 'island'); // 島の人は入り江に、ロカは島に出てこない
     this.restoreAllOcclusionImmediately(); // 半透明のまま画がすり替わらないように
     const p = inCove ? COVE_SPAWN : ISLAND_BOAT_POINT;
     this.player.teleport(p.x, p.z);
     this.player.face(p.x, p.z - 4); // どちらも桟橋の付け根(北)を向いて降りる
     this.island.dayNight.update(this.island.time.hour, this.player.x, this.player.z);
     this.state.player = { x: this.player.x, z: this.player.z, rotY: this.player.rotY };
+    if (inCove) void this.meetRokaOnFirstLanding();
     save(this.state);
+  }
+
+  /**
+   * はじめて入り江へ上陸した瞬間に、ロカを灯台のふもとへ出す(第2章のはじまり)。
+   * 2回目からは何もしない(フラグとセーブの記録の両方を見る)。
+   *
+   * 読みこみ(GLB)が要るので非同期だが、待たなくても進行は壊れない:
+   * 出てくるまでの数百ミリ秒は「まだ誰もいない入り江」で、そのあいだ目標は
+   * ロカのいない状態(=第1章の続き or 自由)のまま。実体ができた次のフレームから
+   * syncQuestUnlocks が q2_meet を開く。
+   */
+  private async meetRokaOnFirstLanding(): Promise<void> {
+    const first = this.state.flags.roka_arrived !== true;
+    this.state.flags.roka_arrived = true;
+    if (!this.state.npcs.roka) {
+      this.state.npcs.roka = { friendship: 0, talkedToday: false, giftedToday: false };
+    }
+    await this.npcs.addNpc('roka');
+    this.npcs.setArea(this.inCove ? 'cove' : 'island');
+    if (first) save(this.state);
+  }
+
+  /**
+   * とうだいに レンズを つける(こわれた灯台のとびらの前でEを押したとき)。
+   * 状態(レンズを消す・フラグを立てる)をここで確定させてから見せ場を始める。
+   */
+  attachLighthouseLens(): void {
+    if (this.seq.active) return;
+    if (!invRemove(this.state, 'lens', 1)) return;
+    this.state.flags.lighthouse_lit = true;
+    // 依頼の達成も この瞬間に確定させる(見せ場は「見せるだけ」にする)。
+    // あとまわしにすると、演出のあいだ左上に「ロカに ほうこくしよう」が出てしまう
+    // ——レンズを つけたのに 報告しろ、という ちぐはぐな案内になる(実機で確認)。
+    const def = QUEST_BY_ID.q2_light;
+    this.lighthouseRewardLines = [];
+    if (def && this.state.quests[def.id] === 'open') {
+      this.lighthouseRewardLines = completeQuest(this.state, def).lines;
+      statAdd(this.state, 'quest_done');
+      const roka = this.state.npcs.roka;
+      if (roka) roka.friendship += 3;
+    }
+    // じっせき「とうだいの ひかり」のカウンタ(1回だけ。次のフレームの判定で達成になる)
+    if (statCount(this.state, LIGHTHOUSE_LIT_KEY) < 1) statAdd(this.state, LIGHTHOUSE_LIT_KEY);
+    save(this.state);
+    this.seq.lightLighthouse();
+  }
+
+  /**
+   * ロカを プレイヤーの となり(1.5m)へ動かす。
+   * 会話のツーショットは「二人の真横」から撮るので、離れていると構図が崩れる。
+   * 灯台のとびらを基準に、決まった順で角度をためして「立てる点」をえらぶ(乱数は使わない)。
+   */
+  private moveRokaBesidePlayer(): void {
+    if (!this.npcs.npcs.get('roka')) return;
+    const lh = this.island.cove.lighthouseWorld;
+    const base = Math.atan2(lh.x - this.player.x, lh.z - this.player.z);
+    for (const deg of [90, -90, 135, -135, 45, -45, 180]) {
+      const a = base + (deg * Math.PI) / 180;
+      const x = this.player.x + Math.sin(a) * 1.5;
+      const z = this.player.z + Math.cos(a) * 1.5;
+      if (!this.island.walkable(x, z)) continue;
+      const [rx, rz] = this.island.resolveCollision(x, z, 0.3);
+      if (Math.hypot(rx - x, rz - z) > 0.01) continue; // 岩や灯台に押し出される点は使わない
+      this.npcs.placeAt('roka', x, z);
+      return;
+    }
+  }
+
+  /**
+   * 点灯の見せ場が終わったあと: ロカのよろこびの会話と 達成バナー。
+   * SequenceDirector から1回だけ呼ばれる(状態はすでに attachLighthouseLens で確定ずみ)。
+   */
+  onLighthouseLit(): void {
+    const def = QUEST_BY_ID.q2_light;
+    const rewardLines = this.lighthouseRewardLines;
+    sfx('quest');
+    // ロカのよろこびの会話。ふつうの会話と同じ道すじ(カメラ・終わりかた)にそろえる。
+    // まず となりへ来てもらう: 灯台のふもと(3.9m先)のままだと二人が画面の左右に離れ、
+    // あいだに ほしくさが入る構図になる(教訓1のツーショットの項)
+    this.moveRokaBesidePlayer();
+    const rt = this.npcs.npcs.get('roka');
+    if (rt) {
+      this.npcs.setTalking('roka', true, this.player.x, this.player.z);
+      this.player.face(rt.x, rt.z);
+      this.focusDialogueCamera('roka');
+    }
+    this.dialogue.show('ロカ', [
+      'ついた……! ひかった! ぼくの とうだいが ひかったよ!',
+      'ほら、うみの ずっと むこうまで とどいてる。ふねが 見つけてくれるね。',
+      'ありがとう。ぼく、もう ひとりで ばんを してるって かんじが しないんだ。',
+      'これからは まいばん ともすよ。しまからも 見えるかな。……見えたら 手を ふってね。',
+    ], () => {
+      if (rt) {
+        this.npcs.setTalking('roka', false);
+        this.focusDialogueCamera(null);
+      }
+      this.questComplete.show(def?.title ?? 'とうだいに あかりを', rewardLines, 'しまへ もどって 夜の海を 見てみよう');
+      save(this.state);
+    });
   }
 
   // ---------- カメラ遮蔽 ----------

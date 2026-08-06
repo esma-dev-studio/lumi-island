@@ -81,10 +81,22 @@ export function visitPraiseLines(def: NpcDef, facts: VisitPraiseFacts): string[]
   return lines;
 }
 
+/**
+ * そのNPCが くらしている場所。
+ *   island : 島(はじめからの3人)
+ *   cove   : よるの入り江(v11第2章のロカ)
+ * 別の場所にいるNPCは 見た目を消し、話しかけられない(src/systems/NPCSystem.ts の setArea)。
+ * 「いまやること」も、場所がちがえば ふねの のりばへ案内する
+ * (src/systems/ObjectiveSystem.ts の withAreaTravel)。
+ */
+export type NpcArea = 'island' | 'cove';
+
 export interface NpcDef {
   id: string;
   charId: string;
   name: string;
+  /** くらしている場所(省略=island)。ここが現在地と違うNPCは出てこない */
+  area?: NpcArea;
   /** 大好物。おくりもので なかよし度が +2 になる(src/systems/GiftSystem.ts が読む) */
   giftLoves: ItemId[];
   /** よろこぶもの。+1 だが専用のことばで返す */
@@ -109,9 +121,14 @@ export interface NpcDef {
    */
   debutFlag?: string;
   /**
-   * ふだんの ひとこと(あいさつのあとに ときどき足す 雑談)。
+   * ふだんの ひとこと(あいさつのあとに足す 雑談)。
    * あいさつ(greetings)と分けてあるのは、なかよし度に関係なく その子の
    * 「いま気にしていること」を伝えるため。取り出しは dailyLine(def, day)。
+   *
+   * 出る場面は「依頼が1つも動いていないときの あいさつ」だけ
+   * (src/scenes/QuestDialogueController.ts)。受注・報告の会話には まざらない:
+   * 大事な場面に雑談を足すと、何をすればよいのかが読み取りにくくなる。
+   * 話題は日付で1つ選ぶので、同じ日に何度話しても同じ・翌日には変わる。
    */
   dailyLines?: string[];
 }
@@ -168,6 +185,13 @@ export const NPCS: NpcDef[] = [
       ['お、きたね! 今日も釣り日和だ。', 'ヨザカナって知ってる? 夜の池で光るんだよ。'],
       ['きみと釣りする時間、けっこう好きなんだよね。', '今度いっしょに夜釣りしようよ!'],
     ],
+    // v11第2章への伏線。あいさつのあとに ときどき足す 雑談なので、
+    // 依頼の受注・報告の会話には まざらない(QuestDialogueControllerの questCritical を参照)
+    dailyLines: [
+      'あの ふね、いつか なおしたいの。おきへ 出られたら いいなあ。',
+      '桟橋の よこの ふね、見た? ぼくの じまんの ふねなんだ……いまは やすんでるけどね。',
+      'ヨザカナは 夜の池で 光るんだ。海の 夜も いつか 見てみたいな。',
+    ],
   },
   {
     id: 'nokto',
@@ -200,6 +224,12 @@ export const NPCS: NpcDef[] = [
       ['ふぁ…ワシはノクト。夜にならんと頭がまわらんのじゃ。', '夜の島は良いぞ。光るものだらけじゃ。'],
       ['おぬしか。ちょうど星の記録をしておったところじゃ。', 'ヒカリゴケは夜に見るとようわかる。おぼえておくとよい。'],
       ['おぬしと話すのは楽しいのう。', 'ルミの木の伝説、いつか全部話してやろう。'],
+    ],
+    // v11第2章への伏線(ミナモと同じく 雑談だけに置く)
+    dailyLines: [
+      'よる、海の むこうに むかし あかりが 見えたんだ。いまは 見えんがのう。',
+      'あの あかりはな、ふねに「ここだよ」と おしえておったのじゃ。',
+      '星は しずまん。じゃが 人の ともす あかりは 消えることが ある。さびしいものよ。',
     ],
   },
   {
@@ -237,18 +267,16 @@ export const NPCS: NpcDef[] = [
     ],
   },
   // ---------------------------------------------------------------------------
-  // v11第2章 ロカ(ペンギンの灯台守の子)。
-  // まだ島には出てこない: debutFlag('roka_arrived')が true になるまで NPCSystem は実体を作らない。
-  // ここに置いてあるのは「データだけ先に用意して、出す日を第2章の担当が決める」ため。
-  // 島へ出すときに必要なもの(このファイルの外・別担当):
-  //   - src/data/island.ts の NPC_SPOTS に 'roka' の立ち位置(下の schedule の spot キー)
-  //   - GameState.npcs に roka を足す処理(出会った時。newGameState には入れない)
-  //   - flags.roka_arrived を立てる進行
+  // v11第2章 ロカ(ペンギンの灯台守の子)。くらしているのは島ではなく「よるの入り江」。
+  // debutFlag('roka_arrived')が true になるまで NPCSystem は実体を作らない
+  // (フラグは はじめて入り江へ上陸したときに立つ。src/scenes/GameScene.ts applyCove)。
+  // 立ち位置は src/data/island.ts の NPC_SPOTS.roka(入り江の世界座標)。
   // ---------------------------------------------------------------------------
   {
     id: 'roka',
     charId: 'roka',
     name: 'ロカ',
+    area: 'cove',
     debutFlag: 'roka_arrived',
     // うみの子。ひかりの貝と さかなは 大好物。あまい木の実をよろこぶ。
     giftLoves: ['lightshell', 'fish', 'nightfish', 'seafish', 'rarefish'],
@@ -269,26 +297,33 @@ export const NPCS: NpcDef[] = [
       ],
     },
     thanksLetter: 'きのうの よる、ひかりが きみの ほうを むいた気が したよ。',
-    // TODO(v11): ロカ専用のレシピ(とうだいの あかり など)が items.ts に入ったら差しかえる。
-    //   いまは あかりのレシピで いちばん ロカらしい「ほしのランタン」を借りている
-    //   (ほしのかけらの初入手でも ひらめくので、すでに知っていたら 手紙だけ とどく)。
-    thanksRecipe: 'r_starlantern',
+    // ロカ専用のレシピ。ほかの3人と同じく「お礼だけが入手経路」
+    // (INITIAL_RECIPES にも RECIPE_DISCOVERY にも入れていない)
+    thanksRecipe: 'r_lighthouse_lantern',
     visitPraise: {
       base: ['おはよう。……あの、きみの家、見にきちゃった。', 'まどが 海のほうを むいてるんだね。いいなあ。'],
       display: ['いきものを かざってる! ぼくも とうだいに かざりたいな。'],
       many: ['ものが たくさんある。ひとつずつ 見ても いい?'],
       bloom: ['にわの お花、まんかいだね。よるも ここは あかるいのかな。'],
     },
-    // 立ち位置(spot)は NPC_SPOTS に 'roka' が入ってから有効になる。
-    // それまで NPCSystem は roka を作らないので、このスケジュールは まだ使われない。
+    /**
+     * 1日の行き先(spotキーは src/data/island.ts の NPC_SPOTS.roka)。
+     *
+     * 「家に帰る(activity:'home')枠を作らない」のが要点:
+     *   入り江へは ふねでしか行けないので、着いた時刻に ロカが家の中だと
+     *   「わざわざ わたったのに 会えない」になってしまう(教訓3のNPC不在の項)。
+     *   灯台守は 夜も起きている、という設定がそのまま導線の安全になっている。
+     *
+     * 動きは決定論: どの spot も wanderR:0 なので、うろうろ(乱数)をしない。
+     * 時刻で行き先が変わるぶんだけ歩く=「固定+ときどき歩く」。
+     */
     schedule: [
-      { from: 6, to: 11, spot: 'pier', activity: 'watch' },
-      { from: 11, to: 15, spot: 'plaza', activity: 'stroll' },
-      { from: 15, to: 20, spot: 'pier', activity: 'fish' },
-      { from: 20, to: 24, spot: 'hill', activity: 'watch' },
-      { from: 24, to: 30, spot: 'home', activity: 'home' },
+      { from: 6, to: 11, spot: 'shore', activity: 'idle' }, // 朝は波うちぎわを見ている
+      { from: 11, to: 16, spot: 'lighthouse', activity: 'work' }, // 昼は灯台の手入れ
+      { from: 16, to: 20, spot: 'pier', activity: 'watch' }, // 夕方は桟橋から沖を見る
+      { from: 20, to: 30, spot: 'lighthouse', activity: 'watch' }, // 夜は灯台の ばん
     ],
-    questEntry: { from: 0, to: 30, spot: 'pier', activity: 'idle' },
+    questEntry: { from: 0, to: 30, spot: 'lighthouse', activity: 'watch' },
     greetings: [
       // なかよし度 0〜2: はじめまして。ひかえめで、まだ ようすを見ている
       [

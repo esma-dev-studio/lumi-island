@@ -1,9 +1,10 @@
 // NPC会話と依頼進行のオーケストレーション(GameSceneから分離)
 import type { GameState } from '../game/GameState';
 import { statAdd } from '../game/GameState';
-import { questFor, acceptQuest, completeQuest } from '../systems/QuestSystem';
+import { questFor, acceptQuest, completeQuest, questShortfall } from '../systems/QuestSystem';
 import { currentObjective } from '../systems/ObjectiveSystem';
-import { NPC_BY_ID } from '../data/npcs';
+import { NPC_BY_ID, dailyLine, greetingTier } from '../data/npcs';
+import type { QuestDef } from '../data/quests';
 import type { ItemId } from '../data/items';
 import { applyGift, canGift, friendshipText, type GiftResult } from '../systems/GiftSystem';
 import { burst } from '../entities/effects';
@@ -30,6 +31,7 @@ export interface QuestDialogueDeps {
   onDialogueCamera: (npcId: string | null) => void; // null=会話終了
   onIslandLevel: (level: number) => void;
   onCelebrate: () => void; // ルミの木開花
+  onBoatRepaired: () => void; // v11第2章 ふねの修理がおわった
 }
 
 /** 家の拡張こうじを たのめる相手(島の大工=ツムギ) */
@@ -63,33 +65,27 @@ export class QuestDialogueController {
       after = () => {
         acceptQuest(d.state, q.def);
         d.tutorial.onQuestAccepted();
+        // v11 「話すだけでおわる」依頼(ロカとの であい)は、この会話のまま達成までいく。
+        // 受注→すぐ報告のために もう一度話しかけさせない(出会いの場面が二度に割れる)
+        if (q.def.type === 'talk') this.finishQuest(q.def, rtNpc);
         save(d.state);
       };
     } else if (q && q.mode === 'done') {
       lines = q.def.done;
-      after = () => {
-        const summary = completeQuest(d.state, q.def);
-        statAdd(d.state, 'quest_done'); // じっせき用のカウンタ
-        rtNpc.friendship += 3;
-        sfx('quest');
-        const next = currentObjective(d.state);
-        d.questComplete.show(q.def.title, summary.lines, next.label.replace(/<[^>]+>/g, ''));
-        if (q.def.id === 'q_wood') d.tutorial.onCraftUnlocked();
-        if (q.def.id === 'q_lumi') {
-          d.onIslandLevel(2);
-          d.onCelebrate();
-        } else if (q.def.id === 'q_lantern') {
-          d.onIslandLevel(Math.max(1, d.state.islandLevel));
-        }
-        save(d.state);
-      };
+      after = () => this.finishQuest(q.def, rtNpc);
     } else if (q && q.mode === 'progress') {
-      lines = [q.def.progress + '。' + q.def.lostHint];
+      // 足りないものが数字で分かる文を先に出す(v11 ふねの修理の「あと◯◯ルミナ」)
+      const short = questShortfall(d.state, q.def);
+      lines = short ? [short, q.def.progress + '。' + q.def.lostHint] : [q.def.progress + '。' + q.def.lostHint];
     } else {
       const f = rtNpc.friendship;
-      const tier = f >= 7 ? 2 : f >= 3 ? 1 : 0;
-      const variants = npcDef.greetings[tier];
+      // しきい値は npcs.ts の greetingTier が唯一の情報源(会話側で写経しない)
+      const variants = npcDef.greetings[greetingTier(f)];
       lines = [variants[(d.state.time.day + f) % variants.length]];
+      // ふだんの ひとこと(その日の話題)。あいさつのあとに足す。
+      // 依頼の受注・報告の会話には まざらない(ここは「依頼が無いとき」の枝)
+      const daily = dailyLine(npcDef, d.state.time.day);
+      if (daily) lines = [...lines, daily];
     }
     // 依頼の受注(offer)と報告(done)は、会話の終わりに状態が変わる大事な場面。
     // そこには寄り道の入口(おくりもの・こうじ)も、こうじの案内も足さない
@@ -125,6 +121,30 @@ export class QuestDialogueController {
     if (!questCritical && canGift(d.state, npcId)) {
       d.dialogue.addExtraAction('おくりものをする', () => this.openGift(npcId, endConversation));
     }
+  }
+
+  /**
+   * 依頼の達成(報酬・じっせき・なかよし度・達成バナー・見せ場)。
+   * ふつうの報告(mode='done')と、話すだけでおわる依頼(type='talk')が同じ道すじを通る。
+   */
+  private finishQuest(def: QuestDef, rtNpc: { friendship: number }): void {
+    const d = this.deps;
+    const summary = completeQuest(d.state, def);
+    statAdd(d.state, 'quest_done'); // じっせき用のカウンタ
+    rtNpc.friendship += 3;
+    sfx('quest');
+    const next = currentObjective(d.state);
+    d.questComplete.show(def.title, summary.lines, next.label.replace(/<[^>]+>/g, ''));
+    if (def.id === 'q_wood') d.tutorial.onCraftUnlocked();
+    if (def.id === 'q_lumi') {
+      d.onIslandLevel(2);
+      d.onCelebrate();
+    } else if (def.id === 'q_lantern') {
+      d.onIslandLevel(Math.max(1, d.state.islandLevel));
+    } else if (def.id === 'q2_boat') {
+      d.onBoatRepaired(); // 桟橋の小舟の見た目を「なおったあと」へ入れかえる
+    }
+    save(d.state);
   }
 
   /**

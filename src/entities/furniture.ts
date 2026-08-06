@@ -1165,6 +1165,40 @@ export function makeFurnitureMesh(scene: Scene, item: ItemId, content?: ItemId):
       lean(0, 0.09, 0.05, 0.4, 0.07, 0.014, Color3.FromHexString('#e2cfa0'));
       return { root: toMesh(scene, 'f_starmap', A, 'keep'), colliderR: 0.34 };
     }
+    // ---- v11第2章 とうだいのランタン(ロカのお礼レシピ) ----
+    // よるの入り江の こわれた灯台(src/entities/cove.ts makeLighthouse)を 高さ0.86mに
+    // うつしたもの。あちらは折れているが、こちらは「ちゃんと立って ともっている」姿にして、
+    // 家に持ちかえった思い出になるようにする。
+    // 部品は fbox と appendTrunk だけなので法線は 'keep'(丸い appendBlob は光る球にだけ使う)。
+    case 'f_lighthouse_lantern': {
+      const A = A0();
+      const TOWER = Color3.FromHexString('#e8e2cf'); // 風にさらされた しっくい
+      const BAND = Color3.FromHexString('#c9705c'); // 色あせた赤い帯
+      // 石の土台(2段。上ほど小さくして 塔へつなげる)
+      fbox(A, 0, 0.035, 0, 0.42, 0.07, 0.42, jitterColor(STONE, 5));
+      fbox(A, 0, 0.105, 0, 0.34, 0.07, 0.34, jitterColor(STONE, 9));
+      // 塔(下ほど太い)。appendTrunkは半径に±15%のゆらぎが入るので、
+      // 帯は塔より太くしないと壁にもぐって「まだらな染み」に見える(cove.ts の灯台と同じ理由)
+      appendTrunk(A, [[0, 0.13, 0], [0, 0.36, 0], [0, 0.59, 0]], 0.145, 0.105, TOWER, 3);
+      appendTrunk(A, [[0, 0.30, 0], [0, 0.38, 0]], 0.14, 0.133, BAND, 9);
+      // 展望台の床と手すり(4辺)
+      fbox(A, 0, 0.605, 0, 0.30, 0.022, 0.30, WOOD_D);
+      for (const sx of [-0.135, 0.135]) fbox(A, sx, 0.645, 0, 0.018, 0.055, 0.30, WOOD_D);
+      for (const sz of [-0.135, 0.135]) fbox(A, 0, 0.645, sz, 0.30, 0.055, 0.018, WOOD_D);
+      // ランタン室は「四すみの柱+屋根」の枠にする。
+      // 箱で囲うと中の光る球が見えなくなる(教訓1: 発光オブジェクトを不透明な箱に入れない)
+      for (const sx of [-0.082, 0.082]) {
+        for (const sz of [-0.082, 0.082]) fbox(A, sx, 0.715, sz, 0.02, 0.19, 0.02, WOOD_D);
+      }
+      fbox(A, 0, 0.818, 0, 0.235, 0.024, 0.235, WOOD_D); // 屋根の ひさし
+      fbox(A, 0, 0.845, 0, 0.14, 0.03, 0.14, BAND); // てっぺんの赤い かざり
+      const root = toMesh(scene, 'f_lighthouse_lantern', A, 'keep');
+      const glowPart = mkGlow(
+        (G) => appendBlob(G, 0, 0.715, 0, 0.072, 0.092, 0.072, Color3.FromHexString('#f6e2b4'), { segs: 7, noise: 0.03 }),
+        'amber', root
+      );
+      return { root, glowPart, colliderR: 0.26 };
+    }
     default: {
       const A = A0();
       fbox(A, 0, 0.25, 0, 0.5, 0.5, 0.5, WOOD);
