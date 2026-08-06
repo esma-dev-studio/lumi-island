@@ -5,7 +5,7 @@ import { IslandScene } from './IslandScene';
 import { CameraController } from './CameraController';
 import { SequenceDirector } from './SequenceDirector';
 import { routeInteraction, HOME_EXIT } from './InteractionRouting';
-import { HOME_SHOT, HOME_SPAWN, HOME_BED, insideHomeFloor } from './HomeInterior';
+import { homeShot, HOME_SPAWN, HOME_BED, insideHomeFloor, setHomeExpandedLayout } from './HomeInterior';
 import { WorldMarkerController, type MarkerNpc } from './WorldMarkerController';
 import { QuestDialogueController } from './QuestDialogueController';
 import { DialogueCameraPlanner, leanToward } from './DialogueCameraPlanner';
@@ -20,8 +20,9 @@ import { applyHomeStyle, invAddRecorded, newGameState, type GameState } from '..
 import { PlayerController, type InputState } from '../systems/PlayerController';
 import { InteractionSystem } from '../systems/InteractionSystem';
 import { FishingSystem } from '../systems/FishingSystem';
-import { PlacementSystem } from '../systems/PlacementSystem';
-import { NPCSystem } from '../systems/NPCSystem';
+import { PlacementSystem, type PlacedRuntime } from '../systems/PlacementSystem';
+import { NPCSystem, visitPraiseFacts } from '../systems/NPCSystem';
+import { NPC_BY_ID, visitPraiseLines } from '../data/npcs';
 import { TutorialSystem } from '../systems/TutorialSystem';
 import { evaluate as evaluateAchievements } from '../systems/AchievementSystem';
 import { resetNpcDaily, validateGiftData } from '../systems/GiftSystem';
@@ -29,10 +30,13 @@ import { currentObjective, type Objective } from '../systems/ObjectiveSystem';
 import { questFor } from '../systems/QuestSystem';
 import { NpcAvailabilityService } from '../systems/NpcAvailabilityService';
 import { sharedWeather, type Weather } from '../systems/WeatherSystem';
+import { finishHomeExpansion, isHomeExpanded, shouldFinishConstruction } from '../systems/HomeExpansion';
+import { GARDEN_PLOTS, HARVEST_YIELD, harvestPlot, plantFlower } from '../systems/GardenSystem';
 import { Hud } from '../ui/Hud';
 import { ObjectiveHud } from '../ui/ObjectiveHud';
 import { InventoryUI } from '../ui/InventoryUI';
 import { CraftUI } from '../ui/CraftUI';
+import { DisplayUI } from '../ui/DisplayUI';
 import { ShopUI } from '../ui/ShopUI';
 import { DialogueUI } from '../ui/DialogueUI';
 import { QuestLogUI } from '../ui/QuestLogUI';
@@ -75,6 +79,8 @@ export class GameScene {
   tutorial!: TutorialSystem;
   invUI!: InventoryUI;
   craftUI!: CraftUI;
+  /** 展示家具(すいそう・むしかご)に いきものを入れる選択パネル */
+  displayUI!: DisplayUI;
   shopUI!: ShopUI;
   dialogue!: DialogueUI;
   questLog!: QuestLogUI;
@@ -113,11 +119,15 @@ export class GameScene {
   get modalOpen(): boolean {
     return (
       this.invUI.open || this.craftUI.open || this.shopUI.open ||
-      this.questLog.open || this.codexUI.open || this.dialogue.open || this.questComplete.open
+      this.questLog.open || this.codexUI.open || this.dialogue.open || this.questComplete.open ||
+      this.displayUI.open
     );
   }
 
   async init(): Promise<void> {
+    // 部屋の間取り(6×5m / こうじずみ9×7m)は、歩行可否・接地高さ・配置判定・カメラ構図の
+    // 唯一の情報源なので、部屋を建てるより先に決める
+    setHomeExpandedLayout(isHomeExpanded(this.state));
     this.island.build();
     this.playerView = await CharacterView.load(this.scene, CHARACTERS.mio);
     for (const m of this.playerView.meshes) this.island.shadows.addShadowCaster(m, true);
@@ -137,6 +147,7 @@ export class GameScene {
     // 「つかう」(模様替え)は室内にいるときだけ出す。判定の元は indoor ひとつだけにする
     this.invUI = new InventoryUI(() => this.state, () => this.indoor);
     this.craftUI = new CraftUI(() => this.state);
+    this.displayUI = new DisplayUI(() => this.state);
     this.shopUI = new ShopUI(() => this.state);
     this.dialogue = new DialogueUI();
     this.questLog = new QuestLogUI(() => this.state);
@@ -152,6 +163,14 @@ export class GameScene {
       () => this.state.flags,
       // 依頼の受注・報告相手のNPCは家に入らない(子どもを待たせない)
       (id) => questFor(this.state, id) !== null
+    );
+    // v10 来訪の判定材料(なかよし度と依頼状況)。依頼が動いている日はだれも来ない
+    this.npcs.setVisitProbe(() =>
+      Object.entries(this.state.npcs).map(([id, n]) => ({
+        id,
+        friendship: n.friendship,
+        questCritical: questFor(this.state, id) !== null,
+      }))
     );
     await this.npcs.init();
     this.seq = new SequenceDirector(this);
@@ -173,21 +192,7 @@ export class GameScene {
     this.questDlg = new QuestDialogueController({
       state: this.state, npcs: this.npcs, dialogue: this.dialogue,
       questComplete: this.questComplete, tutorial: this.tutorial, player: this.player,
-      onDialogueCamera: (npcId) => {
-        if (npcId) {
-          const p = this.npcs.positionOf(npcId);
-          if (p) {
-            this.restoreAllOcclusionImmediately();
-            const c = this.dialogueCam.plan(p.x, p.y, p.z);
-            this.camCtl.beginDialogue(c.pos, c.tgt);
-            // 顔がカメラに写るよう、互いの向きをカメラ側へ約45度開く(ツーショットの基本)
-            this.player.rotY = leanToward(this.player.x, this.player.z, p.x, p.z, c.pos[0], c.pos[2], 1.0);
-            this.npcs.setFacing(npcId, leanToward(p.x, p.z, this.player.x, this.player.z, c.pos[0], c.pos[2], 1.0));
-          }
-        } else {
-          this.camCtl.endDialogue();
-        }
-      },
+      onDialogueCamera: (npcId) => this.focusDialogueCamera(npcId),
       onIslandLevel: (lv) => this.island.applyIslandLevel(lv),
       onCelebrate: () => this.seq.start('bloom'),
     });
@@ -231,6 +236,7 @@ export class GameScene {
     this.island.dayNight.setCold(this.weather.update(0, this.island.time.day, this.island.time.hour).cold);
     this.island.home.applyStyle(this.state.homeStyle); // 模様替えは家具の復元より先(床の見た目を先に決める)
     this.placement.restore();
+    this.island.applyGarden(this.state.garden, this.island.time.day); // 花だんの育ちぐあい
     this.island.applyIslandLevel(this.state.islandLevel);
     this.island.dayNight.update(this.island.time.hour, this.player.x, this.player.z);
     // 室内で保存したセーブは室内から始める(indoorが無い旧セーブは屋外あつかい)。
@@ -242,7 +248,7 @@ export class GameScene {
         this.player.teleport(HOME_SPAWN.x, HOME_SPAWN.z);
         this.player.face(HOME_BED.x, HOME_BED.z);
       }
-      this.camCtl.beginRoom(HOME_SHOT, true);
+      this.camCtl.beginRoom(homeShot(), true);
     } else {
       this.camCtl.snapTo(this.player.x, this.player.y, this.player.z);
     }
@@ -344,6 +350,127 @@ export class GameScene {
     save(this.state);
   }
 
+  // ---------- 庭の花だん ----------
+  /** のばなを1つ うえる(芽になる。翌日つぼみ・2日後に満開) */
+  plantGardenFlower(slot: number): void {
+    if (!plantFlower(this.state, slot, this.island.time.day)) return;
+    const p = GARDEN_PLOTS[slot];
+    this.island.applyGarden(this.state.garden, this.island.time.day);
+    this.player.face(p.x, p.z);
+    burst(p.x, this.island.groundY(p.x, p.z) + 0.2, p.z, 'moss', 8);
+    toast(`${ITEMS.flower.name}を うえた。あさって さくよ`, 'flower');
+    sfx('place');
+    this.playerView.play('pickup', {
+      onEnd: () => {
+        if (!this.player.moving) this.playerView.play('idle');
+      },
+    });
+    save(this.state);
+  }
+
+  /** 満開の花だんを つみとる(のばな×2)。区画は空きにもどるので また うえられる */
+  harvestGardenPlot(slot: number): void {
+    const got = harvestPlot(this.state, slot, this.island.time.day);
+    if (got <= 0) return;
+    const p = GARDEN_PLOTS[slot];
+    const y = this.island.groundY(p.x, p.z);
+    this.island.applyGarden(this.state.garden, this.island.time.day);
+    this.player.face(p.x, p.z);
+    burst(p.x, y + 0.3, p.z, 'berry', 10);
+    flyItem(p.x, y + 0.25, p.z);
+    toast(`+${HARVEST_YIELD} ${ITEMS.flower.name}`, 'flower');
+    sfx('pickup');
+    this.playerView.play('pickup', {
+      onEnd: () => {
+        if (!this.player.moving) this.playerView.play('idle');
+      },
+    });
+    save(this.state);
+  }
+
+  // ---------- 家の拡張こうじ ----------
+  /**
+   * こうじの完成を反映する(毎フレーム見る。ふだんは比較3回で終わる)。
+   *
+   * 室内にいるあいだは保留する: 部屋のメッシュを作りなおすと、いま立っている床・カメラ構図・
+   * 歩ける範囲が同じフレームで入れかわってしまう。退出(applyIndoor(false))のときに
+   * もう一度呼ぶので、「出かけているあいだに できあがっていた」形で必ず反映される。
+   */
+  private tryFinishConstruction(): void {
+    if (this.indoor) return;
+    if (!shouldFinishConstruction(this.state, this.island.time.day, this.island.time.hour)) return;
+    if (!finishHomeExpansion(this.state)) return;
+    this.island.home.applyExpanded(true);
+    this.island.home.applyStyle(this.state.homeStyle); // 新しい壁・床にも かべがみ/ゆかいたを貼る
+    toast('こうじが おわった! へやが ひろくなったよ', 'lumina');
+    sfx('quest');
+    save(this.state);
+  }
+
+  // ---------- 会話カメラ ----------
+  /**
+   * 会話のツーショットカメラ(npcId=null で通常カメラへ戻す)。
+   * 依頼の会話(QuestDialogueController)と、来訪NPCの会話が同じ道すじを通るように
+   * ここ1か所にまとめてある。
+   */
+  focusDialogueCamera(npcId: string | null): void {
+    if (!npcId) {
+      this.camCtl.endDialogue();
+      return;
+    }
+    const p = this.npcs.positionOf(npcId);
+    if (!p) return;
+    this.restoreAllOcclusionImmediately();
+    const c = this.dialogueCam.plan(p.x, p.y, p.z);
+    this.camCtl.beginDialogue(c.pos, c.tgt);
+    // 顔がカメラに写るよう、互いの向きをカメラ側へ約45度開く(ツーショットの基本)
+    this.player.rotY = leanToward(this.player.x, this.player.z, p.x, p.z, c.pos[0], c.pos[2], 1.0);
+    this.npcs.setFacing(npcId, leanToward(p.x, p.z, this.player.x, this.player.z, c.pos[0], c.pos[2], 1.0));
+  }
+
+  // ---------- 来訪NPC(朝の庭先) ----------
+  /**
+   * 遊びに来たNPCに話しかけたときの会話(家をほめる)。
+   * 依頼の会話とは別口だが、カメラ・向き・なかよし度の上がり方はふつうの会話と同じにする。
+   * 依頼がある日は そもそも来訪しない(NPCSystem.visitorOfDay)ので、ここで依頼は起きない。
+   */
+  startVisitTalk(npcId: string): void {
+    const def = NPC_BY_ID[npcId];
+    const rt = this.npcs.npcs.get(npcId);
+    if (!def || !rt) return;
+    this.npcs.setTalking(npcId, true, this.player.x, this.player.z);
+    this.player.face(rt.x, rt.z);
+    this.focusDialogueCamera(npcId);
+    const st = this.state.npcs[npcId];
+    const lines = visitPraiseLines(def, visitPraiseFacts(this.state));
+    this.dialogue.show(def.name, lines, () => {
+      this.npcs.setTalking(npcId, false);
+      this.focusDialogueCamera(null);
+      if (st && !st.talkedToday) {
+        st.talkedToday = true;
+        st.friendship += 1;
+      }
+      save(this.state);
+    });
+  }
+
+  // ---------- 展示家具(すいそう・むしかご) ----------
+  /**
+   * 中身をえらぶパネルを開く。えらんだ・もちかえるの実処理は PlacementSystem が受けもち、
+   * セーブ・見た目の作り直し・トーストまで あちらで完結する(ここは配線だけ)。
+   */
+  openDisplay(p: PlacedRuntime): void {
+    const kind = this.placement.displayKindOf(p);
+    if (kind === null) return;
+    this.displayUI.onChoose = (item) => {
+      this.placement.putIn(p, item);
+    };
+    this.displayUI.onCarry = () => {
+      this.placement.pickUp(p);
+    };
+    this.displayUI.show(kind);
+  }
+
   // ---------- じっせき ----------
   /**
    * 達成判定(1秒に1回)。達成の瞬間だけ、小さくお祝いする
@@ -374,13 +501,15 @@ export class GameScene {
       this.island.home.applyStyle(this.state.homeStyle); // 入るたびに貼りなおす(セーブと画を必ず一致させる)
       this.player.teleport(HOME_SPAWN.x, HOME_SPAWN.z);
       this.player.face(HOME_BED.x, HOME_BED.z); // 入ったらベッドのほうを向く
-      this.camCtl.beginRoom(HOME_SHOT, true);
+      this.camCtl.beginRoom(homeShot(), true);
     } else {
       // ドア前ちょうど(HOME_POINT)は家のコライダーの内側なので、立てる点(HOME_EXIT)へ出す
       this.player.teleport(HOME_EXIT.x, HOME_EXIT.z);
       this.player.face(HOME_EXIT.x + 2.4, HOME_EXIT.z + 0.6); // 家に背を向けて島のほうへ
       this.camCtl.endRoom();
       this.camCtl.snapTo(this.player.x, this.player.y, this.player.z);
+      // 室内にいるあいだ保留していたこうじを、外へ出たこの瞬間に反映する
+      this.tryFinishConstruction();
     }
     this.island.dayNight.update(this.island.time.hour, this.player.x, this.player.z);
     this.state.player = { x: this.player.x, z: this.player.z, rotY: this.player.rotY };
@@ -435,7 +564,10 @@ export class GameScene {
         if (this.island.time.day !== this.lastDay) {
           this.lastDay = this.island.time.day;
           resetNpcDaily(this.state); // talkedToday と giftedToday(おくりもの1日1回)
+          this.island.applyGarden(this.state.garden, this.island.time.day); // 花だんが1段そだつ
         }
+        // 家の拡張こうじ(たのんだ翌朝6時に完成。就寝で朝へ飛んだ場合もここで拾う)
+        this.tryFinishConstruction();
         if (Object.keys(this.state.inventory).length > 0) this.tutorial.onFirstItem();
         this.updateAchievements(dt);
         this.saveTimer += dt;
@@ -469,7 +601,7 @@ export class GameScene {
       sequenceActive: this.seq.active,
       panelOpen:
         this.invUI.open || this.craftUI.open || this.shopUI.open ||
-        this.questLog.open || this.codexUI.open || this.pauseMenu.open,
+        this.questLog.open || this.codexUI.open || this.pauseMenu.open || this.displayUI.open,
     });
     this.scene.render();
   }

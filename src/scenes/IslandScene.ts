@@ -27,6 +27,9 @@ import {
 } from '../data/island';
 import { DayNight } from './DayNight';
 import { HomeInterior, homeFloorY, insideHomeFloor, HOME_RECTS, HOME_CIRCLES } from './HomeInterior';
+import { buildGarden, type GardenView } from '../entities/garden';
+import { gardenFenceColliders } from '../systems/GardenSystem';
+import type { GardenPlot } from '../game/GameState';
 import { TimeSystem } from '../systems/TimeSystem';
 import { StarShardScheduler } from '../systems/StarShardSystem';
 import { DriftScheduler } from '../systems/DriftSystem';
@@ -81,6 +84,7 @@ export class IslandScene {
   terrain!: Terrain;
   water!: WaterRefs;
   home!: HomeInterior; // マイホームの室内(屋外にいるあいだは消えている)
+  garden!: GardenView; // 自宅のお庭(柵・門・花だん)
   shadows!: CascadedShadowGenerator;
   circles: CircleCollider[] = [];
   rects: RectCollider[] = [];
@@ -396,11 +400,19 @@ export class IslandScene {
     }
     this.updateBirds(0); // 最初のフレームから海の上にいる状態にしておく
 
+    // ---- v10 自宅のお庭(低い柵で囲った前庭+花だん6区画) ----
+    // 柵だけが当たり判定を持つ(花だんの枠は踏みこえられる)。門の切れ目から出入りする
+    this.garden = buildGarden(s, (gx, gz) => this.groundY(gx, gz));
+    for (const r of gardenFenceColliders()) this.rects.push(r);
+
     // ---- マイホームの室内(島の外。屋外にいるあいだは消えている) ----
-    // 遮蔽フェード(occludables)には入れない: プレイヤーが乗る床と、カメラの手前に来る壁だから
-    this.home = new HomeInterior(s, [this.terrain.mesh, this.water.sea]);
-    this.shadows.addShadowCaster(this.home.root, true);
-    this.home.root.receiveShadows = true;
+    // 遮蔽フェード(occludables)には入れない: プレイヤーが乗る床と、カメラの手前に来る壁だから。
+    // 部屋の本体は拡張こうじで作りなおすので、そのたびに影の登録をやり直す
+    this.home = new HomeInterior(s, [this.terrain.mesh, this.water.sea], (added, removed) => {
+      if (removed) this.shadows.removeShadowCaster(removed, true); // 捨てる部屋を影マップに残さない
+      this.shadows.addShadowCaster(added, true);
+      added.receiveShadows = true;
+    });
     for (const r of HOME_RECTS) this.rects.push(r);
     for (const c of HOME_CIRCLES) this.circles.push(c);
 
@@ -746,6 +758,14 @@ export class IslandScene {
       this.drift.markTaken(dspot);
       this.despawnDrift(dspot);
     }
+  }
+
+  /**
+   * 花だんの見た目をセーブの内容と日付にあわせる。
+   * うえた・つみとった直後と、日またぎ(就寝ふくむ)・起動時に GameScene が呼ぶ。
+   */
+  applyGarden(plots: GardenPlot[], day: number): void {
+    this.garden.apply(plots, day);
   }
 
   /** ルミの木の段階(0=ねむり 1=めばえ 2=かいか)を見た目へ反映(蕾⇄花の差し替え) */

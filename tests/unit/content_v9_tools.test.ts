@@ -21,7 +21,6 @@ import {
 import {
   DigScheduler, digSpotsOfDay, pickDigLoot, DIG_LOOT, DIG_RARE, DIG_MIN_PER_DAY, DIG_MAX_PER_DAY,
 } from '../../src/systems/DigSystem';
-import { pickCagedBug } from '../../src/entities/bugs';
 import { ICONS } from '../../src/ui/icons';
 
 // IslandScene.walkable と同じしきい値(ここが変わったら両方を直す)
@@ -311,14 +310,6 @@ describe('v9 虫あみ→虫6種(データ)', () => {
       expect(discoverRecipes(s, id).map((r) => r.id), id).toEqual(['r_bugcage']);
       expect(discoverRecipes(s, id), id).toEqual([]); // 二重にひらめかない
     }
-  });
-
-  it('むしかごの中身は「持っている虫」から選ぶ(いなければモンシロチョウ)', () => {
-    expect(pickCagedBug({})).toBe('b_shiro');
-    expect(pickCagedBug({ b_suzu: 1 })).toBe('b_suzu');
-    // めずらしい虫を優先する(カブトムシ>アゲハ>ホタル>スズムシ>テントウ>モンシロ)
-    expect(pickCagedBug({ b_shiro: 3, b_kabuto: 1 })).toBe('b_kabuto');
-    expect(pickCagedBug({ b_shiro: 3, b_tento: 1 })).toBe('b_tento');
   });
 
   it('実績2種: むしとりめいじん(5ひき)・むしはかせ(6しゅるい)', () => {

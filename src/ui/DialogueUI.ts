@@ -29,9 +29,12 @@ export class DialogueUI {
    * 何も起きないボタンを画面に残さないため、上のパネル側が「やめる」を割りあてる。
    */
   onBlockedAdvance: (() => void) | null = null;
-  /** 最終行にだけ出す任意ボタン(いまは「おくりものをする」)。押しても会話は進まない */
-  private extraLabel: string | null = null;
-  private extraHandler: (() => void) | null = null;
+  /**
+   * 最終行にだけ出す任意ボタン(「おくりものをする」「こうじを たのむ」「はい/やめる」)。
+   * 押しても会話は進まない。複数出せるが、横1列に並ぶので2つまでにする
+   * (タッチの丸ボタンと合わせて3つ以上は画面の下がふさがる)。
+   */
+  private extras: { label: string; handler: () => void }[] = [];
 
   constructor() {
     this.el = document.createElement('div');
@@ -44,8 +47,10 @@ export class DialogueUI {
     document.getElementById('ui-root')!.appendChild(this.el);
     this.el.addEventListener('click', (e) => {
       // 任意ボタンは「会話を進めない」ので、advanceより先に見る
-      if ((e.target as HTMLElement).closest('[data-dlg-extra]')) {
-        this.extraHandler?.();
+      const btn = (e.target as HTMLElement).closest('[data-dlg-extra]') as HTMLElement | null;
+      if (btn) {
+        const i = Number(btn.getAttribute('data-dlg-extra'));
+        this.extras[i]?.handler();
         return;
       }
       this.advance();
@@ -61,8 +66,7 @@ export class DialogueUI {
     this.blockAdvance = false;
     this.onBlockedAdvance = null;
     // 前の会話のボタンを持ちこさない(出す側が show のあとに setExtraAction で付け直す)
-    this.extraLabel = null;
-    this.extraHandler = null;
+    this.extras = [];
     this.el.classList.remove('hidden');
     this.renderLine();
   }
@@ -72,9 +76,25 @@ export class DialogueUI {
    * 押さなければ何も起きない追加要素なので、Eだけで会話を送る自動テスト・ボットには影響しない。
    */
   setExtraAction(label: string | null, handler: (() => void) | null): void {
-    this.extraLabel = label;
-    this.extraHandler = handler;
+    this.extras = label && handler ? [{ label, handler }] : [];
     if (this.open) this.renderLine();
+  }
+
+  /** 任意ボタンを1つ足す(先に足したものが左に出る) */
+  addExtraAction(label: string, handler: () => void): void {
+    this.extras.push({ label, handler });
+    if (this.open) this.renderLine();
+  }
+
+  /** 任意ボタンをまとめて差しかえる(確認の「はい/やめる」のように2つ出すとき) */
+  setExtraActions(list: { label: string; handler: () => void }[]): void {
+    this.extras = [...list];
+    if (this.open) this.renderLine();
+  }
+
+  /** いま出ている任意ボタンの文言(検証・テスト用) */
+  get extraLabels(): string[] {
+    return this.extras.map((e) => e.label);
   }
 
   advance(): void {
@@ -97,8 +117,7 @@ export class DialogueUI {
     this.open = false;
     this.blockAdvance = false;
     this.onBlockedAdvance = null;
-    this.extraLabel = null;
-    this.extraHandler = null;
+    this.extras = [];
     this.el.classList.add('hidden');
     const cb = this.onEnd;
     this.onEnd = null;
@@ -109,10 +128,11 @@ export class DialogueUI {
     const last = this.idx >= this.lines.length - 1;
     (this.el.querySelector('.dlg-name') as HTMLElement).textContent = this.speaker;
     (this.el.querySelector('.dlg-text') as HTMLElement).textContent = this.lines[this.idx];
-    const extra =
-      last && this.extraLabel
-        ? `<button class="craft-btn sub" data-dlg-extra style="margin-right:10px">${this.extraLabel}</button>`
-        : '';
+    const extra = last
+      ? this.extras
+          .map((e, i) => `<button class="craft-btn sub" data-dlg-extra="${i}" style="margin-right:10px">${e.label}</button>`)
+          .join('')
+      : '';
     (this.el.querySelector('.dlg-next') as HTMLElement).innerHTML = extra + nextLabel(last);
   }
 }

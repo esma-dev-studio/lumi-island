@@ -254,24 +254,32 @@ const C_GRASS_YARD = Color3.FromHexString('#6f9a5c'); // 部屋のまわりの�
 const C_SOIL_YARD = Color3.FromHexString('#6a5233'); // 地面の断面(土)
 const C_DOOR_IN = Color3.FromHexString('#6f8a80'); // 外から見えるミオの家のドアと同じ色
 
+/**
+ * 部屋の内寸(ローカル座標の範囲)と壁の高さ。
+ * 北(-Z)の壁は minZ、東(+X)の壁は maxX に立つ。拡張こうじではこの2つを動かさず、
+ * 開いている西(minX)と南(maxZ)だけを広げるので、ドア・窓・作りつけ家具の位置は変わらない
+ * (= 既存セーブの「室内に置いた家具」の座標がそのまま生きる)。
+ */
 export interface RoomDims {
-  w: number;
-  d: number;
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
   wallH: number;
 }
 
 /** 部屋のまわりの地面(不定形の円盤+土の断面)。上面は+Y向き */
-function yardDisc(A: Arrays, r: number, y: number, drop: number): void {
+function yardDisc(A: Arrays, cx: number, cz: number, r: number, y: number, drop: number): void {
   const segs = 30;
   const base = A.pos.length / 3;
-  A.pos.push(0, y, 0);
+  A.pos.push(cx, y, cz);
   A.col.push(C_GRASS_YARD.r, C_GRASS_YARD.g, C_GRASS_YARD.b, 1);
   const rim: number[][] = [];
   for (let i = 0; i < segs; i++) {
     const th = (i / segs) * Math.PI * 2;
     const rr = r * (0.86 + vnoise(Math.cos(th) * 1.7 + 31, Math.sin(th) * 1.7 + 13) * 0.28);
-    const px = Math.cos(th) * rr;
-    const pz = Math.sin(th) * rr;
+    const px = cx + Math.cos(th) * rr;
+    const pz = cz + Math.sin(th) * rr;
     const py = y - 0.04 - vnoise(px * 0.4 + 3, pz * 0.4 + 7) * 0.06;
     rim.push([px, py, pz]);
     A.pos.push(px, py, pz);
@@ -297,58 +305,61 @@ function yardDisc(A: Arrays, r: number, y: number, drop: number): void {
  * @returns mesh=本体 / glow=窓ガラス(夜に月あかりで青く光る発光メッシュ)
  */
 export function buildHomeRoom(scene: Scene, dim: RoomDims): { mesh: Mesh; glow: Mesh } {
-  const { w, d, wallH } = dim;
-  const hw = w / 2, hd = d / 2;
+  const { minX, maxX, minZ, maxZ, wallH } = dim;
+  const w = maxX - minX;
+  const d = maxZ - minZ;
+  const cx0 = (minX + maxX) / 2; // 部屋の中心(拡張すると原点からずれる)
+  const cz0 = (minZ + maxZ) / 2;
   const wt = 0.16; // 壁の厚み
   const A = A0();
 
   // ---- 部屋のまわりの地面と土台 ----
-  yardDisc(A, 5.9, -0.3, 0.75);
+  // 円盤は部屋の対角線より必ず大きくする(小さいと土台の角が地面から はみ出して宙に浮く)
+  yardDisc(A, cx0, cz0, Math.hypot(w, d) * 0.72 + 1.2, -0.3, 0.75);
   // 石の土台(床の厚みを見せる)。上面は床板の下(-0.07)に置く。
   // 床板の上面と同じ高さにすると、板と土台がZファイティングして床が縞に見える(実際に出た)
-  box(A, 0, -0.22, 0, w + 0.44, 0.3, d + 0.44, C_STONE, 0.09);
+  box(A, cx0, -0.22, cz0, w + 0.44, 0.3, d + 0.44, C_STONE, 0.09);
 
   // ---- 床(板張り。1枚ずつ色を変えて「1枚の板」に見せない) ----
-  const planks = 15;
+  const planks = Math.round(15 * (w / 6));
   const pw = w / planks;
   for (let i = 0; i < planks; i++) {
-    const cx = -hw + pw * (i + 0.5);
-    box(A, cx, -0.03, 0, pw - 0.014, 0.06, d - 0.02, jitterColor(C_FLOOR, i * 7 + 3, 0.13), 0.05);
+    const cx = minX + pw * (i + 0.5);
+    box(A, cx, -0.03, cz0, pw - 0.014, 0.06, d - 0.02, jitterColor(C_FLOOR, i * 7 + 3, 0.13), 0.05);
   }
 
   // ---- 壁(北=-Z / 東=+X) ----
-  box(A, 0, wallH / 2, -(hd + wt / 2), w + wt * 2, wallH, wt, C_WALL_IN, 0.05);
-  box(A, hw + wt / 2, wallH / 2, 0, wt, wallH, d, C_WALL_IN, 0.05);
+  box(A, cx0, wallH / 2, minZ - wt / 2, w + wt * 2, wallH, wt, C_WALL_IN, 0.05);
+  box(A, maxX + wt / 2, wallH / 2, cz0, wt, wallH, d, C_WALL_IN, 0.05);
   // 腰板(こしいた)と笠木: 白い面だけにしない
-  box(A, 0, 0.44, -(hd - 0.03), w, 0.88, 0.06, C_WOOD, 0.07);
-  box(A, hw - 0.03, 0.44, 0, 0.06, 0.88, d, C_WOOD, 0.07);
-  box(A, 0, 0.91, -(hd - 0.05), w, 0.07, 0.1, C_WOOD_D);
-  box(A, hw - 0.05, 0.91, 0, 0.1, 0.07, d, C_WOOD_D);
+  box(A, cx0, 0.44, minZ + 0.03, w, 0.88, 0.06, C_WOOD, 0.07);
+  box(A, maxX - 0.03, 0.44, cz0, 0.06, 0.88, d, C_WOOD, 0.07);
+  box(A, cx0, 0.91, minZ + 0.05, w, 0.07, 0.1, C_WOOD_D);
+  box(A, maxX - 0.05, 0.91, cz0, 0.1, 0.07, d, C_WOOD_D);
   // 隅柱(壁の端を木で締める)
-  for (const [cx, cz] of [[-(hw + wt / 2), -(hd + wt / 2)], [hw + wt / 2, -(hd + wt / 2)], [hw + wt / 2, hd - 0.07]]) {
+  for (const [cx, cz] of [[minX - wt / 2, minZ - wt / 2], [maxX + wt / 2, minZ - wt / 2], [maxX + wt / 2, maxZ - 0.07]]) {
     box(A, cx, (wallH + 0.12) / 2, cz, 0.19, wallH + 0.12, 0.19, C_WOOD_D, 0.06);
   }
   // 化粧梁(屋根のかわりに壁の上を回す)
-  box(A, 0, wallH + 0.15, -(hd + wt / 2), w + wt * 2 + 0.34, 0.2, wt + 0.14, C_WOOD_D);
-  box(A, hw + wt / 2, wallH + 0.15, 0.17, wt + 0.14, 0.2, d + 0.34, C_WOOD_D);
+  box(A, cx0, wallH + 0.15, minZ - wt / 2, w + wt * 2 + 0.34, 0.2, wt + 0.14, C_WOOD_D);
+  box(A, maxX + wt / 2, wallH + 0.15, cz0 + 0.17, wt + 0.14, 0.2, d + 0.34, C_WOOD_D);
 
   // ---- 窓(枠+ガラス。ガラスは夜だけ青く光る=月あかり) ----
   // 枠は「4本の桟」で組む。1個の箱で作るとガラスが枠の中に埋まって見えなくなる(実際に出た)
   const G = A0();
   const winY = 1.62;
   const fb = 0.09; // 桟の太さ
-  // 北の窓(ベッドの上)
-  const nwx = -2.0, nww = 1.1, nwh = 0.85;
-  const nzf = -(hd - 0.05);
-  box(A, nwx, winY + nwh / 2 + fb / 2, nzf, nww + fb * 2, fb, 0.1, C_WOOD_D);
-  box(A, nwx, winY - nwh / 2 - fb / 2, nzf, nww + fb * 2, fb, 0.1, C_WOOD_D);
-  box(A, nwx - nww / 2 - fb / 2, winY, nzf, fb, nwh, 0.1, C_WOOD_D);
-  box(A, nwx + nww / 2 + fb / 2, winY, nzf, fb, nwh, 0.1, C_WOOD_D);
-  box(A, nwx, winY, -(hd - 0.075), 0.05, nwh, 0.05, C_WOOD_D); // 中桟
-  box(A, nwx, winY - nwh / 2 - 0.11, -(hd - 0.1), nww + 0.34, 0.07, 0.2, C_WOOD); // 窓台
-  {
+  const nzf = minZ + 0.05;
+  /** 北の壁の窓(x=中心)。拡張で伸びた壁にも同じ窓をもう1つ足す(無地の白い壁にしない) */
+  const northWindow = (nwx: number, nww: number, nwh: number): void => {
+    box(A, nwx, winY + nwh / 2 + fb / 2, nzf, nww + fb * 2, fb, 0.1, C_WOOD_D);
+    box(A, nwx, winY - nwh / 2 - fb / 2, nzf, nww + fb * 2, fb, 0.1, C_WOOD_D);
+    box(A, nwx - nww / 2 - fb / 2, winY, nzf, fb, nwh, 0.1, C_WOOD_D);
+    box(A, nwx + nww / 2 + fb / 2, winY, nzf, fb, nwh, 0.1, C_WOOD_D);
+    box(A, nwx, winY, minZ + 0.075, 0.05, nwh, 0.05, C_WOOD_D); // 中桟
+    box(A, nwx, winY - nwh / 2 - 0.11, minZ + 0.1, nww + 0.34, 0.07, 0.2, C_WOOD); // 窓台
     // 室内側(+Z)を向くガラス。頂点は「右下→左下→左上→右上」の順(この向きで法線が+Zになる)
-    const zg = -(hd - 0.012);
+    const zg = minZ + 0.012;
     const b = G.pos.length / 3;
     G.pos.push(
       nwx + nww / 2, winY - nwh / 2, zg, nwx - nww / 2, winY - nwh / 2, zg,
@@ -356,19 +367,18 @@ export function buildHomeRoom(scene: Scene, dim: RoomDims): { mesh: Mesh; glow: 
     );
     for (let i = 0; i < 4; i++) G.col.push(1, 1, 1, 1);
     G.idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
-  }
-  // 東の窓(つくえの上)
-  const ewz = -0.55, eww = 1.0, ewh = 0.85;
-  const exf = hw - 0.05;
-  box(A, exf, winY + ewh / 2 + fb / 2, ewz, 0.1, fb, eww + fb * 2, C_WOOD_D);
-  box(A, exf, winY - ewh / 2 - fb / 2, ewz, 0.1, fb, eww + fb * 2, C_WOOD_D);
-  box(A, exf, winY, ewz + eww / 2 + fb / 2, 0.1, ewh, fb, C_WOOD_D);
-  box(A, exf, winY, ewz - eww / 2 - fb / 2, 0.1, ewh, fb, C_WOOD_D);
-  box(A, hw - 0.075, winY, ewz, 0.05, ewh, 0.05, C_WOOD_D); // 中桟
-  box(A, hw - 0.1, winY - ewh / 2 - 0.11, ewz, 0.2, 0.07, eww + 0.34, C_WOOD); // 窓台
-  {
+  };
+  /** 東の壁の窓(z=中心) */
+  const eastWindow = (ewz: number, eww: number, ewh: number): void => {
+    const exf = maxX - 0.05;
+    box(A, exf, winY + ewh / 2 + fb / 2, ewz, 0.1, fb, eww + fb * 2, C_WOOD_D);
+    box(A, exf, winY - ewh / 2 - fb / 2, ewz, 0.1, fb, eww + fb * 2, C_WOOD_D);
+    box(A, exf, winY, ewz + eww / 2 + fb / 2, 0.1, ewh, fb, C_WOOD_D);
+    box(A, exf, winY, ewz - eww / 2 - fb / 2, 0.1, ewh, fb, C_WOOD_D);
+    box(A, maxX - 0.075, winY, ewz, 0.05, ewh, 0.05, C_WOOD_D); // 中桟
+    box(A, maxX - 0.1, winY - ewh / 2 - 0.11, ewz, 0.2, 0.07, eww + 0.34, C_WOOD); // 窓台
     // 室内側(-X)を向くガラス
-    const xg = hw - 0.012;
+    const xg = maxX - 0.012;
     const b = G.pos.length / 3;
     G.pos.push(
       xg, winY - ewh / 2, ewz + eww / 2, xg, winY - ewh / 2, ewz - eww / 2,
@@ -376,14 +386,18 @@ export function buildHomeRoom(scene: Scene, dim: RoomDims): { mesh: Mesh; glow: 
     );
     for (let i = 0; i < 4; i++) G.col.push(1, 1, 1, 1);
     G.idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
-  }
+  };
+  northWindow(-2.0, 1.1, 0.85); // ベッドの上(位置は拡張前後で変わらない)
+  eastWindow(-0.55, 1.0, 0.85); // つくえの上(同上)
+  if (minX <= -5) northWindow(-4.7, 1.1, 0.85); // 拡張で伸びた西がわの北壁
+  if (maxZ >= 3.5) eastWindow(2.9, 1.0, 0.85); // 拡張で伸びた南がわの東壁
 
   // ---- ドア(北の壁。ここでEを押すと外へ出る) ----
   const dx = 1.6, doorW = 0.92, doorH = 1.98;
-  box(A, dx, doorH / 2 + 0.03, -(hd - 0.05), doorW + 0.22, doorH + 0.14, 0.1, C_WOOD_D);
-  box(A, dx, doorH / 2, -(hd - 0.11), doorW, doorH, 0.06, C_DOOR_IN, 0.05);
-  box(A, dx + doorW / 2 - 0.14, 1.0, -(hd - 0.16), 0.09, 0.09, 0.07, Color3.FromHexString('#c9a86b')); // 取っ手
-  box(A, dx, doorH + 0.2, -(hd - 0.13), doorW + 0.42, 0.06, 0.16, C_WOOD); // ドア上の小だな
+  box(A, dx, doorH / 2 + 0.03, minZ + 0.05, doorW + 0.22, doorH + 0.14, 0.1, C_WOOD_D);
+  box(A, dx, doorH / 2, minZ + 0.11, doorW, doorH, 0.06, C_DOOR_IN, 0.05);
+  box(A, dx + doorW / 2 - 0.14, 1.0, minZ + 0.16, 0.09, 0.09, 0.07, Color3.FromHexString('#c9a86b')); // 取っ手
+  box(A, dx, doorH + 0.2, minZ + 0.13, doorW + 0.42, 0.06, 0.16, C_WOOD); // ドア上の小だな
 
   const mesh = toMesh(scene, 'homeRoom', A, 'keep');
   // ガラスも巻き順で法線が決まっている(重心からの'auto'判定は部品が2枚に散っていて当てにならない)

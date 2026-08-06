@@ -5,8 +5,8 @@
 // ではない(それは tools/ux_bot.mjs のブラックボックス試験と人間テストの領分)。
 import puppeteer from 'puppeteer-core';
 import { writeFileSync } from 'node:fs';
+import { launchEdge } from './launch_browser.mjs';
 
-const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 const START = Date.now();
 const timeline = [];
 const mark = (label) => {
@@ -15,12 +15,32 @@ const mark = (label) => {
   console.log(`[${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}] ${label}`);
 };
 
-const browser = await puppeteer.launch({
-  executablePath: EDGE, headless: 'new',
+// この開発機のEdge(151)は puppeteer.launch の起動検知が空ぶりするため、共通ヘルパーで起こす。
+// Edgeが直れば中でそのまま launch が使われる(このファイルの書き換えは不要)。tools/launch_browser.mjs 参照
+const browser = await launchEdge(puppeteer, {
   args: ['--window-size=1280,720', '--use-angle=d3d11', '--enable-gpu', '--mute-audio'],
   defaultViewport: { width: 1280, height: 720 },
 });
 const page = await browser.newPage();
+// Vite HMR のフルリロードは走行の途中で window.__lumi を消し、
+// 「Cannot read properties of undefined (reading 'game')」で走行を無効にしてしまう(教訓5の静穏窓)。
+// ゲーム本体は WebSocket を使わないので、HMRの接続だけを無効化して走行を守る。
+await page.evaluateOnNewDocument(() => {
+  class NoopSocket {
+    constructor() {
+      this.readyState = 0;
+      this.onopen = null;
+      this.onclose = null;
+      this.onerror = null;
+      this.onmessage = null;
+    }
+    send() {}
+    close() {}
+    addEventListener() {}
+    removeEventListener() {}
+  }
+  Object.defineProperty(window, 'WebSocket', { value: NoopSocket, writable: true, configurable: true });
+});
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 page.on('pageerror', (e) => errors.push(e.message));
@@ -58,44 +78,119 @@ async function flushDialogs() {
   }
 }
 
-// 目的地まで実キーで歩く(はしる=Shift併用)。つまり対策は段階的に強める:
-// 横歩きを左右交互に→3回に1回は目標から離れて仕切り直す(木立の間で振動しないため)。
+// ---- 壁ぞい迂回(粘るよけ) ----
+// 直進をさえぎるのが木1本なら、少し横へずれればすぐ抜けられる。
+// ところが池・海・庭の柵のように「長い・大きい」相手では、一歩よけてすぐ目標の向きに戻すと
+// 同じ岸へ入り直すだけで、岸ぞいを行ったり来たりして永久に進まない。
+// (v10の実害: 池の東(28.5,17)から西の木(20,26)へ直進しようとして10分の見張りに掛かった。
+//  証跡 .logs/v10_g1_bot_run.txt / .logs/screenshots/playtest/stuck_q_fish_mats_wood.png)
+//
+// そこで tools/ux_bot.mjs のv5と同じ考え方を移植する:
+//   「よけた向きは、はっきり近づけるまで保つ。効かなければ左右を入れかえて逆回り」。
+// 角度は目標の向きから 45度(壁にすりつけて回りこむ)と 90度(すりつけても動けないとき)の2段だけ。
+// 135度以上にすると目標方向の速度成分が cos135°=-0.71 と負になり、よけているつもりで遠ざかる
+// (ux_bot の実測。90度なら成分0なので、よけが距離を増やすことは原理的に起きない)。
+//
+// 45度と90度を行き来するのが要点。45度は壁を押しながら進むので ずれて回りこめる反面、
+// 壁に正面から当たる形になると まったく動けない → 90度へ広げる。
+// 90度は自由に動けるが壁からはなれてしまう(池のまわりを同じ半径で回るだけになる)ので、
+// 自由に動けたら45度へ戻して壁ぞいに保つ。庭の門(通れる幅0.96m)はこの45度が見つける。
+const DETOUR_TRIGGER = 2600; // 直進のまま「いちばん近づけた距離」を更新できない時間(ms)→ 迂回に入る
+const DETOUR_ESC = 2600; // 45度のまま更新できない時間(ms)→ 90度に広げる
+const DETOUR_HOLD = 24000; // 迂回を続ける上限(ms)。過ぎたら直進に戻して様子を見る
+const DETOUR_GAIN = 2.5; // 迂回を始めた距離から これだけ近づけたら迂回を解く(m)
+const BEST_EPS = 0.5; // 「近づけた」とみなす最小の改善(m)
+const WEDGE_TICKS = 2; // これだけ続けてほとんど動けなければ「押しつぶされている」
+const FREE_MOVE = 1.2; // 1歩でこれだけ動けたら「自由に動けている」(m)
+const FREE_TICKS = 3; // 90度で自由に動けた回数。壁からはなれる前に45度へ戻す
+
+/** 目標の向きへそのまま歩くキー(画面基準の操作系: A=画面左=東(+x) / D=画面右=西(-x)) */
+function axisKeys(dx, dz) {
+  const keys = [];
+  if (dz < -0.35) keys.push('w');
+  if (dz > 0.35) keys.push('s');
+  if (dx > 0.35) keys.push('a');
+  if (dx < -0.35) keys.push('d');
+  return keys;
+}
+/** 目標の向きを side*off*45度まわしたキー(8方位に丸める) */
+function offsetKeys(dx, dz, side, off) {
+  const n = Math.hypot(dx, dz) || 1;
+  const a = (side * off * Math.PI) / 4;
+  const c = Math.cos(a), s = Math.sin(a);
+  const vx = (dx * c - dz * s) / n, vz = (dx * s + dz * c) / n;
+  const keys = [];
+  if (vz < -0.38) keys.push('w');
+  if (vz > 0.38) keys.push('s');
+  if (vx > 0.38) keys.push('a');
+  if (vx < -0.38) keys.push('d');
+  return keys;
+}
+const navLog = (msg) => console.log(`nav ${Math.round((Date.now() - START) / 1000)}s ${msg}`);
+
+// 目的地まで実キーで歩く(はしる=Shift併用)。直進できないときは上の壁ぞい迂回に入る。
 async function navigate(tx, tz, stopDist = 1.5, timeoutMs = 90000) {
   const t0 = Date.now();
-  let lastX = 1e9, lastZ = 1e9, stuck = 0, unstickN = 0;
+  let lastX = 1e9, lastZ = 1e9, stuck = 0, free = 0;
+  let best = Infinity, bestAt = Date.now();
+  let off = 0; // 0=直進 / 1=45度 / 2=90度
+  let side = 1; // よける向き。効かなかったら反転して逆回りを試す
+  let holdFrom = Infinity, holdUntil = 0, flipped = false;
   await page.keyboard.down('Shift');
   try {
     while (Date.now() - t0 < timeoutMs) {
       const info = await gameInfo();
       if (info.paused) { await page.keyboard.press('Escape'); await sleep(250); continue; } // 誤ポーズ解除
-      if (info.dialogue || info.qc || info.seq) { await page.keyboard.up('Shift'); await flushDialogs(); await page.keyboard.down('Shift'); }
+      if (info.dialogue || info.qc || info.seq) { await page.keyboard.up('Shift'); await flushDialogs(); await page.keyboard.down('Shift'); bestAt = Date.now(); } // 会話中は動けないので、迂回の発動時計をリセット(空振り防止)
       const dx = tx - info.px, dz = tz - info.pz;
-      if (Math.hypot(dx, dz) < stopDist) return true;
+      const d = Math.hypot(dx, dz);
+      if (d < stopDist) return true;
+      const now = Date.now();
+      if (d < best - BEST_EPS) { best = d; bestAt = now; } else if (d < best) best = d;
       const moved = Math.hypot(info.px - lastX, info.pz - lastZ);
       lastX = info.px; lastZ = info.pz;
-      if (moved < 0.12) stuck++; else { stuck = 0; unstickN = 0; }
-      let keys = [], hold = 230;
-      if (stuck >= 3) {
-        stuck = 0;
-        unstickN++;
-        hold = 520;
-        const side = unstickN % 2 === 0 ? 1 : -1;
-        if (unstickN % 3 === 0) {
-          // 目標と逆方向へ引き返して仕切り直す(A=東/D=西の画面基準)
-          keys = Math.abs(dx) > Math.abs(dz) ? [dx >= 0 ? 'd' : 'a'] : [dz >= 0 ? 'w' : 's'];
-          hold = 650;
-        } else if (Math.abs(dx) > Math.abs(dz)) {
-          keys = [side > 0 ? 's' : 'w'];
-        } else {
-          keys = [side > 0 ? 'd' : 'a'];
+      if (moved < 0.12) { stuck++; free = 0; } else { stuck = 0; free = moved > FREE_MOVE ? free + 1 : 0; }
+
+      let retreat = false;
+      // 迂回を解く: はっきり近づけた / 保持の上限をこえた(直進を試し直す)
+      if (off > 0) {
+        if (best <= holdFrom - DETOUR_GAIN) {
+          navLog(`迂回おわり: ${holdFrom.toFixed(1)}m→${best.toFixed(1)}m まで近づけた`);
+          off = 0; bestAt = now;
+        } else if (now > holdUntil) {
+          if (best > holdFrom - 0.6) side = -side; // この回りかたは効かなかった: 次は逆回りから
+          navLog(`迂回おわり: 時間切れ(${best.toFixed(1)}m)。直進を試す`);
+          off = 0; bestAt = now;
         }
-      } else {
-        if (dz < -0.35) keys.push('w');
-        if (dz > 0.35) keys.push('s');
-        // 画面基準の操作系: A=画面左=東(+x) / D=画面右=西(-x)
-        if (dx > 0.35) keys.push('a');
-        if (dx < -0.35) keys.push('d');
       }
+      // 迂回を始める・角度を広げる・回る向きを変える
+      if (off === 0) {
+        if (now - bestAt > DETOUR_TRIGGER) {
+          // 保持は「持ち時間の残り4割」まで。室内(30秒)のような短い持ち時間で
+          // 1回の迂回に全部使いきると、逆まわりを試す番が来ないまま時間切れになる
+          // (実害: 走行1で ベッド→ドアの30秒を24秒の迂回1回で使いきり、退出できなかった)
+          const holdMs = Math.min(DETOUR_HOLD, Math.max(8000, (t0 + timeoutMs - now) * 0.4));
+          off = 1; holdFrom = best; holdUntil = now + holdMs; flipped = false; bestAt = now; stuck = 0;
+          navLog(`迂回はじめ: (${tx.toFixed(1)},${tz.toFixed(1)})へ ${best.toFixed(1)}m で足ぶみ → 45度 ${side > 0 ? '左' : '右'}まわり(${Math.round(holdMs / 1000)}秒まで)`);
+        }
+      } else if (off === 1) {
+        if (stuck >= WEDGE_TICKS || now - bestAt > DETOUR_ESC) {
+          off = 2; bestAt = now; stuck = 0; free = 0;
+          navLog('迂回: 45度でも進めない → 90度に広げる');
+        }
+      } else if (stuck >= WEDGE_TICKS) {
+        if (!flipped) {
+          flipped = true; side = -side; off = 1; bestAt = now; stuck = 0;
+          navLog(`迂回: 逆まわり(${side > 0 ? '左' : '右'})へ`);
+        } else { retreat = true; stuck = 0; navLog('迂回: 両がわ詰まり → いったん下がる'); }
+      } else if (free >= FREE_TICKS) {
+        off = 1; free = 0; bestAt = now; // 壁からはなれて同じ半径を回るだけにならないよう すりつけに戻す
+      }
+
+      let keys, hold;
+      if (retreat) { keys = axisKeys(-dx, -dz); hold = 650; }
+      else if (off === 0) { keys = axisKeys(dx, dz); hold = 230; }
+      else { keys = offsetKeys(dx, dz, side, off); hold = 520; }
       for (const k of keys) await page.keyboard.down(k);
       await sleep(hold);
       for (const k of keys) await page.keyboard.up(k);
@@ -306,10 +401,10 @@ const GATHER_KIND = { wood: 'tree', stone: 'rock', fiber: 'grass', moss: 'moss',
 const RECIPE_NAMES = { r_sickle: 'カマ', r_rod: 'ツリザオ', r_lantern: 'ランタン', r_stonelamp: 'いしのランプ', r_bench: 'ウッドベンチ' };
 const flags = { night: false, gather: false, craft: false, place: false };
 try {
-  await page.goto('http://localhost:5183/', { waitUntil: 'networkidle2' });
+  await page.goto('http://localhost:5183/', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction('window.__lumi && window.__lumi.titleReady===true', { timeout: 30000 });
   await page.evaluate('localStorage.clear()'); // まっさらな新規開始
-  await page.reload({ waitUntil: 'networkidle2' });
+  await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForFunction('window.__lumi && window.__lumi.titleReady===true', { timeout: 30000 });
   mark('タイトル表示');
   await page.click('[data-act="new"]');

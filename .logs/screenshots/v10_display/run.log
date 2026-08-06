@@ -1,0 +1,60 @@
+起動: ゲーム本編(自由行動)。いまやること="島で じゆうに くらそう"
+うきだま: glassfloat1 (-19.0, 31.5) / 6.2時
+  ヒント(1回目): Eうきだまをひろう
+  [shot] 01_drift_pickup_hint.png
+ひらめいたレシピ: ["r_seamobile","r_aquarium"](うきだま拾い=true)
+  [shot] 02_recipe_discovered_toast.png
+  [shot] 03_craft_panel_aquarium.png
+クラフト「すいそう」: 成功 / もちもの=1
+  [shot] 04_craft_done_aquarium.png
+つり場: (20, 19) zone=pond
+  つり場のヒント: Eつりをする
+つれた魚のかず: 1
+いれる魚: fish
+  [shot] 05_fishing_result.png
+  [shot] 06_inventory_place_button.png
+配置ヒント: Eおく Rまわす Escやめる / active=f_aquarium
+  [shot] 07_place_ghost.png
+置いた家具: [{"item":"f_aquarium","x":-14,"z":2.5,"content":null}]
+  [shot] 08_aquarium_placed.png
+すいそうの前のヒント: Eいきものを いれる
+  [shot] 09_hint_put_in.png
+  [shot] 10_aquarium_closeup_empty.png (接写)
+  [shot] 11_display_panel.png
+いれたあと: {"content":"fish","inv":0,"stat":1}
+  [shot] 12_aquarium_with_fish_1.png (接写)
+  [shot] 13_aquarium_with_fish_2.png (接写)
+  [shot] 14_aquarium_with_fish_3.png (接写)
+魚のローカル位置: [{"name":"aquaFish_fish","x":-0.11,"rotY":3.14}]
+中身ありのヒント: Eサカナを とりだす
+  [shot] 15_hint_take_out.png
+とりだしたあと: {"content":null,"inv":1}
+  [shot] 16_aquarium_after_take_out.png (接写)
+  [shot] 17_display_panel_carry.png
+もちかえったあと: {"furniture":0,"aquarium":1,"fish":1}
+中身つきで もちかえった結果(pickUp): {"furniture":0,"aquarium":1,"fish":1}
+むしかご(b_kabuto)のヒント: Eいきものを いれる
+むしかご(b_ageha)のヒント: Eいきものを いれる
+むしかご(b_hotaru)のヒント: Eいきものを いれる
+むしかごの中身: ["b_kabuto","b_ageha","b_hotaru"]
+  [shot] 18_bugcages_three.png (接写)
+  [shot] 19_achievement_cage3_toast.png
+  [shot] 20_bugcage_firefly_night_1.png (接写)
+  [shot] 21_bugcage_firefly_night_2.png (接写)
+  [shot] 22_achievement_toasts.png
+実績4種: [["a_aquarium1",true],["a_cage3",true],["a_garden_bloom",true],["a_room10",true]]
+  [shot] 23_codex_achievements.png
+来訪: {"day":6,"npc":"nokto","stand":{"x":-29.13223304703363,"z":4.932233047033631}}
+  nokto の位置: (-29.13, 4.93) hidden=false / 庭先=(-29.13, 4.93)
+  [shot] 24_npc_visit_yard.png
+  来訪中のヒント: Eノクトと はなす
+  [shot] 25_npc_visit_praise_1.png
+  [shot] 26_npc_visit_praise_2.png
+  [shot] 27_npc_visit_praise_3.png
+  [shot] 28_npc_visit_praise_4.png
+  [shot] 29_npc_visit_praise_5.png
+  [shot] 30_ipad_hint_put_in.png
+  [shot] 31_ipad_display_panel.png
+  [shot] 32_ipad_after_put_in.png
+iPad: 行動ボタン→パネル→いれる = できた / content=fish
+consoleエラー: 0件

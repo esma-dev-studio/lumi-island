@@ -14,7 +14,6 @@ import { burst, flyItem } from '../entities/effects';
 import { ITEMS } from '../data/items';
 import { discoverRecipes } from './DiscoverySystem';
 import { pickDigLoot, DIG_RARE } from './DigSystem';
-import { setCagedBug, pickCagedBug } from '../entities/bugs';
 import type { ActiveBug } from './BugSystem';
 
 /** 採取時の効果音(ノード種ごと)。素手で拾うものはすべて pickup */
@@ -101,11 +100,7 @@ export class InteractionSystem {
     private island: IslandScene,
     private state: GameState,
     private debug: boolean
-  ) {
-    // むしかごの中身は「いま持っている虫」から決める。PlacementSystem.restore()より
-    // 先に作られるので、セーブから復元した かごにも反映される(src/entities/bugs.ts)
-    setCagedBug(pickCagedBug(state.inventory));
-  }
+  ) {}
 
   private absHour(): number {
     return this.island.time.day * 24 + this.island.time.hour;
@@ -317,7 +312,6 @@ export class InteractionSystem {
     this.onHit?.();
     this.island.catchBug(bug.key);
     this.award(bug.bug as ItemId, 1);
-    setCagedBug(bug.bug); // つぎに置く むしかごには この虫が入る
   }
 
   /** 穴ほり: 重みつきで1つ出土する。きんのかけらだけ お祝いを少し足す */

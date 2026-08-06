@@ -19,7 +19,9 @@ export const RECIPE_DISCOVERY: Partial<Record<ItemId, string[]>> = {
   starshard: ['r_starlantern'],
   twig: ['r_pinwheel', 'r_birdhouse'],
   clay: ['r_pot'],
-  glassfloat: ['r_seamobile'],
+  // v10: うきだま(ガラス)から「うみのモビール」と「すいそう」の2つをひらめく
+  // (1素材で複数ひらめく形はv8のこえだで用意ずみ)
+  glassfloat: ['r_seamobile', 'r_aquarium'],
   // v9 道具→素材の階段の「ごほうび」。
   // むしかごは どの虫を初めてつかまえても ひらめく(6種すべてに同じレシピを載せる)。
   b_shiro: ['r_bugcage'], b_ageha: ['r_bugcage'], b_tento: ['r_bugcage'],

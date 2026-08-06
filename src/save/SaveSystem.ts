@@ -138,13 +138,30 @@ export function load(): GameState | null {
         if (!finite(f.id) || !Number.isInteger(f.id) || f.id <= 0 || seenIds.has(f.id)) continue;
         if (Math.abs(f.x) > 70 || Math.abs(f.z) > 70) continue;
         seenIds.add(f.id);
-        s.furniture.push({ id: f.id, item: f.item, x: f.x, z: f.z, rotY: f.rotY });
+        const entry: PlacedFurniture = { id: f.id, item: f.item, x: f.x, z: f.z, rotY: f.rotY };
+        // 展示家具の中身(実在ItemIdのみ。不正値は「中身なし」に落とす)
+        if (typeof f.content === 'string' && VALID_ITEMS.has(f.content)) entry.content = f.content as ItemId;
+        s.furniture.push(entry);
       }
     }
     s.furnitureSeq = Math.max(
       intIn(raw.furnitureSeq, 1, 1_000_000, 1),
       ...[0, ...s.furniture.map((f) => f.id + 1)]
     );
+
+    // 庭の花だん(区画番号0..15・実在ItemId・植えた日1..のみ。重複区画は先勝ち)
+    s.garden = [];
+    if (Array.isArray(raw.garden)) {
+      const seenSlots = new Set<number>();
+      for (const g of raw.garden as Partial<import('../game/GameState').GardenPlot>[]) {
+        if (!g || typeof g !== 'object') continue;
+        if (!finite(g.slot) || !Number.isInteger(g.slot) || g.slot < 0 || g.slot > 15 || seenSlots.has(g.slot)) continue;
+        if (typeof g.item !== 'string' || !VALID_ITEMS.has(g.item)) continue;
+        if (!finite(g.plantedDay) || !Number.isInteger(g.plantedDay) || g.plantedDay < 1) continue;
+        seenSlots.add(g.slot);
+        s.garden.push({ slot: g.slot, item: g.item as ItemId, plantedDay: g.plantedDay });
+      }
+    }
 
     s.islandLevel = intIn(raw.islandLevel, 0, 2, 0);
 

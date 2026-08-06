@@ -6,6 +6,7 @@ import { currentObjective } from '../systems/ObjectiveSystem';
 import { NPC_BY_ID } from '../data/npcs';
 import type { ItemId } from '../data/items';
 import { applyGift, canGift } from '../systems/GiftSystem';
+import { HOME_EXPAND_COST, canOrderHomeExpansion, orderHomeExpansion } from '../systems/HomeExpansion';
 import type { NPCSystem } from '../systems/NPCSystem';
 import type { PlayerController } from '../systems/PlayerController';
 import type { DialogueUI } from '../ui/DialogueUI';
@@ -27,6 +28,9 @@ export interface QuestDialogueDeps {
   onIslandLevel: (level: number) => void;
   onCelebrate: () => void; // ルミの木開花
 }
+
+/** 家の拡張こうじを たのめる相手(島の大工=ツムギ) */
+export const HOME_BUILDER_NPC = 'tsumugi';
 
 export class QuestDialogueController {
   /**
@@ -98,9 +102,48 @@ export class QuestDialogueController {
     // その2つは会話の終わりに状態が変わる大事な場面なので、寄り道の入口を作らない
     // (進行中の雑談とふだんのあいさつには出す。押さなければ何も起きない任意ボタン)。
     const questCritical = q !== null && (q.mode === 'offer' || q.mode === 'done');
-    if (!questCritical && canGift(d.state, npcId)) {
-      d.dialogue.setExtraAction('おくりものをする', () => this.openGift(npcId, endConversation));
+    // v10 家の拡張こうじ。おくりものと同じ「最終行の任意ボタン」の仕組みで足す。
+    // 大工はツムギだけ・未発注・お金が足りているときにだけ出る(発注すると消える)
+    if (!questCritical && npcId === HOME_BUILDER_NPC && canOrderHomeExpansion(d.state)) {
+      d.dialogue.addExtraAction(`こうじを たのむ(${HOME_EXPAND_COST}ルミナ)`, () =>
+        this.openHomeOrder(npcId, endConversation)
+      );
     }
+    if (!questCritical && canGift(d.state, npcId)) {
+      d.dialogue.addExtraAction('おくりものをする', () => this.openGift(npcId, endConversation));
+    }
+  }
+
+  /**
+   * 家の拡張こうじの確認。会話ボックスをそのまま使い、最終行に「はい/やめる」を出す。
+   * 「つぎへ」(E・タッチの丸ボタン)は「やめる」と同じにして、押して無反応にしない
+   * (おくりものパネルと同じ考え方)。
+   */
+  private openHomeOrder(npcId: string, endConversation: () => void): void {
+    const d = this.deps;
+    const name = NPC_BY_ID[npcId].name;
+    const back = (line: string): void => {
+      d.dialogue.blockAdvance = false;
+      d.dialogue.onBlockedAdvance = null;
+      d.dialogue.show(name, [line], endConversation);
+    };
+    const confirm = (): void => {
+      if (!orderHomeExpansion(d.state, d.state.time.day)) {
+        back('うーん、いまは たのめないみたい。');
+        return;
+      }
+      sfx('coin');
+      toast(`こうじを たのんだ(-${HOME_EXPAND_COST}ルミナ)`, 'lumina');
+      back('あしたの あさには できあがるわ。たのしみに していてね!');
+      save(d.state);
+    };
+    d.dialogue.show(name, [`へやを ひろく する こうじ。${HOME_EXPAND_COST}ルミナで いい?`], endConversation);
+    d.dialogue.blockAdvance = true;
+    d.dialogue.onBlockedAdvance = (): void => back('そう? きが かわったら いつでも 言ってね。');
+    d.dialogue.setExtraActions([
+      { label: 'はい', handler: confirm },
+      { label: 'やめる', handler: () => back('そう? きが かわったら いつでも 言ってね。') },
+    ]);
   }
 
   /** おくりものの選択パネルを開く。選ぶと反応セリフ→トースト、やめると会話にもどる */

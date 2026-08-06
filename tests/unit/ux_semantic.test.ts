@@ -92,6 +92,19 @@ describe('categorizeHint(ホットヒント)', () => {
     expect(categorizeHint('家に はいる')).toBe('enter'); // タッチの行動ボタンのラベル
     expect(categorizeHint('そとへ でる')).toBe('exit');
   });
+  it('v10 庭の花だん(うえる・つみとる)は のばなの行動', () => {
+    expect(categorizeHint('<kbd>E</kbd>はなを うえる')).toBe('gatherFlower');
+    expect(categorizeHint('はなを うえる')).toBe('gatherFlower'); // タッチの行動ボタンのラベル
+    expect(categorizeHint('<kbd>E</kbd>つみとる')).toBe('gatherFlower');
+    // 育ちきっていない区画・のばなを持っていない場合は「理由表示」なので blocked
+    expect(categorizeHint('つみとるには もうすこし まってから')).toBe('blocked');
+    expect(categorizeHint('うえるには のばなが ひつよう')).toBe('blocked');
+    // 既存の採取ヒントを横取りしない(表の順序が壊れていないこと)
+    expect(categorizeHint('<kbd>E</kbd>のばなをつむ')).toBe('gatherFlower');
+    expect(categorizeHint('<kbd>E</kbd>ベリーをつむ')).toBe('gatherBerry');
+    expect(categorizeHint('<kbd>E</kbd>ほる')).toBe('dig');
+    expect(categorizeHint('<kbd>E</kbd>ランタンを もちかえる')).toBe('carry');
+  });
 });
 
 describe('isSemanticMatch(既知の矛盾を検出する)', () => {

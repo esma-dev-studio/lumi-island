@@ -6,6 +6,7 @@
 // 範囲: 新規開始→初依頼の受注→木材5→報告→つぎの依頼→素材あつめ→初クラフト→初の家具配置。
 // (全依頼の通し回帰は tools/playtest_bot.mjs、本命の判定は人間テスト)
 import puppeteer from 'puppeteer-core';
+import { launchEdge } from './launch_browser.mjs';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import {
   annotateRow, summarizeTrace, isShopPanelTitle, uxVerdictOf, categorizeHint, categorizeObjective,
@@ -23,14 +24,11 @@ const mark = (label) => {
   console.log(`[${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}] ${label}`);
 };
 
-const browser = await puppeteer.launch({
-  executablePath: EDGE, headless: 'new',
+// Edge151ではpuppeteer.launchの起動検知が空ぶりするため、共通ヘルパー(spawn+connect)で起こす。
+// vsync無効・rAF自走の引数はヘルパー側が持つ。
+const browser = await launchEdge(puppeteer, {
   args: ['--window-size=1280,720', '--use-angle=d3d11', '--enable-gpu', '--mute-audio'],
   defaultViewport: { width: 1280, height: 720 },
-  // 既定の180秒だと、描画が固まったとき走行が無言で何分も止まり、
-  // 外から打ち切られて結果を1行も残せずに死ぬ(2026-08-03の走行で実際に起きた)。
-  // CDPの1呼び出しは本来50ms未満なので45秒で見切って例外にし、finallyで必ず結果を書かせる。
-  protocolTimeout: 45000,
 });
 const page = await browser.newPage();
 const errors = [];
@@ -428,10 +426,10 @@ async function navigate(s) {
 // ---- 開始 ----
 try {
   mkdirSync('.logs/screenshots/v3_p1', { recursive: true });
-  await page.goto('http://localhost:5183/', { waitUntil: 'networkidle2' });
+  await page.goto('http://localhost:5183/', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction('window.__lumi && window.__lumi.titleReady===true', { timeout: 60000 });
   await page.evaluate('localStorage.clear()');
-  await page.reload({ waitUntil: 'networkidle2' });
+  await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForFunction('window.__lumi && window.__lumi.titleReady===true', { timeout: 60000 });
   flags.title = true;
   mark('タイトル表示');

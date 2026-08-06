@@ -1,190 +1,198 @@
 {
   "completed": true,
   "homeRoundTrip": true,
-  "totalSec": 304,
+  "totalSec": 366,
   "timeline": [
     {
-      "sec": 5,
+      "sec": 3,
       "label": "タイトル表示"
     },
     {
-      "sec": 6,
+      "sec": 4,
       "label": "ゲーム開始(新規)"
     },
     {
-      "sec": 7,
+      "sec": 5,
       "label": "目標: tut_move"
     },
     {
-      "sec": 8,
+      "sec": 6,
       "label": "目標: q_wood_offer"
     },
     {
-      "sec": 10,
+      "sec": 8,
       "label": "目標: q_wood_gather"
     },
     {
-      "sec": 19,
+      "sec": 24,
       "label": "はじめての採取"
     },
     {
-      "sec": 30,
-      "label": "目標: q_wood_report"
-    },
-    {
-      "sec": 45,
+      "sec": 47,
       "label": "はじめての夜(発光を確認)"
     },
     {
-      "sec": 46,
+      "sec": 48,
+      "label": "目標: q_wood_report"
+    },
+    {
+      "sec": 67,
       "label": "目標: q_fish_offer"
     },
     {
-      "sec": 56,
+      "sec": 78,
       "label": "目標: q_fish_mats_wood"
-    },
-    {
-      "sec": 62,
-      "label": "目標: q_fish_mats_stone"
-    },
-    {
-      "sec": 66,
-      "label": "目標: q_fish_craft_r_sickle"
-    },
-    {
-      "sec": 68,
-      "label": "はじめてのクラフト"
-    },
-    {
-      "sec": 68,
-      "label": "目標: q_fish_mats_wood"
-    },
-    {
-      "sec": 89,
-      "label": "目標: q_fish_mats_fiber"
-    },
-    {
-      "sec": 97,
-      "label": "目標: q_fish_craft_r_rod"
     },
     {
       "sec": 99,
+      "label": "目標: q_fish_mats_stone"
+    },
+    {
+      "sec": 103,
+      "label": "目標: q_fish_craft_r_sickle"
+    },
+    {
+      "sec": 105,
+      "label": "はじめてのクラフト"
+    },
+    {
+      "sec": 105,
+      "label": "目標: q_fish_mats_wood"
+    },
+    {
+      "sec": 126,
+      "label": "目標: q_fish_mats_fiber"
+    },
+    {
+      "sec": 131,
+      "label": "目標: q_fish_craft_r_rod"
+    },
+    {
+      "sec": 132,
       "label": "目標: q_fish_fish"
     },
     {
-      "sec": 121,
+      "sec": 158,
       "label": "目標: q_fish_report"
     },
     {
-      "sec": 150,
+      "sec": 187,
       "label": "目標: q_ore_offer"
     },
     {
-      "sec": 162,
+      "sec": 200,
       "label": "目標: q_ore_gather"
     },
     {
-      "sec": 171,
+      "sec": 209,
       "label": "目標: q_ore_report"
     },
     {
-      "sec": 176,
+      "sec": 214,
       "label": "目標: q_lantern_offer"
     },
     {
-      "sec": 189,
+      "sec": 228,
       "label": "目標: q_lantern_mats_moss"
     },
     {
-      "sec": 204,
+      "sec": 242,
       "label": "目標: q_lantern_craft_r_lantern"
     },
     {
-      "sec": 205,
+      "sec": 243,
       "label": "目標: q_lantern_place"
     },
     {
-      "sec": 219,
+      "sec": 256,
       "label": "はじめての家具配置"
     },
     {
-      "sec": 219,
+      "sec": 256,
       "label": "目標: q_lantern_report"
     },
     {
-      "sec": 222,
+      "sec": 260,
       "label": "目標: q_lumi_offer"
     },
     {
-      "sec": 224,
+      "sec": 262,
+      "label": "目標: q_lumi_mats_stone"
+    },
+    {
+      "sec": 270,
+      "label": "目標: q_lumi_mats_ore"
+    },
+    {
+      "sec": 282,
+      "label": "目標: q_lumi_craft_r_stonelamp"
+    },
+    {
+      "sec": 283,
+      "label": "目標: q_lumi_place"
+    },
+    {
+      "sec": 305,
       "label": "目標: q_lumi_mats_wood"
     },
     {
-      "sec": 232,
+      "sec": 314,
       "label": "目標: q_lumi_mats_moss"
     },
     {
-      "sec": 242,
+      "sec": 326,
       "label": "目標: q_lumi_craft_r_lantern"
     },
     {
-      "sec": 244,
+      "sec": 327,
       "label": "目標: q_lumi_place"
     },
     {
-      "sec": 256,
-      "label": "目標: q_lumi_mats_moss"
-    },
-    {
-      "sec": 273,
-      "label": "目標: q_lumi_craft_r_lantern"
-    },
-    {
-      "sec": 274,
-      "label": "目標: q_lumi_place"
-    },
-    {
-      "sec": 286,
+      "sec": 341,
       "label": "目標: q_lumi_report"
     },
     {
-      "sec": 290,
+      "sec": 346,
       "label": "目標: free"
     },
     {
-      "sec": 290,
+      "sec": 346,
       "label": "ルミの木 開花!"
     },
     {
-      "sec": 304,
+      "sec": 366,
       "label": "マイホーム 入室→就寝→退出: OK"
     },
     {
-      "sec": 304,
-      "label": "終了(5分4秒)"
+      "sec": 366,
+      "label": "終了(6分6秒)"
     }
   ],
   "errors": 0,
   "errorSamples": [],
   "fps": [
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60,
-    60
+    19,
+    111,
+    86,
+    98,
+    121,
+    106,
+    57,
+    138,
+    106,
+    145,
+    134,
+    124,
+    123,
+    117,
+    125,
+    148,
+    148,
+    45,
+    147,
+    160,
+    128,
+    122
   ],
   "quests": {
     "q_wood": "done",
@@ -193,5 +201,5 @@
     "q_lantern": "done",
     "q_lumi": "done"
   },
-  "day": 2
+  "day": 3
 }

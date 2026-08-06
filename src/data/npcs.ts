@@ -40,6 +40,38 @@ export interface GiftLines {
   ok: string[];
 }
 
+/**
+ * 家に遊びに来た日の「家をほめる」ことば(v10)。
+ *   base    : かならず言う 1〜2行
+ *   display : すいそう・むしかごに いきものが入っている
+ *   many    : 家具を10こ以上おいている
+ *   bloom   : にわの花だんが まんかい(stats.garden_bloom>=1)
+ * 当てはまるものを base のあとに1種ずつ足す(順番はこの並びのまま)。
+ */
+export interface VisitPraise {
+  base: string[];
+  display: string[];
+  many: string[];
+  bloom: string[];
+}
+
+/** 家のようす(GameStateから作る。判定は src/systems/NPCSystem.ts の visitPraiseFacts) */
+export interface VisitPraiseFacts {
+  display: boolean;
+  many: boolean;
+  bloom: boolean;
+}
+
+/** 来訪したNPCが話す行(純関数。表示側はふつうの会話と同じ道すじで出す) */
+export function visitPraiseLines(def: NpcDef, facts: VisitPraiseFacts): string[] {
+  const p = def.visitPraise;
+  const lines = [...p.base];
+  if (facts.display) lines.push(...p.display);
+  if (facts.many) lines.push(...p.many);
+  if (facts.bloom) lines.push(...p.bloom);
+  return lines;
+}
+
 export interface NpcDef {
   id: string;
   charId: string;
@@ -53,6 +85,8 @@ export interface NpcDef {
   thanksLetter: string;
   /** なかよし度5でおぼえる とくべつなレシピID(src/data/items.ts の RECIPES) */
   thanksRecipe: string;
+  /** 家に遊びに来た日に話す「家をほめる」ことば(なかよし度5以上の朝だけ) */
+  visitPraise: VisitPraise;
   schedule: ScheduleEntry[];
   // 依頼の受注・報告相手になっている間は家に入らず、ここに居続ける(子どもを待たせない)
   questEntry: ScheduleEntry;
@@ -74,6 +108,12 @@ export const NPCS: NpcDef[] = [
     },
     thanksLetter: '水のおとが、きみの 足おとに にてきたよ。',
     thanksRecipe: 'r_fishtrophy',
+    visitPraise: {
+      base: ['やあ! 近くまで来たから、きみの家を 見にきたんだ。', 'いい ばしょだね。朝の 光が よく入るなあ。'],
+      display: ['あ、いきものを かざってる! ぼくの たからばこより ずっと いいなあ。'],
+      many: ['ものが たくさん あるね。ぐるっと 見てまわりたく なるよ。'],
+      bloom: ['にわの お花、まんかいだ。水を あげるの、うまいんだね。'],
+    },
     schedule: [
       { from: 6, to: 10, spot: 'pond', activity: 'fish' },
       { from: 10, to: 13, spot: 'plaza', activity: 'stroll' },
@@ -102,6 +142,12 @@ export const NPCS: NpcDef[] = [
     },
     thanksLetter: '星は 遠いが、おぬしは もう 近い。',
     thanksRecipe: 'r_starmap',
+    visitPraise: {
+      base: ['ほう、ここが おぬしの家か。朝から すまんのう。', 'よい かぜが 通っておる。ワシの すみかより ずっと よいわい。'],
+      display: ['いきものを かざっておるのか。よい 目の つけどころじゃ。'],
+      many: ['ずいぶん ものが ふえたのう。おぬしの 日々が 見えるようじゃ。'],
+      bloom: ['にわの花が まんかいじゃ。夜には ちがう顔を 見せるぞい。'],
+    },
     schedule: [
       { from: 6, to: 17, spot: 'home', activity: 'home' }, // 昼はうとうと
       { from: 17, to: 20, spot: 'forest', activity: 'watch' },
@@ -129,6 +175,12 @@ export const NPCS: NpcDef[] = [
     },
     thanksLetter: 'まどから 入る風が、あなたの ことを はなしていくの。',
     thanksRecipe: 'r_woodtable_fine',
+    visitPraise: {
+      base: ['おはよう。おじゃまするわね……まあ、すてきな おうち!', 'ならべ方に あなたらしさが 出てるわ。'],
+      display: ['いきものを かざるなんて、いい アイデアね。まねしても いい?'],
+      many: ['家具が こんなに! わたしの お店より にぎやかかも。'],
+      bloom: ['にわの お花、まんかいね。ここから ながめるのが さいこうだわ。'],
+    },
     schedule: [
       { from: 6, to: 12, spot: 'shop', activity: 'work' },
       { from: 12, to: 13.5, spot: 'bench', activity: 'idle' },

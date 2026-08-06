@@ -22,6 +22,8 @@ export type ItemId =
   | 'f_broom' | 'f_jar' | 'f_birdhouse' | 'f_pinwheel' | 'f_seamobile' | 'f_gardentable'
   // v9 新しい置き家具4種(虫かご・いにしえのつぼ・わらのマット・かかし)
   | 'f_bugcage' | 'f_ancient_pot' | 'f_strawmat' | 'f_scarecrow'
+  // v10 とった魚をかざる すいそう(むしかごと同じ「展示家具」)
+  | 'f_aquarium'
   // v9 おくりもの: なかよし度5でおしえてもらう とくべつな家具3種(NPC1人につき1つ)
   | 'f_finetable' | 'f_fishtrophy' | 'f_starmap'
   // v7-P2 模様替え(かべがみ・ゆかいた)。使っても無くならないので、各1個あれば足りる
@@ -103,7 +105,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   f_seamobile: { id: 'f_seamobile', name: 'うみのモビール', sell: 52, kind: 'furniture', desc: 'うきだまと かいがらのモビール。夜は あお白くひかる', glow: true },
   f_gardentable: { id: 'f_gardentable', name: 'ガーデンテーブル', sell: 46, kind: 'furniture', desc: '石の脚に 木の天板をのせた そとのテーブル' },
   // ---- v9 新しい置き家具4種 ----
-  f_bugcage: { id: 'f_bugcage', name: 'むしかご', sell: 30, kind: 'furniture', desc: 'こえだで 組んだ かご。さいごに つかまえた虫が 中に見える' },
+  f_bugcage: { id: 'f_bugcage', name: 'むしかご', sell: 30, kind: 'furniture', desc: 'こえだで 組んだ かご。つかまえた虫を えらんで 入れられる' },
   f_ancient_pot: { id: 'f_ancient_pot', name: 'いにしえのつぼ', sell: 55, kind: 'furniture', desc: 'つぼのかけらを つなぎ合わせて なおした、つぎめの ある土器' },
   f_strawmat: { id: 'f_strawmat', name: 'わらのマット', sell: 20, kind: 'furniture', desc: 'わらを ぐるぐる まいて あんだ、まるい しきもの' },
   f_scarecrow: { id: 'f_scarecrow', name: 'かかし', sell: 35, kind: 'furniture', desc: 'わらと こえだで つくった 畑の見はり。ぼうしを かぶっている' },
@@ -111,6 +113,8 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   f_finetable: { id: 'f_finetable', name: 'こだわりのテーブル', sell: 70, kind: 'furniture', desc: 'ツムギが おしえてくれた、木めを えらんで 組んだ とくべつなテーブル' },
   f_fishtrophy: { id: 'f_fishtrophy', name: 'さかなのトロフィー', sell: 65, kind: 'furniture', desc: 'ミナモが おしえてくれた、木の台に つった魚を かざる トロフィー' },
   f_starmap: { id: 'f_starmap', name: 'ほしぞらのちず', sell: 80, kind: 'furniture', desc: 'ノクトが おしえてくれた、夜空の 星のならびを うつしとった ちず' },
+  // ---- v10 展示家具: つった魚を 入れて かざる ----
+  f_aquarium: { id: 'f_aquarium', name: 'すいそう', sell: 48, kind: 'furniture', desc: 'つった魚を えらんで 入れられる ガラスの水そう。中を 魚が およぐ' },
   // ---- v7-P2 模様替え(室内で「つかう」。何度でも かえられる) ----
   // 名前は6文字までにする。もちものの1マスは4文字ほどで折り返すので、
   // 「クリームのかべがみ」のような長い名前は3〜4行に割れて読みにくい(実機のスクショで確認)。
@@ -122,6 +126,40 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   floor_tile: { id: 'floor_tile', name: 'タイルのゆか', sell: 40, kind: 'decor', desc: '白いタイルと めじの線。すっきりしたゆかいた' },
   floor_rug: { id: 'floor_rug', name: 'ラグのゆか', sell: 40, kind: 'decor', desc: '一面がおりもののゆかいた。ふかふかに見える' },
 };
+
+// ---------------------------------------------------------------------------
+// v10 展示家具(すいそう・むしかご)。
+// 「置いた家具に いきものを 1匹入れて かざる」しくみを、この1つの表だけで決める。
+//   - accepts : 入れられるItemId(もちものから1つ減って PlacedFurniture.content になる)
+//   - statKey : 入れた回数の累計カウンタ(じっせきが読む。GameState.stats のキー)
+// UI(DisplayUI)・Eのルーティング・メッシュ・じっせきは、すべてこの表を唯一の情報源にする。
+// ---------------------------------------------------------------------------
+export const DISPLAY_FURNITURE = {
+  f_aquarium: {
+    label: 'すいそう',
+    accepts: ['fish', 'nightfish', 'seafish', 'rarefish'],
+    statKey: 'display_fish',
+    empty: 'いま いれられる魚が ない。海や池で つってこよう!',
+  },
+  f_bugcage: {
+    label: 'むしかご',
+    accepts: ['b_shiro', 'b_ageha', 'b_tento', 'b_kabuto', 'b_hotaru', 'b_suzu'],
+    statKey: 'display_bug',
+    empty: 'いま いれられる虫が ない。むしあみで つかまえてこよう!',
+  },
+} as const satisfies Record<string, { label: string; accepts: readonly ItemId[]; statKey: string; empty: string }>;
+
+export type DisplayFurnitureId = keyof typeof DISPLAY_FURNITURE;
+
+/** 展示家具か(すいそう・むしかご)。Eのヒント・DisplayUI・実績の判定はここを通す */
+export function isDisplayFurniture(item: string): item is DisplayFurnitureId {
+  return Object.prototype.hasOwnProperty.call(DISPLAY_FURNITURE, item);
+}
+
+/** その展示家具に入れられるものか(セーブから復元した content の検証にも使える) */
+export function canDisplayIn(furniture: DisplayFurnitureId, item: string): boolean {
+  return (DISPLAY_FURNITURE[furniture].accepts as readonly string[]).includes(item);
+}
 
 /** 模様替えアイテムが かべ・ゆか のどちらを かえるか(この表にあるものだけ「つかう」が出る) */
 export const DECOR_SLOT = {
@@ -213,6 +251,8 @@ export const RECIPES: RecipeDef[] = [
   { id: 'r_ancient_pot', name: 'いにしえのつぼ', out: 'f_ancient_pot', outKind: 'item', cost: { shard_pot: 3, clay: 1 } },
   { id: 'r_strawmat', name: 'わらのマット', out: 'f_strawmat', outKind: 'item', cost: { straw: 3 } },
   { id: 'r_scarecrow', name: 'かかし', out: 'f_scarecrow', outKind: 'item', cost: { straw: 3, twig: 2, cutgrass: 1 } },
+  // ---- v10 すいそう。うきだま(ガラス)を初めて拾ったときに ひらめく(うみのモビールと同時) ----
+  { id: 'r_aquarium', name: 'すいそう', out: 'f_aquarium', outKind: 'item', cost: { glassfloat: 1, wood: 2, stone: 1 } },
   // ---- v9 おくりもの: なかよし度5の お礼でおぼえる3種 ----
   // INITIAL_RECIPES にも RECIPE_DISCOVERY にも入れない(お礼だけが入手経路)。
   // 材料は「そのNPCらしいもの」で組む: ツムギ=木とやきもの、ミナモ=魚とかいがら、ノクト=星と草。
@@ -277,5 +317,15 @@ export function validateItemData(): string[] {
   }
   if (!isStyleFor('wall', DEFAULT_HOME_STYLE.wall)) problems.push('既定のかべがみが不正');
   if (!isStyleFor('floor', DEFAULT_HOME_STYLE.floor)) problems.push('既定のゆかいたが不正');
+  // 展示家具: 家具そのものが置ける家具で、入れられるものが実在するか(両方向を見る)
+  for (const [id, def] of Object.entries(DISPLAY_FURNITURE)) {
+    if (!(id in ITEMS)) problems.push(`展示家具${id}が存在しない`);
+    else if (ITEMS[id as ItemId].kind !== 'furniture') problems.push(`展示家具${id}のkindがfurnitureでない`);
+    const accepts = def.accepts as readonly ItemId[];
+    if (accepts.length === 0) problems.push(`展示家具${id}に入れられるものが無い`);
+    for (const it of accepts) {
+      if (!(it in ITEMS)) problems.push(`展示家具${id}に入れる${it}が存在しない`);
+    }
+  }
   return problems;
 }

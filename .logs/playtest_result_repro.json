@@ -1,0 +1,47 @@
+{
+  "completed": false,
+  "error": "watchdog: 目標 q_fish_mats_wood が10分間進まない",
+  "timeline": [
+    {
+      "sec": 5,
+      "label": "タイトル表示"
+    },
+    {
+      "sec": 6,
+      "label": "ゲーム開始(新規)"
+    },
+    {
+      "sec": 7,
+      "label": "目標: tut_move"
+    },
+    {
+      "sec": 8,
+      "label": "目標: q_wood_offer"
+    },
+    {
+      "sec": 10,
+      "label": "目標: q_wood_gather"
+    },
+    {
+      "sec": 103,
+      "label": "はじめての夜(発光を確認)"
+    },
+    {
+      "sec": 127,
+      "label": "はじめての採取"
+    },
+    {
+      "sec": 249,
+      "label": "目標: q_wood_report"
+    },
+    {
+      "sec": 327,
+      "label": "目標: q_fish_offer"
+    },
+    {
+      "sec": 497,
+      "label": "目標: q_fish_mats_wood"
+    }
+  ],
+  "errors": []
+}

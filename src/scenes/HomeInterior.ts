@@ -23,7 +23,7 @@ import { getStyleMaterial, makeStylePanel } from '../entities/homeStyle';
 import { DEFAULT_HOME_STYLE, isStyleFor, type DecorId, type HomeStyle } from '../data/items';
 import type { CircleCollider, RectCollider } from './IslandScene';
 
-/** 部屋の位置と大きさ(中心・床の高さ・内寸) */
+/** 部屋の位置と大きさ(中心・床の高さ・はじめの内寸) */
 export const HOME_ROOM = {
   x: 58,
   z: -58,
@@ -35,8 +35,44 @@ export const HOME_ROOM = {
 
 /** 開いた側・壁ぎわで体が食いこまないための余白(体半径0.32mより大きく取る) */
 const EDGE_IN = 0.35;
-const HALF_W = HOME_ROOM.w / 2;
-const HALF_D = HOME_ROOM.d / 2;
+
+/**
+ * 部屋の内寸(部屋の原点=HOME_ROOM.x/z からのローカル範囲)。
+ *
+ * 拡張こうじ(ツムギに たのむ)で 6×5m → 9×7m になるが、
+ * **北(-Z)の壁と東(+X)の壁は動かさない**。広がるのは開いている西(-X)と南(+Z)だけ。
+ * こうしておくと ドア・窓・作りつけ家具(ベッド・つくえ・いす・ラグ)のローカル座標が
+ * 変わらないので、既存セーブの「室内に置いた家具」の世界座標がそのまま有効になる。
+ */
+export interface RoomBounds {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+}
+export const ROOM_BASE: RoomBounds = { minX: -3, maxX: 3, minZ: -2.5, maxZ: 2.5 };
+export const ROOM_EXPANDED: RoomBounds = { minX: -6, maxX: 3, minZ: -2.5, maxZ: 4.5 };
+
+/**
+ * いまの間取り(拡張ずみか)。歩行可否・接地高さ・配置判定・カメラ構図の
+ * 唯一の情報源にするため、モジュール変数を1つだけ置く(GameSceneが起動時と
+ * こうじ完成時に setHomeExpandedLayout で書きこむ)。
+ */
+let expandedLayout = false;
+export function setHomeExpandedLayout(v: boolean): void {
+  expandedLayout = v;
+}
+export function isHomeExpandedLayout(): boolean {
+  return expandedLayout;
+}
+export function roomBounds(): RoomBounds {
+  return expandedLayout ? ROOM_EXPANDED : ROOM_BASE;
+}
+/** いまの内寸(m) */
+export function roomSize(): { w: number; d: number } {
+  const b = roomBounds();
+  return { w: b.maxX - b.minX, d: b.maxZ - b.minZ };
+}
 
 /** 室内のドアの前(ここでEを押すと外へ出る) */
 export const HOME_DOOR = { x: HOME_ROOM.x + 1.6, z: HOME_ROOM.z - 1.9 };
@@ -47,7 +83,7 @@ export const HOME_SPAWN = { x: HOME_ROOM.x + 0.8, z: HOME_ROOM.z + 0.3 };
 /** ドア・ベッドのEが届く距離。2つの範囲は重ならない(2.89m離れている) */
 export const HOME_ACT_R = 1.4;
 
-/** 室内カメラの構図(南から部屋を見おろす) */
+/** 室内カメラの構図(南から部屋を見おろす)。拡張前の6×5m用 */
 export const HOME_SHOT = {
   cx: HOME_ROOM.x,
   cy: HOME_ROOM.floorY,
@@ -55,6 +91,24 @@ export const HOME_SHOT = {
   dist: 5.6,
   height: 4.35,
 } as const;
+
+/**
+ * 拡張後(9×7m)の構図。部屋の中心が西・南へずれるぶんだけ寄せ、引いて全体を入れる。
+ * dist=8.6 / height=5.9 は「手前(南)の床のふちが画面の下で切れない」ぎりぎりより
+ * 3度ほど余裕をとった値(実機のスクショで確認。7.6/5.7だと手前の床が切れていた)。
+ */
+export const HOME_SHOT_BIG = {
+  cx: HOME_ROOM.x + (ROOM_EXPANDED.minX + ROOM_EXPANDED.maxX) / 2,
+  cy: HOME_ROOM.floorY,
+  cz: HOME_ROOM.z + (ROOM_EXPANDED.minZ + ROOM_EXPANDED.maxZ) / 2,
+  dist: 8.6,
+  height: 5.9,
+} as const;
+
+/** いまの部屋にあわせた室内カメラの構図 */
+export function homeShot(): typeof HOME_SHOT | typeof HOME_SHOT_BIG {
+  return expandedLayout ? HOME_SHOT_BIG : HOME_SHOT;
+}
 
 /** 作りつけ家具の当たり判定(矩形)。ベッドとつくえ */
 export const HOME_RECTS: RectCollider[] = [
@@ -66,16 +120,22 @@ export const HOME_CIRCLES: CircleCollider[] = [{ x: HOME_ROOM.x + 1.55, z: HOME_
 
 /** 室内の床の高さ(部屋の外はnull)。IslandScene.groundY が最優先で見る */
 export function homeFloorY(x: number, z: number): number | null {
-  if (Math.abs(x - HOME_ROOM.x) > HALF_W + 0.4) return null;
-  if (Math.abs(z - HOME_ROOM.z) > HALF_D + 0.4) return null;
+  const b = roomBounds();
+  const dx = x - HOME_ROOM.x;
+  const dz = z - HOME_ROOM.z;
+  if (dx < b.minX - 0.4 || dx > b.maxX + 0.4) return null;
+  if (dz < b.minZ - 0.4 || dz > b.maxZ + 0.4) return null;
   return HOME_ROOM.floorY;
 }
 
 /** 室内の歩ける床か。開いた南西の端も壁ぎわも同じ余白で内側に止める */
 export function insideHomeFloor(x: number, z: number): boolean {
+  const b = roomBounds();
+  const dx = x - HOME_ROOM.x;
+  const dz = z - HOME_ROOM.z;
   return (
-    Math.abs(x - HOME_ROOM.x) <= HALF_W - EDGE_IN &&
-    Math.abs(z - HOME_ROOM.z) <= HALF_D - EDGE_IN
+    dx >= b.minX + EDGE_IN && dx <= b.maxX - EDGE_IN &&
+    dz >= b.minZ + EDGE_IN && dz <= b.maxZ - EDGE_IN
   );
 }
 
@@ -122,10 +182,11 @@ export interface HomeObstacle {
  * 歩ける床のふちまで(ドールハウスの手前ぶちに物を立てて、部屋の中を隠さない)。
  */
 export function insideHomePlaceArea(x: number, z: number): boolean {
+  const b = roomBounds();
   const dx = x - HOME_ROOM.x;
   const dz = z - HOME_ROOM.z;
-  if (dx > HALF_W - PLACE_EDGE_WALL || dx < -(HALF_W - EDGE_IN)) return false;
-  if (dz < -(HALF_D - PLACE_EDGE_WALL) || dz > HALF_D - EDGE_IN) return false;
+  if (dx > b.maxX - PLACE_EDGE_WALL || dx < b.minX + EDGE_IN) return false;
+  if (dz < b.minZ + PLACE_EDGE_WALL || dz > b.maxZ - EDGE_IN) return false;
   return true;
 }
 
@@ -158,10 +219,11 @@ export function canStandInHome(x: number, z: number, obstacles: HomeObstacle[]):
  */
 export function homeReachOk(obstacles: HomeObstacle[], start: { x: number; z: number }): boolean {
   const step = REACH_STEP;
-  const x0 = HOME_ROOM.x - HALF_W;
-  const z0 = HOME_ROOM.z - HALF_D;
-  const nx = Math.ceil((HOME_ROOM.w) / step) + 1;
-  const nz = Math.ceil((HOME_ROOM.d) / step) + 1;
+  const b = roomBounds();
+  const x0 = HOME_ROOM.x + b.minX;
+  const z0 = HOME_ROOM.z + b.minZ;
+  const nx = Math.ceil((b.maxX - b.minX) / step) + 1;
+  const nz = Math.ceil((b.maxZ - b.minZ) / step) + 1;
   const at = (ix: number, iz: number): { x: number; z: number } => ({ x: x0 + ix * step, z: z0 + iz * step });
   const free: boolean[] = new Array(nx * nz);
   for (let ix = 0; ix < nx; ix++) {
@@ -245,54 +307,35 @@ export function checkHomePlacement(
  * 遠くの島や水平線が壁ぎわに映りこまないようにする)。
  */
 export class HomeInterior {
+  /**
+   * 部屋ぜんたいの入れ物(位置だけを持つ空のメッシュ)。
+   * 部屋の本体(shell)・模様替えの板・作りつけ家具はこの子で、こうじのときに作りなおす。
+   * 置いた家具(PlacementSystemがこの子にする)は作りなおしの対象にしないので、
+   * 拡張しても室内の配置はそのまま残る。
+   */
   readonly root: Mesh;
+  private shell: Mesh | null = null;
+  private builtins: Mesh[] = [];
   private light: PointLight;
   private hidden: Mesh[];
   private scene: Scene;
   /** 模様替えの板(かべ2枚・ゆか1枚)。マテリアルだけ取りかえて見た目を変える */
   private wallPanels: Mesh[] = [];
-  private floorPanel: Mesh;
+  private floorPanel: Mesh | null = null;
   private style: HomeStyle = { ...DEFAULT_HOME_STYLE };
+  /**
+   * 部屋を作りなおしたときに影の登録をやり直す(IslandSceneが差しこむ)。
+   * 第2引数は捨てる古い部屋(初回はnull)。影マップの登録から外してから捨てる。
+   */
+  private onShellBuilt: ((added: Mesh, removed: Mesh | null) => void) | null;
 
-  constructor(scene: Scene, hideWhileIndoor: Mesh[]) {
+  constructor(scene: Scene, hideWhileIndoor: Mesh[], onShellBuilt?: (added: Mesh, removed: Mesh | null) => void) {
     this.hidden = hideWhileIndoor;
     this.scene = scene;
-    const room = buildHomeRoom(scene, { w: HOME_ROOM.w, d: HOME_ROOM.d, wallH: HOME_ROOM.wallH });
-    this.root = room.mesh;
+    this.onShellBuilt = onShellBuilt ?? null;
+    this.root = new Mesh('homeRoot', scene);
     this.root.position.set(HOME_ROOM.x, HOME_ROOM.floorY, HOME_ROOM.z);
-
-    // ---- 模様替えの板 ----
-    // 壁の面のほんの内がわ・床のほんの上に重ねる。腰板・窓わく・隅柱はもっと内がわに出ているので、
-    // それらは今までどおり手前に描かれる(木の部分は模様替えの対象にしない)。
-    const hw = HALF_W;
-    const hd = HALF_D;
-    const wallH = HOME_ROOM.wallH;
-    const wt = 0.16; // buildHomeRoomの壁の厚み(壁の面は ±hw / -hd の位置)
-    const north = makeStylePanel(scene, 'homeWallN',
-      [hw + wt, 0, -hd + 0.008], [-(hw + wt) * 2, 0, 0], [0, wallH, 0], [0, 0, 1]);
-    const east = makeStylePanel(scene, 'homeWallE',
-      [hw - 0.008, 0, -hd], [0, 0, hd * 2], [0, wallH, 0], [-1, 0, 0]);
-    this.wallPanels = [north, east];
-    // 床: 板張りの上面(ローカルy=0)のすぐ上。ラグの底(y=0.004)より下に置いて、ラグを消さない
-    this.floorPanel = makeStylePanel(scene, 'homeFloor',
-      [-hw, 0.003, -hd + 0.01], [hw * 2, 0, 0], [0, 0, hd * 2 - 0.02], [0, 1, 0]);
-    for (const m of [...this.wallPanels, this.floorPanel]) {
-      m.parent = this.root;
-      m.receiveShadows = true;
-    }
-    this.applyStyle(this.style);
-
-    // 家具は部屋の子にする(部屋ごとまとめて出し入れできる)。座標は部屋のローカル
-    const put = (m: Mesh, lx: number, lz: number, rotY = 0, lift = 0): void => {
-      m.parent = this.root;
-      m.position.set(lx, lift, lz);
-      m.rotation.y = rotY;
-      m.receiveShadows = true;
-    };
-    put(makeRoomBed(scene), -2.0, -1.4);
-    put(makeRoomDesk(scene).root, 2.4, 0.5);
-    put(makeFurnitureMesh(scene, 'f_chair').root, 1.55, 0.5, Math.PI / 2);
-    put(makeRoomRug(scene), -0.1, 1.1);
+    this.root.isPickable = false;
 
     // あたたかい室内灯。屋外では消しておく(消えているライトはシェーダに数えられない)
     this.light = new PointLight('homeLight', new Vector3(HOME_ROOM.x, HOME_ROOM.floorY + 2.15, HOME_ROOM.z + 0.1), scene);
@@ -302,10 +345,88 @@ export class HomeInterior {
     this.light.intensity = 0.85;
     this.light.setEnabled(false);
     // 夜のプレイヤー近傍ライト(DayNight)が室内でもデスクランプを拾えるようにする。
-    // nearestGlowSourceは12m以内しか見ないので、屋外にいるあいだは影響しない
+    // nearestGlowSourceは12m以内しか見ないので、屋外にいるあいだは影響しない。
+    // つくえの位置は拡張しても変わらないので、登録は1回だけでよい
     registerGlowSource(HOME_ROOM.x + 2.4, HOME_ROOM.floorY + 1.2, HOME_ROOM.z + 0.2);
 
+    this.buildShell();
     this.root.setEnabled(false);
+  }
+
+  /** 部屋の本体・模様替えの板・作りつけ家具を、いまの間取りで組み立てる */
+  private buildShell(replacing: Mesh | null = null): void {
+    const scene = this.scene;
+    const b = roomBounds();
+    const wallH = HOME_ROOM.wallH;
+    const room = buildHomeRoom(scene, { ...b, wallH });
+    this.shell = room.mesh;
+    this.shell.parent = this.root;
+    this.shell.position.set(0, 0, 0);
+    this.shell.receiveShadows = true;
+
+    // ---- 模様替えの板 ----
+    // 壁の面のほんの内がわ・床のほんの上に重ねる。腰板・窓わく・隅柱はもっと内がわに出ているので、
+    // それらは今までどおり手前に描かれる(木の部分は模様替えの対象にしない)。
+    const wt = 0.16; // buildHomeRoomの壁の厚み(壁の面は maxX / minZ の位置)
+    const w = b.maxX - b.minX;
+    const d = b.maxZ - b.minZ;
+    const north = makeStylePanel(scene, 'homeWallN',
+      [b.maxX + wt, 0, b.minZ + 0.008], [-(w + wt * 2), 0, 0], [0, wallH, 0], [0, 0, 1]);
+    const east = makeStylePanel(scene, 'homeWallE',
+      [b.maxX - 0.008, 0, b.minZ], [0, 0, d], [0, wallH, 0], [-1, 0, 0]);
+    this.wallPanels = [north, east];
+    // 床: 板張りの上面(ローカルy=0)のすぐ上。ラグの底(y=0.004)より下に置いて、ラグを消さない
+    this.floorPanel = makeStylePanel(scene, 'homeFloor',
+      [b.minX, 0.003, b.minZ + 0.01], [w, 0, 0], [0, 0, d - 0.02], [0, 1, 0]);
+    for (const m of [...this.wallPanels, this.floorPanel]) {
+      m.parent = this.root;
+      m.receiveShadows = true;
+    }
+    this.applyStyle(this.style);
+
+    // 家具は部屋の子にする(部屋ごとまとめて出し入れできる)。座標は部屋のローカル。
+    // 拡張しても北の壁・東の壁は動かないので、この4つのローカル座標は変えない
+    const put = (m: Mesh, lx: number, lz: number, rotY = 0, lift = 0): void => {
+      m.parent = this.root;
+      m.position.set(lx, lift, lz);
+      m.rotation.y = rotY;
+      m.receiveShadows = true;
+      this.builtins.push(m);
+    };
+    put(makeRoomBed(scene), -2.0, -1.4);
+    put(makeRoomDesk(scene).root, 2.4, 0.5);
+    put(makeFurnitureMesh(scene, 'f_chair').root, 1.55, 0.5, Math.PI / 2);
+    put(makeRoomRug(scene), -0.1, 1.1);
+
+    // 室内灯は部屋の中心の上へ(拡張すると中心が西・南へずれる)
+    this.light.position.set(
+      HOME_ROOM.x + (b.minX + b.maxX) / 2,
+      HOME_ROOM.floorY + 2.15,
+      HOME_ROOM.z + (b.minZ + b.maxZ) / 2 + 0.1
+    );
+    this.onShellBuilt?.(this.shell, replacing);
+  }
+
+  /**
+   * こうじの完成を見た目へ反映する(部屋を作りなおす)。
+   * 置いた家具(rootの子のうち作りつけ以外)は触らないので、拡張後もそのまま残る。
+   */
+  applyExpanded(expanded: boolean): void {
+    if (expanded === isHomeExpandedLayout() && this.shell) return;
+    setHomeExpandedLayout(expanded);
+    // 共有マテリアルを道連れにしない(第2引数を省略=false)
+    for (const m of this.builtins) m.dispose();
+    this.builtins = [];
+    for (const m of this.wallPanels) m.dispose();
+    this.wallPanels = [];
+    this.floorPanel?.dispose();
+    this.floorPanel = null;
+    const old = this.shell;
+    this.shell = null;
+    const wasEnabled = this.root.isEnabled();
+    this.buildShell(old); // 影マップの登録を入れかえてから、古い部屋を捨てる
+    old?.dispose();
+    this.root.setEnabled(wasEnabled);
   }
 
   /**
@@ -318,7 +439,7 @@ export class HomeInterior {
     this.style = { wall, floor };
     const wallMat = getStyleMaterial(this.scene, wall);
     for (const m of this.wallPanels) m.material = wallMat;
-    this.floorPanel.material = getStyleMaterial(this.scene, floor);
+    if (this.floorPanel) this.floorPanel.material = getStyleMaterial(this.scene, floor);
   }
 
   /** いま貼ってある見た目(検証・スクショ用) */

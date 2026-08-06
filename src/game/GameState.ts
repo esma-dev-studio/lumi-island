@@ -10,6 +10,15 @@ export interface PlacedFurniture {
   x: number;
   z: number;
   rotY: number;
+  /** 展示家具(水槽・むしかご)の中身。入れた魚・虫のItemId。所持品から移し、もちかえると戻る */
+  content?: ItemId;
+}
+
+/** 庭の花だん区画。plantedDayからの経過日数で成長する(2日で満開) */
+export interface GardenPlot {
+  slot: number; // 区画番号(0..)
+  item: ItemId; // 植えた種類(flowerなど)
+  plantedDay: number;
 }
 
 export type QuestState = 'locked' | 'open' | 'done';
@@ -45,6 +54,8 @@ export interface GameState {
    * 値は src/data/items.ts の DECOR_SLOT にあるIDのみ。読みこみ時の検証は SaveSystem が行う。
    */
   homeStyle: HomeStyle;
+  /** 庭の花だん(植えた区画だけ持つ)。家の拡張ずみは flags.home_expanded(boolean枠)を使う */
+  garden: GardenPlot[];
 }
 
 export function newGameState(): GameState {
@@ -69,6 +80,7 @@ export function newGameState(): GameState {
     codex: {},
     stats: {},
     homeStyle: { ...DEFAULT_HOME_STYLE },
+    garden: [],
   };
 }
 

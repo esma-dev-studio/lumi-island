@@ -3,9 +3,64 @@ import type { Scene } from '@babylonjs/core/scene';
 import { CharacterView } from '../characters/CharacterView';
 import { CHARACTERS } from '../data/characters';
 import { NPCS, npcSpot, scheduleEntryAt, nextOutdoorEntry, type NpcDef, type ScheduleEntry } from '../data/npcs';
+import type { VisitPraiseFacts } from '../data/npcs';
+import { GATHER_NODES } from '../data/island';
+import type { GameState } from '../game/GameState';
 import type { IslandScene } from '../scenes/IslandScene';
 import { vnoise } from '../entities/terrain';
 import { findDryStand, waterClearance, SHORE_CLEAR } from '../scenes/DialogueCameraPlanner';
+
+// ---------------------------------------------------------------------------
+// v10 なかよしのNPCが 朝、自宅の庭先に 遊びに来る。
+//
+// 決め方は「日付から決まる純ロジック」。乱数を使わないので、同じ日は何度読み直しても
+// 同じ結果になり(セーブ・リロードでも変わらない)、テストも決定的にできる。
+//
+// 依頼とは干渉させない: 受注・報告・進行中の依頼が1つでもある日は だれも来ない。
+// 誘導(いまやること)が指すNPCが いつもの場所からいなくなると、子どもが迷うため。
+// これは回帰ボット(依頼を順に進める)の走行にも一切 影響しないという保証でもある。
+// ---------------------------------------------------------------------------
+/** 来訪の時間帯(朝7時〜9時)と、必要ななかよし度・確率 */
+export const VISIT_FROM = 7;
+export const VISIT_TO = 9;
+export const VISIT_FRIENDSHIP = 5;
+export const VISIT_CHANCE = 30; // %
+/** 来訪中のスケジュール枠が使うスポットのキー(NPC_SPOTSには無い。NPCSystemが実測点に差し替える) */
+export const VISIT_SPOT_KEY = 'visit';
+const VISIT_ENTRY: ScheduleEntry = { from: VISIT_FROM, to: VISIT_TO, spot: VISIT_SPOT_KEY, activity: 'idle' };
+
+/** 日付ハッシュ(同じ日・同じsaltなら必ず同じ値。乱数は使わない) */
+function dayHash(day: number, salt: number): number {
+  let h = Math.imul((day | 0) ^ 0x9e3779b9, 0x85ebca6b) ^ salt;
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+/**
+ * その日に遊びに来るNPC(来ない日は null)。
+ * 依頼が動いている日(だれかが questCritical)は だれも来ない。
+ */
+export function visitorOfDay(
+  day: number,
+  npcs: { id: string; friendship: number; questCritical: boolean }[]
+): string | null {
+  if (npcs.some((n) => n.questCritical)) return null;
+  const cands = npcs.filter((n) => n.friendship >= VISIT_FRIENDSHIP).map((n) => n.id).sort();
+  if (cands.length === 0) return null;
+  if (dayHash(day, 1) % 100 >= VISIT_CHANCE) return null;
+  return cands[dayHash(day, 2) % cands.length];
+}
+
+/** 家のようす(来訪NPCの ほめことばが変わる条件)。純関数 */
+export function visitPraiseFacts(s: GameState): VisitPraiseFacts {
+  const furniture = Array.isArray(s.furniture) ? s.furniture : [];
+  const bloom = (s.stats ?? {}).garden_bloom;
+  return {
+    display: furniture.some((f) => typeof f.content === 'string'),
+    many: furniture.length >= 10,
+    bloom: typeof bloom === 'number' && bloom >= 1,
+  };
+}
 
 interface NpcRuntime {
   def: NpcDef;
@@ -26,8 +81,21 @@ interface NpcRuntime {
 
 const WALK_SPEED_MULT = 0.85;
 
+/** 自宅のドア前(src/scenes/InteractionRouting.ts の HOME_POINT と同じ点)。庭先はここから測る */
+const HOME_DOOR_OUT = { x: -30.9, z: 6.7 };
+/** 庭先までの距離(m)。ドアの前をふさがず、ドアのEヒント(2.0m)にも入らない位置 */
+const VISIT_DIST = 2.5;
+const NPC_BODY_R = 0.3; // NPCSystem.update の resolveCollision と同じ
+
 export class NPCSystem {
   npcs = new Map<string, NpcRuntime>();
+  /** 庭先の立ち位置(init で島の当たり判定から実測して決める) */
+  private visitSpot = { x: HOME_DOOR_OUT.x + VISIT_DIST, z: HOME_DOOR_OUT.z, rotY: 0, wanderR: 0.9 };
+  /** きょう遊びに来ているNPC(いない日は null)。day が変わるまで結果を変えない */
+  private visitorDay = -1;
+  private visitorId: string | null = null;
+  /** なかよし度・依頼状況の読み取り口(GameSceneが差しこむ)。無いときは来訪なし */
+  private visitProbe: (() => { id: string; friendship: number; questCritical: boolean }[]) | null = null;
 
   constructor(
     private scene: Scene,
@@ -37,7 +105,74 @@ export class NPCSystem {
     private questCritical: (id: string) => boolean = () => false
   ) {}
 
+  /** 来訪の判定に使う「なかよし度と依頼状況」を渡す(GameSceneがGameStateから作る) */
+  setVisitProbe(probe: () => { id: string; friendship: number; questCritical: boolean }[]): void {
+    this.visitProbe = probe;
+  }
+
+  /**
+   * 庭先の立ち位置を島の当たり判定から実測して決める。
+   * ドアから2.5mの円周を「島がわ(+X)から順に」見て、歩けて・押し出されず・
+   * 四方ふさがりでない点をえらぶ(教訓4: POIは目印であって立てる点とは限らない)。
+   */
+  private measureVisitSpot(): void {
+    const canStand = (x: number, z: number): boolean => {
+      if (!this.island.walkable(x, z)) return false;
+      // 採取ノードのそばには立たせない(教訓4: 採取のEが会話を横取りして話しかけられなくなる)
+      for (const n of GATHER_NODES) {
+        if (Math.hypot(x - n.x, z - n.z) < 2.6) return false;
+      }
+      const [rx, rz] = this.island.resolveCollision(x, z, NPC_BODY_R);
+      if (Math.hypot(rx - x, rz - z) > 0.01) return false;
+      let free = 0;
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        const nx = x + Math.cos(a) * 0.6;
+        const nz = z + Math.sin(a) * 0.6;
+        const [px, pz] = this.island.resolveCollision(nx, nz, NPC_BODY_R);
+        if (this.island.walkable(nx, nz) && Math.hypot(px - nx, pz - nz) < 0.01) free++;
+      }
+      return free >= 4; // 四方ふさがりでない(袋小路に立たせない)
+    };
+    // 0度=島がわ。±22.5度ずつ広げて、家の正面に近い点から順に試す
+    const order = [0, 1, -1, 2, -2, 3, -3, 4, -4];
+    for (const step of order) {
+      const a = (step * Math.PI) / 8;
+      const x = HOME_DOOR_OUT.x + Math.cos(a) * VISIT_DIST;
+      const z = HOME_DOOR_OUT.z + Math.sin(a) * VISIT_DIST;
+      if (!canStand(x, z)) continue;
+      this.visitSpot = {
+        x, z,
+        // 家(ドア)のほうを向いて立つ。描画は+π回転なので atan2+π で対象へ顔が向く
+        rotY: Math.atan2(HOME_DOOR_OUT.x - x, HOME_DOOR_OUT.z - z) + Math.PI,
+        wanderR: 0.9,
+      };
+      return;
+    }
+    console.warn('[npc] 庭先の立ち位置が見つからないので既定値を使う', this.visitSpot);
+  }
+
+  /** きょうの来訪者(日付が変わるまで同じ結果)。来訪なしの日は null */
+  visitorToday(day: number): string | null {
+    if (this.visitorDay !== day) {
+      this.visitorDay = day;
+      this.visitorId = this.visitProbe ? visitorOfDay(day, this.visitProbe()) : null;
+    }
+    return this.visitorId;
+  }
+
+  /** そのNPCが いま庭先に来ているか(会話の分岐に使う) */
+  isVisiting(id: string, day: number, hour: number): boolean {
+    return hour >= VISIT_FROM && hour < VISIT_TO && this.visitorToday(day) === id;
+  }
+
+  /** 来訪中のスポット(いまの立ち位置。撮影・テスト用に読み取れるようにしておく) */
+  get visitStand(): { x: number; z: number } {
+    return { x: this.visitSpot.x, z: this.visitSpot.z };
+  }
+
   async init(): Promise<void> {
+    this.measureVisitSpot();
     for (const def of NPCS) {
       const view = await CharacterView.load(this.scene, CHARACTERS[def.charId]);
       for (const m of view.meshes) this.island.shadows.addShadowCaster(m, true);
@@ -62,10 +197,18 @@ export class NPCSystem {
     if (rt.def.id === 'tsumugi' && this.getFlags().q_wood_accepted !== true) {
       return rt.def.questEntry;
     }
+    // v10 来訪: なかよしのNPCは 朝7〜9時だけ 自宅の庭先にいる。
+    // 依頼が動いている日は visitorToday が null を返すので、依頼の枠を横取りすることはない
+    if (this.isVisiting(rt.def.id, this.island.time.day, hour)) return VISIT_ENTRY;
     if (entry.activity === 'home' && this.questCritical(rt.def.id)) {
       entry = rt.def.questEntry;
     }
     return entry;
+  }
+
+  /** スケジュール枠の立ち位置。来訪の枠だけは実測した庭先を使う(NPC_SPOTSには置かない) */
+  private spotFor(rt: NpcRuntime, entry: ScheduleEntry): { x: number; z: number; rotY?: number; wanderR?: number } {
+    return entry.spot === VISIT_SPOT_KEY ? this.visitSpot : npcSpot(rt.def.id, entry.spot);
   }
 
   /** 会話開始/終了(GameSceneから) */
@@ -110,7 +253,7 @@ export class NPCSystem {
     for (const rt of this.npcs.values()) {
       if (rt.talking) continue; // 会話中はその場でtalk
       const entry = this.resolveEntry(rt, hour);
-      const spot = npcSpot(rt.def.id, entry.spot);
+      const spot = this.spotFor(rt, entry);
       const newEntry = entry !== rt.entry;
       if (newEntry) {
         rt.entry = entry;
@@ -238,7 +381,7 @@ export class NPCSystem {
     for (const rt of this.npcs.values()) {
       if (rt.talking) continue;
       const entry = this.resolveEntry(rt, hour);
-      const spot = npcSpot(rt.def.id, entry.spot);
+      const spot = this.spotFor(rt, entry);
       rt.entry = entry;
       rt.subTarget = null;
       rt.x = spot.x;

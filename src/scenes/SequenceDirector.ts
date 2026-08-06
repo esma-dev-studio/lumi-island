@@ -1,7 +1,7 @@
 // 見せ場(初回の夜・ルミの木開花)と就寝を、排他的な状態機械で進行する。
 // 睡眠はsetTimeoutを使わずタイムラインで処理し、多重実行できない。
 import { POIS } from '../data/island';
-import { HOME_SHOT } from './HomeInterior';
+import { homeShot } from './HomeInterior';
 import { terrainHeight } from '../entities/terrain';
 import { burst } from '../entities/effects';
 import { toast } from '../ui/Toast';
@@ -81,7 +81,7 @@ export class SequenceDirector {
     this.state = 'idle';
     this.gs.camCtl.endEvent();
     // 万一 室内で見せ場が走っても、終わったらドールハウス構図へ戻す(追従カメラのまま残さない)
-    if (this.gs.indoor) this.gs.camCtl.beginRoom(HOME_SHOT, true);
+    if (this.gs.indoor) this.gs.camCtl.beginRoom(homeShot(), true);
   }
 
   // ---------- 自宅の出入り ----------

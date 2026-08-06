@@ -1,0 +1,68 @@
+[00:05] タイトル表示
+[00:06] ゲーム開始(新規)
+[00:07] 目標: tut_move
+[00:08] 目標: q_wood_offer
+[00:10] 目標: q_wood_gather
+hb 27s pos=(-13.2,-8.2) obj=q_wood_gather hour=18.9
+hb 47s pos=(-16.2,-9.7) obj=q_wood_gather hour=19.1
+hb 67s pos=(-18.3,-8.4) obj=q_wood_gather hour=19.3
+hb 87s pos=(-17.7,-8.7) obj=q_wood_gather hour=19.5
+[01:43] はじめての夜(発光を確認)
+hb 107s pos=(-18.1,-8.3) obj=q_wood_gather hour=19.7
+hb 127s pos=(-18.7,-6.8) obj=q_wood_gather hour=19.9
+[02:07] はじめての採取
+hb 147s pos=(-28.6,-5.1) obj=q_wood_gather hour=20.2
+hb 167s pos=(-23.6,-3.0) obj=q_wood_gather hour=20.4
+hb 187s pos=(-21.0,3.3) obj=q_wood_gather hour=20.6
+hb 207s pos=(-21.7,9.4) obj=q_wood_gather hour=20.8
+hb 227s pos=(-23.5,11.3) obj=q_wood_gather hour=21.0
+hb 247s pos=(-24.7,13.4) obj=q_wood_gather hour=21.2
+[04:09] 目標: q_wood_report
+hb 267s pos=(-14.3,-1.9) obj=q_wood_report hour=21.5
+hb 287s pos=(-12.8,-5.4) obj=q_wood_report hour=21.7
+hb 307s pos=(-2.6,-4.0) obj=q_wood_report hour=21.9
+[05:27] 目標: q_fish_offer
+hb 327s pos=(-2.3,0.4) obj=q_fish_offer hour=22.0
+hb 347s pos=(-5.2,-2.3) obj=q_fish_offer hour=22.2
+hb 367s pos=(-5.1,-3.7) obj=q_fish_offer hour=22.4
+hb 387s pos=(-7.7,-9.0) obj=q_fish_offer hour=22.6
+hb 407s pos=(3.9,-2.8) obj=q_fish_offer hour=22.9
+hb 427s pos=(15.0,-1.6) obj=q_fish_offer hour=23.1
+hb 447s pos=(24.5,4.7) obj=q_fish_offer hour=23.3
+hb 467s pos=(27.7,8.7) obj=q_fish_offer hour=23.5
+hb 487s pos=(24.3,11.2) obj=q_fish_offer hour=23.7
+[08:17] 目標: q_fish_mats_wood
+hb 507s pos=(25.8,13.2) obj=q_fish_mats_wood hour=23.9
+hb 527s pos=(29.8,17.0) obj=q_fish_mats_wood hour=0.1
+hb 547s pos=(28.8,17.0) obj=q_fish_mats_wood hour=0.4
+hb 567s pos=(29.1,17.2) obj=q_fish_mats_wood hour=0.6
+hb 587s pos=(28.2,17.4) obj=q_fish_mats_wood hour=0.8
+hb 607s pos=(29.1,16.3) obj=q_fish_mats_wood hour=1.0
+hb 627s pos=(28.1,17.5) obj=q_fish_mats_wood hour=1.2
+hb 647s pos=(28.7,17.0) obj=q_fish_mats_wood hour=1.4
+hb 667s pos=(28.7,17.5) obj=q_fish_mats_wood hour=1.6
+hb 687s pos=(28.8,18.1) obj=q_fish_mats_wood hour=1.9
+hb 707s pos=(29.1,17.4) obj=q_fish_mats_wood hour=2.1
+hb 727s pos=(29.0,17.2) obj=q_fish_mats_wood hour=2.3
+hb 747s pos=(29.1,16.7) obj=q_fish_mats_wood hour=2.5
+hb 767s pos=(29.0,17.1) obj=q_fish_mats_wood hour=2.7
+hb 787s pos=(28.7,17.9) obj=q_fish_mats_wood hour=2.9
+hb 807s pos=(28.8,17.4) obj=q_fish_mats_wood hour=3.2
+hb 827s pos=(28.0,17.0) obj=q_fish_mats_wood hour=3.4
+hb 847s pos=(28.6,16.6) obj=q_fish_mats_wood hour=3.6
+hb 867s pos=(28.9,17.1) obj=q_fish_mats_wood hour=3.8
+hb 887s pos=(28.6,16.7) obj=q_fish_mats_wood hour=4.0
+hb 907s pos=(29.2,17.2) obj=q_fish_mats_wood hour=4.2
+hb 927s pos=(28.2,17.4) obj=q_fish_mats_wood hour=4.4
+hb 947s pos=(28.9,17.0) obj=q_fish_mats_wood hour=4.7
+hb 967s pos=(29.2,16.6) obj=q_fish_mats_wood hour=4.8
+hb 987s pos=(29.2,17.7) obj=q_fish_mats_wood hour=5.0
+hb 1007s pos=(29.7,16.8) obj=q_fish_mats_wood hour=5.3
+hb 1027s pos=(29.4,17.2) obj=q_fish_mats_wood hour=5.5
+hb 1047s pos=(29.0,16.1) obj=q_fish_mats_wood hour=5.6
+hb 1067s pos=(29.3,17.5) obj=q_fish_mats_wood hour=5.8
+hb 1087s pos=(28.8,17.0) obj=q_fish_mats_wood hour=6.1
+hb 1107s pos=(27.9,16.6) obj=q_fish_mats_wood hour=6.3
+hb 1127s pos=(28.4,16.9) obj=q_fish_mats_wood hour=6.5
+hb 1147s pos=(29.2,17.6) obj=q_fish_mats_wood hour=6.8
+BOT FAILED: watchdog: 目標 q_fish_mats_wood が10分間進まない

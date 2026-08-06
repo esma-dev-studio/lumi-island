@@ -10,6 +10,7 @@
 //
 // 使い方: node tools/check_v9_connectivity_perf.mjs  (先に npm run dev で 5183 を上げておく)
 import { createRequire } from 'node:module';
+import { launchEdge } from './launch_browser.mjs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { writeFileSync } from 'node:fs';
@@ -17,20 +18,17 @@ import { writeFileSync } from 'node:fs';
 const require = createRequire(import.meta.url);
 const puppeteer = require('puppeteer-core');
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const r2 = (n) => Math.round(n * 100) / 100;
 
-const browser = await puppeteer.launch({
-  executablePath: EDGE,
-  headless: 'new',
-  args: [
-    '--window-size=1280,720', '--use-angle=d3d11', '--enable-gpu', '--mute-audio',
+// Edge 151 は puppeteer.launch の起動検知が空ぶりするため、共通ヘルパーで起こす
+// (Edgeが直れば中でそのまま launch が使われる)。tools/launch_browser.mjs 参照
+const browser = await launchEdge(puppeteer, {
+  args: ['--window-size=1280,720', '--use-angle=d3d11', '--enable-gpu', '--mute-audio',
     // vsyncを外して「60fps張りつき」で差が消えないようにする
     '--disable-gpu-vsync', '--disable-frame-rate-limit',
     '--disable-background-timer-throttling', '--disable-renderer-backgrounding',
-    '--disable-backgrounding-occluded-windows',
-  ],
+    '--disable-backgrounding-occluded-windows',],
   defaultViewport: { width: 1280, height: 720 },
 });
 const page = await browser.newPage();

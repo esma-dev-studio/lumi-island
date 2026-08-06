@@ -112,6 +112,13 @@ export const HINT_RULES = [
   { cat: 'gatherBerry', re: /ベリーをつむ/, src: 'GatherSystem verb: ベリーをつむ(berry)' },
   // v6の拾いもの。「ベリーをつむ」より後ろでよい(文言が重ならない)
   { cat: 'gatherFlower', re: /のばなをつむ/, src: 'GatherSystem verb: のばなをつむ(flower)' },
+  // v10 自宅のお庭の花だん。どちらも「のばな」をあつかう行動なので gatherFlower にそろえる
+  // (うえる=のばなを1つ使う / つみとる=満開の株から のばなが2つ手に入る)。
+  // 「うえる」側の候補は kind='place' で作ってあり、ObjectiveSystem の preferredKinds に
+  // place は決して入らないので、依頼の誘導中(guided)はそもそも画面に出ない。
+  // 育ちきっていない区画の「つみとるには もうすこし まってから」は、上の blocked が先に当たる。
+  { cat: 'gatherFlower', re: /はなを うえる/, src: 'InteractionRouting: <kbd>E</kbd>はなを うえる(庭の花だん・空き)' },
+  { cat: 'gatherFlower', re: /つみとる/, src: 'InteractionRouting: <kbd>E</kbd>つみとる(庭の花だん・満開)' },
   { cat: 'gatherMushroom', re: /きのこをとる/, src: 'GatherSystem verb: きのこをとる(mushroom)' },
   { cat: 'gatherShell', re: /かいがらをひろう/, src: 'GatherSystem verb: かいがらをひろう(shell)' },
   { cat: 'gatherStar', re: /ほしのかけらをひろう/, src: 'GatherSystem verb: ほしのかけらをひろう(starshard)' },
@@ -128,6 +135,14 @@ export const HINT_RULES = [
   // 「こうせきをほる」(gatherOre)より後ろに置くこと(「ほる」が横取りしないように)
   { cat: 'catch', re: /むしあみでつかまえる|つかまえる/, src: 'InteractionRouting: <kbd>E</kbd>むしあみでつかまえる' },
   { cat: 'dig', re: /ほる/, src: 'InteractionRouting: <kbd>E</kbd>ほる(ほりあと)' },
+  // v10: 展示家具(すいそう・むしかご)の出し入れ。「もちかえる」(carry)とは別の行動なので別カテゴリ。
+  // catch(/つかまえる/)・dig(/ほる/)より後ろでよい(文言が重ならない)。
+  // carry より前に置くのは順序の意図を明示するためで、「いれる」「とりだす」に
+  // 「もちかえる」は含まれないので、どちらの順でも判定は同じ
+  {
+    cat: 'display', re: /いきものを いれる|とりだす/,
+    src: 'InteractionRouting: <kbd>E</kbd>いきものを いれる / <kbd>E</kbd>◯◯を とりだす',
+  },
   { cat: 'carry', re: /もちかえる/, src: 'InteractionRouting: <kbd>E</kbd>◯◯を もちかえる' },
   { cat: 'talk', re: /と はなす/, src: 'InteractionRouting: <kbd>E</kbd>◯◯と はなす' },
 ];
@@ -197,6 +212,10 @@ export function isShopPanelTitle(title) {
  *    行動が絞られている段階(受注済み)では必ず矛盾。
  *  - 別素材の採取ヒント(例: 目的=ヒカリゴケ + ヒント=岩をくだく)。
  *  - 目的=report + hint=fish(報告に行くべき場面での釣り再開)。
+ *  - hint=display(v10の すいそう・むしかごの出し入れ): carry と同じ「かざる遊び」の寄り道。
+ *    候補の kind は 'pickup' なので ObjectiveSystem の preferredKinds には決して入らず、
+ *    誘導中(guided)は表示されない設計。出ていたら候補の絞りこみが壊れたということなので、
+ *    sleep/enter/exit のような「常時許可」にはしない(GATHER_CATEGORIES にも入れない)。
  *  - hint=catch / dig(v9の虫あみ・シャベル): どちらも依頼の目的にはならないので、
  *    ObjectiveSystem の preferredKinds に入ることが決してない。
  *    つまり誘導中(guided)は表示されない設計であり、出ていたら候補の絞りこみが

@@ -1,0 +1,156 @@
+[00:05] タイトル表示
+[00:06] ゲーム開始(新規)
+[00:07] 目標: tut_move
+[00:08] 目標: q_wood_offer
+[00:12] 目標: q_wood_gather
+nav 18s 迂回はじめ: (-20.0,-6.0)へ 15.2m で足ぶみ → 45度 左まわり(24秒まで)
+nav 21s 迂回: 45度でも進めない → 90度に広げる
+hb 27s pos=(-5.2,-10.3) obj=q_wood_gather hour=18.8
+nav 43s 迂回おわり: 時間切れ(14.8m)。直進を試す
+nav 45s 迂回はじめ: (-20.0,-6.0)へ 14.8m で足ぶみ → 45度 右まわり(23秒まで)
+hb 47s pos=(-14.1,-19.3) obj=q_wood_gather hour=19.0
+nav 49s 迂回おわり: 14.8m→12.2m まで近づけた
+[01:05] はじめての採取
+hb 67s pos=(-19.8,-7.3) obj=q_wood_gather hour=19.2
+nav 68s 迂回はじめ: (-30.0,-4.0)へ 10.7m で足ぶみ → 45度 左まわり(24秒まで)
+nav 72s 迂回おわり: 10.7m→7.7m まで近づけた
+nav 86s 迂回はじめ: (-26.0,14.0)へ 18.4m で足ぶみ → 45度 左まわり(24秒まで)
+hb 87s pos=(-29.7,-3.4) obj=q_wood_gather hour=19.4
+nav 89s 迂回: 45度でも進めない → 90度に広げる
+hb 107s pos=(-42.4,7.2) obj=q_wood_gather hour=19.6
+nav 110s 迂回おわり: 時間切れ(16.2m)。直進を試す
+hb 127s pos=(-29.8,13.9) obj=q_wood_gather hour=19.8
+[02:11] はじめての夜(発光を確認)
+hb 147s pos=(-17.8,1.9) obj=q_wood_report hour=20.0
+hb 167s pos=(-15.9,-14.4) obj=q_wood_report hour=20.2
+[02:59] 目標: q_wood_report
+hb 187s pos=(-11.4,-19.8) obj=q_wood_report hour=20.4
+hb 207s pos=(-1.2,-9.7) obj=q_fish_offer hour=20.6
+[03:27] 目標: q_fish_offer
+hb 227s pos=(-13.5,-4.3) obj=q_fish_offer hour=20.8
+hb 247s pos=(-26.7,6.5) obj=q_fish_offer hour=21.0
+hb 267s pos=(-24.2,12.6) obj=q_fish_offer hour=6.1
+hb 287s pos=(-4.6,12.6) obj=q_fish_offer hour=6.3
+hb 307s pos=(13.4,12.6) obj=q_fish_offer hour=6.5
+[05:20] 目標: q_fish_mats_wood
+hb 327s pos=(19.8,17.2) obj=q_fish_mats_wood hour=6.7
+[05:39] 目標: q_fish_mats_stone
+nav 341s 迂回はじめ: (10.0,30.0)へ 10.9m で足ぶみ → 45度 左まわり(24秒まで)
+nav 345s 迂回おわり: 10.9m→7.8m まで近づけた
+hb 347s pos=(15.0,26.6) obj=q_fish_mats_stone hour=6.9
+[05:56] 目標: q_fish_craft_r_sickle
+[05:57] はじめてのクラフト
+[05:59] 目標: q_fish_mats_wood
+hb 367s pos=(7.2,25.9) obj=q_fish_mats_wood hour=7.1
+hb 387s pos=(-5.8,13.8) obj=q_fish_mats_wood hour=7.3
+nav 406s 迂回はじめ: (-30.0,-4.0)へ 18.4m で足ぶみ → 45度 左まわり(24秒まで)
+hb 407s pos=(-23.9,12.5) obj=q_fish_mats_wood hour=7.6
+nav 408s 迂回: 45度でも進めない → 90度に広げる
+hb 427s pos=(-13.7,-0.4) obj=q_fish_mats_wood hour=7.7
+nav 430s 迂回おわり: 時間切れ(16.0m)。直進を試す
+hb 447s pos=(-28.7,-3.7) obj=q_fish_mats_wood hour=7.9
+[07:29] 目標: q_fish_mats_fiber
+nav 452s 迂回はじめ: (-24.0,2.0)へ 7.4m で足ぶみ → 45度 左まわり(24秒まで)
+nav 457s 迂回おわり: 7.4m→4.9m まで近づけた
+hb 467s pos=(-24.8,2.1) obj=q_fish_mats_fiber hour=8.1
+nav 467s 迂回はじめ: (-30.0,12.0)へ 11.2m で足ぶみ → 45度 左まわり(24秒まで)
+nav 471s 迂回おわり: 11.2m→8.3m まで近づけた
+[08:04] 目標: q_fish_craft_r_rod
+[08:07] 目標: q_fish_fish
+hb 487s pos=(-29.6,10.9) obj=q_fish_fish hour=8.3
+hb 507s pos=(-17.1,23.6) obj=q_fish_fish hour=8.5
+hb 527s pos=(-3.5,33.6) obj=q_fish_fish hour=8.7
+hb 547s pos=(4.3,47.0) obj=q_fish_fish hour=9.0
+[09:15] 目標: q_fish_report
+hb 567s pos=(4.9,41.0) obj=q_fish_report hour=9.2
+hb 587s pos=(15.1,28.3) obj=q_fish_report hour=9.4
+nav 598s 迂回はじめ: (23.3,12.7)へ 10.2m で足ぶみ → 45度 左まわり(8秒まで)
+nav 599s 迂回: 45度でも進めない → 90度に広げる
+nav 600s 迂回: 逆まわり(右)へ
+nav 604s 迂回はじめ: (23.3,12.7)へ 10.2m で足ぶみ → 45度 左まわり(17秒まで)
+nav 605s 迂回: 45度でも進めない → 90度に広げる
+nav 606s 迂回: 逆まわり(右)へ
+hb 607s pos=(20.2,21.9) obj=q_fish_report hour=9.6
+nav 608s 迂回: 45度でも進めない → 90度に広げる
+nav 621s 迂回おわり: 時間切れ(8.7m)。直進を試す
+hb 627s pos=(19.5,12.9) obj=q_fish_report hour=9.8
+[10:34] 目標: q_ore_offer
+hb 647s pos=(26.9,2.5) obj=q_ore_offer hour=10.0
+hb 667s pos=(26.9,-18.7) obj=q_ore_offer hour=10.2
+[11:15] 目標: q_ore_gather
+nav 684s 迂回はじめ: (32.0,-24.0)へ 4.3m で足ぶみ → 45度 左まわり(24秒まで)
+hb 687s pos=(32.4,-22.1) obj=q_ore_gather hour=10.4
+nav 688s 迂回おわり: 4.3m→1.6m まで近づけた
+nav 695s 迂回はじめ: (35.0,-30.0)へ 7.2m で足ぶみ → 45度 左まわり(24秒まで)
+nav 698s 迂回おわり: 7.2m→4.2m まで近づけた
+[11:44] 目標: q_ore_report
+nav 707s 迂回はじめ: (26.9,-24.6)へ 9.0m で足ぶみ → 45度 左まわり(17秒まで)
+hb 707s pos=(34.9,-28.6) obj=q_ore_report hour=10.6
+nav 710s 迂回おわり: 9.0m→6.3m まで近づけた
+[12:00] 目標: q_lantern_offer
+hb 727s pos=(24.8,-20.5) obj=q_lantern_offer hour=10.8
+hb 747s pos=(11.4,-7.2) obj=q_lantern_offer hour=11.0
+hb 767s pos=(-3.1,1.1) obj=q_lantern_offer hour=11.2
+[12:51] 目標: q_lantern_mats_moss
+hb 787s pos=(-2.2,-12.2) obj=q_lantern_mats_moss hour=11.3
+hb 807s pos=(-6.3,-29.4) obj=q_lantern_mats_moss hour=11.6
+[13:36] 目標: q_lantern_craft_r_lantern
+[13:39] 目標: q_lantern_place
+hb 827s pos=(-0.7,-29.1) obj=q_lantern_place hour=11.8
+hb 847s pos=(2.5,-12.4) obj=q_lantern_place hour=12.0
+hb 867s pos=(2.5,5.7) obj=q_lantern_report hour=12.2
+[14:27] はじめての家具配置
+[14:27] 目標: q_lantern_report
+[14:38] 目標: q_lumi_offer
+[14:41] 目標: q_lumi_mats_stone
+hb 887s pos=(5.1,-2.9) obj=q_lumi_mats_stone hour=12.3
+[15:04] 目標: q_lumi_mats_ore
+hb 907s pos=(14.0,-12.7) obj=q_lumi_mats_ore hour=12.5
+nav 907s 迂回はじめ: (27.0,-34.0)へ 24.9m で足ぶみ → 45度 左まわり(24秒まで)
+nav 910s 迂回: 45度でも進めない → 90度に広げる
+hb 927s pos=(31.7,-11.5) obj=q_lumi_mats_ore hour=12.7
+nav 932s 迂回おわり: 時間切れ(22.5m)。直進を試す
+hb 947s pos=(27.7,-29.8) obj=q_lumi_mats_ore hour=13.0
+nav 949s 迂回はじめ: (27.0,-34.0)へ 4.1m で足ぶみ → 45度 左まわり(18秒まで)
+[15:56] 目標: q_lumi_craft_r_stonelamp
+[15:59] 目標: q_lumi_place
+nav 965s 迂回はじめ: (-2.5,8.5)へ 50.0m で足ぶみ → 45度 左まわり(24秒まで)
+hb 967s pos=(24.3,-33.8) obj=q_lumi_place hour=13.2
+nav 967s 迂回: 45度でも進めない → 90度に広げる
+hb 987s pos=(10.1,-40.8) obj=q_lumi_place hour=13.4
+nav 989s 迂回おわり: 時間切れ(49.9m)。直進を試す
+hb 1007s pos=(-2.4,-27.4) obj=q_lumi_place hour=13.6
+hb 1027s pos=(-2.4,-9.4) obj=q_lumi_place hour=13.8
+hb 1047s pos=(-2.4,7.7) obj=q_lumi_mats_wood hour=14.0
+[17:27] 目標: q_lumi_mats_wood
+nav 1059s 迂回はじめ: (-20.0,-6.0)へ 14.3m で足ぶみ → 45度 左まわり(24秒まで)
+nav 1060s 迂回: 45度でも進めない → 90度に広げる
+hb 1067s pos=(-4.5,2.3) obj=q_lumi_mats_wood hour=14.2
+nav 1082s 迂回: 45度でも進めない → 90度に広げる
+nav 1083s 迂回おわり: 時間切れ(13.8m)。直進を試す
+hb 1087s pos=(-11.7,-11.9) obj=q_lumi_mats_wood hour=14.5
+[18:21] 目標: q_lumi_mats_moss
+nav 1103s 迂回はじめ: (-20.0,-22.0)へ 15.8m で足ぶみ → 45度 左まわり(24秒まで)
+hb 1107s pos=(-16.4,-8.1) obj=q_lumi_mats_moss hour=14.7
+nav 1109s 迂回: 45度でも進めない → 90度に広げる
+nav 1113s 迂回おわり: 15.8m→13.2m まで近づけた
+hb 1127s pos=(-20.2,-20.5) obj=q_lumi_mats_moss hour=14.9
+hb 1147s pos=(-14.0,-28.0) obj=q_lumi_mats_moss hour=15.1
+[19:08] 目標: q_lumi_craft_r_lantern
+[19:11] 目標: q_lumi_place
+hb 1167s pos=(-3.9,-17.8) obj=q_lumi_place hour=15.3
+hb 1187s pos=(4.4,-3.2) obj=q_lumi_place hour=15.5
+[19:56] 目標: q_lumi_report
+hb 1207s pos=(-2.0,0.8) obj=q_lumi_report hour=15.7
+[20:10] 目標: free
+[20:10] ルミの木 開花!
+nav 1262s 迂回はじめ: (59.6,-59.9)へ 2.3m で足ぶみ → 45度 左まわり(9秒まで)
+nav 1267s 迂回: 45度でも進めない → 90度に広げる
+nav 1271s 迂回おわり: 時間切れ(2.3m)。直進を試す
+nav 1276s 迂回はじめ: (59.6,-59.9)へ 2.3m で足ぶみ → 45度 右まわり(8秒まで)
+nav 1280s 迂回: 45度でも進めない → 90度に広げる
+nav 1285s 迂回おわり: 時間切れ(2.3m)。直進を試す
+[21:29] マイホーム 入室→就寝→退出: NG
+[21:29] 終了(21分29秒)
+RESULT {"completed":true,"homeRoundTrip":false,"totalSec":1289,"errors":0,"fpsAvg":2}
+EXIT=1

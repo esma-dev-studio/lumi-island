@@ -14,7 +14,6 @@ import type { Scene } from '@babylonjs/core/scene';
 import { A0, appendBlob, toMesh, jitterColor, getGlowMats, type Arrays } from './flora';
 import { faceOutward } from './deco';
 import type { BugId } from '../systems/BugSystem';
-import type { ItemId } from '../data/items';
 
 const C_BODY_DARK = Color3.FromHexString('#3f3a33'); // 虫のからだ(こげ茶)
 const C_WING_WHITE = Color3.FromHexString('#f4f2e8');
@@ -259,37 +258,23 @@ export function makeBugMesh(scene: Scene, id: BugId, seed: number): BugMesh {
 
 // ---------------------------------------------------------------------------
 // むしかごの中に見せる ミニ虫。
-// 「いま持っている虫のうち1匹」を家具の生成時に決めるが、makeFurnitureMesh は
-// GameState を知らないので、モジュール変数で受けわたす(effects.ts の共有資産と同じ考え方)。
-//  - InteractionSystem が「つかまえた虫」で更新する。
-//  - InteractionSystem の生成時に、セーブから復元した もちものでも初期化する
-//    (PlacementSystem.restore より前に作られるので、置いてあるかごにも反映される)。
-// すでに置いてあるかごの中身は、置きなおす/読みこみなおすまで変わらない(簡易仕様)。
+// v10から「かごに入れた1匹」(PlacedFurniture.content)で決まる。
+// 家具のメッシュを作るときに content を渡すだけなので、モジュール変数の受けわたしは要らない
+// (v9の「さいごに つかまえた虫が見える」簡易仕様と、その cagedBug 変数は廃止した)。
 // ---------------------------------------------------------------------------
-let cagedBug: BugId = 'b_shiro';
 
-/** もちものの中から、かごに入れる虫を1匹えらぶ(いなければ既定のモンシロチョウ) */
-export function pickCagedBug(inventory: Partial<Record<ItemId, number>>): BugId {
-  const order: BugId[] = ['b_kabuto', 'b_ageha', 'b_hotaru', 'b_suzu', 'b_tento', 'b_shiro'];
-  for (const id of order) {
-    if ((inventory[id] ?? 0) > 0) return id;
-  }
-  return 'b_shiro';
-}
-
-export function setCagedBug(id: BugId): void {
-  cagedBug = id;
-}
-export function getCagedBug(): BugId {
-  return cagedBug;
-}
+/** ホタルの光る おしり(子メッシュ)の名前。furniture.ts が明滅させるために探す */
+export const CAGED_GLOW_NAME = 'cagedBugGlow';
 
 /**
- * むしかごの中に置く小さな虫(1メッシュ)。羽は動かさないので子メッシュにしない。
+ * むしかごの中に置く小さな虫。羽は動かさないので子メッシュにしない。
+ * ただしホタルの「光る おしり」だけは、共有の発光マテリアルを使うために子メッシュにする
+ * (共有のmintを からだ全体にかけると、暗い頂点色とかけ算されて にごる。v9に実機で確認ずみ)。
  * 大きさは かごの中に収まる比率(実物の約0.6倍)。
  */
 export function makeCagedBugMesh(scene: Scene, id: BugId, seed: number): Mesh {
   const A = A0();
+  let firefly = false;
   switch (id) {
     case 'b_tento':
       ladybug(A, seed, 0.85);
@@ -302,11 +287,7 @@ export function makeCagedBugMesh(scene: Scene, id: BugId, seed: number): Mesh {
       break;
     case 'b_hotaru':
       fireflyBody(A, seed);
-      // おしりだけ明るい黄みどりにする。1メッシュなので発光マテリアルは使えない
-      // (共有のmintを全体にかけると、からだの暗い頂点色とかけ算されて にごる。実機で確認)
-      appendBlob(A, 0, 0, -0.042, 0.021, 0.018, 0.028, Color3.FromHexString('#eaffc4'), {
-        segs: 6, noise: 0.05, seed: seed + 7, bottomDark: 0,
-      });
+      firefly = true;
       break;
     default: {
       // チョウ: 羽をたたんで とまっている姿(かごの中で ぱたぱたさせない)
@@ -322,5 +303,18 @@ export function makeCagedBugMesh(scene: Scene, id: BugId, seed: number): Mesh {
   }
   const m = faceOutward(toMesh(scene, `cagedBug_${id}`, A, 'flip'));
   m.isPickable = false;
+  if (firefly) {
+    // おしりだけ 黄みどりに光らせる。頂点色は白に近づける(共有マテリアルの色とかけ算になるため)
+    // かごの中では からだが小さいので、光る おしりは大きめに作る
+    // (v10の夜の実写で、実物と同じ大きさだと点滅が見えなかった)
+    const G = A0();
+    appendBlob(G, 0, 0, -0.044, 0.028, 0.024, 0.036, Color3.FromHexString('#e8ffc8'), {
+      segs: 6, noise: 0.05, seed: seed + 7, bottomDark: 0,
+    });
+    const glow = faceOutward(toMesh(scene, `${CAGED_GLOW_NAME}_${seed}`, G, 'flip'));
+    glow.material = getGlowMats(scene).mint; // 共有マテリアルなので dispose しない
+    glow.parent = m;
+    glow.isPickable = false;
+  }
   return m;
 }

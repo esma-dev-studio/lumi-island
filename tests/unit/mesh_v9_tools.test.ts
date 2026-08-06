@@ -12,7 +12,7 @@ import type { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { makeTallGrassNode, makeDigMound } from '../../src/entities/deco';
-import { makeBugMesh, makeCagedBugMesh, setCagedBug } from '../../src/entities/bugs';
+import { makeBugMesh, makeCagedBugMesh } from '../../src/entities/bugs';
 import { makeFurnitureMesh } from '../../src/entities/furniture';
 import { BUG_IDS } from '../../src/systems/BugSystem';
 import type { ItemId } from '../../src/data/items';
@@ -187,19 +187,21 @@ describe('v9メッシュの法線が外向き(昼に真っ黒にならない)', 
 });
 
 describe('v9家具の作り', () => {
-  it('むしかごには 中の虫が入っている(枠なので外から見える)', () => {
-    setCagedBug('b_kabuto');
-    const fm = makeFurnitureMesh(scene, 'f_bugcage');
+  it('むしかごには 入れた虫(content)が入っている(枠なので外から見える)', () => {
+    // v10: 中身は「最後に つかまえた虫」ではなく、プレイヤーが えらんで入れた1匹
+    const fm = makeFurnitureMesh(scene, 'f_bugcage', 'b_kabuto');
     const inner = fm.root.getChildMeshes().find((m) => m.name.startsWith('cagedBug_'));
     expect(inner, 'かごの中の虫').toBeDefined();
     expect(inner!.name).toBe('cagedBug_b_kabuto');
     // 中の虫は かごの中(高さ0〜0.5m・横0.2m以内)にある
     expect(inner!.position.y).toBeGreaterThan(0.05);
     expect(inner!.position.y).toBeLessThan(0.5);
-    setCagedBug('b_hotaru');
-    const fm2 = makeFurnitureMesh(scene, 'f_bugcage');
+    const fm2 = makeFurnitureMesh(scene, 'f_bugcage', 'b_hotaru');
     expect(fm2.root.getChildMeshes().find((m) => m.name.startsWith('cagedBug_'))!.name)
       .toBe('cagedBug_b_hotaru');
+    // 何も入れていなければ 空のかご
+    expect(makeFurnitureMesh(scene, 'f_bugcage').root.getChildMeshes()
+      .some((m) => m.name.startsWith('cagedBug_'))).toBe(false);
   });
 
   it('わらのマットは踏んで通れる(コライダー0)。ほかはぶつかる', () => {

@@ -7,7 +7,9 @@ import type { IslandScene } from '../scenes/IslandScene';
 import type { GameState, PlacedFurniture } from '../game/GameState';
 import { invAdd, invRemove, statAdd } from '../game/GameState';
 import { makeFurnitureMesh } from '../entities/furniture';
-import { ITEMS, type ItemId } from '../data/items';
+import {
+  DISPLAY_FURNITURE, ITEMS, canDisplayIn, isDisplayFurniture, type ItemId,
+} from '../data/items';
 import type { PlayerController } from './PlayerController';
 import { toast } from '../ui/Toast';
 import { sfx } from '../audio/AudioSystem';
@@ -20,7 +22,7 @@ import {
   type HomeObstacle, type HomePlaceProblem,
 } from '../scenes/HomeInterior';
 
-interface PlacedRuntime {
+export interface PlacedRuntime {
   data: PlacedFurniture;
   mesh: Mesh;
   colliderR: number;
@@ -216,7 +218,8 @@ export class PlacementSystem {
   }
 
   private spawn(f: PlacedFurniture): void {
-    const fm = makeFurnitureMesh(this.island.scene, f.item);
+    // 展示家具(すいそう・むしかご)は中身つきで作る。中身は出し入れのたびに作り直す(respawn)
+    const fm = makeFurnitureMesh(this.island.scene, f.item, f.content);
     const y = this.island.groundY(f.x, f.z) - 0.01;
     const indoor = this.isIndoorSpot(f.x, f.z);
     const home = indoor ? (this.island.home?.root ?? null) : null;
@@ -387,10 +390,67 @@ export class PlacementSystem {
     this.state.furniture = this.state.furniture.filter((f) => f.id !== p.data.id);
     p.mesh.dispose(); // 共有マテリアルを道連れにしない
     invAdd(this.state, p.data.item, 1);
+    // 展示家具の中身は いっしょに もちものへ戻す(いきものを消さない)
+    const content = p.data.content;
+    if (content) {
+      delete p.data.content;
+      invAdd(this.state, content, 1);
+    }
     this.rebuildColliders();
-    toast(`${ITEMS[p.data.item].name}を もちかえった`, p.data.item);
+    toast(
+      content
+        ? `${ITEMS[p.data.item].name}と ${ITEMS[content].name}を もちかえった`
+        : `${ITEMS[p.data.item].name}を もちかえった`,
+      p.data.item
+    );
     sfx('pickup');
     save(this.state);
+  }
+
+  // ---- 展示家具(すいそう・むしかご)の出し入れ ----
+  //
+  // 中身は PlacedFurniture.content にだけ持ち、見た目は家具ごと作り直して合わせる
+  // (「データを直したのに絵が古いまま」を構造的に起こさない)。
+  // どちらも光る家具ではないので、作り直しで光だまりが二重登録されることはない。
+
+  /** 中身を入れかえたあと、その家具のメッシュだけを作り直す */
+  private respawn(p: PlacedRuntime): void {
+    p.mesh.dispose(); // 共有マテリアルを道連れにしない(子メッシュはいっしょに消える)
+    this.placed.delete(p.data.id);
+    this.spawn(p.data);
+    this.rebuildColliders();
+  }
+
+  /** その家具が展示家具か(Eのヒント・DisplayUIの入口の判定はここを通す) */
+  displayKindOf(p: PlacedRuntime): keyof typeof DISPLAY_FURNITURE | null {
+    return isDisplayFurniture(p.data.item) ? p.data.item : null;
+  }
+
+  /** もちものの いきものを1匹いれる。入れられない組み合わせ・持っていない場合は false */
+  putIn(p: PlacedRuntime, item: ItemId): boolean {
+    const kind = this.displayKindOf(p);
+    if (kind === null || p.data.content || !canDisplayIn(kind, item)) return false;
+    if (!invRemove(this.state, item, 1)) return false;
+    p.data.content = item;
+    statAdd(this.state, DISPLAY_FURNITURE[kind].statKey); // じっせき用(入れた回数の累計)
+    this.respawn(p);
+    toast(`${ITEMS[item].name}を ${DISPLAY_FURNITURE[kind].label}に いれた`, item);
+    sfx('place');
+    save(this.state);
+    return true;
+  }
+
+  /** 中身を もちものへ戻して空にする。中身が無ければ null */
+  takeOut(p: PlacedRuntime): ItemId | null {
+    const content = p.data.content;
+    if (!content) return null;
+    delete p.data.content;
+    invAdd(this.state, content, 1);
+    this.respawn(p);
+    toast(`${ITEMS[content].name}を とりだした`, content);
+    sfx('pickup');
+    save(this.state);
+    return content;
   }
 
   /** 置けない理由(置けるときはnull) */

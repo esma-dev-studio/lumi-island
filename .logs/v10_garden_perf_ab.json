@@ -1,0 +1,132 @@
+{
+ "when": "2026-08-06T04:53:06.237Z",
+ "vsync": "off",
+ "sampleMs": 9000,
+ "geometry": {
+  "gardenMeshes": 43,
+  "gardenVertices": 12702,
+  "gardenTriangles": 13704,
+  "sceneMeshes": 295
+ },
+ "rows": [
+  {
+   "label": "garden_ON_0",
+   "frames": 1029,
+   "p50": 8.5,
+   "p95": 11.8,
+   "p99": 15.9,
+   "activeMeshes": 65
+  },
+  {
+   "label": "garden_OFF_0",
+   "frames": 440,
+   "p50": 7.7,
+   "p95": 56.4,
+   "p99": 306.9,
+   "activeMeshes": 34
+  },
+  {
+   "label": "door_ON_0",
+   "frames": 1132,
+   "p50": 7,
+   "p95": 14,
+   "p99": 24.3,
+   "activeMeshes": 55
+  },
+  {
+   "label": "door_OFF_0",
+   "frames": 1127,
+   "p50": 6.2,
+   "p95": 15.1,
+   "p99": 44.3,
+   "activeMeshes": 30
+  },
+  {
+   "label": "garden_ON_1",
+   "frames": 1315,
+   "p50": 6.4,
+   "p95": 10.1,
+   "p99": 16.7,
+   "activeMeshes": 65
+  },
+  {
+   "label": "garden_OFF_1",
+   "frames": 1445,
+   "p50": 5.8,
+   "p95": 9.8,
+   "p99": 13.8,
+   "activeMeshes": 34
+  },
+  {
+   "label": "door_ON_1",
+   "frames": 1339,
+   "p50": 6.2,
+   "p95": 10.4,
+   "p99": 13.4,
+   "activeMeshes": 55
+  },
+  {
+   "label": "door_OFF_1",
+   "frames": 1498,
+   "p50": 5.6,
+   "p95": 8.7,
+   "p99": 12.6,
+   "activeMeshes": 30
+  },
+  {
+   "label": "garden_ON_2",
+   "frames": 1224,
+   "p50": 6.7,
+   "p95": 11.3,
+   "p99": 20.5,
+   "activeMeshes": 65
+  },
+  {
+   "label": "garden_OFF_2",
+   "frames": 1391,
+   "p50": 6,
+   "p95": 10,
+   "p99": 16.6,
+   "activeMeshes": 34
+  },
+  {
+   "label": "door_ON_2",
+   "frames": 1251,
+   "p50": 6.7,
+   "p95": 11,
+   "p99": 17.1,
+   "activeMeshes": 55
+  },
+  {
+   "label": "door_OFF_2",
+   "frames": 1412,
+   "p50": 5.7,
+   "p95": 10.4,
+   "p99": 16.2,
+   "activeMeshes": 30
+  }
+ ],
+ "summary": {
+  "garden": {
+   "onP50": 6.7,
+   "offP50": 6,
+   "onP95": 11.3,
+   "offP95": 10,
+   "deltaP50": 0.7,
+   "deltaP95": 1.3,
+   "onMeshes": 65,
+   "offMeshes": 34
+  },
+  "door": {
+   "onP50": 6.7,
+   "offP50": 5.7,
+   "onP95": 11,
+   "offP95": 10.4,
+   "deltaP50": 1,
+   "deltaP95": 0.6,
+   "onMeshes": 55,
+   "offMeshes": 30
+  }
+ },
+ "consoleErrors": 0
+}

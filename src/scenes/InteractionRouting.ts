@@ -8,6 +8,8 @@ import { GATHER_RULES, toolReason } from '../systems/GatherSystem';
 import { PRIORITY, type InteractionCandidate } from '../systems/InteractionResolver';
 import { objectiveActionContext } from '../systems/ObjectiveSystem';
 import { selectInteraction } from '../systems/ObjectiveInteractionPolicy';
+import { canPlant, nearestPlot, stageOf } from '../systems/GardenSystem';
+import type { PlacedRuntime } from '../systems/PlacementSystem';
 import { HOME_DOOR, HOME_BED, HOME_ACT_R } from './HomeInterior';
 import type { GameScene } from './GameScene';
 
@@ -21,6 +23,42 @@ export const HOME_POINT = { x: -30.9, z: 6.7 };
  * HOME_POINTから1.0mなので「<kbd>E</kbd>家に はいる」のヒント(2.0m)はそのまま出る。
  */
 export const HOME_EXIT = { x: -29.9, z: 6.7 };
+
+/**
+ * v10 展示家具(すいそう・むしかご)のE候補。中身が無ければ「いれる」(選択パネル)、
+ * 入っていれば「とりだす」。もちかえるはパネルの中に入口を用意してある。
+ *
+ * 優先度は採取(30)のすぐ下=31。「自分で置いた家具に わざわざ近づいた」ので、
+ * たまたま近くにある虫(32)・ほりあと(33)・ドア(35)・雑談(35)より強くする。
+ * ——実測で「かごのそばに ほりあとが出た日は ずっと『ほるには シャベルが ひつよう』が出て
+ * かごが使えない」ことが起きた(道具が無いと ほりあとも消せないので自力で直せない)。
+ * 採取ノードには最初から重ねて置けない(PlacementSystem.checkPlacement)ので、
+ * 採取(30)より弱いままでも「見えているのに使えない」は起きない。
+ *
+ * kind は既存の 'pickup'(家具まわりの操作)を使う。ObjectiveSystem の preferredKinds には
+ * pickup が入らないので、依頼の誘導中(guided)は自動で隠れる=依頼の進行を横取りしない。
+ */
+function displayCandidate(gs: GameScene, near: PlacedRuntime, px: number, pz: number): InteractionCandidate | null {
+  const kind = gs.placement.displayKindOf(near);
+  if (kind === null) return null;
+  const content = near.data.content;
+  return {
+    id: `disp_${near.data.id}`,
+    kind: 'pickup',
+    targetId: String(near.data.id),
+    itemId: near.data.item,
+    priority: PRIORITY.gather + 1,
+    distance: Math.hypot(px - near.data.x, pz - near.data.z),
+    enabled: true,
+    hint: content
+      ? `<kbd>E</kbd>${ITEMS[content].name}を とりだす`
+      : '<kbd>E</kbd>いきものを いれる',
+    run: () => {
+      if (content) gs.placement.takeOut(near);
+      else gs.openDisplay(near);
+    },
+  };
+}
 
 // 戻り値はホットヒント(1行)。E押下(gs.wantInteract)はここで消費する。
 export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
@@ -81,6 +119,8 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     // 誘導中(ベッドで待つ等)は preferredKinds に pickup が入っていないので、そもそも出ない
     const inNear = gs.placement.nearest(px, pz);
     if (inNear) {
+      const disp = displayCandidate(gs, inNear, px, pz);
+      if (disp) cands.push(disp);
       cands.push({
         id: `furn_${inNear.data.id}`, kind: 'pickup',
         targetId: String(inNear.data.id), itemId: inNear.data.item,
@@ -104,6 +144,10 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     const rt = npc as unknown as { def: { id: string; name: string }; x: number; z: number };
     const q = questFor(gs.state, rt.def.id);
     const actionable = q !== null && (q.mode === 'offer' || q.mode === 'done');
+    // v10 朝の来訪中(依頼が1つも動いていない日にしか起きない)は「家をほめる」会話にする。
+    // ヒントの文言はふつうの会話と同じ「◯◯と はなす」のまま
+    // (押す前から中身を分ける必要はなく、意味カテゴリの表も増やさずに済む)
+    const visiting = q === null && gs.npcs.isVisiting(rt.def.id, gs.island.time.day, gs.island.time.hour);
     cands.push({
       id: `npc_${rt.def.id}`,
       kind: 'talk',
@@ -113,7 +157,7 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
       distance: Math.hypot(px - rt.x, pz - rt.z),
       enabled: true,
       hint: `<kbd>E</kbd>${rt.def.name}と はなす`,
-      run: () => gs.questDlg.talkTo(rt.def.id),
+      run: () => (visiting ? gs.startVisitTalk(rt.def.id) : gs.questDlg.talkTo(rt.def.id)),
     });
   }
   // 採取ノード
@@ -216,9 +260,47 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
       run: () => gs.seq.enterHome(),
     });
   }
-  // 設置家具の持ち帰り
+  // v10 庭の花だん(自宅のお庭)。
+  //   空き    : のばなを1つ うえる(持っていなければ理由だけ出す)
+  //   芽/つぼみ: まだ つみとれない理由を出す(押しても何も起きない表示専用)
+  //   満開    : つみとる(のばな×2)
+  // 「うえる」「まだ育っていない」は kind='place' にしてある。ObjectiveSystem の
+  // preferredKinds に 'place' は決して入らないので、依頼の誘導中は自動的に隠れる
+  // (虫あみ・シャベルと同じ考え方)。つみとりだけは kind='gather'/itemId='flower' なので、
+  // 「のばなを あつめよう」の誘導中に出てよい(実際にのばなが2つ手に入る)。
+  const plot = nearestPlot(px, pz);
+  if (plot) {
+    const stage = stageOf(gs.state.garden, plot.slot, gs.island.time.day);
+    if (stage === 'empty') {
+      const ok = canPlant(gs.state);
+      cands.push({
+        id: `garden_plant_${plot.slot}`, kind: 'place', targetId: `plot${plot.slot}`,
+        priority: PRIORITY.garden, distance: plot.distance, enabled: true,
+        hint: ok ? '<kbd>E</kbd>はなを うえる' : `うえるには ${ITEMS.flower.name}が ひつよう`,
+        run: () => {
+          if (ok) gs.plantGardenFlower(plot.slot);
+        },
+      });
+    } else if (stage === 'bloom') {
+      cands.push({
+        id: `garden_pick_${plot.slot}`, kind: 'gather', targetId: `plot${plot.slot}`, itemId: 'flower',
+        priority: PRIORITY.garden, distance: plot.distance, enabled: true,
+        hint: '<kbd>E</kbd>つみとる',
+        run: () => gs.harvestGardenPlot(plot.slot),
+      });
+    } else {
+      cands.push({
+        id: `garden_wait_${plot.slot}`, kind: 'place', targetId: `plot${plot.slot}`,
+        priority: PRIORITY.garden, distance: plot.distance, enabled: true,
+        hint: 'つみとるには もうすこし まってから', run: () => {},
+      });
+    }
+  }
+  // 設置家具の持ち帰り(展示家具なら「いれる/とりだす」を先に出す)
   const near = gs.placement.nearest(px, pz);
   if (near) {
+    const disp = displayCandidate(gs, near, px, pz);
+    if (disp) cands.push(disp);
     cands.push({
       id: `furn_${near.data.id}`, kind: 'pickup',
       targetId: String(near.data.id), itemId: near.data.item,

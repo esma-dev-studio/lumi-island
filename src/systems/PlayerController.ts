@@ -227,10 +227,12 @@ export class PlayerController {
         this.z = nz;
       } else if (this.island.walkable(nx, this.z)) {
         this.x = nx;
-        this.speed *= 0.7;
+        // 壁ずりの減速はフレームレート非依存に(毎フレーム×0.7だと、120fps環境で
+        // 60fpsの4割まで遅くなる実害があった。60fps相当の減速率にdtで正規化する)
+        this.speed *= Math.pow(0.7, dt * 60);
       } else if (this.island.walkable(this.x, nz)) {
         this.z = nz;
-        this.speed *= 0.7;
+        this.speed *= Math.pow(0.7, dt * 60);
       } else {
         this.speed = 0;
       }

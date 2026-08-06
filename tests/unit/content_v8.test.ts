@@ -476,12 +476,15 @@ describe('v8の新レシピ7種', () => {
     }
   });
 
-  it('ひらめき: ねんど→うえきばち / こえだ→かざぐるま+とりのすばこ / うきだま→うみのモビール', () => {
+  it('ひらめき: ねんど→うえきばち / こえだ→かざぐるま+とりのすばこ / うきだま→うみのモビール+すいそう', () => {
     const s = newGameState();
     expect(discoverRecipes(s, 'clay').map((r) => r.id)).toEqual(['r_pot']);
     expect(discoverRecipes(s, 'twig').map((r) => r.id)).toEqual(['r_pinwheel', 'r_birdhouse']);
-    expect(discoverRecipes(s, 'glassfloat').map((r) => r.id)).toEqual(['r_seamobile']);
-    for (const id of ['r_pot', 'r_pinwheel', 'r_birdhouse', 'r_seamobile']) expect(s.recipes).toContain(id);
+    // v10: うきだまは「うみのモビール」と「すいそう」の2つをひらめく(こえだと同じ複数ひらめき)
+    expect(discoverRecipes(s, 'glassfloat').map((r) => r.id)).toEqual(['r_seamobile', 'r_aquarium']);
+    for (const id of ['r_pot', 'r_pinwheel', 'r_birdhouse', 'r_seamobile', 'r_aquarium']) {
+      expect(s.recipes).toContain(id);
+    }
   });
 
   it('2回目以降はひらめかない(トーストの二重表示を防ぐ)', () => {

@@ -42,6 +42,35 @@ export function statCount(s: GameState, key: string): number {
 }
 
 /**
+ * マイホームの室内の範囲(世界座標のかこみ)。
+ * src/scenes/HomeInterior.ts の HOME_ROOM(中心 58, -58)+ 拡張後の内寸 ROOM_EXPANDED を
+ * すっぽり包む大きさにしてある。数値をここに持つのは、実績を「描画に依存しない純ロジック」の
+ * ままにするため(HomeInterior は Babylon のメッシュを読みこむ)。
+ * 島は半径46m以内にあるので、この かこみに屋外の家具が入ることは無い。
+ * HomeInterior とずれていないことは tests/unit/display_v10.test.ts が機械で確かめる。
+ */
+const HOME_AREA = { minX: 51.6, maxX: 61.4, minZ: -60.9, maxZ: -53.1 } as const;
+
+/** 置いてある家具(壊れた古い状態でも空配列であつかう) */
+function placedFurniture(s: GameState): { item: string; x: number; z: number; content?: string }[] {
+  return Array.isArray(s.furniture) ? s.furniture : [];
+}
+
+/** 家の中に置いてある家具の数(実績 a_room10 が読む。こうじで部屋が広がっても数えられる) */
+export function indoorFurnitureCount(s: GameState): number {
+  return placedFurniture(s).filter(
+    (f) =>
+      f.x >= HOME_AREA.minX && f.x <= HOME_AREA.maxX &&
+      f.z >= HOME_AREA.minZ && f.z <= HOME_AREA.maxZ
+  ).length;
+}
+
+/** 中身の入っている むしかごの数(実績 a_cage3 が読む。同時に置いてある数を直接数える) */
+export function filledBugCageCount(s: GameState): number {
+  return placedFurniture(s).filter((f) => f.item === 'f_bugcage' && typeof f.content === 'string').length;
+}
+
+/**
  * いちばん なかよしなNPCの なかよし度(実績 a_friend10 が読む)。
  * npcsが無い・壊れた古い状態でも0を返すだけで壊れない(codexCountと同じ考え方)。
  */
@@ -55,10 +84,10 @@ export function maxFriendship(s: GameState): number {
 }
 
 /**
- * 実績14種。並びがそのまま「ずかん」の下段の表示順になる。
+ * 実績18種。並びがそのまま「ずかん」の下段の表示順になる。
  * flower(お花)・starshard(星のかけら)は近日追加の新素材。
  * codexCount が未定義を0で返すので、素材が増えるまでは「未達成のまま安全に」表示される。
- * v9で「むしとり」2つと「おくりもの」2つを足した
+ * v9で「むしとり」2つと「おくりもの」2つ、v10で「かざる・くらす」4つを足した
  * (おねがいマスターは いちばん最後の目標なので末尾のまま)。
  */
 export const ACHIEVEMENTS: AchievementDef[] = [
@@ -117,6 +146,25 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   {
     id: 'a_friend10', name: 'しんゆう', desc: 'だれかとの なかよし度を 10に しよう',
     target: 10, icon: 'heart', progress: (s) => maxFriendship(s),
+  },
+  // ---- v10 かざる・くらす(すいそう・むしかご・にわ・家の中) ----
+  // display_fish は PlacementSystem.putIn が数える(すいそうに入れた累計)。
+  // garden_bloom は庭の花だんが満開になったときに加算される契約(別システムが加算する)。
+  {
+    id: 'a_aquarium1', name: 'はじめてのすいそう', desc: 'すいそうに 魚を 1ぴき いれてみよう',
+    target: 1, icon: 'f_aquarium', progress: (s) => statCount(s, 'display_fish'),
+  },
+  {
+    id: 'a_cage3', name: 'むしはくぶつかん', desc: '虫の入った むしかごを 3つ ならべよう',
+    target: 3, icon: 'f_bugcage', progress: filledBugCageCount,
+  },
+  {
+    id: 'a_garden_bloom', name: 'まんかいのにわ', desc: 'にわの はなだんを まんかいに しよう',
+    target: 1, icon: 'f_flowerbed', progress: (s) => statCount(s, 'garden_bloom'),
+  },
+  {
+    id: 'a_room10', name: 'かざりつけめいじん', desc: '家の中に 家具を 10こ かざろう',
+    target: 10, icon: 'f_bookcase', progress: indoorFurnitureCount,
   },
   {
     id: 'a_all_quests', name: 'おねがいマスター', desc: '島のみんなの おねがいを 5つ かなえよう',

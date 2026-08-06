@@ -1,0 +1,237 @@
+{
+ "when": "2026-08-06T02:02:22.765Z",
+ "checks": [
+  {
+   "name": "拡張前の部屋にいる",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "室内に置いた家具(ウッドベンチ 55.6,-56.4)がある",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "ツムギのそばで「はなす」のヒントが出る",
+   "ok": true,
+   "detail": "Eツムギと はなす"
+  },
+  {
+   "name": "「こうじを たのむ(300ルミナ)」ボタンが出る",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "確認に「はい/やめる」が出る",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "300ルミナ支払われた",
+   "ok": true,
+   "detail": "lumina=200"
+  },
+  {
+   "name": "発注フラグが立った",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "まだ部屋はひろくない",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "就寝で翌朝になった",
+   "ok": true,
+   "detail": "day=2 hour=6"
+  },
+  {
+   "name": "室内にいるあいだは拡張を保留(部屋はそのまま)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "退出した瞬間に拡張ずみになる",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "拡張後も置いた家具が同じ座標にある",
+   "ok": true,
+   "detail": "[[\"f_bench\",55.6,-56.4]]"
+  },
+  {
+   "name": "拡張後の面にも模様替えが乗る",
+   "ok": true,
+   "detail": "{\"wall\":\"wall_sky\",\"floor\":\"floor_tile\"}"
+  },
+  {
+   "name": "拡張後の四すみで押しつけても室内から抜けない",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "拡張後もベッドの「ねる」が出る",
+   "ok": true,
+   "detail": "Eねる(あさまで) / Eねる(あさまで)"
+  },
+  {
+   "name": "拡張後もドアの「そとへ でる」が出る",
+   "ok": true,
+   "detail": "Eそとへ でる"
+  },
+  {
+   "name": "門から お庭へ入れた(東→西の実キー歩行)",
+   "ok": true,
+   "detail": "pos=(-25.33,5.3)"
+  },
+  {
+   "name": "門から お庭の外へ出られた(西→東)",
+   "ok": true,
+   "detail": "pos=(-23.63,5.3)"
+  },
+  {
+   "name": "柵ぎわで自動脱出(スタック)が起きない",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "空きの区画で「はなを うえる」が出る",
+   "ok": true,
+   "detail": "Eはなを うえる"
+  },
+  {
+   "name": "うえると芽になり、のばなが1つ減る",
+   "ok": true,
+   "detail": "[{\"slot\":0,\"item\":\"flower\",\"plantedDay\":2}]"
+  },
+  {
+   "name": "育っていない区画は「まってから」の理由表示",
+   "ok": true,
+   "detail": "つみとるには もうすこし まってから"
+  },
+  {
+   "name": "翌日はつぼみ(まだ つみとれない)",
+   "ok": true,
+   "detail": "つみとるには もうすこし まってから"
+  },
+  {
+   "name": "2日後は満開で「つみとる」が出る",
+   "ok": true,
+   "detail": "Eつみとる"
+  },
+  {
+   "name": "つみとると のばな×2 がふえる",
+   "ok": true,
+   "detail": "flower=4"
+  },
+  {
+   "name": "区画が空きへもどる",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "統計 garden_bloom が1になる",
+   "ok": true,
+   "detail": "garden_bloom=1"
+  },
+  {
+   "name": "もくざい集めの誘導中は花だんのEが出ない",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "リロード後も花だん6区画が残る",
+   "ok": true,
+   "detail": "[{\"slot\":0,\"item\":\"flower\",\"plantedDay\":2},{\"slot\":1,\"item\":\"flower\",\"plantedDay\":2},{\"slot\":2,\"item\":\"flower\",\"plantedDay\":2},{\"slot\":3,\"item\":\"flower\",\"plantedDay\":2},{\"slot\":4,\"item\":\"flower\",\"plantedDay\":2},{\"slot\":5,\"item\":\"flower\",\"plantedDay\":2}]"
+  },
+  {
+   "name": "リロード後も部屋はひろいまま",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "リロード後の室内も9×7mで家具が残っている",
+   "ok": true,
+   "detail": ""
+  }
+ ],
+ "errors": [],
+ "log": [
+  "=== A. 家の拡張こうじ ===",
+  "01_room_before_6x5: indoor=true pos=(58.8,-57.7) 1日13.1時 ひろい=false ヒント=\"\" ルミナ=500",
+  "  OK  拡張前の部屋にいる",
+  "  OK  室内に置いた家具(ウッドベンチ 55.6,-56.4)がある",
+  "  OK  ツムギのそばで「はなす」のヒントが出る — Eツムギと はなす",
+  "  会話の任意ボタン: [\"こうじを たのむ(300ルミナ)\"]",
+  "  OK  「こうじを たのむ(300ルミナ)」ボタンが出る",
+  "02_tsumugi_order_button: indoor=false pos=(-2.42,0.95) 1日13.2時 ひろい=false ヒント=\"\" ルミナ=500",
+  "  確認: \"へやを ひろく する こうじ。300ルミナで いい?\" ボタン=[\"はい\",\"やめる\"]",
+  "  OK  確認に「はい/やめる」が出る",
+  "03_order_confirm: indoor=false pos=(-2.42,0.95) 1日13.2時 ひろい=false ヒント=\"\" ルミナ=500",
+  "04_order_done: indoor=false pos=(-2.42,0.95) 1日13.2時 ひろい=false ヒント=\"\" ルミナ=200",
+  "  OK  300ルミナ支払われた — lumina=200",
+  "  OK  発注フラグが立った",
+  "  OK  まだ部屋はひろくない",
+  "05_sleep_indoor_pending: indoor=true pos=(57.3,-59) 2日6時 ひろい=false ヒント=\"Eねる(あさまで)\" ルミナ=200",
+  "  OK  就寝で翌朝になった — day=2 hour=6",
+  "  OK  室内にいるあいだは拡張を保留(部屋はそのまま)",
+  "06_construction_done_toast: indoor=false pos=(-29.9,6.7) 2日6.1時 ひろい=true ヒント=\"E家に はいる\" ルミナ=200",
+  "  OK  退出した瞬間に拡張ずみになる",
+  "07_room_after_9x7: indoor=true pos=(58.8,-57.7) 2日6.1時 ひろい=true ヒント=\"\" ルミナ=200",
+  "  OK  拡張後も置いた家具が同じ座標にある — [[\"f_bench\",55.6,-56.4]]",
+  "  部屋メッシュ頂点=1663 ベンチ数=3 見た目={\"wall\":\"wall_cream\",\"floor\":\"floor_wood\"} camZ=-48.4",
+  "08_room_after_restyle: indoor=true pos=(58.8,-57.7) 2日6.2時 ひろい=true ヒント=\"\" ルミナ=200",
+  "  OK  拡張後の面にも模様替えが乗る — {\"wall\":\"wall_sky\",\"floor\":\"floor_tile\"}",
+  "  押しつけ 北東(奥・画面左): pos=(59.5,-59.9) 室内=true 脱出先=null",
+  "  押しつけ 北西(奥・画面右): pos=(53.5,-59.9) 室内=true 脱出先=null",
+  "  押しつけ 南西(手前・画面右): pos=(53.5,-54.1) 室内=true 脱出先=null",
+  "  押しつけ 南東(手前・画面左): pos=(59.5,-54.1) 室内=true 脱出先=null",
+  "  OK  拡張後の四すみで押しつけても室内から抜けない",
+  "09_room_after_southwest: indoor=true pos=(55,-55) 2日6.4時 ひろい=true ヒント=\"Eウッドベンチを もちかえる\" ルミナ=200",
+  "  OK  拡張後もベッドの「ねる」が出る — Eねる(あさまで) / Eねる(あさまで)",
+  "10_room_after_door_bed: indoor=true pos=(59.6,-59.9) 2日6.4時 ひろい=true ヒント=\"Eそとへ でる\" ルミナ=200",
+  "  OK  拡張後もドアの「そとへ でる」が出る — Eそとへ でる",
+  "=== B. お庭と花だん ===",
+  "11_garden_overview: indoor=false pos=(-27,8) 2日13時 ひろい=true ヒント=\"わらをかるには カマが ひつよう\" ルミナ=200",
+  "12_garden_gate: indoor=false pos=(-24.4,8) 2日13.1時 ひろい=true ヒント=\"わらをかるには カマが ひつよう\" ルミナ=200",
+  "  OK  門から お庭へ入れた(東→西の実キー歩行) — pos=(-25.33,5.3)",
+  "13_gate_enter_from_east: indoor=false pos=(-25.33,5.3) 2日13.2時 ひろい=true ヒント=\"\" ルミナ=200",
+  "  OK  門から お庭の外へ出られた(西→東) — pos=(-23.63,5.3)",
+  "  北の柵に内から: pos=(-27.5,1.98) うごいた距離=1.62m 自動脱出=null",
+  "  南の柵に内から: pos=(-27.5,12) うごいた距離=1.20m 自動脱出=null",
+  "  東の柵に内から: pos=(-24,8) うごいた距離=1.20m 自動脱出=null",
+  "  西の柵に内から: pos=(-30.4,10.3) うごいた距離=1.00m 自動脱出=null",
+  "  東の柵に外から: pos=(-24.8,8) うごいた距離=1.20m 自動脱出=null",
+  "  南の柵に外から: pos=(-27,11.2) うごいた距離=1.20m 自動脱出=null",
+  "  OK  柵ぎわで自動脱出(スタック)が起きない",
+  "14_plot_empty_hint: indoor=false pos=(-28.4,9.6) 2日13.5時 ひろい=true ヒント=\"Eはなを うえる\" ルミナ=200",
+  "  OK  空きの区画で「はなを うえる」が出る — Eはなを うえる",
+  "15_plot_sprout: indoor=false pos=(-28.4,9.6) 2日13.5時 ひろい=true ヒント=\"つみとるには もうすこし まってから\" ルミナ=200",
+  "  OK  うえると芽になり、のばなが1つ減る — [{\"slot\":0,\"item\":\"flower\",\"plantedDay\":2}]",
+  "  OK  育っていない区画は「まってから」の理由表示 — つみとるには もうすこし まってから",
+  "16_plot_bud: indoor=false pos=(-28.4,9.6) 3日13.6時 ひろい=true ヒント=\"つみとるには もうすこし まってから\" ルミナ=200",
+  "  OK  翌日はつぼみ(まだ つみとれない) — つみとるには もうすこし まってから",
+  "17_plot_bloom: indoor=false pos=(-28.4,9.6) 4日13.6時 ひろい=true ヒント=\"Eつみとる\" ルミナ=200",
+  "  OK  2日後は満開で「つみとる」が出る — Eつみとる",
+  "18_plot_bloom_night: indoor=false pos=(-28.4,9.6) 4日21時 ひろい=true ヒント=\"Eつみとる\" ルミナ=200",
+  "19_plot_picked: indoor=false pos=(-28.4,9.6) 4日13時 ひろい=true ヒント=\"Eつみとる\" ルミナ=200",
+  "  OK  つみとると のばな×2 がふえる — flower=4",
+  "  OK  区画が空きへもどる",
+  "  OK  統計 garden_bloom が1になる — garden_bloom=1",
+  "20_garden_all_bloom: indoor=false pos=(-27,8) 4日13.1時 ひろい=true ヒント=\"わらをかるには カマが ひつよう\" ルミナ=200",
+  "21_garden_all_bloom_night: indoor=false pos=(-27,8) 4日20.5時 ひろい=true ヒント=\"わらをかるには カマが ひつよう\" ルミナ=200",
+  "24_guided_plot_suppressed: indoor=false pos=(-28.4,9.6) 4日13時 ひろい=true ヒント=\"\" ルミナ=200",
+  "  誘導中の目標=\"いまやること/もくざいを あつめよう\" ヒント=\"\"",
+  "  OK  もくざい集めの誘導中は花だんのEが出ない",
+  "22_reload_garden: indoor=false pos=(-27,8) 4日13.1時 ひろい=true ヒント=\"わらをかるには カマが ひつよう\" ルミナ=200",
+  "  OK  リロード後も花だん6区画が残る — [{\"slot\":0,\"item\":\"flower\",\"plantedDay\":2},{\"slot\":1,\"item\":\"flower\",\"plantedDay\":2},{\"slot\":2,\"item\":\"flower\",\"plantedDay\":2},{\"slot\":3,\"item\":\"flower\",\"plantedDay\":2},{\"slot\":4,\"item\":\"flower\",\"plantedDay\":2},{\"slot\":5,\"item\":\"flower\",\"plantedDay\":2}]",
+  "  OK  リロード後も部屋はひろいまま",
+  "23_reload_room_big: indoor=true pos=(58.8,-57.7) 4日13.1時 ひろい=true ヒント=\"\" ルミナ=200",
+  "  OK  リロード後の室内も9×7mで家具が残っている",
+  "",
+  "consoleエラー: 0件",
+  "検査: 31/31 OK"
+ ]
+}
