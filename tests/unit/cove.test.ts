@@ -338,6 +338,10 @@ function fakeScene(p: FakeParts): GameScene {
     player: { x: p.x, z: p.z },
     playerView: {},
     questComplete: { open: false, hide: () => {} },
+    // v15 朝の「きょうの島」カードと でんごんばん。
+    // routeInteraction が Eの早送り・パネルの入口で見るので、閉じた状態を用意しておく
+    todayCardUI: { open: false, hide: () => {} },
+    bulletinUI: { open: false, show: () => {}, close: () => {} },
     seq: { active: false, skip: () => {}, sail: (to: string) => sailed.push(to) },
     dialogue: { open: false, advance: () => {} },
     placement: { active: null, hint: '', nearest: () => null, displayKindOf: () => null },

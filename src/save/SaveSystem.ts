@@ -7,6 +7,7 @@ import {
 } from '../data/items';
 import { QUESTS } from '../data/quests';
 import { NPCS } from '../data/npcs';
+import { ERRAND_MAX } from '../systems/BulletinSystem';
 
 const KEY = 'lumi_save';
 const OPTS_KEY = 'lumi_opts';
@@ -22,6 +23,10 @@ const PLACEABLE = new Set(Object.values(ITEMS).filter((i) => isPlaceable(i.id)).
 /** 実績カウンタのキー(英数字と_のみ)。壊れたキーや長すぎるキーは捨てる */
 const STAT_KEY_RE = /^[A-Za-z0-9_]{1,40}$/;
 const COUNT_MAX = 9_999_999;
+/** v15 でんごんばんの「とどけおわった」合いことば(`${npc}_${item}`)。形の合うものだけ通す */
+const BULLETIN_DONE_RE = /^[a-z][a-z0-9_]{1,38}$/;
+/** 1日に出る おてつだいの上限。読みこみでも同じ数で切る(数の情報源は BulletinSystem ひとつ) */
+const BULLETIN_DONE_MAX = ERRAND_MAX;
 
 export function hasSave(): boolean {
   try {
@@ -202,6 +207,34 @@ export function load(): GameState | null {
         if (!finite(g.plantedDay) || !Number.isInteger(g.plantedDay) || g.plantedDay < 1) continue;
         seenSlots.add(g.slot);
         s.garden.push({ slot: g.slot, item: g.item as ItemId, plantedDay: g.plantedDay });
+      }
+    }
+
+    // v15 朝の「きょうの島」カードを出した日。日づけと同じ範囲の整数だけ通す。
+    // 項目が無い旧セーブ・壊れた値は「まだ出していない」(未設定)= 次の朝にちゃんと出る
+    const cardDay = raw.cardDay;
+    if (finite(cardDay) && Number.isInteger(cardDay) && cardDay >= 1 && cardDay <= 100000) {
+      s.cardDay = cardDay;
+    }
+
+    // v15 きょうの おてつだい(でんごんばん)の進みぐあい。
+    // 中身そのものは 日づけから みちびけるので、ここで見るのは
+    // 「いつの ぶんか(day)」と「なにを とどけおわったか(done)」だけ。
+    // done の合いことばは `${npc}_${item}` の形だけ通し、件数も おてつだいの上限までに切る
+    // (知らないキー・長すぎるキー・重複は 捨てる。stats と同じ「知らない値は捨てる」方針)。
+    const bl = raw.bulletin as { day?: unknown; done?: unknown } | undefined;
+    if (bl && typeof bl === 'object' && !Array.isArray(bl)) {
+      const day = bl.day;
+      if (finite(day) && Number.isInteger(day) && day >= 1 && day <= 100000) {
+        const done: string[] = [];
+        if (Array.isArray(bl.done)) {
+          for (const v of bl.done) {
+            if (done.length >= BULLETIN_DONE_MAX) break;
+            if (typeof v !== 'string' || !BULLETIN_DONE_RE.test(v) || done.includes(v)) continue;
+            done.push(v);
+          }
+        }
+        s.bulletin = { day, done };
       }
     }
 

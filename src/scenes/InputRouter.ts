@@ -29,6 +29,7 @@ export class InputRouter {
   toggleInventory(): void {
     const gs = this.gs;
     if (!gs.tutorial.gates().inventory) return; // 未解放(混乱する画面を出さない)
+    gs.bulletinUI.close();
     gs.craftUI.close();
     gs.shopUI.close();
     gs.codexUI.close();
@@ -41,6 +42,7 @@ export class InputRouter {
   toggleCraft(): void {
     const gs = this.gs;
     if (!gs.tutorial.gates().craft) return;
+    gs.bulletinUI.close();
     gs.invUI.close();
     gs.shopUI.close();
     gs.questLog.close();
@@ -54,6 +56,7 @@ export class InputRouter {
   toggleQuestLog(): void {
     const gs = this.gs;
     if (!gs.tutorial.gates().quest) return;
+    gs.bulletinUI.close();
     gs.invUI.close();
     gs.craftUI.close();
     gs.shopUI.close();
@@ -67,6 +70,7 @@ export class InputRouter {
   toggleCodex(): void {
     const gs = this.gs;
     if (!gs.tutorial.gates().inventory) return;
+    gs.bulletinUI.close();
     gs.invUI.close();
     gs.craftUI.close();
     gs.shopUI.close();
@@ -101,7 +105,9 @@ export class InputRouter {
     const wasOpen =
       gs.invUI.open || gs.craftUI.open || gs.shopUI.open || gs.questLog.open ||
       gs.codexUI.open || gs.dialogue.open || gs.pauseMenu.open || gs.questComplete.open ||
-      gs.displayUI.open || gs.paintUI.open || gs.placement.active || gs.fishing.state !== 'idle';
+      gs.displayUI.open || gs.paintUI.open || gs.bulletinUI.open ||
+      gs.placement.active || gs.fishing.state !== 'idle';
+    gs.bulletinUI.close(); // v15 でんごんばん(読むだけのパネル。閉じても何も起きない)
     gs.invUI.close();
     gs.craftUI.close();
     gs.displayUI.close(); // 展示家具の選択パネル(何も入れずに閉じるだけ)

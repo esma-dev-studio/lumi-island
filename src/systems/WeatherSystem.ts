@@ -53,6 +53,18 @@ export function weatherOfDay(day: number): Weather {
   return 'rainy';
 }
 
+/**
+ * v15 その日 虹が出る予定か。
+ *
+ * 朝の「きょうの島」カード(src/systems/TodayCard.ts)の唯一の問い合わせ口。
+ * 「あめの日か」を カード側で言いかえるのではなく、実際に虹の濃さを出す関数
+ * (rainbowLevelFor)に 雨上がりの時刻を入れて聞く = 虹の出かたを変えたら
+ * カードの予報も自動でついてくる。
+ */
+export function willRainbowOn(day: number): boolean {
+  return rainbowLevelFor(weatherOfDay(day), RAIN_END_HOUR + RAINBOW_HOURS / 2) > 0;
+}
+
 /** 0〜1に丸める */
 const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 

@@ -17,7 +17,11 @@ export class WorldPauseController {
       gs.invUI.open || gs.craftUI.open || gs.shopUI.open || gs.questLog.open ||
       gs.codexUI.open || gs.dialogue.open ||
       gs.displayUI.open || // 展示家具(すいそう・むしかご)の選択パネルも操作をふさぐ
-      gs.letterUI.open; // v13 手紙を読んでいるあいだも 世界を止める(読みおわるまで 波も時計も待つ)
+      gs.letterUI.open || // v13 手紙を読んでいるあいだも 世界を止める(読みおわるまで 波も時計も待つ)
+      gs.bulletinUI.open; // v15 でんごんばんを読んでいるあいだも 世界を止める(手紙と同じあつかい)
+    // v15 朝の「きょうの島」カードは ここに入れない。
+    // 3秒で自動的に消える お知らせなので、世界を止めると 朝のたびに 時計が3秒とまる。
+    // Eも食べない(src/scenes/InteractionRouting.ts)ので、遊びの流れを1つも せき止めない
     // 会話・モーダルUI・見せ場・就寝中はゲーム内時間とNPCを完全に止める(P0-5)
     this.frozen = this.uiOpen || gs.questComplete.open || gs.seq.active;
   }

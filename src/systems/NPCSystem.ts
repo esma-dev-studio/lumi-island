@@ -10,6 +10,7 @@ import type { VisitPraiseFacts } from '../data/npcs';
 import { GATHER_NODES } from '../data/island';
 import type { GameState } from '../game/GameState';
 import { displayContents } from '../game/GameState';
+import { questFor } from './QuestSystem';
 import type { IslandScene } from '../scenes/IslandScene';
 import { vnoise } from '../entities/terrain';
 import { findDryStand, waterClearance, SHORE_CLEAR } from '../scenes/DialogueCameraPlanner';
@@ -38,6 +39,41 @@ function dayHash(day: number, salt: number): number {
   let h = Math.imul((day | 0) ^ 0x9e3779b9, 0x85ebca6b) ^ salt;
   h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
   return (h ^ (h >>> 16)) >>> 0;
+}
+
+/** 来訪くじの入力(なかよし度と依頼の状況)。1人ぶん */
+export interface VisitProbeEntry {
+  id: string;
+  friendship: number;
+  questCritical: boolean;
+}
+
+/**
+ * 来訪くじの入力を GameState から組み立てる(純関数)。
+ *
+ * GameScene が NPCSystem に わたす setVisitProbe と、朝の「きょうの島」カードが読む
+ * willVisitToday が、まったく同じ入力を見るようにするための1本化。
+ * 島にくらしていない人(よるの入り江のロカ)は 朝の庭先には来ないので外す。
+ */
+export function visitProbeOf(s: GameState): VisitProbeEntry[] {
+  return Object.entries(s.npcs ?? {})
+    .filter(([id]) => (NPC_BY_ID[id]?.area ?? 'island') === 'island')
+    .map(([id, n]) => ({
+      id,
+      friendship: n?.friendship ?? 0,
+      questCritical: questFor(s, id) !== null,
+    }));
+}
+
+/**
+ * v15 その日 だれかが 朝あそびに来るか(来ない日は null)。
+ *
+ * 朝の「きょうの島」カード(src/systems/TodayCard.ts)の唯一の問い合わせ口。
+ * 中身は visitorOfDay そのものなので、来訪の決めかたは この1か所にしかない
+ * (カード側に日付の計算を写経しない)。
+ */
+export function willVisitToday(s: GameState, day: number): string | null {
+  return visitorOfDay(day, visitProbeOf(s));
 }
 
 /**

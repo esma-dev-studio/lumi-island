@@ -24,10 +24,11 @@ import { makeBugMesh, type BugMesh } from '../entities/bugs';
 import { buildHouse, makeBench, makeLamp, makeStoneRing } from '../entities/buildings';
 import {
   makeLogPile, makeCrate, makeBucketRod, makeTelescope, makeDriftwood, makeStump, makeMessageBottle,
+  makeBulletinBoard,
 } from '../entities/props';
 import {
   GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, STAR_SPOTS, DRIFT_SPOTS, SEABIRD_CIRCLES,
-  BUG_SPOTS, DIG_SPOTS, BOTTLE_SPOTS,
+  BUG_SPOTS, DIG_SPOTS, BOTTLE_SPOTS, BULLETIN_BOARD,
   type GatherNodeDef,
 } from '../data/island';
 import { DayNight } from './DayNight';
@@ -377,6 +378,14 @@ export class IslandScene {
     putProp(makeStump(s, 1), -10.5, -30.5, 0, 0.22); // 林の切りかぶ(幹半径0.2)
     putProp(makeStump(s, 3), 5.5, -35.5, 0.7, 0.22);
     putProp(makeStump(s, 7), -1.5, -27.5, 1.9, 0.22);
+    // v15 でんごんばん(広場の東、高台への道のわき)。おもて(はりがみの面)を広場の中心へ向ける。
+    // 当たり判定の円は0.4m。体半径0.32を足すと0.72mまでしか寄れないので、
+    // 板のはし(中心から0.71m)にも めりこまない = 見た目とほぼ同じ大きさで止まる。
+    // Eのとどく距離(BULLETIN_REACH=1.8m)は これより広いので、止まった所で かならずヒントが出る
+    putProp(
+      makeBulletinBoard(s), BULLETIN_BOARD.x, BULLETIN_BOARD.z,
+      Math.atan2(BULLETIN_BOARD.x, BULLETIN_BOARD.z), 0.4
+    );
 
     // ---- 観測コーナー(デッキの右奥にひとかたまり。ばらまかない) ----
     // 座標は据え置き(会話カメラの見どころ DIALOGUE_BACKDROPS が望遠鏡の位置を参照している)。

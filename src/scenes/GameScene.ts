@@ -28,7 +28,7 @@ import { PlayerController, type InputState } from '../systems/PlayerController';
 import { InteractionSystem } from '../systems/InteractionSystem';
 import { FishingSystem } from '../systems/FishingSystem';
 import { PlacementSystem, type PlacedRuntime } from '../systems/PlacementSystem';
-import { NPCSystem, visitPraiseFacts } from '../systems/NPCSystem';
+import { NPCSystem, visitPraiseFacts, visitProbeOf } from '../systems/NPCSystem';
 import { NPC_BY_ID, greetingTier, homeGiftFor, homeTalkLine, visitPraiseLines } from '../data/npcs';
 import { TutorialSystem } from '../systems/TutorialSystem';
 import {
@@ -47,6 +47,8 @@ import { BOTTLE_REACH, BOTTLE_TOTAL_KEY, letterOfDay, markLetterRead } from '../
 import { NIGHT_TRAIN_KEY } from '../systems/NightTrainSystem';
 import { LETTER_BY_ID, validateLetterData } from '../data/letters';
 import { resetNpcDaily, validateGiftData } from '../systems/GiftSystem';
+import { validateBulletinData } from '../systems/BulletinSystem';
+import { markTodayCardShown, shouldShowTodayCard, todayCard } from '../systems/TodayCard';
 import {
   COVE_LIGHTHOUSE_POI, COVE_RETURN_POI, ISLAND_BOAT_POI, currentObjective, withAreaTravel, type Objective,
 } from '../systems/ObjectiveSystem';
@@ -65,6 +67,8 @@ import { PaintUI } from '../ui/PaintUI';
 import { ShopUI } from '../ui/ShopUI';
 import { DialogueUI } from '../ui/DialogueUI';
 import { QuestLogUI } from '../ui/QuestLogUI';
+import { BulletinUI } from '../ui/BulletinUI';
+import { TodayCardUI } from '../ui/TodayCardUI';
 import { CodexUI } from '../ui/CodexUI';
 import { LetterUI } from '../ui/LetterUI';
 import { QuestCompleteUI } from '../ui/QuestCompleteUI';
@@ -122,6 +126,10 @@ export class GameScene {
   shopUI!: ShopUI;
   dialogue!: DialogueUI;
   questLog!: QuestLogUI;
+  /** v15 でんごんばん(きょうの おてつだいを 読むパネル) */
+  bulletinUI!: BulletinUI;
+  /** v15 朝の「きょうの島」カード(1日1回・3秒で消える お知らせ) */
+  todayCardUI!: TodayCardUI;
   codexUI!: CodexUI;
   /** v13 メッセージボトルの手紙(ずかんからの読み返しも ここを通る) */
   letterUI!: LetterUI;
@@ -190,7 +198,7 @@ export class GameScene {
     return (
       this.invUI.open || this.craftUI.open || this.shopUI.open ||
       this.questLog.open || this.codexUI.open || this.dialogue.open || this.questComplete.open ||
-      this.displayUI.open || this.paintUI.open || this.letterUI.open
+      this.displayUI.open || this.paintUI.open || this.letterUI.open || this.bulletinUI.open
     );
   }
 
@@ -227,7 +235,10 @@ export class GameScene {
     setCookGlow(false);
     this.shopUI = new ShopUI(() => this.state);
     this.dialogue = new DialogueUI();
-    this.questLog = new QuestLogUI(() => this.state);
+    this.questLog = new QuestLogUI(() => this.state, () => this.island.time.day);
+    // v15 でんごんばん(広場の板を Eで見る)と、朝の「きょうの島」カード
+    this.bulletinUI = new BulletinUI(() => this.state, () => this.island.time.day);
+    this.todayCardUI = new TodayCardUI();
     this.codexUI = new CodexUI(() => this.state);
     // ずかんより あとに作る: DOMの ならび順が そのまま かさなり順になるので、
     // ずかんを開いたまま 手紙を ひらいても 手紙が 上に来る(z-indexは style.css にも入れてある)
@@ -251,15 +262,9 @@ export class GameScene {
     // v10 来訪の判定材料(なかよし度と依頼状況)。依頼が動いている日はだれも来ない。
     // v11: 島にくらすNPCだけを対象にする。ロカは入り江の住人なので、朝の庭先には来ない
     // (来訪の立ち位置は自宅の庭先=島の座標なので、入り江の住人を入れると海をわたって来てしまう)
-    this.npcs.setVisitProbe(() =>
-      Object.entries(this.state.npcs)
-        .filter(([id]) => (NPC_BY_ID[id]?.area ?? 'island') === 'island')
-        .map(([id, n]) => ({
-          id,
-          friendship: n.friendship,
-          questCritical: questFor(this.state, id) !== null,
-        }))
-    );
+    // v15: 組み立ては NPCSystem.visitProbeOf 1本にした。朝の「きょうの島」カードも
+    // 同じ関数を通るので、「カードは来ると言ったのに 来ない」がずれようがない
+    this.npcs.setVisitProbe(() => visitProbeOf(this.state));
     await this.npcs.init();
     this.seq = new SequenceDirector(this);
     this.npcAvail = new NpcAvailabilityService(this.npcs, this.state, this.island.time);
@@ -419,6 +424,7 @@ export class GameScene {
     for (const p of validateComboData()) console.warn('[data]', p);
     for (const p of validateCookingData()) console.warn('[data]', p);
     for (const p of validateLetterData()) console.warn('[data]', p);
+    for (const p of validateBulletinData()) console.warn('[data]', p);
     for (const p of validateAchievementRewards()) console.warn('[data]', p);
     for (const p of validateBadges()) console.warn('[data]', p);
     this.inputRouter.attach();
@@ -492,6 +498,29 @@ export class GameScene {
     this.tutorial.update(dt, this.player.moving, obj, progressKey, dist);
   }
 
+  // ---------- v15 朝の「きょうの島」カード ----------
+  /**
+   * 朝(6時〜11時)に1日1回、その日の たのしみを 1枚のカードで知らせる。
+   *
+   * 出すかどうかの判断は2段に分けてある:
+   *   いつ出すか(日づけと時刻)   … src/systems/TodayCard.ts の shouldShowTodayCard(純関数)
+   *   いま出してよいか(画面の状況) … ここ
+   * 会話・モーダル・見せ場・配置モードが1つでも動いていれば 出さずに 見送る
+   * (その日のうちに 何度でも やり直すので、朝のうちに かならず1回は出る)。
+   * 「1日1回」の記録は state.cardDay ひとつ。日ごとのリセット処理を1つも増やさない。
+   */
+  private tryShowTodayCard(): void {
+    const day = this.island.time.day;
+    if (!shouldShowTodayCard(this.state, day, this.island.time.hour)) return;
+    if (this.todayCardUI.open) return;
+    // 会話・モーダル・見せ場・配置・釣り中は かさねない(お知らせで 手もとを ふさがない)
+    if (this.modalOpen || this.seq.active || this.pauseMenu.open) return;
+    if (this.placement.active || this.fishing.state !== 'idle' || this.inter.busy) return;
+    markTodayCardShown(this.state, day);
+    this.todayCardUI.show(todayCard(this.state, day));
+    save(this.state);
+  }
+
   // ---------- 地面の ひろいもの(雨のカタツムリ・v13 メッセージボトル) ----------
   /**
    * E入力のルーティング。カタツムリと メッセージボトルは
@@ -517,6 +546,13 @@ export class GameScene {
     if (this.letterUI.open) {
       this.wantInteract = false;
       if (want) this.letterUI.close();
+      return '';
+    }
+    // v15 でんごんばんも 同じ(読むだけのパネルなので Eで とじる)。
+    // 世界が凍るパネルには かならず Eの逃げ道を用意する、を そろえておく
+    if (this.bulletinUI.open) {
+      this.wantInteract = false;
+      if (want) this.bulletinUI.close();
       return '';
     }
     const canPickGround =
@@ -1138,6 +1174,7 @@ export class GameScene {
           resetNpcDaily(this.state); // talkedToday と giftedToday(きょう あげたかの記録)
           this.island.applyGarden(this.state.garden, this.island.time.day); // 花だんが1段そだつ
         }
+        this.tryShowTodayCard(); // v15 朝の「きょうの島」カード(1日1回)
         // 家の拡張こうじ(たのんだ翌朝6時に完成。就寝で朝へ飛んだ場合もここで拾う)
         this.tryFinishConstruction();
         if (Object.keys(this.state.inventory).length > 0) {
@@ -1179,7 +1216,7 @@ export class GameScene {
       panelOpen:
         this.invUI.open || this.craftUI.open || this.shopUI.open ||
         this.questLog.open || this.codexUI.open || this.pauseMenu.open || this.displayUI.open ||
-        this.paintUI.open || this.letterUI.open,
+        this.paintUI.open || this.letterUI.open || this.bulletinUI.open,
     });
     this.scene.render();
   }

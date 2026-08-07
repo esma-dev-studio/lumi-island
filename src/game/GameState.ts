@@ -53,6 +53,18 @@ export interface GardenPlot {
   plantedDay: number;
 }
 
+/**
+ * v15 きょうの おてつだい(でんごんばん)の進みぐあい。
+ *
+ * 出す中身そのものは 日づけから みちびけるので セーブしない(天気・ボトルと同じ考え方)。
+ * のこすのは「その日 なにを とどけおわったか」だけ。
+ * done に入るのは `${npc}_${item}` の形の合いことば(src/systems/BulletinSystem.ts)。
+ */
+export interface BulletinProgress {
+  day: number;
+  done: string[];
+}
+
 export type QuestState = 'locked' | 'open' | 'done';
 
 export interface NpcState {
@@ -94,6 +106,13 @@ export interface GameState {
   homeStyle: HomeStyle;
   /** 庭の花だん(植えた区画だけ持つ)。家の拡張ずみは flags.home_expanded(boolean枠)を使う */
   garden: GardenPlot[];
+  /**
+   * v15 朝の「きょうの島」カードを 最後に出した日。未設定 = まだ1度も出していない。
+   * 「1日1回」は この1つだけで成り立つ(日ごとのリセット処理を1つも ふやさない)。
+   */
+  cardDay?: number;
+  /** v15 きょうの おてつだい(でんごんばん)の進みぐあい。未設定 = きょうは まだ1件も とどけていない */
+  bulletin?: BulletinProgress;
 }
 
 export function newGameState(): GameState {

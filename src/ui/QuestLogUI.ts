@@ -1,6 +1,9 @@
-// 依頼リスト(Q)。下部に「なかよし度」(おくりもので上がる)をハートで小さく出す。
+// 依頼リスト(Q)。下部に「きょうの おてつだい」と「なかよし度」(おくりもので上がる)を小さく出す。
 import type { GameState } from '../game/GameState';
+import { invCount } from '../game/GameState';
 import { activeQuests } from '../systems/QuestSystem';
+import { errandsOfDay, isErrandDone } from '../systems/BulletinSystem';
+import { ITEMS } from '../data/items';
 import { NPC_BY_ID } from '../data/npcs';
 import { QUESTS } from '../data/quests';
 import { FRIEND_BEST, HEART_MAX, friendshipHearts, friendshipText, metNpcs } from '../systems/GiftSystem';
@@ -11,7 +14,10 @@ export class QuestLogUI {
   private el: HTMLElement;
   open = false;
 
-  constructor(private getState: () => GameState) {
+  constructor(
+    private getState: () => GameState,
+    private getDay: () => number = () => 1
+  ) {
     this.el = document.createElement('div');
     this.el.className = 'panel quest-panel hidden';
     document.getElementById('ui-root')!.appendChild(this.el);
@@ -52,6 +58,43 @@ export class QuestLogUI {
     }).join('');
   }
 
+  /**
+   * v15 きょうの おてつだい(でんごんばん)の節。チェックマーク式で 進みぐあいだけを見せる。
+   *
+   * ここは「読む場所」であって「案内する場所」ではない:
+   * メインの目標(いまやること)には いっさい出さない設計なので、
+   * おてつだいの様子が分かるのは この節と でんごんばんの2か所だけ。
+   * 出るものが1件も無い日(まだ だれとも出会っていない等)は 節ごと出さない。
+   */
+  private errandRows(s: GameState): string {
+    const day = this.getDay();
+    const list = errandsOfDay(s, day);
+    if (list.length === 0) return '';
+    const done = list.filter((e) => isErrandDone(s, day, e.id)).length;
+    const rows = list
+      .map((e) => {
+        const ok = isErrandDone(s, day, e.id);
+        const have = Math.min(invCount(s, e.item), e.count);
+        const name = NPC_BY_ID[e.npc]?.name ?? e.npc;
+        const status = ok
+          ? '<span class="q-done">とどけた!</span>'
+          : have >= e.count
+            ? `<span class="q-new">${name}に とどけよう</span>`
+            : `もっている: ${have} / ${e.count}`;
+        return `<div class="quest-row bl-row${ok ? ' bl-done' : ''}" data-errand="${e.id}">
+          <div class="bl-check">${icon(ok ? 'check_on' : 'check_off')}</div>
+          <div class="bl-main">
+            <div class="q-title">${ITEMS[e.item]?.name ?? e.item}を ${e.count}こ <small>${name}に</small></div>
+            <div class="q-status">${status}</div>
+          </div>
+          <div class="bl-reward"><span class="t-ico">${icon('lumina')}</span>${e.reward}</div>
+        </div>`;
+      })
+      .join('');
+    return `<div class="panel-sub">きょうの おてつだい <span class="panel-count">${done} / ${list.length}</span></div>
+      <div class="craft-list">${rows}</div>`;
+  }
+
   private render(): void {
     const s = this.getState();
     const acts = activeQuests(s);
@@ -70,6 +113,7 @@ export class QuestLogUI {
       <div class="panel-title">島のおねがい <span class="panel-close" data-close>${byInput('とじる(Q)', 'とじる')}</span></div>
       <div class="craft-list">${rows || '<div class="inv-empty">いまは おねがいがない。島のみんなと話してみよう!</div>'}</div>
       <div class="panel-sub">たっせい: ${doneCount} / ${QUESTS.length}</div>
+      ${this.errandRows(s)}
       <div class="panel-sub">なかよし度</div>
       <div class="craft-list">${this.friendRows(s)}</div>
     `;

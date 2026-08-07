@@ -3,6 +3,8 @@
 import type { GameScene } from '../scenes/GameScene';
 import { ACHIEVEMENTS } from '../systems/AchievementSystem';
 import { rewardKey } from '../systems/AchievementRewards';
+import { errandsOfDay } from '../systems/BulletinSystem';
+import { todayCard } from '../systems/TodayCard';
 
 /** debugフラグのときだけ window.__lumiDebug を生やす */
 export function installLumiDebugApi(gs: GameScene): void {
@@ -29,6 +31,10 @@ export function installLumiDebugApi(gs: GameScene): void {
     advance: () => gs.dialogue.advance(),
     npcPos: (id: string) => gs.npcs.positionOf(id),
     objective: () => gs.lastObjective,
+    /** v15 きょうの おてつだい(でんごんばんの中身)。読み取りだけ */
+    errands: () => errandsOfDay(gs.state, gs.island.time.day),
+    /** v15 朝の「きょうの島」カードの中身。読み取りだけ(出すかどうかは GameScene が決める) */
+    todayCard: () => todayCard(gs.state, gs.island.time.day),
     /**
      * v13 じっせきの ごほうびを「もう受けとった」ことにする(何も もらわずに 印だけ立てる)。
      *

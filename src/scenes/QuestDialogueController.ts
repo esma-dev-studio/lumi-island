@@ -5,8 +5,9 @@ import { questFor, acceptQuest, completeQuest, questShortfall } from '../systems
 import { currentObjective } from '../systems/ObjectiveSystem';
 import { NPC_BY_ID, dailyLine, greetingTier } from '../data/npcs';
 import type { QuestDef } from '../data/quests';
-import type { ItemId } from '../data/items';
+import { ITEMS, type ItemId } from '../data/items';
 import { applyGift, canGift, friendshipText, type GiftResult } from '../systems/GiftSystem';
+import { deliverErrand, deliverableErrand, errandThanksLine } from '../systems/BulletinSystem';
 import { burst } from '../entities/effects';
 import {
   canOrderHomeExpansion, homeExpandStage, homeExpandTalkLine, nextHomeExpandCost, orderHomeExpansion,
@@ -107,20 +108,78 @@ export class QuestDialogueController {
       d.onDialogueCamera(null);
       after?.();
     };
-    d.dialogue.show(npcDef.name, lines, endConversation);
-    // 「おくりものをする」も下の「こうじを たのむ」も、押さなければ何も起きない任意ボタン。
-    // questCritical(受注・報告)の会話には出さない(理由は上の questCritical のところ)。
-    // v10 家の拡張こうじ。おくりものと同じ「最終行の任意ボタン」の仕組みで足す。
-    // 大工はツムギだけ・未発注・お金が足りているときにだけ出る(発注すると消える)
-    const cost = nextHomeExpandCost(d.state);
-    if (!questCritical && npcId === HOME_BUILDER_NPC && cost !== null && canOrderHomeExpansion(d.state)) {
-      d.dialogue.addExtraAction(`こうじを たのむ(${cost}ルミナ)`, () =>
-        this.openHomeOrder(npcId, endConversation)
+    /** ふだんの会話(あいさつ・雑談)と、その最終行に出す任意ボタン */
+    const showNormalTalk = (): void => {
+      d.dialogue.blockAdvance = false;
+      d.dialogue.onBlockedAdvance = null;
+      d.dialogue.show(npcDef.name, lines, endConversation);
+      // 「おくりものをする」も下の「こうじを たのむ」も、押さなければ何も起きない任意ボタン。
+      // questCritical(受注・報告)の会話には出さない(理由は上の questCritical のところ)。
+      // v10 家の拡張こうじ。おくりものと同じ「最終行の任意ボタン」の仕組みで足す。
+      // 大工はツムギだけ・未発注・お金が足りているときにだけ出る(発注すると消える)
+      const cost = nextHomeExpandCost(d.state);
+      if (!questCritical && npcId === HOME_BUILDER_NPC && cost !== null && canOrderHomeExpansion(d.state)) {
+        d.dialogue.addExtraAction(`こうじを たのむ(${cost}ルミナ)`, () =>
+          this.openHomeOrder(npcId, endConversation)
+        );
+      }
+      if (!questCritical && canGift(d.state, npcId)) {
+        d.dialogue.addExtraAction('おくりものをする', () => this.openGift(npcId, endConversation));
+      }
+    };
+    // v15 でんごんばんの おてつだい。
+    // たのまれたものを 持って 来ているときは、**ふだんの会話より先に** 1行だけ聞く
+    // ——最終行の任意ボタンにすると、会話を最後まで送らないと 気づけないため。
+    // 「つぎへ」(E・タッチの丸ボタン)は「あとで」と同じ = 押して無反応の画面を作らない。
+    // これは こうじの確認(openHomeOrder)と まったく同じ仕組み。
+    // 受注・報告の会話(questCritical)には まぜない: おくりもの・こうじと同じ線引きで、
+    // 大事な場面に 別の用事を かさねない。
+    const errand = questCritical ? null : deliverableErrand(d.state, d.state.time.day, npcId);
+    if (errand) {
+      d.dialogue.show(
+        npcDef.name,
+        [`あ、でんごんばん 見てくれたんだね。${ITEMS[errand.item].name}を もってきて くれた?`],
+        endConversation
       );
+      d.dialogue.blockAdvance = true;
+      d.dialogue.onBlockedAdvance = showNormalTalk;
+      d.dialogue.setExtraActions([
+        { label: 'おてつだいの おとどけ', handler: () => this.handleErrandDelivery(npcId, endConversation) },
+        { label: 'あとで', handler: showNormalTalk },
+      ]);
+      return;
     }
-    if (!questCritical && canGift(d.state, npcId)) {
-      d.dialogue.addExtraAction('おくりものをする', () => this.openGift(npcId, endConversation));
+    showNormalTalk();
+  }
+
+  /**
+   * v15 でんごんばんの おてつだいを とどける(会話の任意ボタンから)。
+   *
+   * 依頼の報告(finishQuest)とは べつの道すじにしてある:
+   *   - 達成バナー(QuestCompleteUI)は出さない。おてつだいは 毎日のことなので、
+   *     依頼の達成と同じ大きさで祝うと、依頼の うれしさが うすくなる
+   *   - 「いまやること」も 1ミリも動かさない(ObjectiveSystem を1行も通らない)
+   * 知らせるのは お礼の一言(会話のつづき)と トースト2本だけ。
+   */
+  private handleErrandDelivery(npcId: string, endConversation: () => void): void {
+    const d = this.deps;
+    const name = NPC_BY_ID[npcId].name;
+    d.dialogue.blockAdvance = false; // 「とどける?」の1行から ふつうの会話へ もどす
+    d.dialogue.onBlockedAdvance = null;
+    const r = deliverErrand(d.state, d.state.time.day, npcId);
+    if (!r) {
+      // 押せる状態でしかここへ来ないので ふつうは起きない(持ちものが足りない等の保険)
+      d.dialogue.show(name, ['あれ? まだ そろっていないみたい。またね。'], endConversation);
+      return;
     }
+    sfx('coin');
+    d.dialogue.show(name, [errandThanksLine(npcId, r.errand.item)], endConversation);
+    toast(`おてつだい たっせい! +${r.errand.reward}ルミナ`, 'lumina');
+    if (r.gain > 0) {
+      toast(`${name}と なかよし +${r.gain} → ${friendshipText(r.friendship)}`, 'heart');
+      this.sparkleAt(npcId);
+    }
+    save(d.state);
   }
 
   /**

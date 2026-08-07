@@ -141,6 +141,16 @@ export const ICONS: Record<string, string> = {
   f_starlantern_gold: S('<path d="M7 19.5 L17 19.5 L15.6 15.6 L8.4 15.6 Z" fill="#c9a860" stroke="#8d7030"/><path d="M9.6 15.6 L9.6 12.6 L14.4 12.6 L14.4 15.6" stroke="#8d7030"/><path d="M12 2 L13.6 6.4 L18 8 L13.6 9.6 L12 13.4 L10.4 9.6 L6 8 L10.4 6.4 Z" fill="#f0d489" stroke="#c9982f"/><path d="M12 2 L12 13.4 M6 8 L18 8" stroke="#d9b23e"/>'),
   // よるのとうだい: とうだいのランタン(f_lighthouse_lantern)の こん色版
   f_lighthouse_lantern_night: S('<path d="M8.6 20.6 L15.4 20.6 L15.4 18.6 L8.6 18.6 Z" fill="#3d4d70" stroke="#1d2740"/><path d="M9.8 18.6 L14.2 18.6 L13.4 9 L10.6 9 Z" fill="#4a5c84" stroke="#1d2740"/><path d="M10.2 13.6 L13.8 13.6 L13.7 11.8 L10.3 11.8 Z" fill="#2f3e5c" stroke="#1d2740"/><path d="M9.4 9 L14.6 9 L14.6 7.8 L9.4 7.8 Z" fill="#3d4d70" stroke="#1d2740"/><path d="M10.4 7.8 L10.4 4.6 M13.6 7.8 L13.6 4.6" stroke="#2f3e5c"/><path d="M9.6 4.6 L14.4 4.6 L14.4 3.4 L9.6 3.4 Z" fill="#2f3e5c" stroke="#1d2740"/><circle cx="12" cy="6.2" r="1.9" fill="#dff2ff" stroke="#7aa8bc"/><path d="M8.4 5 L5.6 4 M15.6 5 L18.4 4 M8.4 7.4 L5.6 8.4 M15.6 7.4 L18.4 8.4" stroke="#a8d2e4"/>'),
+  // ---- v15 きょうの島カード・でんごんばん ----
+  // にじ: 雨あがりの空にかかる7色の弧(色は既存の パレットから にごらせた6本)
+  rainbow: S('<path d="M2.6 19 A9.4 9.4 0 0 1 21.4 19" fill="none" stroke="#c9705c" stroke-width="1.9"/><path d="M4.4 19 A7.6 7.6 0 0 1 19.6 19" fill="none" stroke="#dcb56a" stroke-width="1.9"/><path d="M6.2 19 A5.8 5.8 0 0 1 17.8 19" fill="none" stroke="#7aa85f" stroke-width="1.9"/><path d="M8 19 A4 4 0 0 1 16 19" fill="none" stroke="#7aa8d4" stroke-width="1.9"/><path d="M2 19.4 L22 19.4" stroke="#b8ad96" stroke-width="1.1"/>'),
+  // ボトル: 浜に流れつく メッセージボトル(3Dの makeMessageBottle と同じ色づかい)
+  bottle: S('<path d="M9.6 3.2 L14.4 3.2 L14.4 6 C14.4 7.4 16.2 8.4 16.2 10.6 L16.2 19.2 C16.2 20.2 15.4 20.8 14.4 20.8 L9.6 20.8 C8.6 20.8 7.8 20.2 7.8 19.2 L7.8 10.6 C7.8 8.4 9.6 7.4 9.6 6 Z" fill="#b8d8c4" stroke="#4f8a72"/><path d="M9.2 2.2 L14.8 2.2 L14.8 3.4 L9.2 3.4 Z" fill="#c9a06b" stroke="#8d6b3d"/><path d="M9.4 11 L14.6 11 L14.6 18.4 L9.4 18.4 Z" fill="#f2ead6" stroke="#b8a88e"/><path d="M9.4 14.2 L14.6 14.2" stroke="#b0553f" stroke-width="1.4"/>'),
+  // でんごんばん: 2本の柱に わたした板と、はってある紙3枚
+  board: S('<path d="M6.4 15.6 L6.4 21.4 M17.6 15.6 L17.6 21.4" stroke="#7a5a3d" stroke-width="1.8"/><path d="M3.4 6.6 L20.6 6.6 L20.6 16.4 L3.4 16.4 Z" fill="#a8845c" stroke="#7a5a3d"/><path d="M2.4 4.4 L21.6 4.4 L20.6 6.6 L3.4 6.6 Z" fill="#63472f" stroke="#3f2d1c"/><path d="M5.4 8.4 L9.4 8.4 L9.4 12.6 L5.4 12.6 Z" fill="#f2ead6" stroke="#b8a88e"/><path d="M10.4 9.4 L14.4 9.4 L14.4 14.4 L10.4 14.4 Z" fill="#f2ead6" stroke="#b8a88e"/><path d="M15.4 8.8 L18.8 8.8 L18.8 12.4 L15.4 12.4 Z" fill="#f2ead6" stroke="#b8a88e"/>'),
+  // チェック(すみ・まだ)。おてつだいの進みぐあいに使う。形は同じで 色だけ変える
+  check_on: S('<circle cx="12" cy="12" r="8.6" fill="#dff0e2" stroke="#4f7a50"/><path d="M7.8 12.2 L10.8 15.2 L16.4 9" stroke="#4f7a50" stroke-width="2.1"/>'),
+  check_off: S('<circle cx="12" cy="12" r="8.6" fill="#f2eee2" stroke="#c4bdac"/>'),
 };
 
 export function icon(id: string): string {

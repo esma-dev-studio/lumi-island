@@ -212,6 +212,20 @@ export function stageOf(garden: GardenPlot[] | undefined, slot: number, day: num
   return plotStage(plotIn(garden, slot), day);
 }
 
+/**
+ * v15 その日に「まんかいに なる」区画の数(前の日は まだ満開でなかったものだけ)。
+ *
+ * 朝の「きょうの島」カード(src/systems/TodayCard.ts)の唯一の問い合わせ口。
+ * 育ちぐあいの判定は plotStage ひとつのまま = カード側に日数の計算を写経しない。
+ * すでに満開で ほったらかしの区画は「きょうの出来事」ではないので数えない。
+ */
+export function plotsBloomingOn(garden: GardenPlot[] | undefined, day: number): number {
+  if (!Array.isArray(garden)) return 0;
+  return garden.filter(
+    (p) => plotStage(p, day) === 'bloom' && plotStage(p, day - 1) !== 'bloom'
+  ).length;
+}
+
 /** いちばん近い花だんの区画(判定圏の外ならnull) */
 export function nearestPlot(px: number, pz: number): { slot: number; x: number; z: number; distance: number } | null {
   let best: { slot: number; x: number; z: number; distance: number } | null = null;

@@ -1,7 +1,8 @@
 // E入力のルーティング: その場で実行できる候補を集め、
 // いまの目的との突き合わせ(ObjectiveInteractionPolicy)→優先度・距離(InteractionResolver)で1つに決める。
-import { POIS } from '../data/island';
+import { BULLETIN_BOARD, POIS } from '../data/island';
 import { ITEMS, displayCapacity } from '../data/items';
+import { BULLETIN_REACH } from '../systems/BulletinSystem';
 import { BUG_CATCH_R, BUG_HINT_R } from '../systems/BugSystem';
 import { hasTool } from '../game/GameState';
 import { questFor } from '../systems/QuestSystem';
@@ -169,6 +170,11 @@ function pushNpcCandidate(gs: GameScene, cands: InteractionCandidate[], px: numb
 export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
   const want = gs.wantInteract;
   gs.wantInteract = false;
+  // v15 朝の「きょうの島」カードは Eで早送りできるが、Eを食べない(returnしない)。
+  // 3秒で勝手に消える お知らせなので、ここで return すると
+  // 「カードが出ているあいだに押したEが1回きかない」という取りこぼしになる
+  // ——押した操作は そのまま通し、ついでにカードを閉じる、が いちばん おどろきが少ない。
+  if (gs.todayCardUI.open && want) gs.todayCardUI.hide();
   if (gs.questComplete.open && want) {
     gs.questComplete.hide();
     return '';
@@ -487,6 +493,24 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
             run: () => {},
           }
     );
+  }
+  // v15 広場の でんごんばん(きょうの おてつだいを 読む)。
+  //
+  // kind='place' にしてある。ObjectiveSystem の preferredKinds に 'place' は
+  // ふつう入らないので、依頼の誘導中は 自動的に かくれる
+  // ——おてつだいは 依頼の じゃまを 1ミリも しない、という設計を 構造で保証する
+  // (庭の花だん・るすの家・こわれた ふね と まったく同じ流儀)。
+  //
+  // 優先度は自宅のドア(35)と同じ。ちかくを 通りかかった人(会話も35)とは
+  // 距離で決まるので、板の真ん前に立てば 板が、人の真ん前に立てば 会話が出る。
+  const boardD = Math.hypot(px - BULLETIN_BOARD.x, pz - BULLETIN_BOARD.z);
+  if (boardD < BULLETIN_REACH) {
+    cands.push({
+      id: 'bulletin', kind: 'place', targetId: 'bulletin',
+      priority: PRIORITY.door, distance: boardD, enabled: true,
+      hint: '<kbd>E</kbd>でんごんばんを 見る',
+      run: () => gs.bulletinUI.show(),
+    });
   }
   // 自宅のドア: 家の中へ入る(ねるのは室内のベッド)
   const homeD = Math.hypot(px - HOME_POINT.x, pz - HOME_POINT.z);

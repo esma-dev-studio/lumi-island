@@ -95,6 +95,53 @@ export function makeStump(scene: Scene, seed = 1): Mesh {
 }
 
 // ---------------------------------------------------------------------------
+// v15 でんごんばん(広場の木の板。きょうの おてつだいが はってある)
+// ---------------------------------------------------------------------------
+const C_BOARD_FRAME = Color3.FromHexString('#7a5a3d'); // わく・柱の こい木
+const C_BOARD_FACE = Color3.FromHexString('#a8845c'); // 板の面
+const C_BOARD_ROOF = Color3.FromHexString('#63472f'); // 小さな 雨よけ屋根
+const C_BOARD_NOTE = Color3.FromHexString('#f2ead6'); // はってある紙
+const C_BOARD_PIN = Color3.FromHexString('#b0553f'); // 紙どめの びょう
+
+/**
+ * でんごんばん。2本の柱に 板を1枚わたし、小さな 雨よけ屋根を のせる。
+ *
+ * 紙は 板の面より 1mm だけ 手前(-Z)に出す(教訓1「平たい板を重ねるときは高さを変える」——
+ * ここは たてに立った面なので、重ねる向き=Z に わずかな段差をつける。同じ面に置くと
+ * Zファイティングで はりがみが しま模様になる)。
+ * おもて(はりがみのある面)は -Z。置く側で rotation.y = atan2(x, z) にすると 広場を向く。
+ * 法線の向きは 既定の 'auto'(木箱・まき置きと同じ)。じぶんで 'keep'/'flip' を決めうちすると、
+ * fbox の巻き順との組み合わせで 昼でも まっ黒に描かれることがある(教訓1)。
+ */
+export function makeBulletinBoard(scene: Scene): Mesh {
+  const A = A0();
+  // 柱2本(地面から板の高さまで)
+  appendTrunk(A, [[-0.62, 0, 0], [-0.62, 1.32, 0]], 0.06, 0.05, C_BOARD_FRAME, 21, 0);
+  appendTrunk(A, [[0.62, 0, 0], [0.62, 1.32, 0]], 0.06, 0.05, C_BOARD_FRAME, 22, 0);
+  // 板の面(はば1.34 × たて0.78 × あつさ0.07)
+  fbox(A, 0, 1.02, 0, 1.34, 0.78, 0.07, C_BOARD_FACE);
+  // わく(上下・左右のふち)
+  fbox(A, 0, 1.44, 0, 1.42, 0.09, 0.1, C_BOARD_FRAME);
+  fbox(A, 0, 0.6, 0, 1.42, 0.09, 0.1, C_BOARD_FRAME);
+  fbox(A, -0.67, 1.02, 0, 0.09, 0.86, 0.1, C_BOARD_FRAME);
+  fbox(A, 0.67, 1.02, 0, 0.09, 0.86, 0.1, C_BOARD_FRAME);
+  // 雨よけ屋根(前へ すこし かたむける代わりに、前へ ずらした 板を2枚かさねる)
+  fbox(A, 0, 1.58, -0.04, 1.56, 0.06, 0.3, C_BOARD_ROOF);
+  fbox(A, 0, 1.53, 0.12, 1.56, 0.06, 0.22, C_BOARD_ROOF);
+  // はってある紙3枚(大きさ・かたむきを ふぞろいにして「はりがみ」に見せる)
+  const notes: [number, number, number, number][] = [
+    [-0.38, 1.12, 0.34, 0.4], [0.02, 1.02, 0.36, 0.44], [0.4, 1.14, 0.32, 0.38],
+  ];
+  for (let i = 0; i < notes.length; i++) {
+    const [nx, ny, nw, nh] = notes[i];
+    fbox(A, nx, ny, -0.04, nw, nh, 0.012, C_BOARD_NOTE);
+    // 紙どめの びょう(上のはしに1つ)
+    fbox(A, nx, ny + nh / 2 - 0.03, -0.05, 0.04, 0.04, 0.02, C_BOARD_PIN);
+  }
+  return toMesh(scene, 'bulletinBoard', A);
+}
+
+// ---------------------------------------------------------------------------
 // v13 メッセージボトル(浜に流れつく手紙のびん)
 // ---------------------------------------------------------------------------
 const C_BOTTLE_GLASS = Color3.FromHexString('#9fc9b4'); // 海のガラスの みどり

@@ -163,6 +163,50 @@ body { font-family: var(--font); color: var(--ink); }
 .qc-reward { font-size: 0.88rem; font-weight: 700; color: #4f7a50; margin-top: 2px; }
 .qc-next { font-size: 0.8rem; color: var(--ink-soft); margin-top: 8px; border-top: 1px solid var(--line); padding-top: 8px; margin-left: 16px; margin-right: 16px; }
 
+/* ---- v15 朝の「きょうの島」カード ---- */
+/* 依頼達成バナー(.quest-complete)と同じ格・同じ置き場所。ちがうのは中身が「お知らせ」なので、
+   帯を紺ではなくミント寄りの落ちついた緑にして「めでたい」と読みちがえられないようにする */
+.today-card {
+  position: absolute; left: 50%; top: 34%; transform: translate(-50%, -50%);
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 8px 30px rgba(30, 24, 12, 0.3);
+  padding: 0 0 12px; min-width: 320px; max-width: min(440px, 88vw);
+  text-align: left; cursor: pointer; z-index: 8;
+}
+.today-card.hidden { display: none; }
+.tc-band {
+  background: #4f8a72; color: #fff; font-weight: 900; letter-spacing: 0.1em;
+  padding: 6px 0; border-radius: var(--radius) var(--radius) 0 0; font-size: 0.9rem; text-align: center;
+}
+.tc-day { font-size: 0.74rem; font-weight: 700; color: var(--ink-soft); text-align: center; margin: 7px 0 4px; }
+.tc-row {
+  display: flex; align-items: center; gap: 9px; font-size: 0.92rem; font-weight: 700;
+  line-height: 1.85; padding: 3px 16px;
+}
+.tc-quiet { color: var(--ink-soft); font-weight: 700; }
+.tc-ico { font-size: 1.2rem; line-height: 0; display: flex; flex: 0 0 auto; }
+.tc-pick { margin: 8px 16px 0; padding-top: 8px; border-top: 1px solid var(--line); }
+.tc-pick-label {
+  display: inline-block; margin-bottom: 5px;
+  font-size: 0.7rem; font-weight: 900; letter-spacing: 0.06em;
+  color: #4f8a72; border: 1px solid #a8ccbc; border-radius: 999px; padding: 1px 8px;
+}
+/* 文が2行になっても 絵が まん中に浮かないよう、絵は1行めの高さにそろえる */
+.tc-pick-text {
+  display: flex; align-items: flex-start; gap: 9px;
+  font-size: 0.86rem; line-height: 1.85; color: var(--ink);
+}
+.tc-pick-text .tc-ico { padding-top: 0.45em; }
+
+/* ---- v15 でんごんばんのパネル ---- */
+.bl-row { display: flex; align-items: center; gap: 10px; }
+.bl-check { font-size: 1.15rem; line-height: 0; display: flex; flex: 0 0 auto; }
+.bl-main { flex: 1 1 auto; min-width: 0; }
+.bl-main .q-title { display: flex; align-items: center; gap: 6px; }
+.bl-reward { flex: 0 0 auto; display: flex; align-items: center; gap: 4px; font-weight: 900; font-size: 0.86rem; color: var(--amber); }
+.bl-done { background: #f4f7f2; border-color: #b8d4bc; }
+.bl-done .q-title { color: var(--ink-soft); }
+
 .craft-pop {
   position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%) scale(0.92);
   background: var(--paper); border: 1px solid var(--amber); border-radius: var(--radius);
@@ -572,6 +616,11 @@ html.touch-ui .craft-name { font-size: 0.9rem; }
 html.touch-ui .inv-empty { font-size: 0.9rem; }
 html.touch-ui .q-title { font-size: 0.92rem; }
 html.touch-ui .q-status { font-size: 0.84rem; }
+/* v15 朝のカードと でんごんばんも、指の画面では ひとまわり大きくする */
+html.touch-ui .today-card { min-width: min(420px, 90vw); max-width: min(520px, 92vw); }
+html.touch-ui .tc-row { font-size: 0.98rem; }
+html.touch-ui .tc-pick-text { font-size: 0.92rem; }
+html.touch-ui .bl-reward { font-size: 0.92rem; }
 html.touch-ui .codex-cell, html.touch-ui .ach-row { min-height: 52px; font-size: 0.86rem; }
 /* v14 バッジのマスも 指で押せる大きさにそろえる(押すものではないが、行の高さを合わせる) */
 html.touch-ui .badge-cell { min-height: 52px; font-size: 0.86rem; }
