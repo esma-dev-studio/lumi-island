@@ -81,11 +81,46 @@ export interface ObjectiveActionContext {
 //   - 虫は「あとで戻ってくる」ができない相手。目の前のチョウは数秒でとまり直して動くし、
 //     ホタルは夜(19時〜翌5時)にしか出ない。依頼を受けているあいだ虫あみが一切使えないと、
 //     「見えているのに、なにをしても捕れない」体験になる(子どもの苦情の一因だった)。
-//   - ほりあと(dig)は同じ場所に1日残るので、この理由は立たない。だから catch だけを足す。
 //   - 誘導を横取りしない: 優先度は catch=32 で 採取(30)・庭(29)・報告相手のNPC(10)より弱く、
 //     BUG_SPOTS は既存の判定帯から3m以上はなして置いてある(src/data/island.ts)。
 //     「採取のEを虫が奪う」ことは起きない(tests/unit/objective.test.ts が機械検査)。
-const ALWAYS_ALLOWED: InteractionKind[] = ['sleep', 'enter', 'exit', 'catch'];
+//
+// v11.1で ほりあと(dig)も足した。判定の線引きは v10.1の虫とりで学んだ教訓とまったく同じ
+// 「あとで戻れる相手か」で決めている:
+//   - ほりあと(dig)は その日のうちに ほらないと、日付が変わると別の場所へ移ってしまう
+//     (src/systems/DigSystem.ts DigScheduler.update: 日が変わると全部 despawn して置き直す)。
+//     「きょう そこにある」ものなので、依頼のあいだ ずっと ほれないのは取り逃しになる。
+//     v11では「同じ場所に1日残るから あとで戻れる」と書いていたが、ゲーム内の1日は10分で、
+//     依頼1件をこなすあいだに日付が変わる。1日残ることは「戻れる」の根拠にならない。
+//   - 誘導を横取りしない: dig=33 は 採取(30)・庭(29)・報告相手のNPC(10)より弱く、
+//     DIG_SPOTS も既存の判定帯から3m以上はなして置いてある(src/data/island.ts)。
+//
+// ここに入れていないもの(意図的に隠したままにするもの):
+//   - fish  : 釣りは「かかるまで待つ」長い専念行動。報告に行くとちゅうで始めると
+//             そのまま釣りつづけてしまう(UXボットの refishDuringReport ゲートの対象)。
+//   - shop  : 店は依頼の進行に一切寄与せず、パネルを開くと画面が止まる
+//             (UXボットの shopOpens ゲートの対象)。
+//   - pickup: 「もちかえる」「いきものを いれる/とりだす」= 自分で置いた家具の操作。
+//             家具は動かないので いつでも戻れる相手で、資源も増えない(むしろ島から減る)。
+//   - place : 花だんに うえる・灯台にレンズを つける等。誘導の見せ場そのものなので絞る。
+const ALWAYS_ALLOWED: InteractionKind[] = ['sleep', 'enter', 'exit', 'catch', 'dig'];
+
+/**
+ * 「そのとき その場でしか手に入らない」拾いもの。
+ * どちらも道具が要らず、時間がすぎると拾われないまま消える:
+ *   ほしのかけら: 夜(19時〜翌5時)だけ。朝5時に未回収でも消える(StarShardSystem)
+ *   うきだま    : 朝(6〜10時)だけ。10時に波にさらわれる(DriftSystem)
+ * = 虫とり(catch)とまったく同じ「あとで戻れない相手」なので、どの誘導中でも採れるようにする。
+ * これらの候補は kind='gather' なので、種別ではなく「アイテムの許可リスト」で通す
+ * (ふつうの採取ノード——木・岩・草・ベリー・コケ・こうせき——は時間で復活するので絞ったまま。
+ *  そうしないと「もくざいを あつめよう」の最中に岩や草のEが出て、誘導がぼやける)。
+ *
+ * 雨のカタツムリ(snail)がここに無いのは、候補づくりに乗っていないから:
+ * GameScene.routeWithSnail が「ほかに何もできないとき」のフォールバックとして直接ヒントを出すので、
+ * もとから どの誘導中でも拾える(tests/unit/weather.test.ts が場所の分離を機械検査している)。
+ */
+export const TRANSIENT_PICKUPS: ItemId[] = ['starshard', 'glassfloat'];
+
 const FREE_CONTEXT = (): ObjectiveActionContext => ({ preferredKinds: [], guided: false });
 
 /** NPCの在/不在。GameSceneがNPCSystemから作って渡す。不在ならベッドへ誘導する */
@@ -444,27 +479,56 @@ export function objectiveActionContext(obj: Objective | null): ObjectiveActionCo
   if (obj.target.kind === 'npc' && obj.target.id) {
     // 報告だけを誘導する。未受注のオファーはまだ何も引き受けていないので自由に遊べる
     if (obj.headline !== REPORT_HEADLINE) return FREE_CONTEXT();
-    return { preferredKinds: ['talk', ...ALWAYS_ALLOWED], targetNpcId: obj.target.id, guided: true };
+    // v11.1 報告に行くとちゅうの採取は ふさがない(targetItemIds なし=どの素材でもよい)。
+    // 実プレイの苦情「報告しに行く間にアイテムが拾えない」への修正で、これも設計の意味論への較正:
+    // 報告は「その相手に会う」ことだけが条件で、道すがら何を採ろうと1ミリも遅れない
+    // (子どもは目の前のベリーや かけらを見つけたらそこで拾う。それを塞ぐと
+    //  「なにをしても反応しない島」になってしまう)。
+    // 報告そのものが横取りされないことは優先度で保証している:
+    // 報告できるNPCは PRIORITY.npcQuest=10 で最強、さらに selectInteraction が
+    // 受注・報告できるNPCを距離より先に選ぶ(tests/unit/objective.test.ts が機械検査)。
+    // 釣り(fish)と店(shop)だけは足さない——上の ALWAYS_ALLOWED のコメントを参照。
+    return {
+      preferredKinds: ['talk', 'gather', ...ALWAYS_ALLOWED],
+      targetNpcId: obj.target.id, guided: true,
+    };
   }
   // NPC不在でベッドへ誘導中(withAvailabilityが作る目的)。
   // ベッドは家の中なので、出入り(enter/exit)も許可しないと誘導どおりに動けない
   if (obj.target.kind === 'poi' && obj.target.id === 'bed') {
-    return { preferredKinds: [...ALWAYS_ALLOWED], targetPoiId: 'bed', guided: true };
+    return {
+      preferredKinds: ['gather', ...ALWAYS_ALLOWED],
+      targetItemIds: [...TRANSIENT_PICKUPS], targetPoiId: 'bed', guided: true,
+    };
   }
   // v11第2章 とうだいに レンズを つける段階。とびらのE候補は kind='place' なので
-  // それだけを通す(採取・釣りは この場面では出さない=見せ場の直前で寄り道させない)
+  // それだけを通す(釣り・店・ふつうの採取は この場面では出さない=見せ場の直前で寄り道させない)
   if (obj.target.kind === 'poi' && obj.target.id === COVE_LIGHTHOUSE_POI) {
-    return { preferredKinds: ['place', ...ALWAYS_ALLOWED], targetPoiId: COVE_LIGHTHOUSE_POI, guided: true };
+    return {
+      preferredKinds: ['place', 'gather', ...ALWAYS_ALLOWED],
+      targetItemIds: [...TRANSIENT_PICKUPS], targetPoiId: COVE_LIGHTHOUSE_POI, guided: true,
+    };
   }
   if (obj.gatherItem) {
-    return { preferredKinds: ['gather', ...ALWAYS_ALLOWED], targetItemIds: [obj.gatherItem], guided: true };
+    // 案内している素材+「いま拾わないと消えるもの」だけ。ほかの採取ノードは絞ったまま
+    return {
+      preferredKinds: ['gather', ...ALWAYS_ALLOWED],
+      targetItemIds: [obj.gatherItem, ...TRANSIENT_PICKUPS], guided: true,
+    };
   }
   if (obj.fishItems) {
-    return { preferredKinds: ['fish', ...ALWAYS_ALLOWED], targetItemIds: obj.fishItems, guided: true };
+    return {
+      preferredKinds: ['fish', 'gather', ...ALWAYS_ALLOWED],
+      targetItemIds: [...obj.fishItems, ...TRANSIENT_PICKUPS], guided: true,
+    };
   }
   if (obj.craftRecipe || obj.placeFurniture) {
-    // クラフト・配置はCキー/もちものでする作業。Eの主ヒントは出さない(targetItemIdsが空=採取も対象外)
-    return { preferredKinds: ['gather', ...ALWAYS_ALLOWED], targetItemIds: [], guided: true };
+    // クラフト・配置はCキー/もちものでする作業。Eの主ヒントは出さない
+    // (targetItemIds に ふつうの素材を入れない=採取ノードは対象外)
+    return {
+      preferredKinds: ['gather', ...ALWAYS_ALLOWED],
+      targetItemIds: [...TRANSIENT_PICKUPS], guided: true,
+    };
   }
   return FREE_CONTEXT();
 }

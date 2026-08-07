@@ -126,8 +126,11 @@ describe('ObjectiveInteractionPolicy(目的に合う候補だけを出す)', () 
       selectInteraction([node('rock2', 'stone', 0.5), node('moss6', 'moss', 1.8)], mossCtx())?.id
     ).toBe('node_moss6');
   });
-  it('報告目的中: 採取物を主ヒントにせず、報告相手が優先される', () => {
-    expect(selectInteraction([node('tree1', 'wood', 0.3)], reportCtx())).toBeNull();
+  it('報告目的中: 報告相手が優先される(v11.1: 相手がいなければ採取は出る)', () => {
+    // v11.1 実プレイの苦情「報告しに行く間にアイテムが拾えない」への修正。
+    // 報告は「その相手に会う」ことだけが条件なので、道すがらの採取は塞がない。
+    // 相手が射程にいるあいだは 優先度(npcQuest 10 < gather 30)で かならず会話が勝つ。
+    expect(selectInteraction([node('tree1', 'wood', 0.3)], reportCtx())?.id).toBe('node_tree1');
     expect(
       selectInteraction([node('tree1', 'wood', 0.3), talk('tsumugi', true, 1.7)], reportCtx())?.id
     ).toBe('npc_tsumugi');

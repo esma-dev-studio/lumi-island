@@ -16,7 +16,8 @@ import {
   NPC_HOMES, NPC_HOME_ACT_R, NPC_HOME_BY_ID, NPC_HOME_DOOR_R, npcHomeDoorWorld,
 } from './NpcInteriors';
 import {
-  BOAT_ACT_R, COVE_ACT_R, COVE_DOOR, COVE_RETURN, ISLAND_BOAT_POINT, boatPrompt, lighthousePrompt,
+  BOAT_ACT_R, COVE_ACT_R, COVE_DOOR, COVE_RETURN, COVE_RETURN_R, ISLAND_BOAT_POINT,
+  boatPrompt, lighthousePrompt,
 } from './CoveArea';
 import type { GameScene } from './GameScene';
 
@@ -291,9 +292,13 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     // ——ここを忘れると「目の前に立っているのに話しかけられない」になる(実機で発生した)。
     // NPCSystem.nearest は場所ちがいのNPCを返さないので、島の3人がここに出てくることはない
     pushNpcCandidate(gs, cands, px, pz);
-    // 帰りの桟橋の先: ふねで島へ帰る
+    // 帰りの桟橋の先: ふねで島へ帰る。
+    // 輪だけ大きい(COVE_RETURN_R)のは、見えている小舟のよこに立って押せなかったため
+    // (理由は CoveArea.ts の COVE_RETURN_R のコメント)。
+    // kind='exit' は ObjectiveSystem の ALWAYS_ALLOWED なので、どの誘導中でも隠れない
+    // ——島へ帰る唯一の手段なので、ここを絞ると第2章のとちゅうで詰む。
     const backD = Math.hypot(px - COVE_RETURN.x, pz - COVE_RETURN.z);
-    if (backD < COVE_ACT_R) {
+    if (backD < COVE_RETURN_R) {
       cands.push({
         id: 'cove_return', kind: 'exit', targetId: 'cove',
         priority: PRIORITY.door, distance: backD, enabled: true,
@@ -372,7 +377,11 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
       });
     }
   }
-  // v9 ほりあと(シャベルが要る)
+  // v9 ほりあと(シャベルが要る)。
+  // v11.1: kind='dig' は ObjectiveSystem の ALWAYS_ALLOWED に入ったので、依頼の誘導中でも出る。
+  // ほりあとは日付が変わると別の場所へ移ってしまう「その日かぎり」のものなので、
+  // 依頼のあいだ ずっと ほれないと取り逃しになる(理由は ObjectiveSystem のコメント)。
+  // 優先度 dig=33 は 採取(30)・庭(29)・報告相手のNPC(10)より弱いままなので誘導は横取りしない。
   const dig = gs.island.nearestDig(px, pz);
   if (dig) {
     const hasShovel = hasTool(gs.state, 'shovel');

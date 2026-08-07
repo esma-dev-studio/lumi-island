@@ -247,7 +247,8 @@ describe('第2章3-4: ひかりの貝・ほしくさ(見せるだけ=へらな�
     expect(o.progress).toEqual({ cur: 0, max: 3 });
     const ctx = objectiveActionContext(o);
     expect(ctx.guided).toBe(true);
-    expect(ctx.targetItemIds).toEqual(['lightshell']);
+    // v11.1: 案内している素材+時間で消える拾いもの(ObjectiveSystem の TRANSIENT_PICKUPS)
+    expect(ctx.targetItemIds).toEqual(['lightshell', 'starshard', 'glassfloat']);
   });
 });
 
@@ -328,7 +329,10 @@ describe('第2章6: とうだいの点灯', () => {
     expect(ctx.guided).toBe(true);
     expect(ctx.preferredKinds).toContain('place');
     expect(ctx.preferredKinds).toContain('exit'); // 帰り道は いつでも通す
-    expect(ctx.preferredKinds).not.toContain('gather');
+    // v11.1: 採取は「時間で消える拾いもの」だけ通す(入り江の素材ノードは この段階では出ない)
+    expect(ctx.targetItemIds).toEqual(['starshard', 'glassfloat']);
+    expect(ctx.preferredKinds).not.toContain('fish');
+    expect(ctx.preferredKinds).not.toContain('shop');
   });
 
   it('とびらの案内は 状態で切りかわる(表示とEの動きは1か所で決まる)', () => {

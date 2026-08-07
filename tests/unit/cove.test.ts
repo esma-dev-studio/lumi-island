@@ -11,7 +11,7 @@ import {
   terrainHeight,
 } from '../../src/entities/terrain';
 import {
-  BOAT_ACT_R, COVE_ACT_R, COVE_CIRCLES, COVE_DOOR, COVE_NODES, COVE_RETURN, COVE_SPAWN,
+  BOAT_ACT_R, COVE_ACT_R, COVE_CIRCLES, COVE_DOOR, COVE_NODES, COVE_RETURN, COVE_RETURN_R, COVE_SPAWN,
   ISLAND_BOAT, ISLAND_BOAT_POINT, boatPrompt, coveNightLevel,
 } from '../../src/scenes/CoveArea';
 import { GATHER_RULES } from '../../src/systems/GatherSystem';
@@ -263,7 +263,7 @@ describe('よるの入り江: 素材ノードの配置(決定論)', () => {
       }
       const n = COVE_NODES[i];
       for (const [name, p, r] of [
-        ['帰りの桟橋', COVE_RETURN, COVE_ACT_R],
+        ['帰りの桟橋', COVE_RETURN, COVE_RETURN_R], // v11.1で輪を2.6mに広げた
         ['灯台のとびら', COVE_DOOR, COVE_ACT_R],
         ['着いたときの立ち位置', COVE_SPAWN, COVE_ACT_R],
       ] as const) {
@@ -273,7 +273,8 @@ describe('よるの入り江: 素材ノードの配置(決定論)', () => {
   });
 
   it('帰りの桟橋と灯台のとびらは、Eの輪が重ならない', () => {
-    expect(Math.hypot(COVE_RETURN.x - COVE_DOOR.x, COVE_RETURN.z - COVE_DOOR.z)).toBeGreaterThan(COVE_ACT_R * 2);
+    expect(Math.hypot(COVE_RETURN.x - COVE_DOOR.x, COVE_RETURN.z - COVE_DOOR.z))
+      .toBeGreaterThan(COVE_ACT_R + COVE_RETURN_R);
   });
 
   it('ほしくさは野原(高いところ)・ひかりの貝は砂浜(低いところ)に置いてある', () => {
