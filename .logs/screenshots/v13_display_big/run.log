@@ -1,0 +1,16 @@
+起動: http://localhost:5197
+  [shot] 01_garden_inventory_place_button.png
+お庭の配置: {"gx":-27,"gz":6,"reason":null,"active":"f_aquarium_big","hour":13.191,"fps":59} / ヒント=Eおく Rまわす Escやめる
+  [shot] 02_garden_place_ghost_ok.png
+  [shot] 03_garden_place_ghost_ok_closeup.png (接写)
+花だんの上: {"gx":-27,"gz":9.5,"reason":"はなだんの 上には おけないよ","active":"f_aquarium_big","hour":13.475,"fps":60} / ヒント=はなだんの 上には おけないよ — うごかして ばしょを さがそう Rまわす Escやめる
+  [shot] 04_garden_place_denied_plot.png
+  [shot] 05_garden_place_denied_plot_closeup.png (接写)
+拒否のあと: 家具=0 / もちもの=1
+お庭に置いた: [{"item":"f_aquarium_big","x":-27,"z":6}]
+お庭の水そうのヒント: Eいきものを いれる
+  [shot] 06_garden_display_panel_empty.png
+  [shot] 07_garden_display_panel_full.png
+入れたあと: [["fish","seafish","rarefish"]]
+  [shot] 08_garden_big_aquarium_day.png (接写)
+consoleエラー: 0件

@@ -1,7 +1,7 @@
 // E入力のルーティング: その場で実行できる候補を集め、
 // いまの目的との突き合わせ(ObjectiveInteractionPolicy)→優先度・距離(InteractionResolver)で1つに決める。
 import { POIS } from '../data/island';
-import { ITEMS } from '../data/items';
+import { ITEMS, displayCapacity } from '../data/items';
 import { BUG_CATCH_R, BUG_HINT_R } from '../systems/BugSystem';
 import { hasTool } from '../game/GameState';
 import { questFor } from '../systems/QuestSystem';
@@ -49,7 +49,16 @@ export const HOME_EXIT = { x: -29.9, z: 6.7 };
 function displayCandidate(gs: GameScene, near: PlacedRuntime, px: number, pz: number): InteractionCandidate | null {
   const kind = gs.placement.displayKindOf(near);
   if (kind === null) return null;
-  const content = near.data.content;
+  const contents = gs.placement.contentsOf(near);
+  const cap = displayCapacity(kind);
+  // 1匹だけ入る すいそう・むしかご(v10からのふるまい): 入っていれば Eで そのまま とりだす。
+  // 3びき入る おおきい版: Eは いつでもパネルを開く(1匹ずつ 入れる/とりだす をその場でくり返せる)。
+  const takeNow = cap === 1 && contents.length > 0;
+  const hint = takeNow
+    ? `<kbd>E</kbd>${ITEMS[contents[0]].name}を とりだす`
+    : contents.length >= cap
+      ? '<kbd>E</kbd>いきものを とりだす'
+      : '<kbd>E</kbd>いきものを いれる';
   return {
     id: `disp_${near.data.id}`,
     kind: 'pickup',
@@ -58,11 +67,9 @@ function displayCandidate(gs: GameScene, near: PlacedRuntime, px: number, pz: nu
     priority: PRIORITY.gather + 1,
     distance: Math.hypot(px - near.data.x, pz - near.data.z),
     enabled: true,
-    hint: content
-      ? `<kbd>E</kbd>${ITEMS[content].name}を とりだす`
-      : '<kbd>E</kbd>いきものを いれる',
+    hint,
     run: () => {
-      if (content) gs.placement.takeOut(near);
+      if (takeNow) gs.placement.takeOut(near);
       else gs.openDisplay(near);
     },
   };

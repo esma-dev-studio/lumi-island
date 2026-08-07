@@ -92,9 +92,12 @@ describe('ロカのデータ整合(src/data/npcs.ts)', () => {
     }
     expect(dailyLine(ROKA, Number.NaN)).not.toBeNull(); // 壊れた値でも落ちない
     expect(dailyLine({ ...ROKA, dailyLines: [] }, 3)).toBeNull();
-    // 持っていないNPCはnull(v11第2章で ミナモとノクトには伏線の ひとことが入ったので、
-    // ここは まだ持っていない ツムギで確かめる)
-    expect(dailyLine(NPC_BY_ID.tsumugi, 3)).toBeNull();
+    // ひとことを持っていないNPCはnull。
+    // v13で島の3人ぜんぶが ひとことを持ったので、実在のNPCではなく
+    // 「dailyLines を外した定義」で確かめる(将来だれかに足しても この検査は死なない)
+    const noLines = { ...NPC_BY_ID.tsumugi };
+    delete noLines.dailyLines;
+    expect(dailyLine(noLines, 3)).toBeNull();
   });
 
   it('一人称は「ぼく」。「わたし」「おれ」は使わない', () => {

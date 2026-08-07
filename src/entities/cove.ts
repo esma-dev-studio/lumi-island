@@ -543,6 +543,75 @@ export function makeHorizonSpark(scene: Scene): { mesh: Mesh; mat: StandardMater
   return { mesh, mat };
 }
 
+// ---------------------------------------------------------------------------
+// v13 島から見える「よるの 海上でんしゃ」(イースターエッグ)
+// ---------------------------------------------------------------------------
+/** 車りょうの数(先頭+客車4)。ふやすほど 長い列車に見えるが、頂点も比例して増える */
+const TRAIN_CARS = 5;
+/** 車りょう1つの長さ・すきま(m)。100m先の見え方で決めた値 */
+const TRAIN_CAR_LEN = 3.4;
+const TRAIN_CAR_GAP = 0.9;
+/** 列車ぜんたいの長さ(m)。走る道の長さを決めるのに つかう */
+export const TRAIN_LENGTH = TRAIN_CARS * TRAIN_CAR_LEN + (TRAIN_CARS - 1) * TRAIN_CAR_GAP;
+
+/**
+ * よるの水平線を よこぎる 小さな光の れっしゃ。
+ *
+ * 作りは makeHorizonSpark と まったく同じ流儀にしてある(遠景演出の流儀):
+ *   - メッシュは1つだけ・パーティクルなし・当たり判定なし・影にも入れない。
+ *   - 加算合成 + applyFog=false で、100m先でも 霧に食われずに「あかり」に見える。
+ *   - 走っていないあいだは 呼び出し側が setEnabled(false) にするので 負荷はゼロ。
+ * 形は「うすい 車体の帯」+「点々と ならぶ まどの あかり」の2層。
+ * 汽笛も けむりも 出さない——静かに とおりすぎるのが この演出の ぜんぶ。
+ *
+ * ローカル座標は +X 方向へ のびる(呼び出し側が rotation.y で 走る向きへ 向ける)。
+ * 中心は 列車の まん中。
+ */
+export function makeHorizonTrain(scene: Scene): { mesh: Mesh; mat: StandardMaterial } {
+  const A = A0();
+  const withAlpha = (a: number, build: () => void): void => {
+    const from = A.col.length;
+    build();
+    for (let i = from + 3; i < A.col.length; i += 4) A.col[i] = a;
+  };
+  const half = TRAIN_LENGTH / 2;
+  const step = TRAIN_CAR_LEN + TRAIN_CAR_GAP;
+  for (let c = 0; c < TRAIN_CARS; c++) {
+    const cx = -half + TRAIN_CAR_LEN / 2 + c * step;
+    // 車体(うすい あかりの帯)。1りょうめだけ 少し明るくして「先頭」だと分かるようにする
+    withAlpha(c === 0 ? 0.34 : 0.24, () =>
+      appendBox(A, cx, 0, 0, TRAIN_CAR_LEN, 1.05, 0.9, Color3.FromHexString('#ffd9a0'), 0, 10 + c)
+    );
+    // まどの あかり(車りょうごとに4つ)。点々と ならぶことで「れっしゃ」に見える
+    for (let w = 0; w < 4; w++) {
+      const wx = cx - TRAIN_CAR_LEN / 2 + 0.62 + w * 0.72;
+      withAlpha(1, () =>
+        appendBox(A, wx, 0.12, 0, 0.42, 0.5, 1.02, Color3.FromHexString('#fff2d8'), 0, 30 + c * 4 + w)
+      );
+    }
+  }
+  // 先頭の ヘッドライト(進む向きへ ひとつ)
+  withAlpha(1, () =>
+    appendBox(A, -half - 0.28, -0.05, 0, 0.5, 0.36, 0.36, Color3.FromHexString('#fff6e2'), 0, 90)
+  );
+  const mesh = new Mesh('nightTrain', scene);
+  applyArrays(mesh, A);
+  mesh.hasVertexAlpha = true;
+  const mat = new StandardMaterial('nightTrainMat', scene);
+  mat.diffuseColor = Color3.Black();
+  mat.specularColor = Color3.Black();
+  mat.emissiveColor = Color3.FromHexString('#ffdca8');
+  mat.disableLighting = true;
+  mat.backFaceCulling = false;
+  mat.alphaMode = Constants.ALPHA_ADD; // 暗い海と空の上に「光を足す」(きらめき・ビームと同じ)
+  mat.alpha = 0;
+  mesh.material = mat;
+  mesh.isPickable = false;
+  mesh.alphaIndex = 4;
+  mesh.applyFog = false; // 100m先。霧に飲まれると 灰色の帯になってしまう
+  return { mesh, mat };
+}
+
 /**
  * 入り江の岩(灯台の足もとのがれき・北がわの岩ばた)。
  *

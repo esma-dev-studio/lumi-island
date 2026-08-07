@@ -1,15 +1,20 @@
-// 展示家具(すいそう・むしかご)に いきものを入れる選択パネル。
+// 展示家具(すいそう・むしかご の大小)に いきものを入れる/とりだす パネル。
 //
 // 見た目の言語は他のパネル(もちもの・クラフト・おくりもの)と同じクラスを使い回す。
 // クリックは委譲リスナー1本だけ(GiftUI・CraftUI・InventoryUIと同方針。毎描画のonclick割当てだと
 // 「ボタンは見えるのに押せない」状態になり得る)。キーボードでもタッチでも同じ経路を通る。
 //
 // このパネルは「置いてある家具そのもののメニュー」でもある:
-//   - いきものを1匹えらんで いれる
+//   - いま入っている いきものを 1匹ずつ とりだす
+//   - もちものの いきものを 1匹ずつ いれる(あき が あるあいだ)
 //   - この家具を もちかえる(中身があれば いっしょに もちものへ戻る)
 //   - やめる
-// もちかえるをここに置いているのは、家具に立つと E が「いれる」になるため。
+// もちかえるをここに置いているのは、家具に立つと E が この パネルになるため。
 // パネルにも入口が無いと、水そう・むしかごだけ 置きなおせなくなってしまう。
+//
+// v13: 中身が複数になったので、押しても パネルを閉じない(入れた・出したの結果が
+// その場で見える)。1匹ずつ3回押して 3びき入れる、が いちばん多い遊びかたなので、
+// そのたびに閉じると 3回 開きなおすことになる。
 import type { GameState } from '../game/GameState';
 import { DISPLAY_FURNITURE, ITEMS, type DisplayFurnitureId, type ItemId } from '../data/items';
 import { icon } from './icons';
@@ -24,8 +29,12 @@ export class DisplayUI {
   private el: HTMLElement;
   open = false;
   private furniture: DisplayFurnitureId = 'f_aquarium';
+  /** いま入っている いきものを読む(呼び出し側が 最新の中身を返す) */
+  private getContents: () => readonly ItemId[] = () => [];
   /** いきものを えらんだ(呼び出し側が 消費・保存・見た目の作り直しを受けもつ) */
   onChoose: ((item: ItemId) => void) | null = null;
+  /** 入っている いきものを1匹とりだす(番号は入っている順) */
+  onTake: ((slot: number) => void) | null = null;
   /** この家具を もちかえる */
   onCarry: (() => void) | null = null;
 
@@ -34,7 +43,7 @@ export class DisplayUI {
     this.el.className = 'panel display-panel hidden';
     document.getElementById('ui-root')!.appendChild(this.el);
     this.el.addEventListener('click', (e) => {
-      const t = (e.target as HTMLElement).closest('[data-close], [data-carry], [data-put]') as HTMLElement | null;
+      const t = (e.target as HTMLElement).closest('[data-close], [data-carry], [data-put], [data-take]') as HTMLElement | null;
       if (!t) return;
       if (t.hasAttribute('data-close')) {
         this.close();
@@ -45,15 +54,27 @@ export class DisplayUI {
         this.onCarry?.();
         return;
       }
+      const take = t.dataset.take;
+      if (take !== undefined) {
+        const slot = Number(take);
+        if (Number.isInteger(slot)) this.onTake?.(slot);
+        this.render(); // 中身が減ったので すぐ描きなおす(閉じない)
+        return;
+      }
       const id = t.dataset.put as ItemId | undefined;
       if (!id) return;
-      this.close();
       this.onChoose?.(id);
+      this.render(); // 中身が増えたので すぐ描きなおす(閉じない)
     });
   }
 
-  show(furniture: DisplayFurnitureId): void {
+  /**
+   * パネルを開く。getContents は「いま入っている いきもの」を返す関数
+   * (中身は PlacementSystem が持つので、UIは毎回読みにいく=データと表示がずれない)。
+   */
+  show(furniture: DisplayFurnitureId, getContents: () => readonly ItemId[] = () => []): void {
     this.furniture = furniture;
+    this.getContents = getContents;
     this.open = true;
     this.render();
     this.el.classList.remove('hidden');
@@ -69,6 +90,24 @@ export class DisplayUI {
   private render(): void {
     const s = this.getState();
     const def = DISPLAY_FURNITURE[this.furniture];
+    const contents = [...this.getContents()];
+    const cap = def.capacity;
+    const full = contents.length >= cap;
+    // 1マスの最小幅を決めて列数は画面まかせにする(タッチでは自然に1列になる)
+    const grid = 'grid-template-columns:repeat(auto-fill,minmax(12em,1fr))';
+    const nameStyle = 'min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    // ---- いま入っている いきもの(1匹ずつ とりだせる) ----
+    const inside = contents
+      .map((id, slot) => {
+        const item = ITEMS[id];
+        return `<div class="inv-slot" title="${item.desc}">
+          <span class="inv-ico">${icon(id)}</span>
+          <span class="inv-name" style="${nameStyle}">${item.name}</span>
+          <button class="craft-btn sub" data-take="${slot}" style="white-space:nowrap">とりだす</button>
+        </div>`;
+      })
+      .join('');
+    // ---- もちものから いれる(いっぱいのときは 出さない) ----
     const items = displayableItems(s, this.furniture);
     const slots = items
       .map((id) => {
@@ -76,19 +115,29 @@ export class DisplayUI {
         // 名前・ボタンは折り返さない(もちもの3列の幅だと「サカ/ナ」のように1文字ずつ縦に割れる)
         return `<div class="inv-slot" title="${item.desc}">
           <span class="inv-ico">${icon(id)}</span>
-          <span class="inv-name" style="min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.name}</span>
+          <span class="inv-name" style="${nameStyle}">${item.name}</span>
           <span class="inv-count">×${s.inventory[id] ?? 0}</span>
           <button class="craft-btn sub" data-put="${id}" style="white-space:nowrap">いれる</button>
         </div>`;
       })
       .join('');
-    // 1マスの最小幅を決めて列数は画面まかせにする(タッチでは自然に1列になる)
-    const grid = 'grid-template-columns:repeat(auto-fill,minmax(12em,1fr))';
+    // 「あと何びき入るか」を数で見せる(3びき入る家具で いま何びきか いつでも分かる)
+    const count = cap > 1 ? ` <span class="panel-count">${contents.length} / ${cap}ひき</span>` : '';
+    const insideBlock =
+      contents.length > 0
+        ? `<div class="panel-sub first">いま いる いきもの</div>
+           <div class="inv-grid" style="${grid}">${inside}</div>`
+        : '';
+    const putBlock = full
+      ? `<div class="inv-empty">${def.full}</div>`
+      : `<div class="inv-grid" style="${grid}">${slots || `<div class="inv-empty">${def.empty}</div>`}</div>`;
     this.el.innerHTML = `
-      <div class="panel-title">${def.label}に いきものを いれる
+      <div class="panel-title"><span>${def.label}に いきものを いれる${count}</span>
         <span class="panel-close" data-close>やめる</span>
       </div>
-      <div class="inv-grid" style="${grid}">${slots || `<div class="inv-empty">${def.empty}</div>`}</div>
+      ${insideBlock}
+      ${contents.length > 0 ? '<div class="panel-sub">いれる</div>' : ''}
+      ${putBlock}
       <div class="panel-sub">入れた いきものは いつでも とりだせるよ。
         <button class="craft-btn sub" data-carry style="white-space:nowrap;margin-left:8px">${def.label}を もちかえる</button>
       </div>

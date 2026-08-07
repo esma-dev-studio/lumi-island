@@ -1,0 +1,11 @@
+起動: http://localhost:5199
+家の中: indoor=true / 家具=2
+かべ: {"wall":"wall_bottle","floor":"floor_wood"}
+メッシュ名: ["f_starlantern_gold","f_lighthouse_lantern_night"]
+  [shot] 01_reward_items_home_night.png
+  [shot] 02_reward_items_closeup.png (接写)
+  [shot] 03_reward_items_home_day.png
+  [shot] 04_reward_wall_bottle_closeup.png (接写)
+  [shot] 05_inventory_name_wrap.png
+  [shot] 06_inventory_name_wrap_closeup.png (接写)
+consoleエラー: 0件

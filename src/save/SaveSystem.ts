@@ -2,6 +2,7 @@
 import { newGameState, SAVE_VERSION, type GameState, type PlacedFurniture, type QuestState } from '../game/GameState';
 import {
   ITEMS, TOOLS, RECIPES, DEFAULT_HOME_STYLE, isStyleFor, isPaintColor, isPlaceable,
+  canDisplayIn, displayCapacity, isDisplayFurniture,
   type ItemId, type ToolId,
 } from '../data/items';
 import { QUESTS } from '../data/quests';
@@ -158,8 +159,26 @@ export function load(): GameState | null {
         if (Math.abs(f.x) > 70 || Math.abs(f.z) > 70) continue;
         seenIds.add(f.id);
         const entry: PlacedFurniture = { id: f.id, item: f.item, x: f.x, z: f.z, rotY: f.rotY };
-        // 展示家具の中身(実在ItemIdのみ。不正値は「中身なし」に落とす)
-        if (typeof f.content === 'string' && VALID_ITEMS.has(f.content)) entry.content = f.content as ItemId;
+        // 展示家具の中身。
+        //   v13〜: contents(配列)
+        //   v12まで: content(1匹) → contents=[content] へ移して、古い項目は残さない
+        // どちらも「その家具に ほんとうに入れられるものか」「入る数をこえていないか」を見る
+        // (家具を持ちかえたセーブ・壊れた値でも、絵とデータが食いちがわない)。
+        const rawContents: unknown[] = Array.isArray(f.contents)
+          ? f.contents
+          : typeof f.content === 'string'
+            ? [f.content]
+            : [];
+        if (rawContents.length > 0 && isDisplayFurniture(f.item)) {
+          const cap = displayCapacity(f.item);
+          const list: ItemId[] = [];
+          for (const c of rawContents) {
+            if (list.length >= cap) break;
+            if (typeof c !== 'string' || !VALID_ITEMS.has(c) || !canDisplayIn(f.item, c)) continue;
+            list.push(c as ItemId);
+          }
+          if (list.length > 0) entry.contents = list;
+        }
         // v12 いろみずで ぬった色。PAINT_COLORS にある色だけ通す。
         // 知らない色・壊れた値("red"・数値・#付けわすれ)は「色なし」= もとの色にもどす
         // (codex・homeStyle と同じ「知らない値は捨てる」方針)

@@ -92,8 +92,12 @@ describe('データ: すいそう(f_aquarium)と展示の表', () => {
     expect(validateDiscoveryData()).toEqual([]);
   });
 
-  it('展示家具は すいそう(魚4種)と むしかご(虫6種)の2つだけ', () => {
-    expect(Object.keys(DISPLAY_FURNITURE).sort()).toEqual(['f_aquarium', 'f_bugcage']);
+  it('展示家具は すいそう(魚4種)と むしかご(虫6種)、それぞれ小・大の4つ', () => {
+    // v13で「おおきい版」を足した。小さい版のふるまい(1ぴきだけ入る)は変えていない
+    expect(Object.keys(DISPLAY_FURNITURE).sort())
+      .toEqual(['f_aquarium', 'f_aquarium_big', 'f_bugcage', 'f_bugcage_big']);
+    expect(DISPLAY_FURNITURE.f_aquarium.capacity).toBe(1);
+    expect(DISPLAY_FURNITURE.f_bugcage.capacity).toBe(1);
     expect([...DISPLAY_FURNITURE.f_aquarium.accepts]).toEqual(['fish', 'nightfish', 'seafish', 'rarefish']);
     expect([...DISPLAY_FURNITURE.f_bugcage.accepts].sort()).toEqual([...BUG_IDS].sort());
     expect(isDisplayFurniture('f_aquarium')).toBe(true);
@@ -123,11 +127,11 @@ describe('データ: すいそう(f_aquarium)と展示の表', () => {
 });
 
 describe('出し入れ(PlacementSystem)', () => {
-  it('いれる: もちものが1つ減り、家具のcontentに入る(実績カウンタも増える)', () => {
+  it('いれる: もちものが1つ減り、家具のcontentsに入る(実績カウンタも増える)', () => {
     const { s, ps, at } = withPlaced('f_aquarium');
     invAdd(s, 'fish', 1);
     expect(ps.putIn(ps.nearest(...at)!, 'fish')).toBe(true);
-    expect(s.furniture[0].content).toBe('fish');
+    expect(s.furniture[0].contents).toEqual(['fish']);
     expect(invCount(s, 'fish')).toBe(0);
     expect(s.stats.display_fish).toBe(1);
   });
@@ -137,7 +141,7 @@ describe('出し入れ(PlacementSystem)', () => {
     expect(ps.putIn(ps.nearest(...at)!, 'b_shiro')).toBe(false); // 虫は すいそうに入らない
     invAdd(s, 'nightfish', 0);
     expect(ps.putIn(ps.nearest(...at)!, 'nightfish')).toBe(false); // 持っていない
-    expect(s.furniture[0].content).toBeUndefined();
+    expect(s.furniture[0].contents).toBeUndefined();
     expect(s.stats.display_fish).toBeUndefined();
     // 展示家具でない家具には入れられない
     const other = withPlaced('f_table');
@@ -147,16 +151,16 @@ describe('出し入れ(PlacementSystem)', () => {
     expect(invCount(other.s, 'fish')).toBe(1);
   });
 
-  it('すでに入っているときは、いれかえずに いったん とりだす', () => {
+  it('すでに入っているときは、いれかえずに いったん とりだす(1ぴきだけ入る家具)', () => {
     const { s, ps, at } = withPlaced('f_aquarium', 'fish');
     invAdd(s, 'seafish', 1);
     expect(ps.putIn(ps.nearest(...at)!, 'seafish')).toBe(false);
-    expect(s.furniture[0].content).toBe('fish');
+    expect(ps.contentsOf(ps.nearest(...at)!)).toEqual(['fish']);
     expect(ps.takeOut(ps.nearest(...at)!)).toBe('fish');
-    expect(s.furniture[0].content).toBeUndefined();
+    expect(s.furniture[0].contents).toBeUndefined();
     expect(invCount(s, 'fish')).toBe(1);
     expect(ps.putIn(ps.nearest(...at)!, 'seafish')).toBe(true);
-    expect(s.furniture[0].content).toBe('seafish');
+    expect(s.furniture[0].contents).toEqual(['seafish']);
   });
 
   it('とりだす: 中身が無ければ null(もちものは変わらない)', () => {

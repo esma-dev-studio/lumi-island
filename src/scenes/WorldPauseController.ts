@@ -16,7 +16,8 @@ export class WorldPauseController {
     this.uiOpen =
       gs.invUI.open || gs.craftUI.open || gs.shopUI.open || gs.questLog.open ||
       gs.codexUI.open || gs.dialogue.open ||
-      gs.displayUI.open; // 展示家具(すいそう・むしかご)の選択パネルも操作をふさぐ
+      gs.displayUI.open || // 展示家具(すいそう・むしかご)の選択パネルも操作をふさぐ
+      gs.letterUI.open; // v13 手紙を読んでいるあいだも 世界を止める(読みおわるまで 波も時計も待つ)
     // 会話・モーダルUI・見せ場・就寝中はゲーム内時間とNPCを完全に止める(P0-5)
     this.frozen = this.uiOpen || gs.questComplete.open || gs.seq.active;
   }

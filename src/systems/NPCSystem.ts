@@ -9,6 +9,7 @@ import {
 import type { VisitPraiseFacts } from '../data/npcs';
 import { GATHER_NODES } from '../data/island';
 import type { GameState } from '../game/GameState';
+import { displayContents } from '../game/GameState';
 import type { IslandScene } from '../scenes/IslandScene';
 import { vnoise } from '../entities/terrain';
 import { findDryStand, waterClearance, SHORE_CLEAR } from '../scenes/DialogueCameraPlanner';
@@ -59,7 +60,8 @@ export function visitPraiseFacts(s: GameState): VisitPraiseFacts {
   const furniture = Array.isArray(s.furniture) ? s.furniture : [];
   const bloom = (s.stats ?? {}).garden_bloom;
   return {
-    display: furniture.some((f) => typeof f.content === 'string'),
+    // v13 中身は contents(配列)。旧セーブの content も displayContents が読む
+    display: furniture.some((f) => displayContents(f).length > 0),
     many: furniture.length >= 10,
     bloom: typeof bloom === 'number' && bloom >= 1,
   };

@@ -648,7 +648,9 @@ describe('画面(くみあわせタブ・ずかん・もちもの)', () => {
     codex.toggle();
     const el = document.querySelector('.codex-panel') as HTMLElement;
     const grids = el.querySelectorAll('.codex-grid');
-    expect(grids.length, 'あつめたもの と くみあわせ の2つ').toBe(2);
+    // v13で「てがみ」の わくが 3つめに ふえた(ならびは あつめたもの → くみあわせ → てがみ)。
+    // くみあわせは これまでどおり grids[1]
+    expect(grids.length, 'あつめたもの・くみあわせ・てがみ の3つ').toBe(3);
     const comboCells = [...grids[1].querySelectorAll('.codex-cell')];
     expect(comboCells.length).toBe(COMBOS.length);
     expect(comboCells.every((c) => c.classList.contains('unknown'))).toBe(true);

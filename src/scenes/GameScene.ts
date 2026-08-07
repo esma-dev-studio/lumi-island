@@ -34,6 +34,18 @@ import { TutorialSystem } from '../systems/TutorialSystem';
 import {
   LIGHTHOUSE_LIT_KEY, evaluate as evaluateAchievements, statCount,
 } from '../systems/AchievementSystem';
+import {
+  grantAchievementRewards, rewardIcon, rewardLabel, validateAchievementRewards,
+  type GrantedReward,
+} from '../systems/AchievementRewards';
+import {
+  COVE_VISIT_KEY, RAINBOW_SEEN_KEY, STYLE_CHANGE_KEY, WALK_M_KEY,
+  evaluateBadges, validateBadges,
+} from '../systems/BadgeSystem';
+import type { BadgeDef } from '../data/badges';
+import { BOTTLE_REACH, BOTTLE_TOTAL_KEY, letterOfDay, markLetterRead } from '../systems/BottleSystem';
+import { NIGHT_TRAIN_KEY } from '../systems/NightTrainSystem';
+import { LETTER_BY_ID, validateLetterData } from '../data/letters';
 import { resetNpcDaily, validateGiftData } from '../systems/GiftSystem';
 import {
   COVE_LIGHTHOUSE_POI, COVE_RETURN_POI, ISLAND_BOAT_POI, currentObjective, withAreaTravel, type Objective,
@@ -54,6 +66,7 @@ import { ShopUI } from '../ui/ShopUI';
 import { DialogueUI } from '../ui/DialogueUI';
 import { QuestLogUI } from '../ui/QuestLogUI';
 import { CodexUI } from '../ui/CodexUI';
+import { LetterUI } from '../ui/LetterUI';
 import { QuestCompleteUI } from '../ui/QuestCompleteUI';
 import { PauseMenu } from '../ui/PauseMenu';
 import { TouchControls } from '../ui/TouchControls';
@@ -70,6 +83,13 @@ import { installLumiDebugApi } from '../debug/LumiDebugApi';
 const FORCE_WEATHER: Record<string, Weather> = {
   rain: 'rainy', rainy: 'rainy', cloudy: 'cloudy', cloud: 'cloudy', sunny: 'sunny', sun: 'sunny',
 };
+
+/**
+ * v14 「あるいた ながさ」で1フレームぶんとして 数える きょりの上限(m)。
+ * これより大きい動きは 歩きではなく テレポート(部屋・入り江への出入り、
+ * スタック脱出、セーブからの復帰)なので数えない。
+ */
+const WALK_JUMP_MAX = 1.5;
 
 export class GameScene {
   island: IslandScene;
@@ -103,6 +123,8 @@ export class GameScene {
   dialogue!: DialogueUI;
   questLog!: QuestLogUI;
   codexUI!: CodexUI;
+  /** v13 メッセージボトルの手紙(ずかんからの読み返しも ここを通る) */
+  letterUI!: LetterUI;
   questComplete!: QuestCompleteUI;
   pauseMenu!: PauseMenu;
   touch!: TouchControls;
@@ -136,7 +158,17 @@ export class GameScene {
   private rainbowToldToday = false; // 虹の案内トーストを1回だけ出す(次の雨でリセット)
   seq!: SequenceDirector;
   private occAcc = 0;
-  private achAcc = 0; // じっせき判定のスロットル(1秒に1回)
+  private achAcc = 0; // じっせき・バッジ判定のスロットル(1秒に1回)
+  /**
+   * v14 あるいた ながさ(m)の はしたと、前のフレームの立ち位置。
+   * 1m たまるごとに stats へ足す(毎フレームは 小数の たし算だけ)。
+   * 部屋・入り江へのテレポートは 1フレームで何十mも動くので、
+   * とびが大きいときは 数えない(WALK_JUMP_MAX)。
+   */
+  private walkAcc = 0;
+  private walkPrev: { x: number; z: number } | null = null;
+  /** v13 いまの1本の でんしゃを もう「見た」と数えたか(1回の走行で1回だけ数える) */
+  private trainSeenThisRun = false;
   lastObjective: Objective | null = null; // 回帰ボット・デバッグAPIが読む
   /** 点灯の見せ場の あとに出す達成バナーの中身(レンズを つけた瞬間に確定させる) */
   private lighthouseRewardLines: string[] = [];
@@ -158,7 +190,7 @@ export class GameScene {
     return (
       this.invUI.open || this.craftUI.open || this.shopUI.open ||
       this.questLog.open || this.codexUI.open || this.dialogue.open || this.questComplete.open ||
-      this.displayUI.open || this.paintUI.open
+      this.displayUI.open || this.paintUI.open || this.letterUI.open
     );
   }
 
@@ -197,6 +229,13 @@ export class GameScene {
     this.dialogue = new DialogueUI();
     this.questLog = new QuestLogUI(() => this.state);
     this.codexUI = new CodexUI(() => this.state);
+    // ずかんより あとに作る: DOMの ならび順が そのまま かさなり順になるので、
+    // ずかんを開いたまま 手紙を ひらいても 手紙が 上に来る(z-indexは style.css にも入れてある)
+    this.letterUI = new LetterUI();
+    this.codexUI.onReadLetter = (id) => {
+      const def = LETTER_BY_ID[id];
+      if (def) this.letterUI.show(def);
+    };
     this.questComplete = new QuestCompleteUI();
     this.pauseMenu = new PauseMenu();
     this.tutorial = new TutorialSystem(this.state);
@@ -261,6 +300,7 @@ export class GameScene {
     this.invUI.onUse = (item) => {
       if (!this.indoor || !applyHomeStyle(this.state, item)) return;
       this.island.home.applyStyle(this.state.homeStyle);
+      statAdd(this.state, STYLE_CHANGE_KEY); // v14 バッジ用(はりかえた回数)
       toast(`${ITEMS[item].name}に かえた`, item);
       sfx('place');
       save(this.state);
@@ -348,11 +388,39 @@ export class GameScene {
     } else {
       this.camCtl.snapTo(this.player.x, this.player.y, this.player.z);
     }
+    // v13 じっせきの ごほうびの さかのぼり配布。
+    // 「達成ずみ かつ まだ配っていない」ぶんを ここで1回だけ配る。stats の印で1回に
+    // なっているので、v13より前のセーブでも 今後のセーブでも 二重には配られない。
+    // トーストは 読み込み直後に出しても じゃまにならない数(4件)に しぼってある。
+    // 受けとったら すぐ保存する(自動セーブ(20秒)を待つあいだに閉じても なくならない)
+    const backfilled = grantAchievementRewards(this.state);
+    if (backfilled.length > 0) {
+      this.announceRewards(backfilled);
+      save(this.state);
+    }
+    // v14 バッジの さかのぼり一括取得。
+    // 判定は「いまの状態が 条件を みたしているか」だけなので、ここで1回まわせば
+    // これまでの遊びぶんが まとめて付く。**トーストは1枚だけ**にして、
+    // 読みこみ直後の画面を バッジの通知で うめつくさない
+    // (1つずつのトーストは、このあと 遊びながら 取ったときに出る)。
+    const gotBadges = evaluateBadges(this.state);
+    if (gotBadges.length > 0) {
+      toast(
+        gotBadges.length === 1
+          ? `バッジ「${gotBadges[0].name}」を ゲット! ずかんで 見てみよう`
+          : `バッジを ${gotBadges.length}こ ゲット! ずかんで 見てみよう`,
+        'lumina'
+      );
+      save(this.state);
+    }
     window.addEventListener('beforeunload', () => save(this.state));
     for (const p of validateItemData()) console.warn('[data]', p);
     for (const p of validateGiftData()) console.warn('[data]', p);
     for (const p of validateComboData()) console.warn('[data]', p);
     for (const p of validateCookingData()) console.warn('[data]', p);
+    for (const p of validateLetterData()) console.warn('[data]', p);
+    for (const p of validateAchievementRewards()) console.warn('[data]', p);
+    for (const p of validateBadges()) console.warn('[data]', p);
     this.inputRouter.attach();
     this.touch.attach();
     if (this.opts.debug) installLumiDebugApi(this); // 決定的テスト用のAPI(実プレイ検証はデバッグなしで行う)
@@ -424,25 +492,76 @@ export class GameScene {
     this.tutorial.update(dt, this.player.moving, obj, progressKey, dist);
   }
 
-  // ---------- カタツムリ(雨の日だけ) ----------
+  // ---------- 地面の ひろいもの(雨のカタツムリ・v13 メッセージボトル) ----------
   /**
-   * E入力のルーティング。カタツムリは「ほかに何もできない場所」でだけ拾える形にして、
+   * E入力のルーティング。カタツムリと メッセージボトルは
+   * 「ほかに何もできない場所」でだけ拾える形にして、
    * 既存の候補(採取・会話・釣り・店・ドア)を横取りしない構造にする。
-   * 出る場所は ほかの候補から5m以上はなしてある(tests/unit/weather.test.ts が機械検査)ので、
-   * 手のとどく1m以内にカタツムリがいるとき、ほかの候補はそもそも射程に入らない
-   * =「見えているのに拾えない」も起きない。表示するヒントとEで動く処理は必ずここで一致する。
+   *
+   * どちらも 出る場所を ほかの候補から じゅうぶん はなしてある
+   * (カタツムリ5m以上=tests/unit/weather.test.ts / ボトル4.5m以上・虫の予告からは6m以上=
+   *  tests/unit/bottle.test.ts が機械検査)ので、手のとどく所に あるとき
+   * ほかの候補はそもそも射程に入らない =「見えているのに拾えない」も起きない。
+   * 表示するヒントとEで動く処理は 必ずここで一致する。
+   *
+   * どちらも「そのとき その場でしか手に入らないもの」なので、依頼の誘導中でも拾える
+   * (ObjectiveSystem の TRANSIENT_PICKUPS と同じ考え方。候補づくりに乗せず、
+   *  ほかに何も出ていないときのフォールバックにしてあるので、誘導は1ミリも ぼやけない)。
    */
-  private routeWithSnail(uiOpen: boolean): string {
+  private routeWithPickups(uiOpen: boolean): string {
     const want = this.wantInteract;
-    const snail =
+    // v13 手紙が ひらいているあいだの E(タッチの丸ボタン)は「とじる」。
+    // 会話の「つぎへ/おわる」と同じ感覚にそろえ、押して無反応の画面を作らない。
+    // 自動テスト・回帰ボットが うっかり 手紙を ひらいても、Eだけで 抜け出せる
+    // (世界が凍っているあいだ プレイヤーは動けないので、逃げ道が1つも無いと そこで止まる)。
+    if (this.letterUI.open) {
+      this.wantInteract = false;
+      if (want) this.letterUI.close();
+      return '';
+    }
+    const canPickGround =
       !uiOpen && !this.indoor && !this.inCove && this.npcHome === null && !this.seq.active && !this.inter.busy &&
-      !this.fishing.locksPlayer && !this.placement.active
-        ? this.weather.snailWithinReach(this.player.x, this.player.z)
-        : null;
+      !this.fishing.locksPlayer && !this.placement.active;
+    const snail = canPickGround ? this.weather.snailWithinReach(this.player.x, this.player.z) : null;
+    const bottle = canPickGround ? this.island.nearestBottle(this.player.x, this.player.z, BOTTLE_REACH) : null;
     const hint = routeInteraction(this, uiOpen); // Eはここで消費される(他候補があればそれが動く)
-    if (!snail || hint) return hint;
+    if (hint) return hint;
+    // ボトルを先に見る(2〜3日に1本しか流れつかない=取り逃しの もったいなさが大きい)
+    if (bottle) {
+      if (want) this.pickBottle(bottle.x, bottle.z);
+      return '<kbd>E</kbd>びんを ひろう';
+    }
+    if (!snail) return '';
     if (want) this.pickSnail(snail.spot);
     return '<kbd>E</kbd>カタツムリをひろう';
+  }
+
+  /**
+   * v13 メッセージボトルを ひろう: 手紙を ひらいて、ずかんに のこす。
+   * もちものは 増えない(手に入るのは 手紙そのもの)。
+   * 中身は 日づけだけで決まる(src/systems/BottleSystem.ts letterOfDay)ので、
+   * 同じセーブを読み直しても 同じ手紙が入っている。
+   */
+  private pickBottle(x: number, z: number): void {
+    const letter = letterOfDay(this.island.time.day);
+    this.island.takeBottle();
+    const first = markLetterRead(this.state, letter.id);
+    statAdd(this.state, BOTTLE_TOTAL_KEY);
+    this.player.face(x, z);
+    const y = this.island.groundY(x, z);
+    burst(x, y + 0.3, z, 'splash', 12);
+    flyItem(x, y + 0.2, z);
+    // 音は 手紙UI(LetterUI.show)の1つだけにする。ここでも鳴らすと同じ瞬間に2つ重なる
+    this.playerView.play('pickup', {
+      onEnd: () => {
+        if (!this.player.moving) this.playerView.play('idle');
+      },
+    });
+    this.letterUI.show(
+      letter,
+      first ? 'びんの 中に、まかれた 手紙が 入っていた。' : 'まえに 読んだ 手紙と 同じものだった。'
+    );
+    save(this.state);
   }
 
   /** カタツムリを拾う: ずかんに記録し、その雨のあいだ同じ場所には出さない */
@@ -582,10 +701,15 @@ export class GameScene {
     this.displayUI.onChoose = (item) => {
       this.placement.putIn(p, item);
     };
+    this.displayUI.onTake = (slot) => {
+      this.placement.takeOut(p, slot);
+    };
     this.displayUI.onCarry = () => {
       this.placement.pickUp(p);
     };
-    this.displayUI.show(kind);
+    // 中身は PlacementSystem が持つので、パネルは描くたびに読みにいく
+    // (「入れたのに 画面の数が古いまま」が構造的に起きない)
+    this.displayUI.show(kind, () => this.placement.contentsOf(p));
   }
 
   // ---------- v12 いろみず(おいてある家具に 色を ぬる) ----------
@@ -604,20 +728,98 @@ export class GameScene {
     this.paintUI.show(p.data.item, p.data.color);
   }
 
-  // ---------- じっせき ----------
+  // ---------- じっせき・バッジ ----------
   /**
    * 達成判定(1秒に1回)。達成の瞬間だけ、小さくお祝いする
    * (トースト+効果音。同時に複数達成しても音は1回)。
+   * v13: 達成したものには その場で ごほうびが つく。
+   * v14: 同じ1秒の刻みで バッジも判定する(判定はどちらも 純関数で軽い)。
    */
   private updateAchievements(dt: number): void {
     this.achAcc += dt;
     if (this.achAcc < 1) return;
     this.achAcc = 0;
     const unlocked = evaluateAchievements(this.state);
-    if (unlocked.length === 0) return;
+    const badges = evaluateBadges(this.state);
+    if (unlocked.length === 0 && badges.length === 0) return;
     for (const a of unlocked) toast(`じっせき たっせい! ${a.name}`, a.icon);
+    this.announceRewards(grantAchievementRewards(this.state));
+    this.announceBadges(badges);
     sfx('quest');
     save(this.state); // 達成の記録を取りこぼさない
+  }
+
+  /**
+   * v14 バッジのお知らせ(じっせきの ごほうびと まったく同じ流儀)。
+   *
+   * トーストは積みすぎると 画面が うまるので3件まで。
+   * 同時に たくさん取れたときは、あとを1行に まとめる
+   * (ロード直後の さかのぼり一括は announceBadgeBackfill が1枚だけ出す)。
+   */
+  private announceBadges(badges: BadgeDef[]): void {
+    if (badges.length === 0) return;
+    const shown = badges.slice(0, 3);
+    for (const b of shown) toast(`バッジ: ${b.name}`, b.pict);
+    if (badges.length > shown.length) {
+      toast(`ほかにも ${badges.length - shown.length}この バッジを ゲット!`, 'lumina');
+    }
+  }
+
+  /**
+   * v14 あるいた ながさ(バッジ用)。
+   *
+   * 毎フレーム 前の位置との きょりを たして、1mごとに stats へ うつす。
+   * 部屋・入り江・スタック脱出などの「1フレームで大きく飛ぶ」移動は数えない
+   * (走っても 1フレームは 0.25秒×走る速さ=1.3m ほどなので、1.5mで切れば
+   *  ふつうの歩きは1回も こぼさない)。
+   */
+  private accumWalk(): void {
+    const x = this.player.x;
+    const z = this.player.z;
+    if (this.walkPrev) {
+      const d = Math.hypot(x - this.walkPrev.x, z - this.walkPrev.z);
+      if (d < WALK_JUMP_MAX) this.walkAcc += d;
+    }
+    this.walkPrev = { x, z };
+    if (this.walkAcc >= 1) {
+      const m = Math.floor(this.walkAcc);
+      this.walkAcc -= m;
+      statAdd(this.state, WALK_M_KEY, m);
+    }
+  }
+
+  /** ごほうびを知らせる(トーストは 積みすぎないよう 4件まで。あとは まとめて1行) */
+  private announceRewards(granted: GrantedReward[]): void {
+    if (granted.length === 0) return;
+    const shown = granted.slice(0, 4);
+    for (const g of shown) toast(`ごほうび: ${rewardLabel(g.reward)}(${g.def.name})`, rewardIcon(g.reward));
+    if (granted.length > shown.length) {
+      toast(`ほかにも ${granted.length - shown.length}この ごほうびが とどいた!`, 'lumina');
+    }
+    this.hud.setLumina(this.state.lumina);
+  }
+
+  /**
+   * v13 よるの 海上でんしゃ。走りはじめた瞬間に1回だけ お知らせして、
+   * じっせき「よるの でんしゃを 見た」のカウンタを立てる。
+   *
+   * 数えるのは「島の そとに立っていて 実際に見える場面」だけ:
+   * 室内・よその家・入り江にいるあいだは 走っていても 見えないので数えない
+   * (見ていないものを「見た」ことにしない)。
+   */
+  private updateNightTrain(): void {
+    const running = this.island.nightTrainRunning;
+    const visible = running && !this.indoor && !this.inCove && this.npcHome === null;
+    if (visible && !this.trainSeenThisRun) {
+      this.trainSeenThisRun = true;
+      if (statCount(this.state, NIGHT_TRAIN_KEY) < 1) {
+        statAdd(this.state, NIGHT_TRAIN_KEY);
+        toast('うみの むこうを、あかりが ゆっくり とおっていく……', 'f_starlantern');
+        sfx('ui');
+        save(this.state);
+      }
+    }
+    if (!running) this.trainSeenThisRun = false;
   }
 
   // ---------- 自宅の出入り ----------
@@ -757,6 +959,7 @@ export class GameScene {
   applyCove(inCove: boolean): void {
     this.inCove = inCove;
     this.state.flags.in_cove = inCove;
+    if (inCove) statAdd(this.state, COVE_VISIT_KEY); // v14 バッジ用(入り江へ わたった回数)
     this.island.cove.setActive(inCove);
     this.npcs.setArea(inCove ? 'cove' : 'island'); // 島の人は入り江に、ロカは島に出てこない
     this.restoreAllOcclusionImmediately(); // 半透明のまま画がすり替わらないように
@@ -901,6 +1104,7 @@ export class GameScene {
         setCookGlow(this.cooking.has('glow'));
         this.hud.setEffects(this.cooking.active());
         this.player.update(dt, this.input);
+        this.accumWalk(); // v14 バッジ用(あるいた ながさ)。動いたぶんの たし算だけ
         this.placement.update(this.player);
         updateEffects(dt, this.player.x, this.player.y, this.player.z);
         // 天気(日付から決まる)。空・光の寒色、雨脚・水たまり・虹・カタツムリの見た目、雨音をあわせる。
@@ -919,11 +1123,12 @@ export class GameScene {
         // 虹は見おろしカメラだと画面に入らないので、出た瞬間に1回だけ「見上げるあそび」へ誘う
         if (wx.rainbow > 0.05 && !this.rainbowToldToday && !sheltered) {
           this.rainbowToldToday = true;
+          statAdd(this.state, RAINBOW_SEEN_KEY); // v14 バッジ用(にじが 実際に見える場面だけ数える)
           toast('あめが あがって にじが でた! カメラを うごかして そらを さがしてみよう', 'lumina');
         }
         if (wx.rainbow <= 0.001 && this.rainbowToldToday && wx.rain > 0.5) this.rainbowToldToday = false;
         this.seq.update(dt);
-        const hint = this.routeWithSnail(uiOpen);
+        const hint = this.routeWithPickups(uiOpen);
         this.shownHint = uiOpen || this.pauseMenu.open ? '' : hint;
         this.hud.setHint(this.shownHint);
         this.updateObjective(dt);
@@ -941,6 +1146,7 @@ export class GameScene {
           this.tutorial.onDisplayHint();
         }
         this.updateAchievements(dt);
+        this.updateNightTrain(); // v13 よるの 海上でんしゃを 見た瞬間の記録
         this.saveTimer += dt;
         if (this.saveTimer > 20) {
           this.saveTimer = 0;
@@ -973,7 +1179,7 @@ export class GameScene {
       panelOpen:
         this.invUI.open || this.craftUI.open || this.shopUI.open ||
         this.questLog.open || this.codexUI.open || this.pauseMenu.open || this.displayUI.open ||
-        this.paintUI.open,
+        this.paintUI.open || this.letterUI.open,
     });
     this.scene.render();
   }

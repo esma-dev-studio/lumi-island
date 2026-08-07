@@ -7,6 +7,7 @@
 // 実績のためだけの新しいセーブ項目は増やさない。
 import type { GameState } from '../game/GameState';
 import { BUG_IDS } from './BugSystem';
+import { NIGHT_TRAIN_KEY } from './NightTrainSystem';
 
 /** 達成の記録に使う stats のキーの接頭辞 */
 export const ACH_PREFIX = 'ach_';
@@ -57,7 +58,7 @@ export function statCount(s: GameState, key: string): number {
 const HOME_AREA = { minX: 48.6, maxX: 61.4, minZ: -60.9, maxZ: -51.1 } as const;
 
 /** 置いてある家具(壊れた古い状態でも空配列であつかう) */
-function placedFurniture(s: GameState): { item: string; x: number; z: number; content?: string }[] {
+function placedFurniture(s: GameState): { item: string; x: number; z: number; contents?: readonly string[]; content?: string }[] {
   return Array.isArray(s.furniture) ? s.furniture : [];
 }
 
@@ -70,9 +71,34 @@ export function indoorFurnitureCount(s: GameState): number {
   ).length;
 }
 
+/**
+ * 展示家具の中身の数を読む(v13の contents。v12までの content も1件として読む)。
+ * GameState.displayContents と同じ考え方だが、ここは「純ロジックのまま」でいたいので
+ * ItemId 型に依存しない形で持つ(数えるのに種類は要らない)。
+ */
+function contentCount(f: { contents?: readonly string[]; content?: string }): number {
+  if (Array.isArray(f.contents)) return f.contents.length;
+  return typeof f.content === 'string' ? 1 : 0;
+}
+
 /** 中身の入っている むしかごの数(実績 a_cage3 が読む。同時に置いてある数を直接数える) */
 export function filledBugCageCount(s: GameState): number {
-  return placedFurniture(s).filter((f) => f.item === 'f_bugcage' && typeof f.content === 'string').length;
+  return placedFurniture(s).filter((f) => f.item === 'f_bugcage' && contentCount(f) > 0).length;
+}
+
+/**
+ * v13 その家具1つに いま入っている いきものの、いちばん多い数
+ * (実績「おおきな すいそう/むしかごが まんいん」が読む)。
+ * 累計ではなく「いま同時に入っている数」なので、とりだすと また未達成にもどる進捗になる
+ * (a_cage3 と同じ「ならべて見せる」たぐいの実績)。
+ */
+export function maxDisplayFilled(s: GameState, item: string): number {
+  let best = 0;
+  for (const f of placedFurniture(s)) {
+    if (f.item !== item) continue;
+    best = Math.max(best, contentCount(f));
+  }
+  return best;
 }
 
 /**
@@ -180,6 +206,18 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     id: 'a_cage3', name: 'むしはくぶつかん', desc: '虫の入った むしかごを 3つ ならべよう',
     target: 3, icon: 'f_bugcage', progress: filledBugCageCount,
   },
+  // ---- v13 おおきい版(3びき入る すいそう・むしかご)を いっぱいにする ----
+  // 数えるのは「いま その家具1つに入っている数」なので、とりだすと進捗も もどる。
+  // 作りかたは 小さい版に1ぴき入れると ひらめく(DISPLAY_FURNITURE.upgrade)ので、
+  // この2つは「すいそう・むしかごで遊んだ子」への次の目標になる
+  {
+    id: 'a_bigaqua3', name: 'おおきな すいそうが まんいん', desc: 'おおきな すいそうに 魚を 3びき いれよう',
+    target: 3, icon: 'f_aquarium_big', progress: (s) => maxDisplayFilled(s, 'f_aquarium_big'),
+  },
+  {
+    id: 'a_bigcage3', name: 'おおきな むしかごが まんいん', desc: 'おおきな むしかごに 虫を 3びき いれよう',
+    target: 3, icon: 'f_bugcage_big', progress: (s) => maxDisplayFilled(s, 'f_bugcage_big'),
+  },
   {
     id: 'a_garden_bloom', name: 'まんかいのにわ', desc: 'にわの はなだんを まんかいに しよう',
     target: 1, icon: 'f_flowerbed', progress: (s) => statCount(s, 'garden_bloom'),
@@ -206,6 +244,15 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   {
     id: 'a_home_visit3', name: 'みんなの おうち', desc: '島の3人の家 ぜんぶに おじゃましよう',
     target: 3, icon: 'f_dishrack', progress: npcHomeVisitCount,
+  },
+  // ---- v13 よるの 海上でんしゃ(イースターエッグ) ----
+  // とうだいが ともったあとの 2日に1回・21時ごろにしか 走らないので、
+  // 未達成欄の desc は「いつ・どこを 見ればよいか」だけを そっと 教える
+  // (「2日に1回」「21時」まで書くと 答え合わせになって、見つけた ときの おどろきが消える)。
+  {
+    id: 'a_night_train', name: 'よるの でんしゃを 見た',
+    desc: 'とうだいが ともった よる、うみの ずっと むこうを ながめてみよう',
+    target: 1, icon: 'f_starlantern', progress: (s) => statCount(s, NIGHT_TRAIN_KEY),
   },
   {
     id: 'a_all_quests', name: 'おねがいマスター', desc: '島のみんなの おねがいを 5つ かなえよう',

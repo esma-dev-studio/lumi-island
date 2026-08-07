@@ -194,16 +194,34 @@ body { font-family: var(--font); color: var(--ink); }
 .panel-close { font-size: 0.74rem; font-weight: 700; color: var(--ink-soft); cursor: pointer; border: 1px solid var(--line); border-radius: 4px; padding: 2px 8px; }
 .panel-close:hover { border-color: var(--amber); color: var(--amber); }
 .panel-sub { font-weight: 700; font-size: 0.84rem; color: var(--ink-soft); margin: 12px 0 6px; border-top: 1px solid var(--line); padding-top: 10px; }
+/* v13 見出しの横にそえる数(おおきなすいそう・むしかごの「2 / 3ひき」)。見出しより弱く見せる */
+.panel-count { font-weight: 700; font-size: 0.8rem; color: var(--ink-soft); letter-spacing: 0; }
 
 /* ---- インベントリ ---- */
-.inv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+/* 列は minmax(0,1fr)。ふつうの 1fr だと 列が「中身の最小幅」より せまくなれず、
+   長い名前の1マスに 引っぱられて パネルから 右へ はみ出す(バッジのグリッドと同じ理由) */
+.inv-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .inv-slot {
   display: flex; align-items: center; gap: 6px; background: #fff;
   border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; font-size: 0.82rem;
 }
 .inv-ico { font-size: 1.25rem; line-height: 0; display: flex; }
-.inv-name { flex: 1; font-weight: 700; }
-.inv-count { color: var(--ink-soft); font-weight: 700; }
+/* v14 1マスの名前が「すいそ / う」のように 1〜2文字ずつ 縦に割れる問題の手当て。
+     min-width  … 名前の欄に かならず4文字ぶんの幅を のこす。これが無いと flex の子は
+                  「1文字ぶん」まで つぶれてよいことになり、何文字の名前でも バラバラに割れる。
+     keep-all   … かなの ならびを ひとかたまりに あつかい、入るかぎり 途中で切らない。
+     break-word … それでも 欄に入りきらない長い名前だけ 折り返す。
+                  ここで `anywhere` を使うと 欄の最小幅そのものが1文字ぶんに落ちて
+                  min-width を書いても元どおり バラバラに割れる(実機のスクショで確認)。
+   名前の字を ひとまわり小さくして、4文字ぶん(4em)の幅が 3列でも おさまるようにしてある */
+.inv-name {
+  flex: 1; min-width: 4em; font-size: 0.74rem; font-weight: 700; line-height: 1.45;
+  word-break: keep-all; overflow-wrap: break-word;
+}
+.inv-count { color: var(--ink-soft); font-weight: 700; white-space: nowrap; }
+/* ボタンは たてに 割らない(名前に幅をゆずると「お / く」になってしまう)。
+   1マスに 名前4文字+絵+個数+ボタンが 入るよう、もちものの中だけ 少し小さくする */
+.inv-slot .craft-btn { flex: none; white-space: nowrap; padding: 4px 8px; font-size: 0.76rem; }
 /* v12 ボタンが2つ入るマス(りょうりの「たべる」+「おく」)は2列ぶんの幅をとる。
    1列のままだと 名前もボタンも1文字ずつ縦に割れて読めない(実機のスクショで確認)。
    幅をひろげたうえで、名前だけ はみ出したら「…」にする(ボタンは押せる大きさのまま) */
@@ -436,6 +454,64 @@ body { font-family: var(--font); color: var(--ink); }
 .ach-row.done .ach-name { color: #3f7a50; }
 .ach-state { font-weight: 900; color: var(--ink-soft); white-space: nowrap; }
 .ach-state.done { display: inline-flex; align-items: center; gap: 4px; color: #4f9a78; }
+/* v13 じっせきの ごほうび。未達成でも「なにが もらえるか」を見せる */
+.ach-reward {
+  display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;
+  font-size: 0.74rem; font-weight: 900; color: var(--amber);
+  border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px;
+}
+.ach-reward .inv-ico { font-size: 1rem; }
+.ach-reward.got { color: var(--ink-soft); opacity: 0.6; }
+/* v13 ずかんの てがみ(読んだものは押して 読み返せる) */
+.codex-cell.letter { font-family: var(--font); cursor: pointer; text-align: left; }
+.codex-cell.letter:hover { border-color: var(--amber); }
+
+/* ---- v14 バッジ(ずかんの2枚めのタブ) ---- */
+.codex-tabs { margin-bottom: 12px; }
+.badge-total { font-size: 0.86rem; font-weight: 700; color: var(--ink-soft); margin-bottom: 4px; }
+.badge-total b { font-size: 1.15rem; font-weight: 900; color: var(--amber); }
+/* 列は minmax(0,1fr)。ふつうの 1fr だと 列が「中身の最小幅」より せまくなれず、
+   名前を1行に収めている(nowrap)ぶん パネルから 右へ はみ出して 横スクロールが出る
+   (実機のスクショで発覚。3列めが 切れて見えていた) */
+.badge-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.badge-cell {
+  display: flex; align-items: center; gap: 6px; min-width: 0; background: #fff;
+  border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; font-size: 0.8rem;
+}
+.badge-ico { font-size: 1.7rem; line-height: 0; display: flex; flex: none; }
+/* 名前は もちものと同じ折り返し規則: かなの とちゅうでは 割らず、
+   1マスに入りきらない長い名前(「はじめての むしとり」など)だけ 空白で2行にする。
+   「…」で切ると 何のバッジか わからなくなるので、切らずに 行を足すほうを えらぶ */
+.badge-name {
+  flex: 1; min-width: 0; font-weight: 700; line-height: 1.35;
+  word-break: keep-all; overflow-wrap: anywhere;
+}
+.badge-name small { display: block; font-weight: 700; font-size: 0.72rem; letter-spacing: 0; }
+.badge-day { color: #4f9a78; }
+.badge-progress { color: var(--ink-soft); }
+/* まだ取っていないバッジは シルエット(色を落として うすくする)。
+   絵そのものは同じなので「どんな形の バッジが あるのか」は見える=つぎの目標になる */
+.badge-cell.locked { background: #ece5d6; color: var(--ink-soft); }
+.badge-cell.locked .badge-ico { filter: grayscale(1) brightness(0.72); opacity: 0.45; }
+.badge-cell.got { background: #fdfaf2; border-color: #e0cb92; }
+
+/* ---- v13 メッセージボトルの手紙 ---- */
+.letter-panel { max-width: 520px; z-index: 11; }
+.letter-lead { font-size: 0.82rem; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; line-height: 1.7; }
+.letter-paper {
+  background: #fbf6e8; border: 1px solid var(--line); border-radius: 4px;
+  padding: 14px 16px 12px; box-shadow: inset 0 0 22px rgba(201, 173, 122, 0.22);
+}
+.letter-head { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
+.letter-title { font-size: 1rem; font-weight: 900; letter-spacing: 0.03em; }
+/* ルビは振らない画面だが、行間は本文の読みやすさ基準(1.85以上)にそろえる */
+.letter-body { line-height: 1.95; }
+.letter-body p { font-size: 0.92rem; margin: 0 0 4px; }
+.letter-body p:last-child { margin-bottom: 0; }
+.letter-from {
+  margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line);
+  text-align: right; font-size: 0.78rem; font-weight: 700; color: var(--ink-soft);
+}
 
 /* ---- トースト ---- */
 /* 「いまやること」の下に積む(上に重ねると両方読めなくなる) */
@@ -497,6 +573,8 @@ html.touch-ui .inv-empty { font-size: 0.9rem; }
 html.touch-ui .q-title { font-size: 0.92rem; }
 html.touch-ui .q-status { font-size: 0.84rem; }
 html.touch-ui .codex-cell, html.touch-ui .ach-row { min-height: 52px; font-size: 0.86rem; }
+/* v14 バッジのマスも 指で押せる大きさにそろえる(押すものではないが、行の高さを合わせる) */
+html.touch-ui .badge-cell { min-height: 52px; font-size: 0.86rem; }
 /* v12 くみあわせタブ: えらぶマスと えらんだ枠も 指で押せる大きさにする */
 html.touch-ui .combo-cell, html.touch-ui .combo-slot { min-height: 52px; font-size: 0.86rem; }
 html.touch-ui .combo-lead { font-size: 0.86rem; }
@@ -516,6 +594,7 @@ html.touch-ui .tc-btns .title-btn { width: 150px; padding: 12px 0; }
   html.touch-ui .panel { min-width: min(560px, 92vw); }
   html.touch-ui .inv-grid { grid-template-columns: repeat(2, 1fr); }
   html.touch-ui .codex-grid { grid-template-columns: repeat(2, 1fr); }
+  html.touch-ui .badge-grid { grid-template-columns: repeat(2, 1fr); }
   html.touch-ui .combo-grid { grid-template-columns: repeat(2, 1fr); }
 }
 

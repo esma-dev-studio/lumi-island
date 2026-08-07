@@ -12,6 +12,8 @@ import { burst } from '../entities/effects';
 import { toast } from '../ui/Toast';
 import { sfx } from '../audio/AudioSystem';
 import { save } from '../save/SaveSystem';
+import { statAdd } from '../game/GameState';
+import { SLEEP_TOTAL_KEY } from '../systems/BadgeSystem';
 import type { GameScene } from './GameScene';
 
 export type SequenceState = 'idle' | 'sleeping' | 'intro' | 'bloom' | 'travel' | 'voyage' | 'lighthouse';
@@ -426,6 +428,7 @@ export class SequenceDirector {
       if (!this.sleepApplied && this.t >= SLEEP_FADE_IN) {
         this.sleepApplied = true;
         gs.island.time.sleep();
+        statAdd(gs.state, SLEEP_TOTAL_KEY); // v14 バッジ用(ねた回数。ここは1回の睡眠につき1度だけ通る)
         gs.state.time = { day: gs.island.time.day, hour: gs.island.time.hour };
         gs.island.dayNight.update(gs.island.time.hour, gs.player.x, gs.player.z);
         gs.npcs.snapToSchedule(gs.island.time.hour);

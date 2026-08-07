@@ -1,5 +1,6 @@
-// エリアの性格づけ小物: まき置き・木箱・バケツと竿・望遠鏡・流木・切りかぶ
+// エリアの性格づけ小物: まき置き・木箱・バケツと竿・望遠鏡・流木・切りかぶ・メッセージボトル
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 import { A0, type Arrays, appendBlob, appendTrunk, toMesh, jitterColor } from './flora';
@@ -91,4 +92,61 @@ export function makeStump(scene: Scene, seed = 1): Mesh {
   appendTrunk(A, [[0, 0, 0], [0.02, 0.28, 0]], 0.2, 0.17, jitterColor(WOOD, seed), seed);
   appendBlob(A, 0.02, 0.28, 0, 0.17, 0.02, 0.17, Color3.FromHexString('#c9ab7e'), { segs: 8, noise: 0.05 });
   return toMesh(scene, `stump_${seed}`, A);
+}
+
+// ---------------------------------------------------------------------------
+// v13 メッセージボトル(浜に流れつく手紙のびん)
+// ---------------------------------------------------------------------------
+const C_BOTTLE_GLASS = Color3.FromHexString('#9fc9b4'); // 海のガラスの みどり
+const C_BOTTLE_PAPER = Color3.FromHexString('#f2ead6');
+const C_BOTTLE_CORK = Color3.FromHexString('#c9a06b');
+const C_BOTTLE_TIE = Color3.FromHexString('#b0553f'); // 手紙を むすんだ ひも
+
+let bottleGlassMat: StandardMaterial | null = null;
+/**
+ * びんのガラス。半とうめいにして、中の手紙が すけて見えるようにする
+ * (教訓1「発光・中身のあるものを 不透明な箱に入れない」と同じ理由。
+ *  中が見えないと、ただの みどりの びんにしか 見えない)。
+ */
+function getBottleGlassMat(scene: Scene): StandardMaterial {
+  if (!bottleGlassMat || bottleGlassMat.getScene() !== scene) {
+    bottleGlassMat = new StandardMaterial('bottleGlassMat', scene);
+    bottleGlassMat.diffuseColor = Color3.White(); // 色は頂点カラー
+    bottleGlassMat.specularColor = Color3.FromHexString('#5a6f66'); // ガラスらしい つや
+    bottleGlassMat.specularPower = 48;
+    bottleGlassMat.alpha = 0.62;
+    bottleGlassMat.backFaceCulling = false; // むこう側の面も残す(うすい ガラスに見せる)
+  }
+  return bottleGlassMat;
+}
+
+/**
+ * メッセージボトル。たてに組んであるので、置く側で rotation.z=π/2 にして 砂に ねかせる。
+ *
+ * 法線の向きは 'keep' で決めうち(appendTrunk だけで作った形は すでに外向き。教訓4)。
+ * ガラス(半とうめい)と 中身(手紙・ひも・コルク=不透明)を 別メッシュに分けてあるのは、
+ * 1枚のマテリアルでは「中が すける」を作れないため。中身は ガラスの子にしてある。
+ */
+export function makeMessageBottle(scene: Scene, seed = 1): Mesh {
+  // ---- ガラス(人工物なので appendTrunk の 半径ゆらぎは0) ----
+  const G = A0();
+  appendTrunk(G, [[0, 0.008, 0], [0, 0.05, 0]], 0.05, 0.064, C_BOTTLE_GLASS, seed, 0); // そこ
+  appendTrunk(G, [[0, 0.05, 0], [0, 0.21, 0]], 0.064, 0.062, C_BOTTLE_GLASS, seed + 1, 0); // どう
+  appendTrunk(G, [[0, 0.21, 0], [0, 0.27, 0]], 0.062, 0.032, C_BOTTLE_GLASS, seed + 2, 0); // かた
+  appendTrunk(G, [[0, 0.27, 0], [0, 0.335, 0]], 0.031, 0.031, C_BOTTLE_GLASS, seed + 3, 0); // くび
+  appendTrunk(G, [[0, 0.335, 0], [0, 0.36, 0]], 0.038, 0.038, C_BOTTLE_GLASS, seed + 4, 0); // くち
+  const root = toMesh(scene, `bottle_${seed}`, G, 'keep');
+  root.material = getBottleGlassMat(scene);
+  root.alphaIndex = 6; // 波うちぎわの燐光(2)・ビーム(3)より あとに描く
+  root.isPickable = false;
+
+  // ---- 中身(まいた手紙・ひも・コルク) ----
+  const P = A0();
+  appendTrunk(P, [[0, 0.045, 0], [0, 0.20, 0]], 0.031, 0.029, C_BOTTLE_PAPER, seed + 5, 0.05);
+  appendTrunk(P, [[0, 0.115, 0], [0, 0.135, 0]], 0.035, 0.035, C_BOTTLE_TIE, seed + 6, 0);
+  appendTrunk(P, [[0, 0.33, 0], [0, 0.405, 0]], 0.029, 0.025, C_BOTTLE_CORK, seed + 7, 0);
+  const inner = toMesh(scene, `bottleIn_${seed}`, P, 'keep');
+  inner.parent = root;
+  inner.isPickable = false;
+  return root;
 }

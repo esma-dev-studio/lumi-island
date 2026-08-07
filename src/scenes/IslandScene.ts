@@ -22,10 +22,12 @@ import {
 } from '../entities/deco';
 import { makeBugMesh, type BugMesh } from '../entities/bugs';
 import { buildHouse, makeBench, makeLamp, makeStoneRing } from '../entities/buildings';
-import { makeLogPile, makeCrate, makeBucketRod, makeTelescope, makeDriftwood, makeStump } from '../entities/props';
+import {
+  makeLogPile, makeCrate, makeBucketRod, makeTelescope, makeDriftwood, makeStump, makeMessageBottle,
+} from '../entities/props';
 import {
   GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, STAR_SPOTS, DRIFT_SPOTS, SEABIRD_CIRCLES,
-  BUG_SPOTS, DIG_SPOTS,
+  BUG_SPOTS, DIG_SPOTS, BOTTLE_SPOTS,
   type GatherNodeDef,
 } from '../data/island';
 import { DayNight } from './DayNight';
@@ -35,13 +37,15 @@ import {
   npcHomeCircles, npcHomeFloorY, npcHomeRects,
 } from './NpcInteriors';
 import { CoveArea, COVE_CIRCLES, COVE_NODES, ISLAND_BOAT, coveNightLevel } from './CoveArea';
-import { makeBoat, makeHorizonSpark, type BoatMesh } from '../entities/cove';
+import { makeBoat, makeHorizonSpark, makeHorizonTrain, type BoatMesh } from '../entities/cove';
 import { buildGarden, type GardenView } from '../entities/garden';
 import { gardenFenceColliders } from '../systems/GardenSystem';
 import type { GardenPlot } from '../game/GameState';
 import { TimeSystem } from '../systems/TimeSystem';
 import { StarShardScheduler } from '../systems/StarShardSystem';
 import { DriftScheduler } from '../systems/DriftSystem';
+import { BottleScheduler } from '../systems/BottleSystem';
+import { NightTrainScheduler } from '../systems/NightTrainSystem';
 import { seabirdPose } from '../systems/SeabirdSystem';
 import {
   BugScheduler, bugOffset, BUG_BY_ID, type ActiveBug, type BugId, type BugPlayer,
@@ -55,6 +59,22 @@ export interface RectCollider { x: number; z: number; w: number; d: number; rot:
 // entities/terrain.ts の walkableGround が唯一の情報源。釣りの水面判定も同じ関数群を見る。
 /** 建物コライダーの余白(片側)。壁の見た目+これだけ内側に近づける(軒・屋根は入れない) */
 const HOUSE_PAD = 0.125;
+
+// ---- v13 よるの 海上でんしゃの 走る道(島の南の水平線) ----
+/** 島の中心からの きょり(m)。水平線のきらめき(100m)と そろえて「遠くのもの」に見せる */
+const TRAIN_RADIUS = 105;
+/**
+ * 海面(SEA_Y=0.3)からの高さ。低すぎると海に沈み、高すぎると「空をとぶ列車」になる。
+ * 2.4mだと 浜から見て 水平線に ちょうど 腰かけて見える(実機のスクショで決めた)。
+ */
+const TRAIN_Y = 2.4;
+/**
+ * 走る弧のはじまり・おわり(+Z=南を0とした角。+が東・-が西)。
+ * 浜べ(z≈35)から南を向いたときの 視野に すっぽり入る幅にしてある。
+ * 弧の長さ = 1.6rad × 105m ≒ 168m を30秒でわたる(時速およそ20km。急がない れっしゃ)。
+ */
+const TRAIN_TH_FROM = -0.8;
+const TRAIN_TH_TO = 0.8;
 
 export interface GatherNodeRuntime {
   def: GatherNodeDef;
@@ -122,6 +142,18 @@ export class IslandScene {
   private driftNodeOfSpot = new Map<number, string>();
   private driftSpotOfNode = new Map<string, number>();
   private driftSparkleT = 0;
+  // ---- v13 メッセージボトル(2〜3日に1本、ひるすぎ〜夕方の浜に流れつく) ----
+  // うきだまと ちがって「採取ノード」ではない(手に入るのは 手紙で、もちものは増えない)ので、
+  // nodes には入れず、この2つの値だけで 場所とEの届く先を持つ
+  private bottles = new BottleScheduler(BOTTLE_SPOTS.length);
+  private bottleMesh: Mesh | null = null;
+  private bottleAt: number | null = null;
+  private bottleSparkleT = 0;
+  private bottleBobT = 0;
+  // ---- v13 よるの 海上でんしゃ(とうだい点灯後の 遠景演出) ----
+  private train = new NightTrainScheduler();
+  private trainMesh!: Mesh;
+  private trainMat!: StandardMaterial;
   // ---- うみどり(海の上を旋回するだけ。当たり判定なし) ----
   private birds: Seabird[] = [];
   private birdT = 0;
@@ -470,6 +502,15 @@ export class IslandScene {
     this.horizonSpark.scaling.setAll(0.55);
     this.horizonSpark.setEnabled(false);
 
+    // ---- v13 よるの 海上でんしゃ(とうだいが ともったあとの 夜だけ 水平線をよこぎる) ----
+    // きらめきと同じ100mの海上に、島から見て 東西へ のびる道を1本ひく。
+    // メッシュは1つだけ・走っていないあいだは setEnabled(false) なので、ふだんの負荷はゼロ。
+    const train = makeHorizonTrain(s);
+    this.trainMesh = train.mesh;
+    this.trainMat = train.mat;
+    // 走る道は「島から半径TRAIN_RADIUSの円の、南がわの弧」。位置も向きも updateNightTrain が毎フレーム入れる
+    this.trainMesh.setEnabled(false);
+
     // ---- v11 よるの入り江(別空間。島にいるあいだは消えている) ----
     // ここまでに作ったメッシュ=島の見た目ぜんぶ。入り江にいるあいだはこれを丸ごと消す
     // (逆に、島にいるあいだは入り江のrootを消す)。この1行より下で作るものは入り江のもの。
@@ -479,6 +520,7 @@ export class IslandScene {
     // (水面を発光レイヤーから外しているのと同じ理由)
     this.dayNight.glow.addExcludedMesh(this.cove.light.beam);
     this.dayNight.glow.addExcludedMesh(this.horizonSpark);
+    this.dayNight.glow.addExcludedMesh(this.trainMesh); // 遠景の帯を発光レイヤーに焼かない(にじみと負荷を足さない)
     for (const c of COVE_CIRCLES) this.circles.push(c);
     // 入り江の採取ノードも島と同じ nodes に入れる(InteractionSystemの道すじを1本にする)
     for (const def of COVE_NODES) {
@@ -520,6 +562,9 @@ export class IslandScene {
     if (!lit) {
       this.horizonSpark.setEnabled(false);
       this.horizonSparkMat.alpha = 0;
+      this.train.stop();
+      this.trainMesh.setEnabled(false);
+      this.trainMat.alpha = 0;
     }
   }
 
@@ -552,6 +597,49 @@ export class IslandScene {
     const pulse = s * s * s * s;
     this.horizonSparkMat.alpha = night * (0.16 + 0.84 * pulse);
     this.horizonSpark.scaling.setAll(0.55 + 0.35 * pulse);
+  }
+
+  // ---------- v13 よるの 海上でんしゃ ----------
+  /** いま でんしゃが 走っているか(実績・撮影・検証用) */
+  get nightTrainRunning(): boolean {
+    return this.train.isRunning;
+  }
+  /** 走りはじめから おわりまで 0→1(撮影で「まん中の いちばん見える瞬間」を出すのに使う) */
+  get nightTrainProgress(): number {
+    return this.train.progress;
+  }
+
+  /**
+   * よるの 海上でんしゃ。とうだいが ともったあと、2日に1回の21時ごろに
+   * 島の南の水平線を 静かに よこぎる(約30秒)。
+   *
+   * 見た目は 位置と向きと alpha を入れるだけ。走っていないあいだは setEnabled(false) なので、
+   * 「点いていない間の負荷はゼロ」という きらめきと同じ約束を まもる。
+   * 走る道は 島から半径 TRAIN_RADIUS の円の南がわの弧なので、
+   * どこを走っていても 見かけの大きさが 変わらない(まっすぐの線だと はしで小さくなる)。
+   */
+  private updateNightTrain(dt: number): void {
+    if (this.cove.isActive) {
+      // 入り江にいるあいだ 島の見た目は丸ごと消えているが、スケジュールも止めておく
+      // (帰ってきた瞬間に 半分だけ走った列車が 出てこないようにする)
+      if (this.train.isRunning) this.train.stop();
+      if (this.trainMesh.isEnabled(false)) this.trainMesh.setEnabled(false);
+      return;
+    }
+    const st = this.train.update(dt, this.time.day, this.time.hour, this.lighthouseLit);
+    if (!st.running) {
+      if (this.trainMesh.isEnabled(false)) this.trainMesh.setEnabled(false);
+      this.trainMat.alpha = 0;
+      return;
+    }
+    const th = TRAIN_TH_FROM + (TRAIN_TH_TO - TRAIN_TH_FROM) * st.progress;
+    this.trainMesh.position.set(Math.sin(th) * TRAIN_RADIUS, TRAIN_Y, Math.cos(th) * TRAIN_RADIUS);
+    this.trainMesh.rotation.y = th; // ローカル+X を 弧の せっせん(進む向き)へ向ける
+    if (!this.trainMesh.isEnabled(false)) this.trainMesh.setEnabled(true);
+    // 出はじめと おわりは すうっと 現れて 消える(画面のはしで ぷつんと 出ない)。
+    // 夜の深さ(coveNightLevel)を かけているので、うっすら明るい時刻には ひかえめになる
+    const fade = Math.min(1, Math.min(st.progress, 1 - st.progress) / 0.12);
+    this.trainMat.alpha = coveNightLevel(this.time.hour) * 0.9 * fade;
   }
 
   /** 航海の演出用: 島がわ/入り江がわの船を世界座標へ置く(SequenceDirectorが毎フレーム呼ぶ) */
@@ -632,6 +720,8 @@ export class IslandScene {
     // ポーズ・会話・見せ場のあいだは進まない。睡眠で朝6時へ飛んだ場合も「夜が終わった」として消える
     this.updateStars(dtSec);
     this.updateDrift(dtSec); // 朝のうきだま(同じ理由でポーズ中は進まない)
+    this.updateBottle(dtSec); // v13 ひるすぎの メッセージボトル
+    this.updateNightTrain(dtSec); // v13 よるの 海上でんしゃ(点いていなければ即return)
     this.updateBirds(dtSec);
     this.updateBugs(dtSec); // 虫(昼夜で顔ぶれが変わる・走って近づくと逃げる)
     this.updateDigs(); // ほりあと(日付が変わったら配置しなおす)
@@ -735,6 +825,73 @@ export class IslandScene {
     if (!node) return;
     node.root.dispose(); // 共有マテリアルは道連れにしない
     this.nodes.delete(id);
+  }
+
+  // ---------- v13 メッセージボトル ----------
+  /** いま浜に出ているボトルの候補地点(無ければnull。検証・E候補が読む) */
+  get bottleSpot(): number | null {
+    return this.bottleAt;
+  }
+  /** いま浜にボトルが出ているか(検証・デバッグ用) */
+  get bottleCount(): number {
+    return this.bottleAt === null ? 0 : 1;
+  }
+
+  /**
+   * 手のとどく所にある ボトル(無ければnull)。
+   * うきだま・ほしのかけらと ちがって「採取ノード」ではないので、
+   * GameScene が カタツムリと同じ「ほかに何もできない場所でだけ出る」フォールバックで使う。
+   */
+  nearestBottle(px: number, pz: number, reach: number): { spot: number; x: number; z: number; distance: number } | null {
+    if (this.bottleAt === null) return null;
+    const p = BOTTLE_SPOTS[this.bottleAt];
+    const d = Math.hypot(px - p.x, pz - p.z);
+    return d < reach ? { spot: this.bottleAt, x: p.x, z: p.z, distance: d } : null;
+  }
+
+  /** ひろわれた: 見た目を消し、その日はもう出さない */
+  takeBottle(): void {
+    if (this.bottleAt === null) return;
+    this.bottles.markTaken(this.bottleAt);
+    this.despawnBottle();
+  }
+
+  private updateBottle(dt: number): void {
+    const plan = this.bottles.update(dt, this.time.day, this.time.hour);
+    if (plan.despawn.length > 0) this.despawnBottle();
+    for (const spot of plan.spawn) this.spawnBottle(spot);
+    if (this.bottleAt === null || !this.bottleMesh) return;
+    // 波うちぎわで ゆっくり ゆれる(砂に置いた ただの小物に見せない)
+    this.bottleBobT += dt;
+    this.bottleMesh.rotation.y = this.bottleAt * 1.7 + Math.sin(this.bottleBobT * 0.7) * 0.06;
+    // 波のきらめき: 3秒に1回だけ(共有パーティクルなので同じフレームに複数出さない)
+    this.bottleSparkleT += dt;
+    if (this.bottleSparkleT < 3) return;
+    this.bottleSparkleT = 0;
+    const p = BOTTLE_SPOTS[this.bottleAt];
+    burst(p.x, this.groundY(p.x, p.z) + 0.24, p.z, 'splash', 4);
+  }
+
+  private spawnBottle(spot: number): void {
+    if (this.bottleMesh) this.despawnBottle();
+    const p = BOTTLE_SPOTS[spot];
+    const y = this.groundY(p.x, p.z);
+    const root = makeMessageBottle(this.scene, spot * 13 + 7);
+    // たてに組んであるので、rotation.z=π/2 で 砂に ねかせる(Babylonは Y→X→Z の順に回す)
+    root.rotation.set(0, spot * 1.7, Math.PI / 2);
+    root.position.set(p.x, y + 0.065, p.z);
+    this.bottleMesh = root;
+    this.bottleAt = spot;
+    this.bottleBobT = 0;
+    this.bottleSparkleT = 0;
+    burst(p.x, y + 0.25, p.z, 'splash', 10); // 打ち上げられた合図(波しぶきの色)
+  }
+
+  private despawnBottle(): void {
+    this.bottleAt = null;
+    if (!this.bottleMesh) return;
+    this.bottleMesh.dispose(false, false); // 共有マテリアルは道連れにしない(子メッシュは一緒に消える)
+    this.bottleMesh = null;
   }
 
   // ---------- うみどり ----------

@@ -52,6 +52,9 @@ async function seedAfterChapter1(page: Page, lumina: number): Promise<void> {
   await ev(
     page,
     `(() => { const s = __lumiDebug.state();
+      // v13 じっせきの ごほうび(読みこみ時の さかのぼり配布)を「受けとりずみ」にしておく。
+      // この検証は しゅうり代の金額そのものを見るので、ごほうびの ルミナを まぜない
+      __lumiDebug.sealAchievementRewards();
       s.flags.tut_move = true; s.flags.intro_done = true;
       s.flags.unlock_inv = true; s.flags.unlock_craft = true; s.flags.unlock_quest = true;
       s.flags.indoor = false; s.flags.in_cove = false;

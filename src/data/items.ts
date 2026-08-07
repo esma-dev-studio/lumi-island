@@ -32,6 +32,8 @@ export type ItemId =
   | 'f_bugcage' | 'f_ancient_pot' | 'f_strawmat' | 'f_scarecrow'
   // v10 とった魚をかざる すいそう(むしかごと同じ「展示家具」)
   | 'f_aquarium'
+  // v13 3びき入る おおきい版(小さい版に1ぴき入れると 作りかたを ひらめく)
+  | 'f_aquarium_big' | 'f_bugcage_big'
   // v9 おくりもの: なかよし度5でおしえてもらう とくべつな家具3種(NPC1人につき1つ)
   | 'f_finetable' | 'f_fishtrophy' | 'f_starmap'
   // v11第2章 ロカのお礼レシピで作る「とうだいのランタン」(家に かざれる 小さな灯台)
@@ -43,7 +45,9 @@ export type ItemId =
   | 'wall_cream' | 'wall_sky' | 'wall_leaf'
   // v12 くみあわせで見つかる かべがみの色版2枚
   | 'wall_rose' | 'wall_night'
-  | 'floor_wood' | 'floor_tile' | 'floor_rug';
+  | 'floor_wood' | 'floor_tile' | 'floor_rug'
+  // v14 じっせきの ごほうびでしか 手に入らない3点(お店・レシピ・くみあわせに 出さない)
+  | 'wall_bottle' | 'f_starlantern_gold' | 'f_lighthouse_lantern_night';
 
 export type ToolId = 'axe' | 'pickaxe' | 'rod' | 'sickle' | 'net' | 'shovel';
 
@@ -165,6 +169,15 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   },
   // ---- v10 展示家具: つった魚を 入れて かざる ----
   f_aquarium: { id: 'f_aquarium', name: 'すいそう', sell: 48, kind: 'furniture', desc: 'つった魚を えらんで 入れられる ガラスの水そう。中を 魚が およぐ' },
+  // ---- v13 おおきい版(3びき入る)。家にも にわにも おける ----
+  f_aquarium_big: {
+    id: 'f_aquarium_big', name: 'おおきな すいそう', sell: 96, kind: 'furniture',
+    desc: '魚が 3びきまで 入る、よこに ながい 水そう。3びきが べつべつに およぐ',
+  },
+  f_bugcage_big: {
+    id: 'f_bugcage_big', name: 'おおきな むしかご', sell: 62, kind: 'furniture',
+    desc: '虫が 3びきまで 入る、だいの ついた 大きな かご。ホタルを 入れると 夜に ちかちか 光る',
+  },
   // ---- v12 りょうりの入口。家の中に おくと、くみあわせの りょうりが つくれるようになる ----
   f_kitchen: { id: 'f_kitchen', name: 'キッチンだい', sell: 50, kind: 'furniture', desc: '木のてんばんと なべの ある だいどころの台。家の中に おくと りょうりが できる' },
   // ---- v12 くみあわせで見つかる かざり4種 ----
@@ -185,40 +198,113 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   floor_wood: { id: 'floor_wood', name: '木のゆか', sell: 40, kind: 'decor', desc: 'いた目のある あたたかい木のゆかいた' },
   floor_tile: { id: 'floor_tile', name: 'タイルのゆか', sell: 40, kind: 'decor', desc: '白いタイルと めじの線。すっきりしたゆかいた' },
   floor_rug: { id: 'floor_rug', name: 'ラグのゆか', sell: 40, kind: 'decor', desc: '一面がおりもののゆかいた。ふかふかに見える' },
+  // ---- v14 じっせきの ごほうび限定の3点 ----
+  //
+  // 入手経路は src/systems/AchievementRewards.ts の ACHIEVEMENT_REWARDS **だけ**。
+  // SHOP_STOCK・RECIPES・COMBOS のどこにも入れない(お店にも クラフトにも 出ない)。
+  // どれも だいじなもの(keyItem)にしてある: 二度と手に入らないので、
+  // うっかり 売ったり あげたりして 無くならないように 構造で止める
+  // (ひかりのレンズ と まったく同じ考え方。売値は0にそろえる約束)。
+  wall_bottle: {
+    id: 'wall_bottle', name: 'ボトルかべ', sell: 0, kind: 'decor', keyItem: true,
+    desc: 'ガラスびんのような みどりの かべがみ。じっせきの ごほうびでしか 手に入らない',
+  },
+  f_starlantern_gold: {
+    id: 'f_starlantern_gold', name: 'きんのランタン', sell: 0, kind: 'furniture', glow: true, keyItem: true,
+    desc: 'ほしのランタンの きん色の もの。夜は あたたかい 金いろに ともる。じっせきの ごほうびでしか 手に入らない',
+  },
+  f_lighthouse_lantern_night: {
+    id: 'f_lighthouse_lantern_night', name: 'よるのとうだい', sell: 0, kind: 'furniture', glow: true, keyItem: true,
+    desc: 'こんいろの 小さな とうだい。夜は てっぺんが あお白く ともる。じっせきの ごほうびでしか 手に入らない',
+  },
 };
 
 // ---------------------------------------------------------------------------
-// v10 展示家具(すいそう・むしかご)。
-// 「置いた家具に いきものを 1匹入れて かざる」しくみを、この1つの表だけで決める。
-//   - accepts : 入れられるItemId(もちものから1つ減って PlacedFurniture.content になる)
-//   - statKey : 入れた回数の累計カウンタ(じっせきが読む。GameState.stats のキー)
+// v10/v13 展示家具(すいそう・むしかご と、その おおきい版)。
+// 「置いた家具に いきものを 入れて かざる」しくみを、この1つの表だけで決める。
+//   - accepts  : 入れられるItemId(もちものから1つ減って PlacedFurniture.contents に入る)
+//   - capacity : 何びきまで 入るか(小さい版=1 / おおきい版=3)
+//   - statKey  : 入れた回数の累計カウンタ(じっせきが読む。GameState.stats のキー)
+//   - upgrade  : はじめて中身を入れたときに ひらめく「おおきい版」のレシピID(おおきい版には無い)
 // UI(DisplayUI)・Eのルーティング・メッシュ・じっせきは、すべてこの表を唯一の情報源にする。
+//
+// v13で1匹→複数に一般化した。中身は PlacedFurniture.contents(配列)だけが持ち、
+// v12までの content(1匹)は セーブの読みこみで contents=[content] へ移していく
+// (src/save/SaveSystem.ts。旧セーブでも入れた いきものが消えない)。
+//
+// おおきい版の入手経路を「小さい版に1ぴき入れたら ひらめく」にした理由:
+//   くみあわせ(combos.ts)は材料の合計2〜3個までで、おおきい版の値だんに合う材料を組めない。
+//   それに「すいそうを 使ってみた子」にだけ次の目標が出るほうが 目標の階段として素直で、
+//   ひらめきの引き金を「素材の初回入手」に無理やり結びつけずに済む(RECIPE_DISCOVERYを汚さない)。
 // ---------------------------------------------------------------------------
+const DISPLAY_FISH = ['fish', 'nightfish', 'seafish', 'rarefish'] as const;
+const DISPLAY_BUGS = ['b_shiro', 'b_ageha', 'b_tento', 'b_kabuto', 'b_hotaru', 'b_suzu'] as const;
+
 export const DISPLAY_FURNITURE = {
   f_aquarium: {
     label: 'すいそう',
-    accepts: ['fish', 'nightfish', 'seafish', 'rarefish'],
+    accepts: DISPLAY_FISH,
+    capacity: 1,
     statKey: 'display_fish',
     empty: 'いま いれられる魚が ない。海や池で つってこよう!',
+    full: 'すいそうは いっぱい。とりだすと また いれられるよ',
+    upgrade: 'r_aquarium_big',
+  },
+  f_aquarium_big: {
+    label: 'おおきな すいそう',
+    accepts: DISPLAY_FISH,
+    capacity: 3,
+    statKey: 'display_fish',
+    empty: 'いま いれられる魚が ない。海や池で つってこよう!',
+    full: 'おおきな すいそうは 3びきで いっぱい。とりだすと また いれられるよ',
   },
   f_bugcage: {
     label: 'むしかご',
-    accepts: ['b_shiro', 'b_ageha', 'b_tento', 'b_kabuto', 'b_hotaru', 'b_suzu'],
+    accepts: DISPLAY_BUGS,
+    capacity: 1,
     statKey: 'display_bug',
     empty: 'いま いれられる虫が ない。むしあみで つかまえてこよう!',
+    full: 'むしかごは いっぱい。とりだすと また いれられるよ',
+    upgrade: 'r_bugcage_big',
   },
-} as const satisfies Record<string, { label: string; accepts: readonly ItemId[]; statKey: string; empty: string }>;
+  f_bugcage_big: {
+    label: 'おおきな むしかご',
+    accepts: DISPLAY_BUGS,
+    capacity: 3,
+    statKey: 'display_bug',
+    empty: 'いま いれられる虫が ない。むしあみで つかまえてこよう!',
+    full: 'おおきな むしかごは 3びきで いっぱい。とりだすと また いれられるよ',
+  },
+} as const satisfies Record<string, {
+  label: string; accepts: readonly ItemId[]; capacity: number;
+  statKey: string; empty: string; full: string; upgrade?: string;
+}>;
 
 export type DisplayFurnitureId = keyof typeof DISPLAY_FURNITURE;
 
-/** 展示家具か(すいそう・むしかご)。Eのヒント・DisplayUI・実績の判定はここを通す */
+/** 展示家具か(すいそう・むしかご の大小)。Eのヒント・DisplayUI・実績の判定はここを通す */
 export function isDisplayFurniture(item: string): item is DisplayFurnitureId {
   return Object.prototype.hasOwnProperty.call(DISPLAY_FURNITURE, item);
 }
 
-/** その展示家具に入れられるものか(セーブから復元した content の検証にも使える) */
+/** その展示家具に入れられるものか(セーブから復元した contents の検証にも使える) */
 export function canDisplayIn(furniture: DisplayFurnitureId, item: string): boolean {
   return (DISPLAY_FURNITURE[furniture].accepts as readonly string[]).includes(item);
+}
+
+/** その家具に 何びきまで入るか(展示家具でなければ0)。セーブの検証・UI・実績が読む */
+export function displayCapacity(item: string): number {
+  return isDisplayFurniture(item) ? DISPLAY_FURNITURE[item].capacity : 0;
+}
+
+/**
+ * その展示家具に「おおきい版」のレシピがあるか(小さい版だけが持つ)。
+ * PlacementSystem.putIn が、はじめて中身を入れたときに この1つを おぼえさせる。
+ */
+export function displayUpgradeRecipe(item: string): string | null {
+  if (!isDisplayFurniture(item)) return null;
+  const def = DISPLAY_FURNITURE[item] as { upgrade?: string };
+  return def.upgrade ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -289,6 +375,8 @@ export function ownedPaints(inventory: Partial<Record<ItemId, number>>): PaintId
 export const DECOR_SLOT = {
   wall_cream: 'wall', wall_sky: 'wall', wall_leaf: 'wall',
   wall_rose: 'wall', wall_night: 'wall',
+  // v14 じっせきの ごほうび限定(お店にもクラフトにも出ない)
+  wall_bottle: 'wall',
   floor_wood: 'floor', floor_tile: 'floor', floor_rug: 'floor',
 } as const satisfies Partial<Record<ItemId, 'wall' | 'floor'>>;
 
@@ -378,6 +466,12 @@ export const RECIPES: RecipeDef[] = [
   { id: 'r_scarecrow', name: 'かかし', out: 'f_scarecrow', outKind: 'item', cost: { straw: 3, twig: 2, cutgrass: 1 } },
   // ---- v10 すいそう。うきだま(ガラス)を初めて拾ったときに ひらめく(うみのモビールと同時) ----
   { id: 'r_aquarium', name: 'すいそう', out: 'f_aquarium', outKind: 'item', cost: { glassfloat: 1, wood: 2, stone: 1 } },
+  // ---- v13 おおきい版2種。小さい版に はじめて いきものを入れたときに ひらめく ----
+  // (INITIAL_RECIPES にも RECIPE_DISCOVERY にも入れない。入手経路は
+  //  DISPLAY_FURNITURE の upgrade → PlacementSystem.putIn だけ)。
+  // 材料は小さい版の ちょうど2倍+だいのぶんの もくざい。3びき入るぶん しっかり高い
+  { id: 'r_aquarium_big', name: 'おおきな すいそう', out: 'f_aquarium_big', outKind: 'item', cost: { glassfloat: 2, wood: 4, stone: 2 } },
+  { id: 'r_bugcage_big', name: 'おおきな むしかご', out: 'f_bugcage_big', outKind: 'item', cost: { twig: 5, fiber: 3, wood: 2 } },
   // ---- v9 おくりもの: なかよし度5の お礼でおぼえる3種 ----
   // INITIAL_RECIPES にも RECIPE_DISCOVERY にも入れない(お礼だけが入手経路)。
   // 材料は「そのNPCらしいもの」で組む: ツムギ=木とやきもの、ミナモ=魚とかいがら、ノクト=星と草。
@@ -487,6 +581,23 @@ export function validateItemData(): string[] {
     if (accepts.length === 0) problems.push(`展示家具${id}に入れられるものが無い`);
     for (const it of accepts) {
       if (!(it in ITEMS)) problems.push(`展示家具${id}に入れる${it}が存在しない`);
+    }
+    // 入る数は1以上の整数(0だと「入れられるのに入らない」家具になる)
+    if (!Number.isInteger(def.capacity) || def.capacity < 1) problems.push(`展示家具${id}のcapacityが1以上の整数でない`);
+    // おおきい版のレシピ: 実在して、その産出が また展示家具で、入れられるものが同じで、もっと入ること
+    const up = (def as { upgrade?: string }).upgrade;
+    if (up !== undefined) {
+      const r = RECIPES.find((x) => x.id === up);
+      if (!r) problems.push(`展示家具${id}のおおきい版レシピ${up}が存在しない`);
+      else if (!isDisplayFurniture(r.out)) problems.push(`展示家具${id}のおおきい版${r.out}が展示家具でない`);
+      else {
+        const big = DISPLAY_FURNITURE[r.out];
+        if (big.capacity <= def.capacity) problems.push(`展示家具${id}のおおきい版${r.out}のほうが入らない`);
+        const a = [...accepts].sort().join(',');
+        const b = [...(big.accepts as readonly ItemId[])].sort().join(',');
+        if (a !== b) problems.push(`展示家具${id}とおおきい版${r.out}で入れられるものが違う`);
+        if (big.statKey !== def.statKey) problems.push(`展示家具${id}とおおきい版${r.out}でstatKeyが違う`);
+      }
     }
   }
   // v12 りょうり: 実在して kind が food か(kindがちがうと「たべる」が出ない)

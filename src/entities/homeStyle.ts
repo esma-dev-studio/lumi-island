@@ -297,9 +297,37 @@ function drawWallNight(c: Ctx): void {
   }
 }
 
+/**
+ * v14 じっせきの ごほうび限定の かべがみ「ボトルかべ」。
+ * そら色のかべ(drawWallSky)の たてじまを そのまま みどりへ ふりかえたもの。
+ * 色は ガラスびん(うきだま f_glassfloat)の みどりから取り、
+ * ほかの かべがみと同じ「にごった色」にそろえてある(教訓1: 原色はおもちゃに見える)。
+ */
+function drawWallBottle(c: Ctx): void {
+  c.fillStyle = '#cfe0d5';
+  c.fillRect(0, 0, TEX, TEX);
+  // たてじま(明るい太い帯+濃い細線の2本組)。1mに4組=25cmピッチ(そら色のかべと同じ組み立て)
+  const pitch = TEX / 4;
+  for (let i = 0; i < 4; i++) {
+    const x = i * pitch;
+    c.fillStyle = '#eaf5ee';
+    c.fillRect(x, 0, M(0.115), TEX);
+    c.fillStyle = '#a4c8b4';
+    c.fillRect(x + M(0.155), 0, M(0.022), TEX);
+    c.fillStyle = '#b8d6c4';
+    c.fillRect(x + M(0.2), 0, M(0.014), TEX);
+  }
+  // 紙の目(たての細かいむら)
+  for (let i = 0; i < 1200; i++) {
+    c.fillStyle = rnd(i * 5 + 11) > 0.5 ? 'rgba(255,255,255,0.4)' : 'rgba(140,180,158,0.2)';
+    c.fillRect(rnd(i * 5 + 7) * TEX, rnd(i * 5 + 9) * TEX, M(0.004), M(0.012));
+  }
+}
+
 const PAINTERS: Record<DecorId, (c: Ctx) => void> = {
   wall_cream: drawWallCream,
   wall_sky: drawWallSky,
+  wall_bottle: drawWallBottle,
   wall_leaf: drawWallLeaf,
   wall_rose: drawWallRose,
   wall_night: drawWallNight,

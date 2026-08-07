@@ -10,7 +10,18 @@ export interface PlacedFurniture {
   x: number;
   z: number;
   rotY: number;
-  /** 展示家具(水槽・むしかご)の中身。入れた魚・虫のItemId。所持品から移し、もちかえると戻る */
+  /**
+   * v13 展示家具(すいそう・むしかご の大小)の中身。入れた順にならぶ。
+   * 所持品から1つずつ移し、とりだす・もちかえると もちものへ戻る。
+   * 長さの上限は DISPLAY_FURNITURE[item].capacity(セーブの読みこみで切りつめる)。
+   */
+  contents?: ItemId[];
+  /**
+   * v12までの中身(1匹だけ)。**書きこみには もう使わない**。
+   * セーブの読みこみ(SaveSystem)が contents=[content] へ移してから捨てるので、
+   * ゲーム中の判定は displayContents() だけを通す。
+   * @deprecated 旧セーブの読みこみ専用
+   */
   content?: ItemId;
   /**
    * v12 いろみずで ぬった色(src/data/items.ts の PAINT_COLORS の hex)。
@@ -18,6 +29,21 @@ export interface PlacedFurniture {
    * 「色の表を減らしても 旧セーブが化けない」。
    */
   color?: string;
+}
+
+/**
+ * 展示家具の中身(唯一の読み口)。
+ *
+ * v12までの content(1匹)も ここで contents 1件として読めるようにしてある。
+ * ふつうは SaveSystem が読みこみで移行ずみだが、この関数を通しておけば
+ * 「移行の前に読んだコードだけ 中身が空に見える」が構造的に起きない。
+ * 引数を ゆるい形にしているのは、AchievementSystem のように
+ * GameState の型を持たない純ロジックからも同じ関数を使えるようにするため。
+ */
+export function displayContents(f: { contents?: readonly ItemId[]; content?: ItemId } | undefined): ItemId[] {
+  if (!f) return [];
+  if (Array.isArray(f.contents)) return [...f.contents];
+  return f.content ? [f.content] : [];
 }
 
 /** 庭の花だん区画。plantedDayからの経過日数で成長する(2日で満開) */

@@ -98,6 +98,88 @@ export function gardenFenceColliders(): { x: number; z: number; w: number; d: nu
 }
 
 // ---------------------------------------------------------------------------
+// v13 お庭に家具を置くときの判定(純関数)。
+//
+// PlacementSystem.checkPlacement がここを通す。お庭は島の一部なので
+// 「屋外のルール(地形・海・NPCの立ち位置…)+ここ」の重ねがけで決まる。
+//
+// ここで止めるのは3つだけ:
+//   plot  … 花だん6区画の枠(v12までは家具と重なれてしまい、花の絵に家具がめりこんだ)
+//   gate  … 門の切れ目(ふさぐと お庭が袋小路になり、実プレイヤーが出られなくなる)
+//   fence … 柵そのもの(IslandScene.rects でも止まるが、そちらの文言は「たてもの」で子どもに通じない)
+// ---------------------------------------------------------------------------
+
+/** お庭の外わく(柵の外がわのかこみ)。柵のデータから機械的に求める */
+export const GARDEN_AREA = ((): { minX: number; maxX: number; minZ: number; maxZ: number } => {
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const f of GARDEN_FENCE) {
+    const hw = (f.axis === 'x' ? f.len : FENCE_THICK) / 2;
+    const hd = (f.axis === 'x' ? FENCE_THICK : f.len) / 2;
+    minX = Math.min(minX, f.x - hw);
+    maxX = Math.max(maxX, f.x + hw);
+    minZ = Math.min(minZ, f.z - hd);
+    maxZ = Math.max(maxZ, f.z + hd);
+  }
+  return { minX, maxX, minZ, maxZ };
+})();
+
+/** お庭(柵のかこみ)の中か。E2E・スクショ・テストが「にわに置いた」を確かめるのに使う */
+export function insideGardenZone(x: number, z: number): boolean {
+  return x >= GARDEN_AREA.minX && x <= GARDEN_AREA.maxX && z >= GARDEN_AREA.minZ && z <= GARDEN_AREA.maxZ;
+}
+
+/** 花だんの枠のまわりに残す余白(m)。枠のふちに家具がふれない値 */
+export const PLOT_PLACE_MARGIN = 0.15;
+
+/** 門の前に あけておく はば(門の線から左右にこれだけ)。人が通れる帯を必ず残す */
+export const GATE_CLEAR = 1.0;
+
+/** 花だんの枠(+余白)と 半径rの家具が重なるか */
+export function overlapsGardenPlot(x: number, z: number, r: number): boolean {
+  const hw = PLOT_W / 2 + PLOT_PLACE_MARGIN + r;
+  const hd = PLOT_D / 2 + PLOT_PLACE_MARGIN + r;
+  return GARDEN_PLOTS.some((p) => Math.abs(x - p.x) < hw && Math.abs(z - p.z) < hd);
+}
+
+/** 門の通り道(切れ目の前後)をふさぐか */
+export function blocksGardenGate(x: number, z: number, r: number): boolean {
+  return (
+    Math.abs(x - GARDEN_GATE.x) < GATE_CLEAR + r &&
+    Math.abs(z - GARDEN_GATE.z) < GARDEN_GATE.gap / 2 + r
+  );
+}
+
+/**
+ * 柵そのものに重なるか(柵は薄い板1枚ぶんの当たり判定)。
+ * 判定は毎フレーム走るので、矩形は1回だけ作って使いまわす
+ * (gardenFenceColliders は IslandScene が積みこむ用に毎回 新しい配列を返す)。
+ */
+const FENCE_RECTS = gardenFenceColliders();
+export function overlapsGardenFence(x: number, z: number, r: number): boolean {
+  return FENCE_RECTS.some(
+    (f) => Math.abs(x - f.x) < f.w / 2 + r && Math.abs(z - f.z) < f.d / 2 + r
+  );
+}
+
+/** お庭で家具を置けない理由(置けるなら null)。文言は PlacementSystem の PLACE_REASON が持つ */
+export type GardenPlaceProblem = 'plot' | 'gate' | 'fence' | null;
+
+export function gardenPlacementProblem(x: number, z: number, r: number): GardenPlaceProblem {
+  // お庭から じゅうぶん はなれていれば見なくてよい(島のどこでも呼ばれる関数なので先に切る)
+  const pad = GATE_CLEAR + r + 1;
+  if (
+    x < GARDEN_AREA.minX - pad || x > GARDEN_AREA.maxX + pad ||
+    z < GARDEN_AREA.minZ - pad || z > GARDEN_AREA.maxZ + pad
+  ) {
+    return null;
+  }
+  if (overlapsGardenPlot(x, z, r)) return 'plot';
+  if (blocksGardenGate(x, z, r)) return 'gate';
+  if (overlapsGardenFence(x, z, r)) return 'fence';
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // 花だんの状態(純関数)
 // ---------------------------------------------------------------------------
 

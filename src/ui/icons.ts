@@ -95,6 +95,10 @@ export const ICONS: Record<string, string> = {
   f_scarecrow: S('<path d="M12 8.6 L12 21" stroke="#7a5a3d"/><path d="M5 10.4 L19 10.4" stroke="#8d6b46"/><path d="M9.4 10.6 L14.6 10.6 L14.6 15.4 L9.4 15.4 Z" fill="#8d9a6a" stroke="#5f6f42"/><path d="M9.4 15.4 L8.6 18.6 M12 15.4 L12 19 M14.6 15.4 L15.4 18.6 M5 10.4 L3.4 12.4 M19 10.4 L20.6 12.4" stroke="#c9b06a"/><path d="M9.6 5.4 L14.4 5.4 L14.4 9.6 L9.6 9.6 Z" fill="#e2cfa0" stroke="#a8845c"/><path d="M6.6 5 L17.4 5 L17.4 5.9 L6.6 5.9 Z" fill="#c9a86b" stroke="#8d7040"/><path d="M9.8 3.2 L14.2 3.2 L14.2 5 L9.8 5 Z" fill="#b8975c" stroke="#8d7040"/><circle cx="13.2" cy="7" r="1" fill="#c9a86b" stroke="#8d7040"/><path d="M9.8 6.2 L11.4 7.8 M11.4 6.2 L9.8 7.8" stroke="#7a5a3d"/><path d="M10.2 8.8 L13 8.8" stroke="#7a5a3d"/>'),
   // ---- v10 すいそう(木のわく+水+砂利+およぐ魚。むしかごと同じ「展示家具」) ----
   f_aquarium: S('<path d="M3.6 5.4 L20.4 5.4 L20.4 17.6 L3.6 17.6 Z" fill="#cfe8f2" stroke="#7a5a3d"/><path d="M3.6 8.4 C7 7.4 9.4 9.4 12.8 8.4 C15.8 7.5 18 8.8 20.4 8.2" stroke="#5f97a8"/><path d="M4.4 15.4 C8 14.2 16 14.2 19.6 15.4 L19.6 17.6 L4.4 17.6 Z" fill="#d6c6a2" stroke="#a8875c"/><path d="M6.6 15.6 C6.2 13 6.8 11.2 7.8 10.2 M7.8 10.2 C8.8 11.2 8.6 13.4 8.2 15.6" stroke="#6f9a58"/><path d="M9.4 12 C11.4 10 14.4 10 16 12 C14.4 14 11.4 14 9.4 12 Z" fill="#8fb8cf" stroke="#4f7a95"/><path d="M16 12 L18.4 10.2 L17.8 12 L18.4 13.8 Z" fill="#8fb8cf" stroke="#4f7a95"/><circle cx="11.4" cy="11.4" r="0.75" fill="#22384c" stroke="none"/><path d="M2.8 4.2 L21.2 4.2 L21.2 5.6 L2.8 5.6 Z" fill="#b98d5f" stroke="#7a5a3d"/><path d="M2.8 17.4 L21.2 17.4 L21.2 19 L2.8 19 Z" fill="#8a6a4a" stroke="#63472f"/><path d="M5 19 L5 21 M19 19 L19 21" stroke="#63472f"/>'),
+  // ---- v13 おおきい版2種(3びき入る)。小さい版と同じ絵の言語のまま、
+  //      「よこに ながい水そう」「だいの上の 大きなかご」と、中の数で見分けられるようにする ----
+  f_aquarium_big: S('<path d="M2.2 6.6 L21.8 6.6 L21.8 17.2 L2.2 17.2 Z" fill="#cfe8f2" stroke="#7a5a3d"/><path d="M2.2 9.2 C5.4 8.3 7.6 10 10.6 9.2 C13.6 8.4 15.4 9.9 18 9.2 C19.4 8.8 20.8 9 21.8 9.2" stroke="#5f97a8"/><path d="M3 15.2 C8 14 16 14 21 15.2 L21 17.2 L3 17.2 Z" fill="#d6c6a2" stroke="#a8875c"/><path d="M4.6 15.4 C4.2 13.2 4.8 11.6 5.6 10.8 M5.6 10.8 C6.4 11.6 6.3 13.6 6 15.4" stroke="#6f9a58"/><path d="M18.4 15.4 C18 13.6 18.4 12.4 19 11.7 M19 11.7 C19.7 12.4 19.6 14 19.3 15.4" stroke="#6f9a58"/><path d="M7.4 10.6 C8.8 9.2 11 9.2 12.2 10.6 C11 12 8.8 12 7.4 10.6 Z" fill="#8fb8cf" stroke="#4f7a95"/><path d="M12.2 10.6 L14 9.4 L13.6 10.6 L14 11.9 Z" fill="#8fb8cf" stroke="#4f7a95"/><path d="M12.6 13.6 C13.8 12.4 15.6 12.4 16.6 13.6 C15.6 14.9 13.8 14.9 12.6 13.6 Z" fill="#9fe8c8" stroke="#4f9a78"/><path d="M16.6 13.6 L18.2 12.6 L17.9 13.6 L18.2 14.7 Z" fill="#9fe8c8" stroke="#4f9a78"/><path d="M15 8.6 C16 7.6 17.6 7.6 18.5 8.6 C17.6 9.7 16 9.7 15 8.6 Z" fill="#c9a8e0" stroke="#7a5f95"/><circle cx="9" cy="10.2" r="0.65" fill="#22384c" stroke="none"/><path d="M1.4 5.4 L22.6 5.4 L22.6 6.8 L1.4 6.8 Z" fill="#b98d5f" stroke="#7a5a3d"/><path d="M1.4 17 L22.6 17 L22.6 18.6 L1.4 18.6 Z" fill="#8a6a4a" stroke="#63472f"/><path d="M3.4 18.6 L3.4 21 M12 18.6 L12 21 M20.6 18.6 L20.6 21" stroke="#63472f"/>'),
+  f_bugcage_big: S('<path d="M3.6 15.4 L20.4 15.4 L20.4 16.8 L3.6 16.8 Z" fill="#8a6a4a" stroke="#63472f"/><path d="M5.6 16.8 L5.6 21 M18.4 16.8 L18.4 21" stroke="#63472f"/><path d="M4.4 5.6 L19.6 5.6 L19.6 15.4 L4.4 15.4 Z" fill="none" stroke="#7a5a3d"/><path d="M8.2 5.6 L8.2 15.4 M12 5.6 L12 15.4 M15.8 5.6 L15.8 15.4" stroke="#a8875c"/><path d="M4.4 8.8 L19.6 8.8 M4.4 12.2 L19.6 12.2" stroke="#a8875c"/><path d="M3.4 3.8 L20.6 3.8 L20.6 5.6 L3.4 5.6 Z" fill="#63472f" stroke="#3f2d1c"/><path d="M10.4 3.8 C10.4 2 13.6 2 13.6 3.8" stroke="#7aa85f"/><path d="M5.6 13 C5.6 11.4 8 11.4 8 13 C8 14.4 5.6 14.4 5.6 13 Z" fill="#f4f2e8" stroke="#8a8578"/><path d="M10.8 10.2 C10.8 8.8 13.2 8.8 13.2 10.2 C13.2 11.6 10.8 11.6 10.8 10.2 Z" fill="#e8d9a0" stroke="#a8875c"/><path d="M16.2 13.4 C16.2 12 18.4 12 18.4 13.4 C18.4 14.6 16.2 14.6 16.2 13.4 Z" fill="#cfe8a0" stroke="#7aa85f"/>'),
   // ---- v9 おくりもの(なかよし度のハート・お礼レシピの家具3種) ----
   heart: S('<path d="M12 20.2 C5.2 15.4 2.8 12.4 2.8 9.4 C2.8 6.8 4.9 4.9 7.4 4.9 C9.1 4.9 10.8 5.9 12 7.6 C13.2 5.9 14.9 4.9 16.6 4.9 C19.1 4.9 21.2 6.8 21.2 9.4 C21.2 12.4 18.8 15.4 12 20.2 Z" fill="#e0879a" stroke="#b0566a"/>'),
   heart_off: S('<path d="M12 20.2 C5.2 15.4 2.8 12.4 2.8 9.4 C2.8 6.8 4.9 4.9 7.4 4.9 C9.1 4.9 10.8 5.9 12 7.6 C13.2 5.9 14.9 4.9 16.6 4.9 C19.1 4.9 21.2 6.8 21.2 9.4 C21.2 12.4 18.8 15.4 12 20.2 Z" fill="#ece6d8" stroke="#c4bdac"/>'),
@@ -128,8 +132,84 @@ export const ICONS: Record<string, string> = {
   wall_night: S('<path d="M4 5 L14 5 L14 19 L4 19 Z" fill="#2f3e5c" stroke="#1d2740"/><circle cx="6.4" cy="7.6" r="0.9" fill="#fff6d8" stroke="none"/><circle cx="11" cy="8.6" r="0.6" fill="#e8eeff" stroke="none"/><circle cx="8.4" cy="11.4" r="1.1" fill="#e8eeff" stroke="none"/><circle cx="12.2" cy="13" r="0.6" fill="#fff6d8" stroke="none"/><circle cx="6" cy="15.4" r="0.8" fill="#e8eeff" stroke="none"/><circle cx="10.4" cy="17" r="1" fill="#e8eeff" stroke="none"/><path d="M8.4 9.6 L8.4 13.2 M6.6 11.4 L10.2 11.4" stroke="#8296c4"/><ellipse cx="17" cy="12" rx="3" ry="7" fill="#3d4d70" stroke="#1d2740"/><path d="M14 5 C16 5 16 19 14 19" stroke="#1d2740"/>'),
   // ---- v12 くみあわせタブの「?」わく(ずかんの 未はっけん)----
   combo_unknown: S('<path d="M12 3.2 L20.4 8 L20.4 16 L12 20.8 L3.6 16 L3.6 8 Z" fill="#ece5d6" stroke="#b8ad96"/><path d="M9.6 9.6 C9.6 7.8 11 6.9 12.3 6.9 C13.8 6.9 14.9 7.9 14.9 9.2 C14.9 11.2 12.2 11.4 12.2 13.4" stroke="#a89a80"/><circle cx="12.2" cy="16" r="1.05" fill="#a89a80" stroke="none"/>'),
+  // ---- v14 じっせきの ごほうびでしか 手に入らない3点 ----
+  // どれも 元になった品と 同じ形にして、色だけ とくべつにしてある
+  // (形まで変えると「別のもの」に見えて、ごほうびの うれしさが つたわらない)。
+  // ボトルかべ: そら色のかべ(wall_sky)の みどり版。ガラスびんの色
+  wall_bottle: S('<path d="M4 5 L14 5 L14 19 L4 19 Z" fill="#cfe4d8" stroke="#4f8a72"/><path d="M6.4 5.6 L6.4 18.4 M9 5.6 L9 18.4 M11.6 5.6 L11.6 18.4" stroke="#eef8f2"/><path d="M7.7 5.6 L7.7 18.4 M10.3 5.6 L10.3 18.4" stroke="#a8ccbc"/><ellipse cx="17" cy="12" rx="3" ry="7" fill="#b8d8c8" stroke="#4f8a72"/><path d="M14 5 C16 5 16 19 14 19" stroke="#4f8a72"/>'),
+  // きんのランタン: ほしのランタン(f_starlantern)の きん版。台も星も 金いろにする
+  f_starlantern_gold: S('<path d="M7 19.5 L17 19.5 L15.6 15.6 L8.4 15.6 Z" fill="#c9a860" stroke="#8d7030"/><path d="M9.6 15.6 L9.6 12.6 L14.4 12.6 L14.4 15.6" stroke="#8d7030"/><path d="M12 2 L13.6 6.4 L18 8 L13.6 9.6 L12 13.4 L10.4 9.6 L6 8 L10.4 6.4 Z" fill="#f0d489" stroke="#c9982f"/><path d="M12 2 L12 13.4 M6 8 L18 8" stroke="#d9b23e"/>'),
+  // よるのとうだい: とうだいのランタン(f_lighthouse_lantern)の こん色版
+  f_lighthouse_lantern_night: S('<path d="M8.6 20.6 L15.4 20.6 L15.4 18.6 L8.6 18.6 Z" fill="#3d4d70" stroke="#1d2740"/><path d="M9.8 18.6 L14.2 18.6 L13.4 9 L10.6 9 Z" fill="#4a5c84" stroke="#1d2740"/><path d="M10.2 13.6 L13.8 13.6 L13.7 11.8 L10.3 11.8 Z" fill="#2f3e5c" stroke="#1d2740"/><path d="M9.4 9 L14.6 9 L14.6 7.8 L9.4 7.8 Z" fill="#3d4d70" stroke="#1d2740"/><path d="M10.4 7.8 L10.4 4.6 M13.6 7.8 L13.6 4.6" stroke="#2f3e5c"/><path d="M9.6 4.6 L14.4 4.6 L14.4 3.4 L9.6 3.4 Z" fill="#2f3e5c" stroke="#1d2740"/><circle cx="12" cy="6.2" r="1.9" fill="#dff2ff" stroke="#7aa8bc"/><path d="M8.4 5 L5.6 4 M15.6 5 L18.4 4 M8.4 7.4 L5.6 8.4 M15.6 7.4 L18.4 8.4" stroke="#a8d2e4"/>'),
 };
 
 export function icon(id: string): string {
   return ICONS[id] ?? S('<circle cx="12" cy="12" r="8"/>');
+}
+
+// ---------------------------------------------------------------------------
+// v14 バッジのアイコン(103個ぶんを 手続きで 合成する)。
+//
+// 手描きの大きなSVGを103個 書かずに、4つの部品の かけ算で作る:
+//   台座の形   … 丸 / 盾 / 六角 / 星(カテゴリごと)
+//   台座の色   … カテゴリの色(face=面 / edge=ふちの線)
+//   中央のピクト… ICONS の 既存の絵を そのまま 縮めて はめる
+//   段位のふち … どう #b08d57 / ぎん #9fa8b0 / きん #d9b23e の 太い輪
+// こうしておくと、あとで バッジを足すときに「行を1つ足す」だけで絵まで付いてくる。
+// ---------------------------------------------------------------------------
+
+/**
+ * ピクトの中身(<svg>…</svg> の中だけ)を取り出す。
+ * ICONS は ぜんぶ S() が作った同じ形なので、最初の '>' と 最後の '</svg>' で切れば足りる。
+ */
+export function iconBody(id: string): string {
+  const svg = ICONS[id];
+  if (!svg) return '';
+  const head = svg.indexOf('>');
+  const tail = svg.lastIndexOf('</svg>');
+  return head < 0 || tail < 0 ? '' : svg.slice(head + 1, tail);
+}
+
+/** 台座の形。どれも 24x24 の中で 同じくらいの面積になるようにしてある */
+const BADGE_PLATES: Record<string, string> = {
+  circle: 'M12 1.6 A10.4 10.4 0 1 1 11.99 1.6 Z',
+  shield: 'M12 1.4 L21.2 4.6 L21.2 12.2 C21.2 17.4 17.2 21 12 22.6 C6.8 21 2.8 17.4 2.8 12.2 L2.8 4.6 Z',
+  hex: 'M12 1.4 L21.2 6.7 L21.2 17.3 L12 22.6 L2.8 17.3 L2.8 6.7 Z',
+  // 星: 10角形(外r=11.0 / 内r=6.0)。角を丸めず、はめたピクトが かくれない大きさにする
+  star:
+    'M12 1 L14.1 8.0 L21.5 7.7 L15.4 12.0 L17.8 18.9 L12 14.5 L6.2 18.9 L8.6 12.0 ' +
+    'L2.5 7.7 L9.9 8.0 Z',
+};
+
+export interface BadgeIconOpts {
+  /** 台座の形(BADGE_PLATES のキー) */
+  shape: string;
+  /** カテゴリの色: 面 */
+  face: string;
+  /** カテゴリの色: ふちの線 */
+  edge: string;
+  /** 段位のふちの色(どう/ぎん/きん) */
+  ring: string;
+  /** 中央に はめる ピクト(ICONS のキー) */
+  pict: string;
+}
+
+/**
+ * バッジ1つぶんのSVG。ほかのピクトと同じ 24x24・1em なので、
+ * `.inv-ico` の中でも バッジのマスの中でも そのまま使える。
+ */
+export function badgeIcon(o: BadgeIconOpts): string {
+  const plate = BADGE_PLATES[o.shape] ?? BADGE_PLATES.circle;
+  // 中央のピクトは 台座の中に おさまる大きさ(0.52倍)へ縮める。
+  // translate → scale → translate の順で 中心(12,12)を そのままに 縮める
+  const inner = `<g transform="translate(12 12) scale(0.52) translate(-12 -12)">${iconBody(o.pict)}</g>`;
+  return (
+    '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" ' +
+    'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
+    `<path d="${plate}" fill="${o.face}" stroke="${o.ring}" stroke-width="1.9"/>` +
+    `<path d="${plate}" fill="none" stroke="${o.edge}" stroke-width="0.7" opacity="0.55" ` +
+    'transform="translate(12 12) scale(0.86) translate(-12 -12)"/>' +
+    inner +
+    '</svg>'
+  );
 }

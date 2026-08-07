@@ -19,8 +19,10 @@ const NEW_FURNITURE: ItemId[] = ['f_bookcase', 'f_dishrack', 'f_flowervase'];
 const DECORS = Object.keys(DECOR_SLOT) as ItemId[];
 /** v12 くみあわせでしか手に入らない模様替え(お店にも クラフトの最初の一覧にも出ない) */
 const COMBO_DECORS: ItemId[] = ['wall_rose', 'wall_night'];
-/** お店で買える模様替え(v7-P2の6種)。v12で増えた2枚は ここに入れない */
-const SHOP_DECORS = DECORS.filter((id) => !COMBO_DECORS.includes(id));
+/** v14 じっせきの ごほうびでしか手に入らない模様替え(お店にもクラフトにも出ない) */
+const REWARD_DECORS: ItemId[] = ['wall_bottle'];
+/** お店で買える模様替え(v7-P2の6種)。v12で増えた2枚・v14の1枚は ここに入れない */
+const SHOP_DECORS = DECORS.filter((id) => !COMBO_DECORS.includes(id) && !REWARD_DECORS.includes(id));
 /** 実際の家具の当たり判定の半径(src/entities/furniture.ts と同じ値。ここを変えたら両方直す) */
 const RADII = [0.42, 0.4, 0.22, 0.6, 0.5];
 
@@ -48,9 +50,10 @@ describe('模様替えアイテム(かべがみ・ゆかいた)', () => {
     expect(validateItemData()).toEqual([]);
   });
 
-  it('かべがみ5種・ゆかいた3種があり、kindはdecor', () => {
+  it('かべがみ6種・ゆかいた3種があり、kindはdecor', () => {
     // v12: くみあわせで見つかる「ももいろかべ」「ほしぞらかべ」が加わった(お店には置かない)
-    expect(WALL_STYLE_IDS).toEqual(['wall_cream', 'wall_sky', 'wall_leaf', 'wall_rose', 'wall_night']);
+    // v14: じっせきの ごほうび限定の「ボトルかべ」が加わった(お店にもクラフトにも出ない)
+    expect(WALL_STYLE_IDS).toEqual(['wall_cream', 'wall_sky', 'wall_leaf', 'wall_rose', 'wall_night', 'wall_bottle']);
     expect(FLOOR_STYLE_IDS).toEqual(['floor_wood', 'floor_tile', 'floor_rug']);
     for (const id of DECORS) {
       expect(ITEMS[id].kind, id).toBe('decor');
@@ -68,8 +71,9 @@ describe('模様替えアイテム(かべがみ・ゆかいた)', () => {
       expect(row, id).toBeDefined();
       expect(row!.price).toBe(120);
     }
-    // くみあわせでしか手に入らない2枚は「見つける楽しみ」なので お店には置かない
-    for (const id of COMBO_DECORS) {
+    // くみあわせでしか手に入らない2枚は「見つける楽しみ」なので お店には置かない。
+    // v14のごほうび限定の1枚も同じ(もっている=そのじっせきを たっせいした しるし)
+    for (const id of [...COMBO_DECORS, ...REWARD_DECORS]) {
       expect(SHOP_STOCK.some((s) => s.item === id), id).toBe(false);
     }
   });

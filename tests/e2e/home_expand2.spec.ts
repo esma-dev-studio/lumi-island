@@ -54,6 +54,9 @@ async function seedAndReload(page: Page, patch: string): Promise<void> {
   await ev(
     page,
     `(() => { const s = __lumiDebug.state();
+      // v13 じっせきの ごほうび(読みこみ時の さかのぼり配布)を「受けとりずみ」にしておく。
+      // この検証は こうじ代の金額そのものを見るので、ごほうびの ルミナを まぜない
+      __lumiDebug.sealAchievementRewards();
       s.lumina = 2000;
       s.flags.tut_move = true; s.flags.intro_done = true;
       s.flags.unlock_inv = true; s.flags.unlock_craft = true; s.flags.unlock_quest = true;

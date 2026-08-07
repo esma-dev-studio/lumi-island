@@ -92,6 +92,12 @@ export class InputRouter {
       gs.questDlg.giftUI.cancel();
       return;
     }
+    // v13 手紙は ずかんの上にも 乗る小さなUI。開いていたら それだけ閉じる
+    // (ずかんから読み返しているときに、Escで ずかんごと 閉じてしまわない)
+    if (gs.letterUI?.open) {
+      gs.letterUI.close();
+      return;
+    }
     const wasOpen =
       gs.invUI.open || gs.craftUI.open || gs.shopUI.open || gs.questLog.open ||
       gs.codexUI.open || gs.dialogue.open || gs.pauseMenu.open || gs.questComplete.open ||

@@ -243,8 +243,120 @@ function getAquaMats(scene: Scene): AquaMats {
   return aquaMats;
 }
 
-/** すいそうの水の高さ(魚の中心)。メッシュの寸法と魚の遊泳をここ1か所でそろえる */
+/** すいそう(小)の水の高さ(魚の中心)。メッシュの寸法と魚の遊泳をここ1か所でそろえる */
 const AQUA_FISH_Y = 0.55;
+
+/**
+ * v13 すいそうの寸法(小・大の2つだけ)。
+ *
+ * わく・ガラス・水面・砂利の位置は すべてこの数から作る(buildAquarium)ので、
+ * 「大きいほうだけ ガラスが水面より下」のような食いちがいが起きない。
+ * lanes は およぐ魚の みち(何びき入るかは items.ts の capacity が決め、
+ * ここは「入った魚を どこで およがせるか」だけを持つ)。
+ */
+interface FishLane {
+  /** 往復の中心(x)・おくゆき(z)・たかさ(y) */
+  z: number;
+  y: number;
+  /** 往復のはば(片道) */
+  amp: number;
+  /** はやさ(rad/秒)と、そろって動かないための ずらし */
+  speed: number;
+  phase: number;
+}
+interface AquaSpec {
+  legX: number[]; // だいの脚のx(z は ±legZ の2列)
+  legZ: number;
+  legW: number;
+  legH: number;
+  railW: number; // 脚のあいだの ぬき(横木)の長さ
+  railY: number;
+  topW: number; // 天板
+  topD: number;
+  topY: number;
+  topH: number;
+  faceY: number; // 天板の面(Zファイティングよけに高さを変える)
+  hw: number; // 水そうのわくの半外寸(x)
+  hd: number; // 同(z)
+  frameY: number; // 下わくの中心y
+  postY: number; // 四すみの柱の中心y
+  postH: number;
+  postT: number; // 柱・わくの太さ
+  topRailY: number; // 上わくの中心y
+  gravelY: number; // 砂利の下の層の中心y
+  waterY: number; // 水面
+  glassY: number; // ガラスの箱の中心y
+  glassH: number;
+  pebbles: number; // 砂利つぶの数
+  weeds: [number, number][]; // 水草の根もと(x, z)
+  weedY: number;
+  colliderR: number;
+  /**
+   * 魚の大きさ(1.3で体長0.26m)。水そうを大きくしたぶん 魚も大きくしないと
+   * 「青い つぶ」に見える(実機の接写で確認して 1.3→1.6 に上げた)。
+   * 体長 + 往復のはば amp×2 が ガラスの内がわ(hw×2−柱)に収まること。
+   */
+  fishScale: number;
+  lanes: FishLane[];
+}
+
+const AQUA_SPECS: Record<'f_aquarium' | 'f_aquarium_big', AquaSpec> = {
+  // 小(v10から寸法はそのまま。1ぴき)
+  f_aquarium: {
+    legX: [-0.28, 0.28], legZ: 0.15, legW: 0.075, legH: 0.3,
+    railW: 0.5, railY: 0.24,
+    topW: 0.74, topD: 0.46, topY: 0.325, topH: 0.05, faceY: 0.355,
+    hw: 0.325, hd: 0.19, postT: 0.035,
+    frameY: 0.382, postY: 0.55, postH: 0.37, topRailY: 0.722,
+    gravelY: 0.4, waterY: 0.66, glassY: 0.552, glassH: 0.35,
+    pebbles: 9, weeds: [[-0.2, -0.04]], weedY: 0.44,
+    colliderR: 0.42, fishScale: 1.3,
+    lanes: [{ z: 0, y: AQUA_FISH_Y, amp: 0.13, speed: 0.55, phase: 0 }],
+  },
+  // 大(3びき)。よこ幅は約2倍・高さは水そうだけ のばす
+  // (だいを高くすると 子どもの目線から 中が見えなくなる)
+  f_aquarium_big: {
+    legX: [-0.6, 0, 0.6], legZ: 0.2, legW: 0.085, legH: 0.34,
+    railW: 1.2, railY: 0.27,
+    topW: 1.54, topD: 0.58, topY: 0.365, topH: 0.055, faceY: 0.398,
+    hw: 0.7, hd: 0.25, postT: 0.04,
+    frameY: 0.428, postY: 0.66, postH: 0.47, topRailY: 0.885,
+    gravelY: 0.45, waterY: 0.84, glassY: 0.655, glassH: 0.45,
+    pebbles: 16, weeds: [[-0.46, -0.06], [0.42, 0.05]], weedY: 0.49,
+    colliderR: 0.75, fishScale: 1.6,
+    // 体長0.32m + 往復0.72m = 1.04m < ガラスの内がわ1.33m
+    lanes: [
+      { z: -0.15, y: 0.58, amp: 0.36, speed: 0.44, phase: 0 },
+      { z: 0.13, y: 0.72, amp: 0.29, speed: 0.56, phase: 2.2 },
+      { z: 0.0, y: 0.65, amp: 0.4, speed: 0.35, phase: 4.3 },
+    ],
+  },
+};
+
+/**
+ * v13 むしかごの寸法(小・大)。虫のとまる場所も ここが持つ。
+ * 大は「だいの上にのった かご」にして、小との差が ひと目で分かるようにする。
+ */
+interface CageSpec {
+  /** 虫のとまる場所(かごのローカル座標)と向き */
+  spots: { x: number; y: number; z: number; rotY: number }[];
+  /** 虫の大きさ。かごが大きいぶん 少し大きくしないと「点」に見える */
+  bugScale: number;
+}
+const CAGE_SPECS: Record<'f_bugcage' | 'f_bugcage_big', CageSpec> = {
+  f_bugcage: {
+    spots: [{ x: 0, y: 0.13, z: 0, rotY: 0.6 }],
+    bugScale: 1,
+  },
+  f_bugcage_big: {
+    spots: [
+      { x: -0.19, y: 0.4, z: -0.09, rotY: 0.5 },
+      { x: 0.03, y: 0.4, z: 0.09, rotY: 2.4 },
+      { x: 0.2, y: 0.4, z: -0.05, rotY: 4.2 },
+    ],
+    bugScale: 1.35,
+  },
+};
 
 /** 展示する魚の色(せなか・ひれ・はら)。ItemId ごとに ずかんのアイコンと色をそろえる */
 const FISH_COLORS: Record<string, [string, string, string]> = {
@@ -307,20 +419,24 @@ function appendMiniFish(A: Arrays, cx: number, cy: number, cz: number, s: number
   } // 目(横向きなので「正面に点2つ」にはならない)
 }
 
-/** すいそうの中で およぐ魚1匹(左右にゆっくり往復し、向きも進む方へ変わる) */
-function makeSwimmingFish(scene: Scene, item: string, seed: number): Mesh {
+/**
+ * すいそうの中で およぐ魚1匹(左右にゆっくり往復し、向きも進む方へ変わる)。
+ * lane が「どのみちを およぐか」を決めるので、大きい水そうでは3匹が
+ * ちがう おくゆき・たかさ・はやさで すれちがう。
+ */
+function makeSwimmingFish(scene: Scene, item: string, seed: number, lane: FishLane, scale: number): Mesh {
   const F = A0();
-  // 1.3倍。等倍だと水そうの中で小さすぎて「魚だ」と分からなかった(実機の接写で確認)。
-  // 体長0.26mで、往復の幅0.13mを足しても ガラス(内寸0.63m)からはみ出さない
-  appendMiniFish(F, 0, 0, 0, 1.3, item, seed);
+  // 等倍だと水そうの中で小さすぎて「魚だ」と分からなかった(実機の接写で確認)。
+  // 大きさは水そうごと(AquaSpec.fishScale)。往復の幅を足しても
+  // ガラスの内がわからはみ出さない値を lane に入れてある
+  appendMiniFish(F, 0, 0, 0, scale, item, seed);
   const fish = faceOutward(toMesh(scene, `aquaFish_${item}`, F, 'flip'));
   fish.isPickable = false;
-  const speed = 0.55 + (seed % 5) * 0.04;
-  const amp = 0.13;
+  const speed = lane.speed + (seed % 5) * 0.02;
   registerAnimator(scene, fish, (m, t) => {
-    const ph = t * speed;
-    m.position.x = Math.sin(ph) * amp;
-    m.position.y = AQUA_FISH_Y + Math.sin(ph * 1.7 + 0.6) * 0.014;
+    const ph = t * speed + lane.phase;
+    m.position.x = Math.sin(ph) * lane.amp;
+    m.position.y = lane.y + Math.sin(ph * 1.7 + 0.6) * 0.014;
     // 進む向きへ体を向ける(頭は+X)。折り返しの手前でなめらかに回す
     const dir = Math.cos(ph);
     m.rotation.y = dir >= 0 ? 0 : Math.PI;
@@ -329,31 +445,42 @@ function makeSwimmingFish(scene: Scene, item: string, seed: number): Mesh {
 }
 
 /**
- * 展示家具の「中身」メッシュ(家具ローカル座標)。content が無い/入れられないものなら null。
+ * 展示家具の「中身」メッシュ1つ(家具ローカル座標)。content が無い/入れられないものなら null。
  * すいそう=およぐ魚 / むしかご=とまっている虫(ホタルは夜だけ明滅する)。
+ *
+ * slot は「何番目に入っているか」。すいそうは およぐみち、むしかごは とまる場所が変わる
+ * (大きい家具に3匹入れても、かさならずに べつべつの場所にいる)。
  */
-export function makeDisplayContentMesh(scene: Scene, furniture: ItemId, content: ItemId | undefined): Mesh | null {
+export function makeDisplayContentMesh(
+  scene: Scene, furniture: ItemId, content: ItemId | undefined, slot = 0
+): Mesh | null {
   if (!content || !isDisplayFurniture(furniture)) return null;
-  if (furniture === 'f_aquarium') {
+  if (furniture === 'f_aquarium' || furniture === 'f_aquarium_big') {
     if (!FISH_COLORS[content]) return null;
-    const fish = makeSwimmingFish(scene, content, 41);
-    fish.position.set(0, AQUA_FISH_Y, 0);
+    const spec = AQUA_SPECS[furniture];
+    const lane = spec.lanes[slot % spec.lanes.length];
+    const fish = makeSwimmingFish(scene, content, 41 + slot * 7, lane, spec.fishScale);
+    fish.position.set(0, lane.y, lane.z);
     return fish;
   }
   // むしかご: 虫は かごの床にとまっている(かごの中で ぱたぱたさせない)
   if (!content.startsWith('b_')) return null;
-  const bug = makeCagedBugMesh(scene, content as BugId, 31);
-  bug.position.set(0, 0.13, 0);
-  bug.rotation.y = 0.6;
+  const spec = CAGE_SPECS[furniture as 'f_bugcage' | 'f_bugcage_big'];
+  const spot = spec.spots[slot % spec.spots.length];
+  const bug = makeCagedBugMesh(scene, content as BugId, 31 + slot * 5);
+  bug.position.set(spot.x, spot.y, spot.z);
+  bug.rotation.y = spot.rotY;
+  if (spec.bugScale !== 1) bug.scaling.setAll(spec.bugScale);
   if (content === 'b_hotaru') {
     const glow = bug.getChildMeshes(true).find((m) => m.name.startsWith(CAGED_GLOW_NAME));
     if (glow) {
       const mint = getGlowMats(scene).mint;
       registerAnimator(scene, glow as Mesh, (m, t) => {
         // 夜だけ明滅させる。夜かどうかは共有マテリアルの emissive(DayNightが動かす)から読む
-        // ——時刻を配線で持ちこまなくても「光っている時間帯」が分かる
+        // ——時刻を配線で持ちこまなくても「光っている時間帯」が分かる。
+        // ずらし(slot)を足して、3匹のホタルが そろって光らないようにする
         const lit = mint.emissiveColor.g;
-        const k = lit > 0.02 ? 0.5 + 0.85 * (0.5 + 0.5 * Math.sin(t * 3.1)) : 1;
+        const k = lit > 0.02 ? 0.5 + 0.85 * (0.5 + 0.5 * Math.sin(t * 3.1 + slot * 1.9)) : 1;
         m.scaling.setAll(k);
       });
     }
@@ -361,7 +488,106 @@ export function makeDisplayContentMesh(scene: Scene, furniture: ItemId, content:
   return bug;
 }
 
-export function makeFurnitureMesh(scene: Scene, item: ItemId, content?: ItemId): FurnitureMesh {
+/** 展示家具の中身ぜんぶ(入っている順に slot が決まる)。空なら空配列 */
+export function makeDisplayContentMeshes(
+  scene: Scene, furniture: ItemId, contents: readonly ItemId[]
+): Mesh[] {
+  const out: Mesh[] = [];
+  for (let i = 0; i < contents.length; i++) {
+    const m = makeDisplayContentMesh(scene, furniture, contents[i], i);
+    if (m) out.push(m);
+  }
+  return out;
+}
+
+/**
+ * すいそう(小・大)を組み立てる。寸法はぜんぶ AQUA_SPECS から取る。
+ * 中の魚が見えるように「わく+ガラス」で組む(教訓1: 見せたいものを不透明な箱に入れない)。
+ */
+function buildAquarium(scene: Scene, item: 'f_aquarium' | 'f_aquarium_big', contents: readonly ItemId[]): FurnitureMesh {
+  const s = AQUA_SPECS[item];
+  const A = A0();
+  // だい(脚+ぬき+天板)
+  for (const lx of s.legX) {
+    for (const lz of [-s.legZ, s.legZ]) fbox(A, lx, s.legH / 2, lz, s.legW, s.legH, s.legW, WOOD_D);
+  }
+  for (const lz of [-s.legZ, s.legZ]) fbox(A, 0, s.railY, lz, s.railW, 0.05, 0.05, WOOD_D);
+  fbox(A, 0, s.topY, 0, s.topW, s.topH, s.topD, WOOD);
+  fbox(A, 0, s.faceY, 0, s.topW - 0.04, 0.02, s.topD - 0.04, WOOD_D); // 天板の面(高さを変えてZファイティングを避ける)
+  // 水そうの わく: 下わく → 四すみの柱 → 上わく(上は4本の帯にして、上から中が見えるようにする)
+  const t = s.postT;
+  for (const sz of [-s.hd, s.hd]) fbox(A, 0, s.frameY, sz, s.hw * 2 + 0.03, 0.03, t, WOOD_D);
+  for (const sx of [-s.hw, s.hw]) fbox(A, sx, s.frameY, 0, t, 0.03, s.hd * 2 + 0.04, WOOD_D);
+  for (const sx of [-s.hw, s.hw]) {
+    for (const sz of [-s.hd, s.hd]) fbox(A, sx, s.postY, sz, t, s.postH, t, WOOD_D);
+  }
+  for (const sz of [-s.hd, s.hd]) fbox(A, 0, s.topRailY, sz, s.hw * 2 + 0.03, 0.036, t + 0.007, WOOD);
+  for (const sx of [-s.hw, s.hw]) fbox(A, sx, s.topRailY, 0, t + 0.007, 0.036, s.hd * 2 + 0.04, WOOD);
+  // 底の砂利(木のわくより明るい砂色。上面の高さは水そうの底板と変える)。
+  // 明るすぎると「白い箱」に見えるので、実機の接写で少し落とした
+  fbox(A, 0, s.gravelY, 0, s.hw * 2 - 0.02, 0.022, s.hd * 2 - 0.01, Color3.FromHexString('#b09b74'));
+  fbox(A, 0, s.gravelY + 0.014, 0, s.hw * 2 - 0.05, 0.016, s.hd * 2 - 0.04, Color3.FromHexString('#c2ae87'));
+  const root = toMesh(scene, item, A, 'keep');
+  // 砂利のつぶ・水草(appendBlobだけなので別メッシュにして法線を'flip'で確定させる)
+  const P = A0();
+  const span = s.hw * 2 - 0.13;
+  for (let i = 0; i < s.pebbles; i++) {
+    const px = -span / 2 + (i * span) / Math.max(1, s.pebbles - 1) + (vnoise(i * 3.1, 1.7) - 0.5) * 0.04;
+    const pz = (vnoise(i * 5.3, 2.9) - 0.5) * (s.hd * 1.4);
+    appendBlob(P, px, s.gravelY + 0.024, pz, 0.032, 0.011, 0.026,
+      jitterColor(Color3.FromHexString('#bda882'), 60 + i, 0.12), { segs: 5, noise: 0.18, seed: 60 + i, bottomDark: 0 });
+  }
+  // 水草(根もとから 葉が3枚 立ちあがる)
+  const leaves: [number, number, number][] = [[0.0, 0.2, 0.02], [0.045, 0.15, -0.03], [-0.04, 0.11, 0.03]];
+  for (let w = 0; w < s.weeds.length; w++) {
+    const [wx, wz] = s.weeds[w];
+    appendBlob(P, wx, s.weedY, wz, 0.05, 0.022, 0.04, Color3.FromHexString('#5a7d4a'), {
+      segs: 6, noise: 0.14, seed: 71 + w * 13, bottomDark: 0.1,
+    });
+    for (let i = 0; i < leaves.length; i++) {
+      const [lx, lh, lz] = leaves[i];
+      appendBlob(P, wx + lx, s.weedY + lh / 2, wz + lz, 0.017, lh / 2, 0.013,
+        jitterColor(Color3.FromHexString('#6f9a58'), 80 + i + w * 3, 0.1), { segs: 5, noise: 0.1, seed: 80 + i + w * 3, bottomDark: 0.18 });
+      appendBlob(P, wx + lx * 1.4, s.weedY + lh * 0.92, wz + lz * 1.3, 0.024, 0.022, 0.016,
+        jitterColor(Color3.FromHexString('#84b06a'), 90 + i + w * 3, 0.1), { segs: 5, noise: 0.12, seed: 90 + i + w * 3, bottomDark: 0.14 });
+    }
+  }
+  const plants = faceOutward(toMesh(scene, `${item}_plants`, P, 'flip'));
+  plants.parent = root;
+  plants.isPickable = false;
+  const mats = getAquaMats(scene);
+  // 水面(半透明のうすい板)。上わくより下・魚の上に置く
+  const W = A0();
+  fbox(W, 0, s.waterY, 0, s.hw * 2 - 0.02, 0.012, s.hd * 2 - 0.01, Color3.White());
+  const water = toMesh(scene, `${item}_water`, W, 'keep');
+  water.material = mats.water; // 共有マテリアルなので dispose しない
+  water.parent = root;
+  water.isPickable = false;
+  // 半透明どうしの前後関係はメッシュ単位でしか決まらないので、描く順を数で固定する
+  // (水面 → ガラスの順。距離まかせにすると角度によって水面がガラスの手前に出る)
+  water.alphaIndex = 10;
+  // ガラス(手前の面だけが見える半透明の箱)。中の魚は不透明なので先に描かれ、透けて見える
+  const G = A0();
+  fbox(G, 0, s.glassY, 0, s.hw * 2, s.glassH, s.hd * 2 + 0.01, Color3.White());
+  const glass = toMesh(scene, `${item}_glass`, G, 'keep');
+  glass.material = mats.glass;
+  glass.parent = root;
+  glass.isPickable = false;
+  glass.alphaIndex = 20;
+  for (const inner of makeDisplayContentMeshes(scene, item, contents)) inner.parent = root;
+  return { root, colliderR: s.colliderR };
+}
+
+/**
+ * 家具のメッシュ。
+ * 第3引数は展示家具の中身(入っている順の配列)。ItemId 1つも受けるのは、
+ * 中身が1匹だった v10〜v12 の呼び出し・テストをそのまま生かすため。
+ */
+export function makeFurnitureMesh(
+  scene: Scene, item: ItemId, content?: ItemId | readonly ItemId[]
+): FurnitureMesh {
+  const contents: readonly ItemId[] =
+    content === undefined ? [] : typeof content === 'string' ? [content] : content;
   const glowMats = getGlowMats(scene);
   const mkGlow = (build: (G: Arrays) => void, mat: 'mint' | 'amber' | 'blue', parent: Mesh): Mesh => {
     const G = A0();
@@ -824,82 +1050,45 @@ export function makeFurnitureMesh(scene: Scene, item: ItemId, content?: ItemId):
       fbox(A, 0, 0.525, 0, 0.34, 0.03, 0.34, WOOD_D); // ふた
       fbox(A, 0, 0.565, 0, 0.11, 0.05, 0.05, Color3.FromHexString('#7aa85f')); // 持ち手(クサツル)
       const root = toMesh(scene, 'f_bugcage', A, 'keep');
-      // 中の虫は「入れた1匹」(PlacedFurniture.content)。何も入れていなければ空のかご
-      const inner = makeDisplayContentMesh(scene, 'f_bugcage', content);
-      if (inner) inner.parent = root;
+      // 中の虫は「入れた いきもの」(PlacedFurniture.contents)。何も入れていなければ空のかご
+      for (const inner of makeDisplayContentMeshes(scene, 'f_bugcage', contents)) inner.parent = root;
       return { root, colliderR: 0.26 };
     }
-    case 'f_aquarium': {
-      // うきだま1+もくざい2+いし1。木のだいに ガラスの水そうをのせた展示家具。
-      // 中の魚が見えるように「わく+ガラス」で組む(教訓1: 見せたいものを不透明な箱に入れない)。
+    case 'f_bugcage_big': {
+      // v13 3びき入る おおきな かご。小さい かごと同じ「枠で組む」言語のまま、
+      // だいの上にのせて 背を高くし、遠目でも「大きいほう」と分かるようにする
       const A = A0();
-      // だい(4本脚+天板)
-      for (const sx of [-0.28, 0.28]) {
-        for (const sz of [-0.15, 0.15]) fbox(A, sx, 0.15, sz, 0.075, 0.3, 0.075, WOOD_D);
+      // だい(4本脚+ぬき+天板)
+      for (const sx of [-0.26, 0.26]) {
+        for (const sz of [-0.16, 0.16]) fbox(A, sx, 0.11, sz, 0.075, 0.22, 0.075, WOOD_D);
       }
-      for (const sz of [-0.15, 0.15]) fbox(A, 0, 0.24, sz, 0.5, 0.05, 0.05, WOOD_D); // ぬき
-      fbox(A, 0, 0.325, 0, 0.74, 0.05, 0.46, WOOD); // 天板
-      fbox(A, 0, 0.355, 0, 0.7, 0.02, 0.42, WOOD_D); // 天板の面(高さを変えてZファイティングを避ける)
-      // 水そうの わく: 下わく → 四すみの柱 → 上わく(上は4本の帯にして、上から中が見えるようにする)
-      for (const sz of [-0.19, 0.19]) fbox(A, 0, 0.382, sz, 0.68, 0.03, 0.035, WOOD_D);
-      for (const sx of [-0.325, 0.325]) fbox(A, sx, 0.382, 0, 0.035, 0.03, 0.42, WOOD_D);
-      for (const sx of [-0.325, 0.325]) {
-        for (const sz of [-0.19, 0.19]) fbox(A, sx, 0.55, sz, 0.035, 0.37, 0.035, WOOD_D);
+      for (const sz of [-0.16, 0.16]) fbox(A, 0, 0.17, sz, 0.44, 0.05, 0.05, WOOD_D);
+      fbox(A, 0, 0.25, 0, 0.72, 0.06, 0.5, WOOD); // 天板
+      fbox(A, 0, 0.305, 0, 0.64, 0.05, 0.44, WOOD_D); // かごの台
+      fbox(A, 0, 0.34, 0, 0.58, 0.02, 0.38, Color3.FromHexString('#c9b06a')); // かごの床(わら色)
+      for (const sx of [-0.29, 0.29]) {
+        for (const sz of [-0.19, 0.19]) fbox(A, sx, 0.62, sz, 0.03, 0.58, 0.03, C_TWIG_PROP); // 四すみの柱
       }
-      for (const sz of [-0.19, 0.19]) fbox(A, 0, 0.722, sz, 0.68, 0.036, 0.042, WOOD);
-      for (const sx of [-0.325, 0.325]) fbox(A, sx, 0.722, 0, 0.042, 0.036, 0.42, WOOD);
-      // 底の砂利(木のわくより明るい砂色。上面の高さは水そうの底板と変える)。
-      // 明るすぎると「白い箱」に見えるので、実機の接写で少し落とした
-      fbox(A, 0, 0.4, 0, 0.63, 0.022, 0.37, Color3.FromHexString('#b09b74'));
-      fbox(A, 0, 0.414, 0, 0.6, 0.016, 0.34, Color3.FromHexString('#c2ae87'));
-      const root = toMesh(scene, 'f_aquarium', A, 'keep');
-      // 砂利のつぶ・水草(appendBlobだけなので別メッシュにして法線を'flip'で確定させる)
-      const P = A0();
-      for (let i = 0; i < 9; i++) {
-        const px = -0.26 + (i * 0.065) + (vnoise(i * 3.1, 1.7) - 0.5) * 0.04;
-        const pz = (vnoise(i * 5.3, 2.9) - 0.5) * 0.26;
-        appendBlob(P, px, 0.424, pz, 0.032, 0.011, 0.026,
-          jitterColor(Color3.FromHexString('#bda882'), 60 + i, 0.12), { segs: 5, noise: 0.18, seed: 60 + i, bottomDark: 0 });
+      // 横木(3段)。すきまを大きくとって中が見えるようにする
+      for (const y of [0.43, 0.62, 0.81]) {
+        for (const sz of [-0.19, 0.19]) fbox(A, 0, y, sz, 0.61, 0.02, 0.02, C_TWIG_PROP);
+        for (const sx of [-0.29, 0.29]) fbox(A, sx, y, 0, 0.02, 0.02, 0.41, C_TWIG_PROP);
       }
-      // 水草1本(根もとから 葉が3枚 立ちあがる)
-      const wx = -0.2, wz = -0.04;
-      appendBlob(P, wx, 0.44, wz, 0.05, 0.022, 0.04, Color3.FromHexString('#5a7d4a'), {
-        segs: 6, noise: 0.14, seed: 71, bottomDark: 0.1,
-      });
-      const leaves: [number, number, number][] = [[0.0, 0.2, 0.02], [0.045, 0.15, -0.03], [-0.04, 0.11, 0.03]];
-      for (let i = 0; i < leaves.length; i++) {
-        const [lx, lh, lz] = leaves[i];
-        appendBlob(P, wx + lx, 0.44 + lh / 2, wz + lz, 0.017, lh / 2, 0.013,
-          jitterColor(Color3.FromHexString('#6f9a58'), 80 + i, 0.1), { segs: 5, noise: 0.1, seed: 80 + i, bottomDark: 0.18 });
-        appendBlob(P, wx + lx * 1.4, 0.44 + lh * 0.92, wz + lz * 1.3, 0.024, 0.022, 0.016,
-          jitterColor(Color3.FromHexString('#84b06a'), 90 + i, 0.1), { segs: 5, noise: 0.12, seed: 90 + i, bottomDark: 0.14 });
+      // たてのすじ(前後だけ。左右は開けて中を見せる)
+      for (const sx of [-0.145, 0, 0.145]) {
+        for (const sz of [-0.19, 0.19]) fbox(A, sx, 0.62, sz, 0.015, 0.54, 0.015, C_TWIG_PROP);
       }
-      const plants = faceOutward(toMesh(scene, 'f_aquarium_plants', P, 'flip'));
-      plants.parent = root;
-      plants.isPickable = false;
-      const mats = getAquaMats(scene);
-      // 水面(半透明のうすい板)。上わく(0.722)より下・魚の上に置く
-      const W = A0();
-      fbox(W, 0, 0.66, 0, 0.63, 0.012, 0.37, Color3.White());
-      const water = toMesh(scene, 'f_aquarium_water', W, 'keep');
-      water.material = mats.water; // 共有マテリアルなので dispose しない
-      water.parent = root;
-      water.isPickable = false;
-      // 半透明どうしの前後関係はメッシュ単位でしか決まらないので、描く順を数で固定する
-      // (水面 → ガラスの順。距離まかせにすると角度によって水面がガラスの手前に出る)
-      water.alphaIndex = 10;
-      // ガラス(手前の面だけが見える半透明の箱)。中の魚は不透明なので先に描かれ、透けて見える
-      const G = A0();
-      fbox(G, 0, 0.552, 0, 0.65, 0.35, 0.39, Color3.White());
-      const glass = toMesh(scene, 'f_aquarium_glass', G, 'keep');
-      glass.material = mats.glass;
-      glass.parent = root;
-      glass.isPickable = false;
-      glass.alphaIndex = 20;
-      const inner = makeDisplayContentMesh(scene, 'f_aquarium', content);
-      if (inner) inner.parent = root;
+      fbox(A, 0, 0.935, 0, 0.7, 0.035, 0.5, WOOD_D); // ふた
+      fbox(A, 0, 0.98, 0, 0.16, 0.055, 0.055, Color3.FromHexString('#7aa85f')); // 持ち手(クサツル)
+      const root = toMesh(scene, 'f_bugcage_big', A, 'keep');
+      for (const inner of makeDisplayContentMeshes(scene, 'f_bugcage_big', contents)) inner.parent = root;
       return { root, colliderR: 0.42 };
     }
+    // ---- v10/v13 すいそう(小・大)。寸法と魚のみちは AQUA_SPECS が唯一の情報源 ----
+    // 小: うきだま1+もくざい2+いし1 / 大: うきだま2+もくざい4+いし2(3びき入る)
+    case 'f_aquarium':
+    case 'f_aquarium_big':
+      return buildAquarium(scene, item, contents);
     case 'f_ancient_pot': {
       // つぼのかけら3+ねんど1。つぎめ(なおしたあと)が見えるずんぐりした土器
       const A = A0();
@@ -1324,6 +1513,29 @@ export function makeFurnitureMesh(scene: Scene, item: ItemId, content?: ItemId):
         appendBlob(G, 0.042, 0.219, -0.02, 0.04, 0.03, 0.04, Color3.FromHexString('#b4e0be'), { segs: 7, noise: 0.18, seed: 72 });
       }, 'mint', root);
       return { root, glowPart, colliderR: 0.2 };
+    }
+    // ============================================================
+    // v14 じっせきの ごほうび限定の2種(元の家具の 色ちがい)。
+    //
+    // 形は もとの家具を そのまま作りなおして、色だけ ぬりかえる:
+    //   - 同じ形にすることで「あの家具の とくべつな色」だと ひと目で わかる
+    //   - 形の コードが 1か所にまとまったままなので、もとを直せば こちらも直る
+    // 光る部品(共有の発光マテリアル)は tintFurnitureMesh が さわらないので、
+    // ここで マテリアルだけ さしかえて 光の色を 変える。
+    // ============================================================
+    case 'f_starlantern_gold': {
+      const base = makeFurnitureMesh(scene, 'f_starlantern');
+      base.root.name = 'f_starlantern_gold';
+      tintFurnitureMesh(base.root, '#d9b23e'); // 石の台を きん色へ
+      if (base.glowPart) base.glowPart.material = glowMats.amber; // 星の光を あお白 → 金いろへ
+      return base;
+    }
+    case 'f_lighthouse_lantern_night': {
+      const base = makeFurnitureMesh(scene, 'f_lighthouse_lantern');
+      base.root.name = 'f_lighthouse_lantern_night';
+      tintFurnitureMesh(base.root, '#3f5078'); // しっくいの塔を こんいろへ
+      if (base.glowPart) base.glowPart.material = glowMats.blue; // てっぺんの光を あたたかい → あお白へ
+      return base;
     }
     // ============================================================
     // v12 りょうり6種(テーブルの上の小物として かざれる)

@@ -5,12 +5,15 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { IslandScene } from '../scenes/IslandScene';
 import type { GameState, PlacedFurniture } from '../game/GameState';
-import { invAdd, invRemove, statAdd } from '../game/GameState';
+import { displayContents, invAdd, invRemove, learnRecipe, statAdd } from '../game/GameState';
 import { makeFurnitureMesh, tintFurnitureMesh } from '../entities/furniture';
 import {
-  DISPLAY_FURNITURE, ITEMS, PAINT_COLORS, canDisplayIn, isDisplayFurniture, isPaint, isPlaceable,
+  DISPLAY_FURNITURE, ITEMS, PAINT_COLORS, RECIPES, canDisplayIn, displayCapacity, displayUpgradeRecipe,
+  isDisplayFurniture, isPaint, isPlaceable,
   type ItemId, type PaintId,
 } from '../data/items';
+import { gardenPlacementProblem, type GardenPlaceProblem } from './GardenSystem';
+import { PAINT_TOTAL_KEY } from './BadgeSystem';
 import type { PlayerController } from './PlayerController';
 import { toast } from '../ui/Toast';
 import { sfx } from '../audio/AudioSystem';
@@ -53,7 +56,18 @@ export const PLACE_REASON = {
   room: 'へやの 中に おこう',
   door: 'ドアの前は あけておこう',
   path: 'とおり道が なくなっちゃうよ',
+  // ---- v13 お庭(柵の内がわ)だけで出る理由 ----
+  plot: 'はなだんの 上には おけないよ',
+  gate: 'もんの 前は あけておこう',
+  fence: 'さくの 上には おけないよ',
 } as const;
+
+/** お庭の判定の種類 → 子ども向けの理由文言(文言はぜんぶPLACE_REASONに集める) */
+const GARDEN_REASON: Record<Exclude<GardenPlaceProblem, null>, string> = {
+  plot: PLACE_REASON.plot,
+  gate: PLACE_REASON.gate,
+  fence: PLACE_REASON.fence,
+};
 
 /** 室内の判定の種類 → 子ども向けの理由文言(文言はぜんぶPLACE_REASONに集める) */
 const HOME_REASON: Record<Exclude<HomePlaceProblem, null>, string> = {
@@ -101,6 +115,9 @@ const GLOW_TINT: Partial<Record<ItemId, 'amber' | 'mint' | 'blue'>> = {
   f_starlantern: 'blue',
   f_mushlamp: 'mint',
   f_seamobile: 'blue', // うきだまの あお白い光
+  // v14 ごほうび限定の2種は もとの家具と 光の色が 逆になる
+  // (きんのランタン=あたたかい金 / よるのとうだい=あお白い)
+  f_lighthouse_lantern_night: 'blue',
 };
 
 /** 光だまりの広さ(m)。表にないものは既定。はなかざり・うみのモビールは「ほのかに」なので小さい */
@@ -129,12 +146,16 @@ export function slopeAt(x: number, z: number): number {
  * 家具を置けるかの判定(描画に依存しない純関数)。
  * 島のコライダー(木・岩・建物)はPlacementSystem側で追加で見る。
  * playerを省略するとstate.player(セーブ時の位置)を使う。
+ *
+ * v13: 第5引数は置くものの半径(m)。お庭の花だん・門・柵との重なりを、
+ * 大きい家具ほど広く見るために使う(省略すると小さめの家具として見る)。
  */
 export function checkPlacement(
   state: GameState,
   x: number,
   z: number,
-  player: { x: number; z: number } = state.player
+  player: { x: number; z: number } = state.player,
+  radius = 0.3
 ): PlacementCheck {
   if (Math.hypot(x, z) > MAP_R) return ng(PLACE_REASON.outside);
   if (terrainHeight(x, z) < WATER_H) return ng(PLACE_REASON.water); // 海・水ぎわ
@@ -144,6 +165,10 @@ export function checkPlacement(
   for (const f of state.furniture) {
     if (near(x, z, f, R_FURNITURE)) return ng(PLACE_REASON.furniture);
   }
+  // v13 お庭(柵の内がわ): 花だんの上・門の前・柵の上には置けない。
+  // 島のコライダーより先に見るのは、柵を「たてもの」と呼ばずに済ませるため
+  const gp = gardenPlacementProblem(x, z, radius);
+  if (gp !== null) return ng(GARDEN_REASON[gp]);
   // ねる場所はミオの家のドア前と同じ座標なので、入口より先に見て専用の文言を出す
   if (near(x, z, POIS.bed, R_BED)) return ng(PLACE_REASON.bed);
   for (const e of ENTRANCES) {
@@ -219,8 +244,9 @@ export class PlacementSystem {
   }
 
   private spawn(f: PlacedFurniture): void {
-    // 展示家具(すいそう・むしかご)は中身つきで作る。中身は出し入れのたびに作り直す(respawn)
-    const fm = makeFurnitureMesh(this.island.scene, f.item, f.content);
+    // 展示家具(すいそう・むしかご)は中身つきで作る。中身は出し入れのたびに作り直す(respawn)。
+    // 旧セーブの content(1匹)も displayContents が contents 1件として読む
+    const fm = makeFurnitureMesh(this.island.scene, f.item, displayContents(f));
     // v12 いろみずで ぬった色。作った直後(親付け・光だまりの前)に1回だけ塗る。
     // 色を変えるたびにメッシュごと作り直す(respawn)ので、データと絵がずれない
     if (f.color) tintFurnitureMesh(fm.root, f.color);
@@ -322,10 +348,10 @@ export class PlacementSystem {
   private check(x: number, z: number): PlacementCheck {
     // 室内にいるあいだは室内のルールだけ(屋外のルール・挙動は何も変わらない)
     if (insideHomeFloor(this.lastPlayer.x, this.lastPlayer.z)) return this.checkIndoor(x, z);
-    const base = checkPlacement(this.state, x, z, this.lastPlayer);
+    const r = Math.max(0.3, this.ghostR);
+    const base = checkPlacement(this.state, x, z, this.lastPlayer, r);
     if (!base.ok) return base;
     if (!this.island.walkable(x, z)) return ng(PLACE_REASON.outside);
-    const r = Math.max(0.3, this.ghostR);
     // 他の家具(大きい家具はコライダー分だけ広く見る)
     for (const p of this.placed.values()) {
       if (Math.hypot(x - p.data.x, z - p.data.z) < Math.max(0.55, p.colliderR + r * 0.8)) {
@@ -395,16 +421,17 @@ export class PlacementSystem {
     this.state.furniture = this.state.furniture.filter((f) => f.id !== p.data.id);
     p.mesh.dispose(); // 共有マテリアルを道連れにしない
     invAdd(this.state, p.data.item, 1);
-    // 展示家具の中身は いっしょに もちものへ戻す(いきものを消さない)
-    const content = p.data.content;
-    if (content) {
-      delete p.data.content;
-      invAdd(this.state, content, 1);
-    }
+    // 展示家具の中身は いっしょに もちものへ戻す(いきものを1匹も消さない)
+    const contents = displayContents(p.data);
+    delete p.data.contents;
+    delete p.data.content;
+    for (const c of contents) invAdd(this.state, c, 1);
     this.rebuildColliders();
+    // 名前は重ならないように まとめる(「サカナと サカナと サカナ」にしない)
+    const names = [...new Set(contents)].map((c) => ITEMS[c].name).join('と ');
     toast(
-      content
-        ? `${ITEMS[p.data.item].name}と ${ITEMS[content].name}を もちかえった`
+      contents.length > 0
+        ? `${ITEMS[p.data.item].name}と ${names}を もちかえった`
         : `${ITEMS[p.data.item].name}を もちかえった`,
       p.data.item
     );
@@ -412,9 +439,9 @@ export class PlacementSystem {
     save(this.state);
   }
 
-  // ---- 展示家具(すいそう・むしかご)の出し入れ ----
+  // ---- 展示家具(すいそう・むしかご の大小)の出し入れ ----
   //
-  // 中身は PlacedFurniture.content にだけ持ち、見た目は家具ごと作り直して合わせる
+  // 中身は PlacedFurniture.contents にだけ持ち、見た目は家具ごと作り直して合わせる
   // (「データを直したのに絵が古いまま」を構造的に起こさない)。
   // どちらも光る家具ではないので、作り直しで光だまりが二重登録されることはない。
 
@@ -431,25 +458,62 @@ export class PlacementSystem {
     return isDisplayFurniture(p.data.item) ? p.data.item : null;
   }
 
-  /** もちものの いきものを1匹いれる。入れられない組み合わせ・持っていない場合は false */
+  /** いま入っている いきもの(入れた順)。旧セーブの content も1件として読める */
+  contentsOf(p: PlacedRuntime): ItemId[] {
+    return displayContents(p.data);
+  }
+
+  /** もう入らないか(展示家具でなければ true = 入れられない) */
+  isDisplayFull(p: PlacedRuntime): boolean {
+    const kind = this.displayKindOf(p);
+    if (kind === null) return true;
+    return this.contentsOf(p).length >= displayCapacity(kind);
+  }
+
+  /**
+   * もちものの いきものを1匹いれる。
+   * 入れられない組み合わせ・持っていない・いっぱいのときは false(状態も見た目も変えない)。
+   *
+   * はじめて中身を入れた家具に おおきい版のレシピ(DISPLAY_FURNITURE.upgrade)があれば、
+   * ここで1回だけ おぼえる=「使ってみたら 次の目標が見えた」の階段(教訓3)。
+   */
   putIn(p: PlacedRuntime, item: ItemId): boolean {
     const kind = this.displayKindOf(p);
-    if (kind === null || p.data.content || !canDisplayIn(kind, item)) return false;
+    if (kind === null || !canDisplayIn(kind, item)) return false;
+    const contents = this.contentsOf(p);
+    if (contents.length >= displayCapacity(kind)) return false;
     if (!invRemove(this.state, item, 1)) return false;
-    p.data.content = item;
+    contents.push(item);
+    p.data.contents = contents;
+    delete p.data.content; // 旧項目は移し終えたら残さない
     statAdd(this.state, DISPLAY_FURNITURE[kind].statKey); // じっせき用(入れた回数の累計)
     this.respawn(p);
     toast(`${ITEMS[item].name}を ${DISPLAY_FURNITURE[kind].label}に いれた`, item);
     sfx('place');
+    this.learnDisplayUpgrade(kind);
     save(this.state);
     return true;
   }
 
-  /** 中身を もちものへ戻して空にする。中身が無ければ null */
-  takeOut(p: PlacedRuntime): ItemId | null {
-    const content = p.data.content;
-    if (!content) return null;
-    delete p.data.content;
+  /** おおきい版のレシピを1回だけ おぼえる(すでに知っていれば何もしない) */
+  private learnDisplayUpgrade(kind: keyof typeof DISPLAY_FURNITURE): void {
+    const id = displayUpgradeRecipe(kind);
+    if (id === null || !learnRecipe(this.state, id)) return;
+    const recipe = RECIPES.find((r) => r.id === id);
+    if (recipe) toast(`${recipe.name}の 作りかたを ひらめいた!`, recipe.out);
+  }
+
+  /**
+   * 中身を1匹 もちものへ戻す。slot は入っている順(0から)。
+   * 中身が無い・番号が範囲外なら null(状態も見た目も変えない)。
+   */
+  takeOut(p: PlacedRuntime, slot = 0): ItemId | null {
+    const contents = this.contentsOf(p);
+    if (slot < 0 || slot >= contents.length) return null;
+    const [content] = contents.splice(slot, 1);
+    if (contents.length > 0) p.data.contents = contents;
+    else delete p.data.contents;
+    delete p.data.content; // 旧項目は移し終えたら残さない
     invAdd(this.state, content, 1);
     this.respawn(p);
     toast(`${ITEMS[content].name}を とりだした`, content);
@@ -475,6 +539,7 @@ export class PlacementSystem {
     if ((p.data.color ?? undefined) === hex) return false;
     if (hex === undefined) delete p.data.color;
     else p.data.color = hex;
+    statAdd(this.state, PAINT_TOTAL_KEY); // v14 バッジ用(もとの色にもどすのも「ぬった」1回)
     this.respawn(p);
     toast(
       hex === undefined

@@ -1,6 +1,8 @@
 // デバッグフック(決定的テスト用。実プレイ検証はデバッグなしで行う)
 // window.__lumiDebug のメソッド名・引数はE2Eテストと回帰ボットが直接使うので変更しない。
 import type { GameScene } from '../scenes/GameScene';
+import { ACHIEVEMENTS } from '../systems/AchievementSystem';
+import { rewardKey } from '../systems/AchievementRewards';
 
 /** debugフラグのときだけ window.__lumiDebug を生やす */
 export function installLumiDebugApi(gs: GameScene): void {
@@ -27,6 +29,18 @@ export function installLumiDebugApi(gs: GameScene): void {
     advance: () => gs.dialogue.advance(),
     npcPos: (id: string) => gs.npcs.positionOf(id),
     objective: () => gs.lastObjective,
+    /**
+     * v13 じっせきの ごほうびを「もう受けとった」ことにする(何も もらわずに 印だけ立てる)。
+     *
+     * お金の計算そのものを見るE2E(ふねの しゅうり代・家の こうじ代)のためのもの。
+     * それらのテストは「依頼をぜんぶ done」にしたセーブから始めるので、
+     * 読みこみの さかのぼり配布で ルミナが ふえてしまい、金額の断言と食いちがう。
+     * ここで印だけ立てておけば、ごほうびの機能を切らずに 金額の検証だけを 純粋にできる。
+     */
+    sealAchievementRewards: () => {
+      if (!gs.state.stats) gs.state.stats = {};
+      for (const a of ACHIEVEMENTS) gs.state.stats[rewardKey(a.id)] = 1;
+    },
     unlockAll: () => {
       gs.state.flags.unlock_inv = true;
       gs.state.flags.unlock_craft = true;

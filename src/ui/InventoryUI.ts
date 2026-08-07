@@ -85,7 +85,9 @@ export class InventoryUI {
           ? `${def.desc} / たべると: ${EFFECTS[DISH_EFFECT[id]].desc}`
           : def.desc;
         // ボタンが2つ入るマス(りょうり)は2列ぶんの幅をとる。
-        // 1列のままだと 名前もボタンも1文字ずつ縦に割れて読めない(実機のスクショで確認)
+        // 1列のままだと 名前もボタンも1文字ずつ縦に割れて読めない(実機のスクショで確認)。
+        // v14: ふつうの1列のマスでも「すいそう」が「すいそ/う」に割れていたので、
+        // 名前の折り返し規則を style.css の .inv-name(word-break: keep-all)で直した
         const wide = isCookedFood(id) ? ' wide' : '';
         return `<div class="inv-slot${wide}" title="${tip}">
           <span class="inv-ico">${icon(id)}</span>
