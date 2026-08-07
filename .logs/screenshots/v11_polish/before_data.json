@@ -1,0 +1,319 @@
+{
+  "craftRows": [
+    {
+      "name": "カマ",
+      "badge": ""
+    },
+    {
+      "name": "ツリザオ",
+      "badge": ""
+    },
+    {
+      "name": "はなだん",
+      "badge": ""
+    },
+    {
+      "name": "きのこランプ",
+      "badge": ""
+    },
+    {
+      "name": "かいがらのかざり",
+      "badge": ""
+    },
+    {
+      "name": "木のほんだな",
+      "badge": ""
+    }
+  ],
+  "craftRowsAfterCraft": [
+    {
+      "name": "カマ",
+      "badge": ""
+    },
+    {
+      "name": "ツリザオ",
+      "badge": ""
+    },
+    {
+      "name": "はなだん",
+      "badge": ""
+    },
+    {
+      "name": "きのこランプ",
+      "badge": ""
+    },
+    {
+      "name": "かいがらのかざり",
+      "badge": ""
+    },
+    {
+      "name": "木のほんだな",
+      "badge": ""
+    }
+  ],
+  "beacon": {
+    "beach": {
+      "objective": "q2_meet_report_sail_cove",
+      "label": "ふねで よるの入り江へ わたろう",
+      "enabled": true,
+      "beaconY": 3.52,
+      "beaconX": 4,
+      "beaconZ": 41.6,
+      "footY": 0.77,
+      "groundYatTarget": 0.92,
+      "terrainYatTarget": 0.175,
+      "playerAt": [
+        -4,
+        36.5
+      ]
+    },
+    "path": {
+      "objective": "q2_meet_report_sail_cove",
+      "label": "ふねで よるの入り江へ わたろう",
+      "enabled": true,
+      "beaconY": 3.52,
+      "beaconX": 4,
+      "beaconZ": 41.6,
+      "footY": 0.77,
+      "groundYatTarget": 0.92,
+      "terrainYatTarget": 0.175,
+      "playerAt": [
+        -2,
+        26
+      ]
+    },
+    "side": {
+      "objective": "q2_meet_report_sail_cove",
+      "label": "ふねで よるの入り江へ わたろう",
+      "enabled": true,
+      "beaconY": 3.52,
+      "beaconX": 4,
+      "beaconZ": 41.6,
+      "footY": 0.77,
+      "groundYatTarget": 0.92,
+      "terrainYatTarget": 0.175,
+      "playerAt": [
+        -12,
+        30
+      ]
+    }
+  },
+  "pondEdges": [
+    {
+      "deg": 0,
+      "waterR": 14,
+      "fishR": 8.75
+    },
+    {
+      "deg": 15,
+      "waterR": 14,
+      "fishR": 8.75
+    },
+    {
+      "deg": 30,
+      "waterR": 14,
+      "fishR": 9
+    },
+    {
+      "deg": 45,
+      "waterR": 14,
+      "fishR": 9.5
+    },
+    {
+      "deg": 60,
+      "waterR": 14,
+      "fishR": 9.25
+    },
+    {
+      "deg": 75,
+      "waterR": 14,
+      "fishR": 9.25
+    },
+    {
+      "deg": 90,
+      "waterR": 14,
+      "fishR": 10
+    },
+    {
+      "deg": 105,
+      "waterR": 10,
+      "fishR": 11
+    },
+    {
+      "deg": 120,
+      "waterR": 10,
+      "fishR": 11.25
+    },
+    {
+      "deg": 135,
+      "waterR": 9.75,
+      "fishR": 11
+    },
+    {
+      "deg": 150,
+      "waterR": 9.5,
+      "fishR": 10.75
+    },
+    {
+      "deg": 165,
+      "waterR": 9,
+      "fishR": 10.25
+    },
+    {
+      "deg": 180,
+      "waterR": 8.75,
+      "fishR": 10
+    },
+    {
+      "deg": 195,
+      "waterR": 8.5,
+      "fishR": 9.75
+    },
+    {
+      "deg": 210,
+      "waterR": 8,
+      "fishR": 9.25
+    },
+    {
+      "deg": 225,
+      "waterR": 7.75,
+      "fishR": 9
+    },
+    {
+      "deg": 240,
+      "waterR": 0,
+      "fishR": 8.5
+    },
+    {
+      "deg": 255,
+      "waterR": 0,
+      "fishR": 7.25
+    },
+    {
+      "deg": 270,
+      "waterR": 0,
+      "fishR": 4
+    },
+    {
+      "deg": 285,
+      "waterR": 0,
+      "fishR": 3.25
+    },
+    {
+      "deg": 300,
+      "waterR": 0,
+      "fishR": 3
+    },
+    {
+      "deg": 315,
+      "waterR": 0,
+      "fishR": 3.25
+    },
+    {
+      "deg": 330,
+      "waterR": 0,
+      "fishR": 7
+    },
+    {
+      "deg": 345,
+      "waterR": 0,
+      "fishR": 9
+    }
+  ],
+  "spots": {
+    "picked": {
+      "mud": [
+        30.78,
+        15.57,
+        280
+      ],
+      "water": [
+        30,
+        30,
+        90
+      ]
+    },
+    "hints": {
+      "mud": {
+        "at": [
+          30.78,
+          15.57,
+          280
+        ],
+        "zone": "-",
+        "hint": ""
+      },
+      "water": {
+        "at": [
+          30,
+          30,
+          90
+        ],
+        "zone": "pond",
+        "hint": "Eつりをする"
+      }
+    }
+  },
+  "spark_peak": {
+    "enabled": true,
+    "alpha": 0.899,
+    "scale": 0.9
+  },
+  "spark_mid": {
+    "enabled": true,
+    "alpha": 0.356,
+    "scale": 0.643
+  },
+  "spark_off": {
+    "enabled": true,
+    "alpha": 0.16,
+    "scale": 0.55
+  },
+  "sparkPixels": {
+    "peak": {
+      "max": 253.1,
+      "rgb": [
+        255,
+        255,
+        228
+      ],
+      "at": [
+        640,
+        356
+      ],
+      "bg": 46.8,
+      "addedLight": 69235,
+      "bright": 900
+    },
+    "mid": {
+      "max": 136.1,
+      "rgb": [
+        136,
+        136,
+        137
+      ],
+      "at": [
+        637,
+        358
+      ],
+      "bg": 46.8,
+      "addedLight": 17192,
+      "bright": 166
+    },
+    "off": {
+      "max": 87.6,
+      "rgb": [
+        80,
+        88,
+        106
+      ],
+      "at": [
+        636,
+        359
+      ],
+      "bg": 46.8,
+      "addedLight": 8032,
+      "bright": 102
+    }
+  }
+}

@@ -131,8 +131,33 @@ export function hasTool(s: GameState, tool: ToolId): boolean {
 export function giveTool(s: GameState, tool: ToolId): void {
   if (!s.tools.includes(tool)) s.tools.push(tool);
 }
+/**
+ * 「おぼえたばかりのレシピ」の目じるしを入れる flags のキー。
+ *
+ * flags は SaveSystem の汎用の入れ物(boolean だけ通し、知らないキーはそのまま残す)なので、
+ * ここに置けばセーブの読み書きを直さなくても旧セーブと行き来できる。
+ * 目じるしが消えるのは「1回つくった」ときだけ(CraftingSystem.craft)。
+ */
+export const newRecipeFlag = (id: string): string => `newrec_${id}`;
+
+/** そのレシピを おぼえたばかりか(まだ1回もつくっていないか) */
+export function isNewRecipe(s: GameState, id: string): boolean {
+  return s.flags[newRecipeFlag(id)] === true;
+}
+
+/** 「あたらしい!」の目じるしを消す(1回つくったとき) */
+export function clearNewRecipe(s: GameState, id: string): void {
+  delete s.flags[newRecipeFlag(id)];
+}
+
+/**
+ * レシピをおぼえる(ひらめき・おれい・依頼の伝授はすべてここを通る)。
+ * はじめておぼえたときだけ「あたらしい!」の目じるしを立てる
+ * (はじめから知っているレシピ INITIAL_RECIPES は newGameState が直接入れるので、目じるしは付かない)。
+ */
 export function learnRecipe(s: GameState, id: string): boolean {
   if (s.recipes.includes(id)) return false;
   s.recipes.push(id);
+  s.flags[newRecipeFlag(id)] = true;
   return true;
 }

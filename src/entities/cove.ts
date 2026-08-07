@@ -518,7 +518,11 @@ export function makeHorizonSpark(scene: Scene): { mesh: Mesh; mat: StandardMater
     build();
     for (let i = from + 3; i < A.col.length; i += 4) A.col[i] = a;
   };
-  withAlpha(0.16, () => appendBlob(A, 0, 0, 0, 2.2, 2.2, 2.2, Color3.FromHexString('#ffd9a0'), { segs: 8, noise: 0 }));
+  // かさの濃さ0.31は v11の仕上げで 0.16 から上げたぶん。
+  // 芯は加算合成で とっくに白くとんでいる(実測: ピークで rgb 255,255,228)ので、
+  // 「もっと明るく」を伝えられるのは かさだけ。大きさ(scaling)と点滅の周期は変えていない
+  // (実測: ピークの光量が約3割ふえ、はっきり明るい画素の数=見かけの大きさは変わらなかった)。
+  withAlpha(0.31, () => appendBlob(A, 0, 0, 0, 2.2, 2.2, 2.2, Color3.FromHexString('#ffd9a0'), { segs: 8, noise: 0 }));
   withAlpha(1, () => appendBlob(A, 0, 0, 0, 1, 1, 1, Color3.FromHexString('#fff2d8'), { segs: 8, noise: 0 }));
   const mesh = new Mesh('lighthouseHorizonSpark', scene);
   applyArrays(mesh, A);

@@ -1,0 +1,9 @@
+=== after 走行開始(port 5192) ===
+ピークの位相: hold=3 pulse=1
+きらめき(peak): {"enabled":true,"alpha":1,"scale":0.9}
+  撮影 after_16_horizon_spark_peak.png
+きらめき(off): {"enabled":true,"alpha":0.16,"scale":0.55}
+  撮影 after_16_horizon_spark_off.png
+きらめきの画素(peak): {"max":255,"rgb":[255,255,255],"at":[636,354],"bg":46.8,"addedLight":92088,"bright":933}
+きらめきの画素(off): {"max":92.7,"rgb":[86,93,109],"at":[640,357],"bg":46.8,"addedLight":10044,"bright":100}
+consoleエラー: 0件

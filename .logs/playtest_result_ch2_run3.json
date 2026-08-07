@@ -1,0 +1,171 @@
+{
+  "completed": false,
+  "error": "Execution context was destroyed",
+  "timeline": [
+    {
+      "sec": 4,
+      "label": "タイトル表示"
+    },
+    {
+      "sec": 6,
+      "label": "ゲーム開始(新規)"
+    },
+    {
+      "sec": 7,
+      "label": "目標: tut_move"
+    },
+    {
+      "sec": 8,
+      "label": "目標: q_wood_offer"
+    },
+    {
+      "sec": 11,
+      "label": "目標: q_wood_gather"
+    },
+    {
+      "sec": 21,
+      "label": "はじめての採取"
+    },
+    {
+      "sec": 45,
+      "label": "はじめての夜(発光を確認)"
+    },
+    {
+      "sec": 46,
+      "label": "目標: q_wood_report"
+    },
+    {
+      "sec": 74,
+      "label": "目標: q_fish_offer"
+    },
+    {
+      "sec": 87,
+      "label": "目標: q_fish_mats_wood"
+    },
+    {
+      "sec": 94,
+      "label": "目標: q_fish_mats_stone"
+    },
+    {
+      "sec": 100,
+      "label": "目標: q_fish_craft_r_sickle"
+    },
+    {
+      "sec": 101,
+      "label": "はじめてのクラフト"
+    },
+    {
+      "sec": 101,
+      "label": "目標: q_fish_mats_wood"
+    },
+    {
+      "sec": 116,
+      "label": "目標: q_fish_mats_fiber"
+    },
+    {
+      "sec": 123,
+      "label": "目標: q_fish_craft_r_rod"
+    },
+    {
+      "sec": 124,
+      "label": "目標: q_fish_fish"
+    },
+    {
+      "sec": 148,
+      "label": "目標: q_fish_report"
+    },
+    {
+      "sec": 195,
+      "label": "目標: q_ore_offer"
+    },
+    {
+      "sec": 210,
+      "label": "目標: q_ore_gather"
+    },
+    {
+      "sec": 219,
+      "label": "目標: q_ore_report"
+    },
+    {
+      "sec": 225,
+      "label": "目標: q_lantern_offer"
+    },
+    {
+      "sec": 240,
+      "label": "目標: q_lantern_mats_wood"
+    },
+    {
+      "sec": 252,
+      "label": "目標: q_lantern_mats_moss"
+    },
+    {
+      "sec": 264,
+      "label": "目標: q_lantern_craft_r_lantern"
+    },
+    {
+      "sec": 265,
+      "label": "目標: q_lantern_place"
+    },
+    {
+      "sec": 280,
+      "label": "はじめての家具配置"
+    },
+    {
+      "sec": 280,
+      "label": "目標: q_lantern_report"
+    },
+    {
+      "sec": 284,
+      "label": "目標: q_lumi_offer"
+    },
+    {
+      "sec": 286,
+      "label": "目標: q_lumi_mats_moss"
+    },
+    {
+      "sec": 300,
+      "label": "目標: q_lumi_craft_r_lantern"
+    },
+    {
+      "sec": 302,
+      "label": "目標: q_lumi_place"
+    },
+    {
+      "sec": 320,
+      "label": "目標: q_lumi_mats_stone"
+    },
+    {
+      "sec": 329,
+      "label": "目標: q_lumi_mats_ore"
+    },
+    {
+      "sec": 340,
+      "label": "目標: q_lumi_craft_r_stonelamp"
+    },
+    {
+      "sec": 341,
+      "label": "目標: q_lumi_place"
+    },
+    {
+      "sec": 353,
+      "label": "目標: q_lumi_report"
+    },
+    {
+      "sec": 357,
+      "label": "目標: q2_boat_offer"
+    },
+    {
+      "sec": 357,
+      "label": "ルミの木 開花!"
+    },
+    {
+      "sec": 372,
+      "label": "マイホームの確認で例外: Protocol error (Input.dispatchKeyEvent): Target closed"
+    },
+    {
+      "sec": 372,
+      "label": "=== 第2章 開始 ==="
+    }
+  ],
+  "errors": []
+}

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { newGameState } from '../../src/game/GameState';
+import { newGameState, learnRecipe, isNewRecipe } from '../../src/game/GameState';
+import { craftList } from '../../src/systems/CraftingSystem';
 import { save, load, hasSave, clearSave } from '../../src/save/SaveSystem';
 import { HOME_ROOM, homeFloorY } from '../../src/scenes/HomeInterior';
 
@@ -117,6 +118,28 @@ describe('セーブ/ロード', () => {
       const back = load()!;
       expect(back.islandLevel).toBe(0);
       expect(back.flags).toEqual({ a: true });
+    });
+  });
+
+  // ---- v11: おぼえたばかりのレシピの目じるし(flagsの汎用経路に乗せてある) ----
+  describe('あたらしいレシピの目じるし(flags.newrec_*)', () => {
+    it('おぼえた順ごと保存して読みもどせる(一覧の並びが再開後も変わらない)', () => {
+      const s = newGameState();
+      learnRecipe(s, 'r_mushlamp');
+      learnRecipe(s, 'r_starmap');
+      save(s);
+      const back = load()!;
+      expect(isNewRecipe(back, 'r_mushlamp')).toBe(true);
+      expect(isNewRecipe(back, 'r_starmap')).toBe(true);
+      expect(craftList(back).slice(0, 2).map((e) => e.recipe.id)).toEqual(['r_starmap', 'r_mushlamp']);
+    });
+    it('目じるしの無い旧セーブでも壊れない(ぜんぶ通常の並び)', () => {
+      const s = newGameState();
+      s.recipes.push('r_mushlamp'); // 目じるしを立てずにレシピだけ持つ旧セーブ
+      save(s);
+      const back = load()!;
+      expect(isNewRecipe(back, 'r_mushlamp')).toBe(false);
+      expect(craftList(back).some((e) => e.isNew)).toBe(false);
     });
   });
 

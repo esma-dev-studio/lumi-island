@@ -1,0 +1,84 @@
+
+> lumi-island@0.1.0 test:regression
+> node tools/playtest_bot.mjs
+
+[00:04] タイトル表示
+[00:06] ゲーム開始(新規)
+[00:07] 目標: tut_move
+[00:08] 目標: q_wood_offer
+[00:11] 目標: q_wood_gather
+nav 15s 迂回はじめ: (-20.0,-6.0)へ 14.9m で足ぶみ → 45度 左まわり(24秒まで)
+nav 16s 迂回おわり: 14.9m→11.5m まで近づけた
+[00:21] はじめての採取
+hb 27s pos=(-27.6,-4.0) obj=q_wood_gather hour=19.3
+nav 33s 迂回はじめ: (-26.0,14.0)へ 11.6m で足ぶみ → 45度 左まわり(24秒まで)
+nav 36s 迂回: 45度でも進めない → 90度に広げる
+nav 37s 迂回: 逆まわり(右)へ
+nav 41s 迂回おわり: 11.6m→8.5m まで近づけた
+[00:45] はじめての夜(発光を確認)
+[00:46] 目標: q_wood_report
+hb 47s pos=(-23.6,11.5) obj=q_wood_report hour=20.1
+nav 64s 迂回はじめ: (1.5,-7.2)へ 13.8m で足ぶみ → 45度 左まわり(11秒まで)
+hb 67s pos=(-1.9,2.6) obj=q_wood_report hour=20.5
+nav 67s 迂回おわり: 13.8m→9.2m まで近づけた
+[01:14] 目標: q_fish_offer
+hb 87s pos=(22.0,12.6) obj=q_fish_offer hour=21.1
+[01:27] 目標: q_fish_mats_wood
+[01:34] 目標: q_fish_mats_stone
+[01:40] 目標: q_fish_craft_r_sickle
+[01:41] はじめてのクラフト
+[01:41] 目標: q_fish_mats_wood
+hb 107s pos=(-1.8,18.7) obj=q_fish_mats_wood hour=21.8
+[01:56] 目標: q_fish_mats_fiber
+[02:03] 目標: q_fish_craft_r_rod
+[02:04] 目標: q_fish_fish
+hb 127s pos=(-28.9,15.7) obj=q_fish_fish hour=22.6
+hb 147s pos=(4.0,47.4) obj=q_fish_report hour=23.4
+[02:28] 目標: q_fish_report
+nav 151s 迂回はじめ: (23.2,12.8)へ 37.2m で足ぶみ → 45度 左まわり(17秒まで)
+nav 152s 迂回: 45度でも進めない → 90度に広げる
+nav 166s 迂回: 逆まわり(右)へ
+hb 167s pos=(5.3,48.7) obj=q_fish_report hour=0.2
+nav 168s 迂回おわり: 時間切れ(35.3m)。直進を試す
+nav 171s 迂回はじめ: (23.2,12.8)へ 34.5m で足ぶみ → 45度 右まわり(9秒まで)
+nav 172s 迂回おわり: 34.5m→31.5m まで近づけた
+hb 187s pos=(21.2,24.0) obj=q_fish_report hour=0.9
+nav 188s 迂回はじめ: (23.2,12.8)へ 11.4m で足ぶみ → 45度 右まわり(8秒まで)
+nav 190s 迂回おわり: 11.4m→8.3m まで近づけた
+[03:15] 目標: q_ore_offer
+hb 207s pos=(27.5,-19.6) obj=q_ore_offer hour=1.6
+[03:30] 目標: q_ore_gather
+[03:39] 目標: q_ore_report
+[03:45] 目標: q_lantern_offer
+hb 227s pos=(24.4,-20.3) obj=q_lantern_offer hour=2.3
+[04:00] 目標: q_lantern_mats_wood
+nav 244s 迂回はじめ: (-20.0,-6.0)へ 15.2m で足ぶみ → 45度 左まわり(24秒まで)
+nav 246s 迂回おわり: 15.2m→12.3m まで近づけた
+hb 247s pos=(-9.1,-6.6) obj=q_lantern_mats_wood hour=3.1
+[04:12] 目標: q_lantern_mats_moss
+[04:24] 目標: q_lantern_craft_r_lantern
+[04:25] 目標: q_lantern_place
+hb 267s pos=(-9.7,-24.9) obj=q_lantern_place hour=3.8
+[04:40] はじめての家具配置
+[04:40] 目標: q_lantern_report
+[04:44] 目標: q_lumi_offer
+[04:46] 目標: q_lumi_mats_moss
+hb 287s pos=(-2.0,-2.6) obj=q_lumi_mats_moss hour=4.5
+[05:00] 目標: q_lumi_craft_r_lantern
+[05:02] 目標: q_lumi_place
+hb 307s pos=(-2.6,-22.3) obj=q_lumi_place hour=5.3
+[05:20] 目標: q_lumi_mats_stone
+hb 327s pos=(17.3,4.3) obj=q_lumi_mats_stone hour=6.0
+[05:29] 目標: q_lumi_mats_ore
+[05:40] 目標: q_lumi_craft_r_stonelamp
+[05:41] 目標: q_lumi_place
+hb 347s pos=(15.2,-6.6) obj=q_lumi_place hour=6.8
+[05:53] 目標: q_lumi_report
+[05:57] 目標: q2_boat_offer
+[05:57] ルミの木 開花!
+hb 367s pos=(-24.0,6.4) obj=q2_boat_offer hour=7.5
+nav 369s 迂回はじめ: (-30.9,6.7)へ 6.9m で足ぶみ → 45度 左まわり(20秒まで)
+nav 371s 迂回おわり: 6.9m→4.0m まで近づけた
+[06:12] マイホームの確認で例外: Protocol error (Input.dispatchKeyEvent): Target closed
+[06:12] === 第2章 開始 ===
+BOT FAILED: Execution context was destroyed

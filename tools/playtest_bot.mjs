@@ -1,12 +1,20 @@
 // Deterministic regression bot(決定的リグレッションボット)
-// 実キー入力とUIクリックで タイトル→依頼5件→ルミの木開花 まで通しで実行する回帰試験。
+// 実キー入力とUIクリックで
+//   タイトル → 第1章の依頼5件 → ルミの木開花 → マイホーム往復
+//   → 第2章(ふねの修理→航海→ロカ→ひかりの貝・ほしくさ→レンズ→とうだいの点灯→島へ帰還)
+// まで通しで実行する回帰試験。
 // デバッグコマンド(tp/give/setHour/talkTo)は使わないが、進行判断に内部状態の
 // 読み取り(座標・目標ID・所持品)を使う。そのため「子どもが自力で遊べたことの証明」
 // ではない(それは tools/ux_bot.mjs のブラックボックス試験と人間テストの領分)。
+//
+// 使いかた: node tools/playtest_bot.mjs [ポート]  (既定 5183 / 環境変数 LUMI_PORT でも指定できる)
 import puppeteer from 'puppeteer-core';
 import { writeFileSync } from 'node:fs';
 import { launchEdge } from './launch_browser.mjs';
 
+// 走行させるdevサーバーのポート。既定は従来どおり5183(共用)。
+// 複数エージェントが同時に走るときは自分のポートを立てて渡す(例: LUMI_PORT=5191)
+const PORT = process.env.LUMI_PORT ?? process.argv[2] ?? '5183';
 const START = Date.now();
 const timeline = [];
 const mark = (label) => {
@@ -56,14 +64,21 @@ async function gameInfo() {
   return JSON.parse(await read(`(() => {
     const g = window.__lumi.game;
     const o = g.lastObjective ?? { id: 'none' };
+    const t = o.target ?? {};
     return JSON.stringify({
       px: g.player.x, pz: g.player.z, indoor: g.indoor,
+      inCove: g.inCove === true, // v11第2章: よるの入り江にいるか
       obj: o.id, objGather: o.gatherItem ?? null, objCraft: o.craftRecipe ?? null,
+      // 目標の相手・場所も構造で読む(依頼IDを書き写さずに「話す/その場所へ行く」を決める)
+      objNpc: t.kind === 'npc' ? (t.id ?? null) : null,
+      objPoi: t.kind === 'poi' ? (t.id ?? null) : null,
+      objMoney: o.money === true, objSail: o.sail === true,
       hour: g.state.time.hour, day: g.state.time.day,
       dialogue: g.dialogue.open, qc: g.questComplete.open, paused: g.pauseMenu.open,
       fishing: g.fishing.state, placing: g.placement.active !== null,
       lumina: g.state.lumina, level: g.state.islandLevel,
       inv: g.state.inventory, quests: g.state.quests, seq: g.seq.active,
+      flags: g.state.flags,
     });
   })()`));
 }
@@ -219,6 +234,29 @@ async function nearestNode(kind) {
   })()`));
 }
 
+/**
+ * 最寄りの有効な採取ノード(idつき・除外つき)。
+ * 稼ぎの巡回で「同じノードへ行っては失敗する」を避けるため、行ったノードを除外できる。
+ * 有効判定は nearestNode と同じ(入り江のノードは島にいるあいだ root ごと消えるので出てこない)。
+ */
+async function nearestNodeEx(kind, exclude = []) {
+  return JSON.parse(await read(`(() => {
+    const g = window.__lumi.game;
+    const skip = new Set(${JSON.stringify([...exclude])});
+    const px = g.player.x, pz = g.player.z;
+    let best = null, bd = 1e9;
+    for (const n of g.island.nodes.values()) {
+      if (n.def.kind !== '${kind}') continue;
+      if (skip.has(n.def.id)) continue;
+      const active = n.fruitMesh ? n.fruitMesh.isEnabled() : (n.root.isEnabled() && n.root.scaling.x > 0.5);
+      if (!active) continue;
+      const d = Math.hypot(px - n.def.x, pz - n.def.z);
+      if (d < bd) { bd = d; best = { id: n.def.id, x: n.def.x, z: n.def.z, d }; }
+    }
+    return JSON.stringify(best);
+  })()`));
+}
+
 async function gatherOne(kind) {
   const node = await nearestNode(kind);
   if (!node) return false; // 全部枯れている→呼び出し側で待つ
@@ -229,8 +267,22 @@ async function gatherOne(kind) {
   return true;
 }
 
+/** 指定ノードまで歩いてE。もちものが増えたら成功(採取のEが横取りされたら false) */
+async function gatherAt(node) {
+  if (!(await navigate(node.x, node.z, 1.55, 60000))) return false;
+  const before = await invTotal();
+  await pressE();
+  await sleep(1500); // アニメ+ヒット
+  return (await invTotal()) > before;
+}
+
 async function invCount(item) {
   return (await read(`window.__lumi.game.state.inventory['${item}'] ?? 0`));
+}
+
+/** もちものの総個数(採取が成立したかの判定に使う) */
+async function invTotal() {
+  return await read('Object.values(window.__lumi.game.state.inventory).reduce((a, b) => a + b, 0)');
 }
 
 // クラフトUIをキーとクリックで操作
@@ -238,8 +290,10 @@ async function craftByName(name) {
   await page.keyboard.press('c');
   await sleep(400);
   const clicked = await page.evaluate((nm) => {
+    // 店パネル(.shop-panel)も同じ .craft-row / .craft-btn を使い、閉じてもDOMに残る。
+    // クラフト画面に絞らないと「うる」ボタンを押してしまうので、必ず .craft-panel の中だけ見る
     // eslint-disable-next-line no-undef -- ブラウザ内で実行される
-    const rows = [...document.querySelectorAll('.craft-row')];
+    const rows = [...document.querySelectorAll('.craft-panel .craft-row')];
     for (const r of rows) {
       if (r.querySelector('.craft-name')?.textContent?.includes(nm)) {
         const b = r.querySelector('.craft-btn:not([disabled])');
@@ -349,11 +403,16 @@ async function waitVisible(npcId, maxMs = 330000) {
   while (Date.now() - t0 < maxMs) {
     const p = await npcPos(npcId);
     if (p && !p.hidden) return true;
-    if (!sleptOnce && npcId !== 'nokto') {
+    // ベッドは島の自宅にしかない。入り江にいるあいだ sleepAtBed を呼ぶと
+    // 80m先の島の座標へ歩こうとして走行が壊れるので、待つだけにする
+    // (入り江の住人ロカは「家に帰る」枠を持たないので、実際に隠れるのは
+    //  上陸直後のモデル読みこみ中の数百ミリ秒だけ)
+    const inCove = await read('window.__lumi.game.inCove === true');
+    if (!sleptOnce && npcId !== 'nokto' && !inCove) {
       sleptOnce = true;
       if (await sleepAtBed()) continue;
     }
-    await sleep(5000);
+    await sleep(inCove ? 700 : 5000);
   }
   return false;
 }
@@ -395,13 +454,220 @@ async function fishOnce() {
   return false;
 }
 
+// ===========================================================================
+// v11 第2章「きえた灯台のひかり」
+// 座標はゲーム側の定数の写し(ボットはTSを読めないため)。出典を各行に書いてある。
+// ===========================================================================
+/** 島の桟橋のよこの小舟の のりば(src/scenes/CoveArea.ts ISLAND_BOAT_POINT。Eの輪1.5m) */
+const ISLAND_BOAT_POINT = { x: 4, z: 41.6 };
+/** よるの入り江の中心(src/entities/terrain.ts COVE) */
+const COVE = { x: -56, z: 57 };
+const cove = (lx, lz) => ({ x: COVE.x + lx, z: COVE.z + lz });
+/** 帰りの桟橋の先(COVE_RETURN。Eの輪1.7m) */
+const COVE_RETURN = cove(4.8, 9.8);
+/** こわれた灯台のとびらの前(COVE_DOOR。Eの輪1.7m) */
+const COVE_DOOR = cove(-5.3, -1.6);
+/** ツムギ工房のカウンター(src/scenes/InteractionRouting.ts SHOP_POINT。Eの輪2.0m) */
+const SHOP_POINT = { x: -4.4, z: -1 };
+/**
+ * 店を開くときの立ち位置。カウンターより南に寄せてある。
+ * ツムギ本人(-3.9,1.4)の会話候補は1.8m以内なら優先度35で、店(40)より強い
+ * =近づきすぎると「はなす」がEを取ってしまうため、いちばん遠い側から寄る。
+ */
+const SHOP_STAND = { x: -4.6, z: -2.5 };
+
+/** 稼ぎで採るノード(売値の高い順)。もくざい・こうせきは reserve のぶんだけ手もとに残す */
+const MONEY_KINDS = ['ore', 'moss', 'berry', 'rock', 'tree'];
+/**
+ * 売らずに残す数。
+ *   wood 6 : ふねの修理で ミナモに わたす ぶん
+ *   ore  2 : このあと入り江で作る「ひかりのレンズ」のざいりょう
+ *            (売ってしまうと 島へ もう一往復することになる。ゲーム側は何も変えない)
+ */
+const MONEY_RESERVE = { wood: 6, ore: 2 };
+
+/** 店パネルの「うる」欄から売値を読む(値段表をボットに書き写さないため) */
+async function readShopPrices() {
+  return JSON.parse(await read(`(() => {
+    const out = {};
+    for (const r of document.querySelectorAll('.shop-panel .craft-row')) {
+      const b = r.querySelector('[data-sell]');
+      if (!b) continue;
+      const t = (r.querySelector('.shop-price') || {}).textContent || '';
+      const n = t.replace(/[^0-9]/g, '');
+      if (n) out[b.getAttribute('data-sell')] = Number(n);
+    }
+    return JSON.stringify(out);
+  })()`));
+}
+
+/** いま売ったら いくらになるか(値段を知らないものは0=少なめに見積もる) */
+function estValue(inv, prices) {
+  let v = 0;
+  for (const [id, n] of Object.entries(inv)) {
+    const sellable = Math.max(0, n - (MONEY_RESERVE[id] ?? 0));
+    v += sellable * (prices[id] ?? 0);
+  }
+  return v;
+}
+
+/** 工房のカウンターへ行って店を開く。ツムギの会話が勝ったら送ってから寄り直す */
+async function openShop() {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if (await read('window.__lumi.game.shopUI.open')) return true;
+    const stand = attempt % 2 === 0 ? SHOP_STAND : SHOP_POINT;
+    await navigate(stand.x, stand.z, 1.0, 60000);
+    const hint = await read("document.querySelector('.hud-hint')?.textContent ?? ''");
+    if (!hint.includes('お店')) {
+      navLog(`店のヒントが出ない(${hint.slice(0, 24)})。寄り直す`);
+      await sleep(600);
+      continue;
+    }
+    await pressE();
+    await sleep(600);
+    if (await read('window.__lumi.game.shopUI.open')) return true;
+    await flushDialogs(); // 会話が開いてしまったら送って閉じる
+  }
+  return false;
+}
+
+/** 店の「うる」を1回だけ押す。売ったアイテムIDを返す(もう売るものが無ければ null) */
+async function sellStep() {
+  return await page.evaluate((res) => {
+    // eslint-disable-next-line no-undef -- ブラウザ内で実行される
+    for (const r of document.querySelectorAll('.shop-panel .craft-row')) {
+      const one = r.querySelector('[data-sell]');
+      if (!one) continue;
+      const id = one.getAttribute('data-sell');
+      const small = r.querySelector('.craft-name small');
+      const m = (small?.textContent ?? '').match(/(\d+)/);
+      const n = m ? Number(m[1]) : 1;
+      const keep = res[id] ?? 0;
+      if (n <= keep) continue;
+      const all = r.querySelector('[data-sellall]');
+      if (keep === 0 && all) {
+        all.click(); // 1種類まとめて
+        return id;
+      }
+      one.click(); // 残す ぶんがあるので1つずつ
+      return id;
+    }
+    return null;
+  }, MONEY_RESERVE);
+}
+
+/**
+ * ふねの しゅうり代を ためる(実際の稼ぎかたは実プレイと同じ「採って売る」だけ)。
+ * 1周 = 足りないぶんが たまるまで採取 → ツムギ工房で売る。値段は店の画面から おぼえる。
+ */
+async function earnMoney(target) {
+  let prices = {};
+  for (let round = 0; round < 8; round++) {
+    const s = JSON.parse(await read(
+      'JSON.stringify({ lumina: window.__lumi.game.state.lumina, inv: window.__lumi.game.state.inventory })'
+    ));
+    if (s.lumina >= target) return true;
+    const need = target - s.lumina;
+    if (estValue(s.inv, prices) < need) {
+      const got = await gatherCircuit(need, prices);
+      if (got === 0) {
+        mark('採れるノードが無い → つりで かせぐ');
+        await fishOnce();
+      }
+    }
+    if (!(await openShop())) {
+      mark('ツムギ工房を ひらけなかった(もう一度ためす)');
+      continue;
+    }
+    prices = { ...prices, ...(await readShopPrices()) };
+    let sold = 0;
+    for (let i = 0; i < 60; i++) {
+      if (!(await sellStep())) break;
+      sold++;
+      await sleep(90);
+    }
+    await page.keyboard.press('Escape');
+    await sleep(400);
+    const lumina = await read('window.__lumi.game.state.lumina');
+    mark(`ツムギ工房で ${sold}回うった → ${lumina}ルミナ(目標${target})`);
+    if (lumina >= target) return true;
+  }
+  return false;
+}
+
+/** 売値の高い順にノードを巡って採る。採った回数を返す */
+async function gatherCircuit(need, prices, maxNodes = 14) {
+  const visited = new Set();
+  let got = 0;
+  for (const kind of MONEY_KINDS) {
+    for (;;) {
+      if (got >= maxNodes) return got;
+      const inv = JSON.parse(await read('JSON.stringify(window.__lumi.game.state.inventory)'));
+      if (estValue(inv, prices) >= need) return got;
+      const node = await nearestNodeEx(kind, visited);
+      if (!node) break; // この種類は全部枯れている → つぎの種類へ
+      visited.add(node.id);
+      if (await gatherAt(node)) got++;
+      else navLog(`採取できなかった: ${node.id}`);
+    }
+  }
+  return got;
+}
+
+/**
+ * ふねで わたる/かえる。演出(約10秒)はスキップできないので、状態を見ながら待つ。
+ * @param to 'cove' = よるの入り江へ / 'island' = 島へ
+ */
+async function sailTo(to) {
+  const p = to === 'cove' ? ISLAND_BOAT_POINT : COVE_RETURN;
+  if (!(await navigate(p.x, p.z, 1.0, 120000))) return false;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await pressE();
+    if (await waitUntil("window.__lumi.game.seq.current === 'voyage'", 4000)) break;
+    await flushDialogs();
+    await sleep(400);
+  }
+  // 航海(SequenceDirector VOYAGE_TOTAL=9.7秒)。時間で決め打ちせず状態で待つ
+  if (!(await waitUntil(`window.__lumi.game.inCove === ${to === 'cove'}`, 30000))) return false;
+  if (!(await waitUntil('window.__lumi.game.seq.active === false', 20000))) return false;
+  await sleep(700);
+  // 上陸の1回目はロカのモデル(GLB)を読みこむ。出てくるまで待つ
+  if (to === 'cove') await waitUntil("!!window.__lumi.game.npcs.positionOf('roka')", 20000);
+  return (await read('window.__lumi.game.inCove === true')) === (to === 'cove');
+}
+
+/** とうだいのとびらの前でE → 点灯の見せ場(約9.2秒)を待ち、ロカの会話と達成バナーを送る */
+async function attachLens() {
+  if (!(await navigate(COVE_DOOR.x, COVE_DOOR.z, 1.1, 90000))) return false;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await pressE();
+    if (await waitUntil("window.__lumi.game.seq.current === 'lighthouse'", 4000)) break;
+    await flushDialogs();
+    await sleep(400);
+  }
+  if (!(await waitUntil("window.__lumi.game.seq.current !== 'lighthouse'", 30000))) return false;
+  await sleep(900);
+  await flushDialogs(); // ロカのよろこびの会話
+  await sleep(600);
+  await flushDialogs(); // 達成バナー
+  return await read('window.__lumi.game.state.flags.lighthouse_lit === true');
+}
+
 // ---- 本編 ----
 // 目標の構造情報(gatherItem/craftRecipe)→ノード種別・レシピ表示名
 const GATHER_KIND = { wood: 'tree', stone: 'rock', fiber: 'grass', moss: 'moss', ore: 'ore', berry: 'berry' };
-const RECIPE_NAMES = { r_sickle: 'カマ', r_rod: 'ツリザオ', r_lantern: 'ランタン', r_stonelamp: 'いしのランプ', r_bench: 'ウッドベンチ' };
+const RECIPE_NAMES = {
+  r_sickle: 'カマ', r_rod: 'ツリザオ', r_lantern: 'ランタン', r_stonelamp: 'いしのランプ', r_bench: 'ウッドベンチ',
+  r_lens: 'ひかりのレンズ', // v11第2章
+};
 const flags = { night: false, gather: false, craft: false, place: false };
+// v11第2章の通過点(すべてゲームの状態から読む。ボットの「やったつもり」では立てない)
+const ch2 = {
+  boatRepaired: false, coveArrived: false, rokaMet: false, shellsShown: false,
+  starweedShown: false, lensCrafted: false, lighthouseLit: false, coveRoundTrip: false,
+};
 try {
-  await page.goto('http://localhost:5183/', { waitUntil: 'domcontentloaded' });
+  await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction('window.__lumi && window.__lumi.titleReady===true', { timeout: 30000 });
   await page.evaluate('localStorage.clear()'); // まっさらな新規開始
   await page.reload({ waitUntil: 'domcontentloaded' });
@@ -521,10 +787,7 @@ try {
       }
     }
   }
-  clearInterval(fpsTimer);
-  clearInterval(hbTimer);
-
-  // ---- v7: マイホームの通し確認(入室→就寝→退出)。本編を終えたあとに1回だけ ----
+  // ---- v7: マイホームの通し確認(入室→就寝→退出)。第1章を終えたあとに1回だけ ----
   // 走行中もNPC不在時に同じ経路を通るが、その日の時間帯しだいなので、ここで必ず1回通す。
   let homeOk = null;
   try {
@@ -539,12 +802,97 @@ try {
     mark(`マイホームの確認で例外: ${e.message}`);
   }
 
+  // =========================================================================
+  // v11 第2章「きえた灯台のひかり」
+  // 第1章と同じく「いまやること」の構造(objNpc / objGather / objCraft / objPoi)で動く。
+  // ちがうのは3つだけ:
+  //   1) ふねの しゅうり代は「採って売る」でためる(earnMoney)
+  //   2) 航海・点灯の見せ場はスキップできないので、状態を見ながら待つ
+  //   3) 目標が「クリア!」になる場面(ふねが なおった直後・点灯のあと)は
+  //      ボットが のりばへ向かう。※誘導の穴。完了報告に書くこと
+  // =========================================================================
+  mark('=== 第2章 開始 ===');
+  const DEADLINE2 = 62 * 60 * 1000;
+  let lastObj2 = '';
+  let objSince2 = Date.now();
+  while (Date.now() - START < DEADLINE2) {
+    const info = await gameInfo();
+    // 通過点はゲームの状態から読む
+    const f = info.flags ?? {};
+    const q = info.quests ?? {};
+    const setCh2 = (key, on, label) => {
+      if (on && !ch2[key]) { ch2[key] = true; mark(label); }
+    };
+    setCh2('boatRepaired', f.boat_repaired === true, 'ふねが なおった(boat_repaired)');
+    setCh2('coveArrived', f.roka_arrived === true, 'よるの入り江へ 上陸した');
+    setCh2('rokaMet', q.q2_meet === 'done', 'ロカと であった');
+    setCh2('shellsShown', q.q2_shell === 'done', 'ひかりの貝を 見せた');
+    setCh2('starweedShown', q.q2_starweed === 'done', 'ほしくさを 見せた');
+    setCh2('lensCrafted', (info.inv.lens ?? 0) >= 1 || q.q2_lens === 'done', 'ひかりのレンズが できた');
+    setCh2('lighthouseLit', f.lighthouse_lit === true, 'とうだいに あかりが ともった!');
+    setCh2('coveRoundTrip', ch2.lighthouseLit && info.inCove === false, '島へ 帰りついた(入り江の往復)');
+    if (ch2.lighthouseLit && ch2.coveRoundTrip) break;
+
+    if (info.paused) { await page.keyboard.press('Escape'); await sleep(250); continue; } // 誤ポーズ解除
+    if (info.dialogue || info.qc || info.seq) { await flushDialogs(); continue; }
+    if (info.indoor && !info.obj.endsWith('_wait')) { await leaveHome(); continue; }
+    if (info.obj !== lastObj2) { lastObj2 = info.obj; objSince2 = Date.now(); mark(`目標: ${info.obj}`); }
+    if (Date.now() - objSince2 > 720000) {
+      await snap(`stuck_${info.obj}`);
+      throw new Error(`watchdog: 目標 ${info.obj} が12分間進まない`);
+    }
+
+    // 点灯がおわったら島へ帰る(全部クリアなので目標は「クリア!」になっている)
+    if (ch2.lighthouseLit && info.inCove) {
+      if (!(await sailTo('island'))) mark('島へ 帰れなかった(もう一度ためす)');
+      continue;
+    }
+    // 場所ちがいの案内(ふねで わたろう / もどろう)
+    if (info.objSail) {
+      await sailTo(info.inCove ? 'island' : 'cove');
+      continue;
+    }
+    if (info.obj.endsWith('_wait')) { await sleepAtBed(); continue; }
+    // しゅうり代をためる段階(目標は「500ルミナを ためよう」)
+    if (info.objMoney) {
+      await earnMoney(500);
+      continue;
+    }
+    if (info.objGather) {
+      // 入り江の2種(lightshell/starweed)はノード種別名とアイテムIDが同じ
+      const kind = GATHER_KIND[info.objGather] ?? info.objGather;
+      if (!(await gatherOne(kind))) await sleep(2500); // 全部枯れていたらリスポーン待ち
+      continue;
+    }
+    if (info.objCraft) {
+      if (!(await craftByName(RECIPE_NAMES[info.objCraft] ?? info.objCraft))) await sleep(600);
+      continue;
+    }
+    if (info.objNpc) { await talkFlow(info.objNpc); continue; } // 受注・報告(ミナモ / ロカ)
+    if (info.objPoi === 'coveLighthouse') { await attachLens(); continue; }
+
+    // 目標が「クリア!」になる場面: ふねが なおった直後は のりばへ、入り江にいるなら帰る
+    if (!info.inCove && f.boat_repaired === true && f.roka_arrived !== true) {
+      mark('目標は「クリア!」だが 第2章は続く → 桟橋の ふねへ向かう');
+      await sailTo('cove');
+      continue;
+    }
+    if (info.inCove) { await sailTo('island'); continue; }
+    await sleep(800);
+  }
+  clearInterval(fpsTimer);
+  clearInterval(hbTimer);
+  await snap(ch2.lighthouseLit ? 'chapter2_done' : 'chapter2_incomplete');
+
   const finalInfo = await gameInfo();
   const totalSec = Math.round((Date.now() - START) / 1000);
   mark(`終了(${Math.floor(totalSec / 60)}分${totalSec % 60}秒)`);
+  const ch2All = Object.values(ch2).every(Boolean);
   const result = {
-    completed: finalInfo.level >= 2,
+    // 完走 = ルミの木の開花(第1章)+ とうだいの点灯と島への帰還(第2章)
+    completed: finalInfo.level >= 2 && ch2.lighthouseLit && ch2.coveRoundTrip,
     homeRoundTrip: homeOk, // v7: 入室→就寝→退出を通せたか
+    ...ch2, // v11第2章の通過点(boatRepaired 〜 coveRoundTrip)
     totalSec, timeline, errors: errors.length,
     errorSamples: errors.slice(0, 5),
     fps: fpsSamples,
@@ -552,8 +900,12 @@ try {
     day: finalInfo.day,
   };
   writeFileSync('.logs/playtest_result.json', JSON.stringify(result, null, 2));
-  console.log('RESULT', JSON.stringify({ completed: result.completed, homeRoundTrip: homeOk, totalSec, errors: errors.length, fpsAvg: Math.round(fpsSamples.reduce((a, b) => a + b, 0) / (fpsSamples.length || 1)) }));
-  process.exitCode = result.completed && homeOk !== false && errors.length === 0 ? 0 : 1;
+  console.log('RESULT', JSON.stringify({
+    completed: result.completed, homeRoundTrip: homeOk, ...ch2,
+    totalSec, errors: errors.length,
+    fpsAvg: Math.round(fpsSamples.reduce((a, b) => a + b, 0) / (fpsSamples.length || 1)),
+  }));
+  process.exitCode = result.completed && homeOk !== false && ch2All && errors.length === 0 ? 0 : 1;
 } catch (e) {
   console.error('BOT FAILED:', e.message);
   writeFileSync('.logs/playtest_result.json', JSON.stringify({ completed: false, error: e.message, timeline, errors: errors.slice(0, 8) }, null, 2));

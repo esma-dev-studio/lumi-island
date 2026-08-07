@@ -86,9 +86,17 @@ export function appendBox(
   quad(5, 4, 1, 0, 0.7); // 下
 }
 
-// 先細りの幹・枝
+/**
+ * 先細りの幹・枝。
+ *
+ * @param jitter 半径のゆらぎ幅(既定0.3=±15%)。木や枝の「手づくり感」はこれで出す。
+ *   0にすると きれいな多角すいになる。人工物(灯台の塔とその帯など)で、
+ *   2つの筒を ぴったり重ねたいときに使う: ゆらぎは筒ごとに別の形になるので、
+ *   細いほうが太いほうへ もぐりこんで「ちぎれた帯」に見えてしまう(実機で確認)。
+ *   さらに ゆらぎは輪のつなぎ目(th=0と2π)で値が食いちがうため、縦に細いすじも出る。
+ */
 export function appendTrunk(
-  A: Arrays, pts: [number, number, number][], r0: number, r1: number, color: Color3, seed = 1
+  A: Arrays, pts: [number, number, number][], r0: number, r1: number, color: Color3, seed = 1, jitter = 0.3
 ): void {
   const segs = 7;
   const base = A.pos.length / 3;
@@ -99,7 +107,7 @@ export function appendTrunk(
     const [cx, cy, cz] = pts[i];
     for (let s = 0; s <= segs; s++) {
       const th = (s / segs) * Math.PI * 2;
-      const n = 1 + (vnoise(th * 1.5 + seed * 7, t * 3 + seed * 13) - 0.5) * 0.3;
+      const n = 1 + (vnoise(th * 1.5 + seed * 7, t * 3 + seed * 13) - 0.5) * jitter;
       A.pos.push(cx + Math.cos(th) * r * n, cy, cz + Math.sin(th) * r * n);
       const cf = 0.9 + vnoise(th + seed, t * 5 + seed) * 0.2;
       A.col.push(color.r * cf, color.g * cf, color.b * cf, 1);

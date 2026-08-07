@@ -1,6 +1,6 @@
 // クラフト画面(C)
 import type { GameState } from '../game/GameState';
-import { knownRecipes, canCraft, craft } from '../systems/CraftingSystem';
+import { knownRecipes, canCraft, craft, craftList } from '../systems/CraftingSystem';
 import { ITEMS, TOOLS, type ItemId, type ToolId } from '../data/items';
 import { icon } from './icons';
 import { byInput } from './inputMode';
@@ -63,8 +63,9 @@ export class CraftUI {
 
   private render(): void {
     const s = this.getState();
-    const rows = knownRecipes(s)
-      .map((r) => {
+    // 並びは craftList にまかせる(おぼえたばかりのレシピが上に来る)
+    const rows = craftList(s)
+      .map(({ recipe: r, isNew }) => {
         const check = canCraft(s, r);
         const outName = r.outKind === 'tool' ? TOOLS[r.out as ToolId].name : ITEMS[r.out as ItemId].name;
         const cost = (Object.entries(r.cost) as [ItemId, number][])
@@ -76,9 +77,12 @@ export class CraftUI {
         const btn = check.alreadyOwned
           ? '<span class="crafted-label">もってる</span>'
           : `<button class="craft-btn" data-id="${r.id}" ${check.ok ? '' : 'disabled'}>つくる</button>`;
-        return `<div class="craft-row">
+        // 目じるしは丸い塗りつぶしのピル(左の色ボーダー+角丸は「(」に見えるので使わない)
+        const badge = isNew ? '<span class="craft-new">あたらしい!</span>' : '';
+        return `<div class="craft-row${isNew ? ' is-new' : ''}">
           <span class="inv-ico">${icon(r.out)}</span>
           <span class="craft-name">${outName}</span>
+          ${badge}
           <span class="craft-costs">${cost}</span>
           ${btn}
         </div>`;

@@ -9,15 +9,20 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 import { POND } from '../data/island';
-import { pondShoreR, vnoise } from './terrain';
+import { pondShoreR, terrainHeight, vnoise } from './terrain';
 
 export const SEA_Y = 0.3;
 // 桟橋: 浜(z=44)から海(z=57)へ。デッキ上は歩行可
 export const PIER = { x: 4, w: 2.4, z0: 35.5, z1: 50.5, y: 0.92 };
 
-/** 池の水面の分割。円周56×中心→岸7リング(約780三角形。波の頂点更新は15Hz) */
-const PSEG = 56;
-const PRINGF = [0, 0.26, 0.47, 0.64, 0.78, 0.89, 0.96, 1];
+/**
+ * 池の水面の分割。円周88×中心→岸13リング(約2200三角形。波の頂点更新は15Hz)。
+ * v11で細かくした: 水ぎわを「実際に水になっているところ」で切るようになったので、
+ * 切れめの きめの細かさ(=格子1マスぶんのぼやけ)がそのまま水ぎわの太さになる。
+ * 岸のあたり(rが大きいほう)を細かくして、水ぎわを60cmほどに収めてある。
+ */
+const PSEG = 88;
+const PRINGF = [0, 0.16, 0.30, 0.42, 0.52, 0.61, 0.69, 0.76, 0.82, 0.87, 0.91, 0.95, 0.98, 1];
 
 // 光(太陽+半球光)と底との重ねで約1.4倍に出るため、見せたい色をこの係数で割って置く
 const LIGHT_COMP = 1.42;
@@ -79,7 +84,9 @@ export function buildWater(scene: Scene): WaterRefs {
   pond.material = pondSurfMat;
   pond.isPickable = false;
 
-  // 入り江の浅瀬にスイレンの葉(水面に浮く。池の子なので一緒にゆれる)
+  // 池の南東の入り江にスイレンの葉(水面に浮く。池の子なので一緒にゆれる)。
+  // この向き(θ≈1.7〜2.2rad)は岸線まで本物の水なので、岸線を基準にしてよい
+  // (実測: pondSurfaceVisibility はこの6枚の位置でどれも1)
   const lilyMat = new StandardMaterial('lilyMat', scene);
   lilyMat.diffuseColor = Color3.FromHexString('#2a4527'); // 半球光+太陽で約2倍明るく出るため暗めに置く
   lilyMat.specularColor = new Color3(0.02, 0.03, 0.02);
@@ -153,6 +160,51 @@ export function onPier(x: number, z: number): boolean {
   return Math.abs(x - PIER.x) < PIER.w / 2 + 0.1 && z > PIER.z0 - 0.2 && z < PIER.z1 + 0.2;
 }
 
+// ---------------------------------------------------------------------------
+// 水面をどこに描くか(見た目だけ。判定はいっさい見ない)
+// ---------------------------------------------------------------------------
+/**
+ * 地面が水面よりこれだけ高いところまでは、そのまま水面を描く(m)。
+ * 「少しの重なり」ぶん。岸との間にすき間や浮き縁ができないようにする。
+ */
+const SURF_KEEP = 0.03;
+/** 地面が水面よりこれだけ高くなったら、水面はもう描かない(m) */
+const SURF_FADE = 0.09;
+/** この深さで「深いところの色」になりきる(m)。池の底は水面-6cmなので、水ぎわの帯の幅を決める値 */
+const SURF_DEEP_AT = 0.045;
+
+const smooth01 = (t: number): number => {
+  const u = Math.min(1, Math.max(0, t));
+  return u * u * (3 - 2 * u);
+};
+
+/**
+ * その地点に水面を描く濃さ(0=描かない / 1=そのまま)。
+ *
+ * なぜ要るか:
+ *   池の北〜東がわは、ミナモの小屋の足もとをならす補正(terrainHeight のBUILDINGSの段)で
+ *   地面が水面(POND.waterY)より高い「泥の岸」になっている。水面メッシュは池の岸線
+ *   pondShoreR まで まるく描いていたので、歩ける泥の上に水がかぶり、
+ *   池が実際よりずっと大きく見えていた(実測: 北がわは水がまったく無いのに5〜8m ぶん水があった)。
+ *
+ * ここは見た目だけの規則。歩ける・水・釣れるの判定は前から「実際の水面」で決めているので
+ *   (terrain.walkableGround / waterBodyAt / systems/FishingCast)、そちらは一切参照しないし、
+ *   この関数を変えても歩ける範囲・釣れる場所は1ミリも動かない。
+ *
+ * @param x,z 世界座標
+ */
+export function pondSurfaceVisibility(x: number, z: number): number {
+  const over = terrainHeight(x, z) - POND.waterY; // +なら地面が水面より高い(陸)
+  if (over <= SURF_KEEP) return 1;
+  if (over >= SURF_FADE) return 0;
+  return smooth01((SURF_FADE - over) / (SURF_FADE - SURF_KEEP));
+}
+
+/** その地点の水の深さ(0=水ぎわ 1=底までとどいた深さ)。色とゆらぎの強さに使う */
+export function pondSurfaceDepth(x: number, z: number): number {
+  return smooth01((POND.waterY - terrainHeight(x, z)) / SURF_DEEP_AT);
+}
+
 // ---- 水面のさざ波(位置と法線を15Hzで更新。上下のボブとは別の「表面のゆらぎ」) ----
 const WAVE_N = 7; // 法線の強調(頂点の動きは小さいまま陰影だけゆらす)
 
@@ -168,7 +220,14 @@ function waveAt(x: number, z: number, t: number, out: [number, number, number]):
   out[2] = c1 * 0.014 * 0.31 + c2 * 0.011 * 0.93 + c3 * 0.005 * -0.72; // ∂y/∂z
 }
 
-/** 池の水面(放射グリッド)。深さ・むら・かげを頂点カラーとアルファで持つ */
+/**
+ * 池の水面(放射グリッド)。深さ・むら・かげを頂点カラーとアルファで持つ。
+ *
+ * v11: 「岸線 pondShoreR まで まるく描く」のをやめ、頂点ごとに足もとの地面の高さを見て、
+ * 水面より高い泥の岸では 描く濃さを0にする(pondSurfaceVisibility)。
+ * 池の水は中心からの円ではない(北〜東は小屋のならしで泥の岸)ので、
+ * 「向きごとの縁の半径」では表せない。頂点ごとに切るのが唯一ただしく効く。
+ */
 function makePondSurface(scene: Scene): PondWave {
   const rows = PRINGF.length;
   const cols = PSEG + 1;
@@ -179,23 +238,26 @@ function makePondSurface(scene: Scene): PondWave {
   for (let r = 0; r < rows; r++) {
     for (let s = 0; s < cols; s++) {
       const th = (s / PSEG) * Math.PI * 2;
-      const edge = Math.max(0.5, pondShoreR(th) - 0.15);
-      const rr = edge * PRINGF[r];
+      const rr = Math.max(0.5, pondShoreR(th) - 0.15) * PRINGF[r];
       const px = Math.cos(th) * rr;
       const pz = Math.sin(th) * rr;
       pos.push(px, 0, pz);
-      damp[r * cols + s] = 1 - PRINGF[r] * PRINGF[r]; // 岸ぎわは動かさない(土手との隙間を出さない)
-      // 深さの場: 中心ほど深いが、ノイズで境目をくずして「楕円の深場」に見せない
+      // 実際の水の深さ(0=水ぎわ 1=底)。色・ゆらぎ・濃さをこれで水域に合わせる
+      const wet = pondSurfaceDepth(POND.x + px, POND.z + pz);
+      const vis = pondSurfaceVisibility(POND.x + px, POND.z + pz);
+      // 岸ぎわは動かさない(土手との隙間を出さない)。実際の水ぎわでも同じように止める
+      damp[r * cols + s] = (1 - PRINGF[r] * PRINGF[r]) * wet;
+      // 深さの場: 実際の深さを土台に、ノイズで境目をくずして「楕円の深場」に見せない
       const blot = vnoise(px * 0.15 + 12.3, pz * 0.15 + 4.7);
       const fine = vnoise(px * 0.62 + 3.1, pz * 0.62 + 9.4);
-      const d = Math.min(1, Math.max(0, (1 - PRINGF[r]) * 1.35 + (blot - 0.5) * 0.75 - 0.12));
+      const d = Math.min(1, Math.max(0, wet * (1.05 + (blot - 0.5) * 0.75) - 0.12));
       // かげ: 岸寄りの一部だけを不規則に暗くする(木かげ・土手のかげ)
       const shN = vnoise(px * 0.11 + 31.7, pz * 0.11 + 18.2);
-      const sh = Math.min(1, Math.max(0, (shN - 0.46) * 2.6)) * Math.min(1, Math.max(0, (PRINGF[r] - 0.25) * 1.6)) * 0.7;
+      const sh = Math.min(1, Math.max(0, (shN - 0.46) * 2.6)) * Math.min(1, Math.max(0, (1 - wet) * 1.4)) * 0.7;
       let c = d < 0.5 ? Color3.Lerp(C_SHALLOW, C_MID, d * 2) : Color3.Lerp(C_MID, C_DEEP, (d - 0.5) * 2);
       c = Color3.Lerp(c, C_SHADE, sh);
       const v = 0.93 + fine * 0.14;
-      col.push(c.r * v, c.g * v, c.b * v, 0.72 + d * 0.28);
+      col.push(c.r * v, c.g * v, c.b * v, (0.72 + d * 0.28) * vis);
     }
   }
   for (let r = 0; r < rows - 1; r++) {

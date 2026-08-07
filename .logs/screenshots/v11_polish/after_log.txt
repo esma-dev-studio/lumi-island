@@ -1,0 +1,41 @@
+=== after 走行開始(port 5192) ===
+レシピをおぼえた: {"mushlamp":true,"starmap":true,"recipes":17}
+クラフト一覧の先頭6行: [{"name":"ほしぞらのちず","badge":"あたらしい!"},{"name":"きのこランプ","badge":"あたらしい!"},{"name":"カマ","badge":""},{"name":"ツリザオ","badge":""},{"name":"はなだん","badge":""},{"name":"かいがらのかざり","badge":""}]
+  撮影 after_01_craft_new_order.png
+きのこランプを作成(clicked) → 先頭6行: [{"name":"ほしぞらのちず","badge":"あたらしい!"},{"name":"カマ","badge":""},{"name":"ツリザオ","badge":""},{"name":"はなだん","badge":""},{"name":"きのこランプ","badge":""},{"name":"かいがらのかざり","badge":""}]
+  撮影 after_02_craft_after_making.png
+  ビーコン(浜べ9m): {"objective":"q2_meet_report_sail_cove","label":"ふねで よるの入り江へ わたろう","enabled":true,"beaconY":3.52,"beaconX":4,"beaconZ":41.6,"footY":0.77,"groundYatTarget":0.92,"terrainYatTarget":0.175,"playerAt":[-4,36.5]}
+  撮影 after_03_beacon_from_beach.png
+  ビーコン(道16m): {"objective":"q2_meet_report_sail_cove","label":"ふねで よるの入り江へ わたろう","enabled":true,"beaconY":3.52,"beaconX":4,"beaconZ":41.6,"footY":0.77,"groundYatTarget":0.92,"terrainYatTarget":0.175,"playerAt":[-2,26]}
+  撮影 after_04_beacon_from_path.png
+  ビーコン(斜め20m): {"objective":"q2_meet_report_sail_cove","label":"ふねで よるの入り江へ わたろう","enabled":true,"beaconY":3.52,"beaconX":4,"beaconZ":41.6,"footY":0.77,"groundYatTarget":0.92,"terrainYatTarget":0.175,"playerAt":[-12,30]}
+  撮影 after_05_beacon_from_side.png
+  撮影 after_06_beacon_foot_closeup.png
+  撮影 after_06b_beacon_foot_low.png
+  撮影 after_07_pond_overhead.png
+  撮影 after_08_pond_from_southwest.png
+  撮影 after_09_pond_from_south.png
+池の水ぎわ(角度: 水面より低い最外半径 / 釣れる最外半径)
+  0:14/8.75 15:14/8.75 30:14/9 45:14/9.5 60:14/9.25 75:14/9.25 90:14/10 105:10/11 120:10/11.25 135:9.75/11 150:9.5/10.75 165:9/10.25 180:8.75/10 195:8.5/9.75 210:8/9.25 225:7.75/9 240:0/8.5 255:0/7.25 270:0/4 285:0/3.25 300:0/3 315:0/3.25 330:0/7 345:0/9
+スポットチェックの候補: {"mud":[30.78,15.57,280],"water":[30,30,90]}
+泥の岸 (30.78, 15.57) : zone=- / ヒント=""
+  撮影 after_10_pond_mud_bank_no_fishing.png
+水ぎわ (30, 30) : zone=pond / ヒント="Eつりをする"
+  撮影 after_11_pond_waterside_fishing_ok.png
+置いたランタン: {"f":{"id":1,"item":"f_lighthouse_lantern","x":57,"z":-57.5,"rotY":0},"floorY":1.15}
+  撮影 after_12_lantern_front_day.png
+  撮影 after_13_lantern_45_day.png
+  撮影 after_14_lantern_lamp_day.png
+  撮影 after_15_lantern_base_day.png
+  撮影 after_12_lantern_front_night.png
+  撮影 after_13_lantern_45_night.png
+  撮影 after_14_lantern_lamp_night.png
+  撮影 after_15_lantern_base_night.png
+ピークの位相: hold=3 pulse=0.998
+きらめき(peak): {"enabled":true,"alpha":0.999,"scale":0.9}
+  撮影 after_16_horizon_spark_peak.png
+きらめき(off): {"enabled":true,"alpha":0.16,"scale":0.55}
+  撮影 after_16_horizon_spark_off.png
+きらめきの画素(peak): {"max":255,"rgb":[255,255,255],"at":[636,354],"bg":46.8,"addedLight":91938,"bright":933}
+きらめきの画素(off): {"max":92.7,"rgb":[86,93,109],"at":[640,357],"bg":46.8,"addedLight":9895,"bright":100}
+consoleエラー: 0件

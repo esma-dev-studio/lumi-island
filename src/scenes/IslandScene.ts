@@ -87,7 +87,11 @@ export class IslandScene {
   private horizonSparkMat!: StandardMaterial;
   /** とうだいが ともっているか(セーブの flags.lighthouse_lit) */
   private lighthouseLit = false;
-  private sparkT = 0;
+  /**
+   * きらめきの明滅の位相(0..12秒)。撮影・検証のときに「いちばん強く光る瞬間」を
+   * 決めうちで出せるように公開してある(sparkT=3 でピーク)。ゲーム側は毎フレーム進めるだけ。
+   */
+  sparkT = 0;
   garden!: GardenView; // 自宅のお庭(柵・門・花だん)
   shadows!: CascadedShadowGenerator;
   circles: CircleCollider[] = [];
@@ -507,10 +511,12 @@ export class IslandScene {
     }
     this.sparkT = (this.sparkT + dt) % 12;
     if (!this.horizonSpark.isEnabled(false)) this.horizonSpark.setEnabled(true);
-    // 12秒に1回、こちらを向いた瞬間だけ強く光る(sinの4乗で「ぱっ…ぱっ」にする)
+    // 12秒に1回、こちらを向いた瞬間だけ強く光る(sinの4乗で「ぱっ…ぱっ」にする)。
+    // 周期・位相・大きさ(scaling)はv11の仕上げでも変えていない。上げたのはピークの濃さだけ
+    // (0.90→1.00。ふだんの0.16はそのまま=「探せば気づける」まで上げて、派手にはしない)
     const s = Math.max(0, Math.sin((this.sparkT / 12) * Math.PI * 2));
     const pulse = s * s * s * s;
-    this.horizonSparkMat.alpha = night * (0.16 + 0.74 * pulse);
+    this.horizonSparkMat.alpha = night * (0.16 + 0.84 * pulse);
     this.horizonSpark.scaling.setAll(0.55 + 0.35 * pulse);
   }
 
