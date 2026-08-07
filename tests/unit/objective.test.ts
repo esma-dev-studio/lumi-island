@@ -168,7 +168,8 @@ describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
     expect(ctx.guided).toBe(true);
     expect(ctx.preferredKinds).toContain('gather');
     expect(ctx.preferredKinds).not.toContain('shop');
-    expect(ctx.targetItemIds).toEqual(['wood']);
+    // v11.1: 案内している素材+時間で消える拾いもの(かけら・うきだま)だけ
+    expect(ctx.targetItemIds).toEqual(['wood', 'starshard', 'glassfloat']);
   });
   it('採取段階でも「ねる」は許可する(夜に行きづまらせない)', () => {
     const s = newGameState();
@@ -186,8 +187,8 @@ describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
     const ctx = objectiveActionContext(o);
     expect(ctx.guided).toBe(true);
     expect(ctx.preferredKinds).toContain('fish');
-    expect(ctx.preferredKinds).not.toContain('gather');
-    expect(ctx.targetItemIds).toEqual(['fish', 'nightfish']);
+    // v11.1: 釣りの最中でも 時間で消える拾いものだけは拾える(ふつうの採取ノードは対象外)
+    expect(ctx.targetItemIds).toEqual(['fish', 'nightfish', 'starshard', 'glassfloat']);
   });
   it('報告段階: その相手との会話だけを対象にする', () => {
     const s = newGameState();
@@ -196,7 +197,11 @@ describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
     const ctx = objectiveActionContext(currentObjective(s));
     expect(ctx.guided).toBe(true);
     expect(ctx.preferredKinds).toContain('talk');
-    expect(ctx.preferredKinds).not.toContain('gather');
+    // v11.1: 報告に行くとちゅうの採取は ふさがない(素材の絞りこみもしない)
+    expect(ctx.preferredKinds).toContain('gather');
+    expect(ctx.targetItemIds).toBeUndefined();
+    expect(ctx.preferredKinds).not.toContain('fish');
+    expect(ctx.preferredKinds).not.toContain('shop');
     expect(ctx.targetNpcId).toBe('tsumugi');
   });
   it('未受注の「話を聞こう」はまだ自由(採取も店も従来どおり)', () => {
@@ -217,12 +222,13 @@ describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
     const o = currentObjective(s, 'tsumugi', { tsumugi: { hidden: true } });
     const ctx = objectiveActionContext(o);
     expect(ctx.guided).toBe(true);
-    // v11: 虫とり(catch)も常時許可に入った(ObjectiveSystem の ALWAYS_ALLOWED のコメント参照)
-    expect(ctx.preferredKinds).toEqual(['sleep', 'enter', 'exit', 'catch']);
-    expect(ctx.preferredKinds).not.toContain('gather');
+    // v11: 虫とり(catch) / v11.1: 穴ほり(dig)も常時許可(ObjectiveSystem の ALWAYS_ALLOWED)
+    expect(ctx.preferredKinds).toEqual(['gather', 'sleep', 'enter', 'exit', 'catch', 'dig']);
+    // 採取は「時間で消える拾いもの」だけ(ふつうの採取ノードはベッド誘導中も出ない)
+    expect(ctx.targetItemIds).toEqual(['starshard', 'glassfloat']);
     expect(ctx.targetPoiId).toBe('bed');
   });
-  it('クラフト段階はE候補を対象にしない(targetItemIdsが空)', () => {
+  it('クラフト段階は採取ノードを対象にしない(時間で消える拾いものだけ)', () => {
     const s = newGameState();
     s.quests.q_wood = 'done';
     s.quests.q_fish = 'open';
@@ -234,9 +240,9 @@ describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
     expect(o.craftRecipe).toBe('r_rod');
     const ctx = objectiveActionContext(o);
     expect(ctx.guided).toBe(true);
-    expect(ctx.targetItemIds).toEqual([]);
+    expect(ctx.targetItemIds).toEqual(['starshard', 'glassfloat']);
   });
-  it('配置段階もE候補を対象にしない', () => {
+  it('配置段階も採取ノードを対象にしない', () => {
     const s = newGameState();
     s.quests.q_wood = 'done';
     s.quests.q_fish = 'done';
@@ -247,7 +253,7 @@ describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
     const o = currentObjective(s);
     expect(o.id).toBe('q_lantern_place');
     expect(o.placeFurniture).toBe(true);
-    expect(objectiveActionContext(o).targetItemIds).toEqual([]);
+    expect(objectiveActionContext(o).targetItemIds).toEqual(['starshard', 'glassfloat']);
   });
   it('全クリア後と目的未計算(null)は自由探索あつかい', () => {
     const s = newGameState();
@@ -296,13 +302,13 @@ describe('虫とり(catch)は誘導中でも使える。ただし採取を横取
     expect(matchesObjective(bugCand(1.2), ctx)).toBe(true);
   });
 
-  it('ほりあと(dig)は従来どおり誘導中は出ない(1日そこに残るので待てる)', () => {
+  it('v11.1: ほりあと(dig)も誘導中に出る(日が変わると別の場所へ移ってしまうため)', () => {
     const ctx = woodCtx();
-    expect(ctx.preferredKinds).not.toContain('dig');
+    expect(ctx.preferredKinds).toContain('dig');
     expect(matchesObjective({
       id: 'dig_1', kind: 'dig', targetId: '1', priority: PRIORITY.dig,
       distance: 1, enabled: true, hint: '<kbd>E</kbd>ほる', run: () => {},
-    }, ctx)).toBe(false);
+    }, ctx)).toBe(true);
   });
 
   it('採取ノードが射程内なら、虫より採取が勝つ(依頼が止まらない)', () => {

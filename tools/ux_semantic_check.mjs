@@ -28,6 +28,18 @@ export const GATHER_CATEGORIES = [
 ];
 const GATHER = new Set(GATHER_CATEGORIES);
 /**
+ * 「そのとき その場でしか拾えない」拾いもの(v11.1)。
+ * ほしのかけら=夜だけ / うきだま=朝だけ / カタツムリ=雨の日だけ で、時間がすぎると消える。
+ * src/systems/ObjectiveSystem.ts の TRANSIENT_PICKUPS(+ GameScene.routeWithSnail)が
+ * 「どの誘導中でも拾える」ようにしたので、判定器もそれに合わせる。
+ * これは判定の緩和ではなく、設計の意味論への較正:
+ * 目的が「もくざいを あつめよう」でも、足もとの ほしのかけらを拾うのは仕様どおりの動き。
+ * 復活するふつうの採取ノード(木・岩・草・ベリー・コケ・こうせき)はここに入れない
+ * ので、「別素材の採取ヒントが出ている」の検出はこれまでどおり効く
+ * (v4コーパスの 179 gatherOre×gatherMoss / 262 gatherMoss×gatherStone は不変)。
+ */
+const TRANSIENT_PICKUP = new Set(['gatherStar', 'gatherFloat', 'gatherSnail']);
+/**
  * 何をしていてもよい目的。「ゲームがプレイヤーの行動を絞っていない場面」がこれにあたる。
  *   free     : クリア後の自由行動
  *   tutorial : 移動チュートリアル
@@ -266,10 +278,6 @@ export function isShopPanelTitle(title) {
  *    候補の kind は 'pickup' なので ObjectiveSystem の preferredKinds には決して入らず、
  *    誘導中(guided)は表示されない設計。出ていたら候補の絞りこみが壊れたということなので、
  *    sleep/enter/exit のような「常時許可」にはしない(GATHER_CATEGORIES にも入れない)。
- *  - hint=dig(v9のシャベル): 依頼の目的にならないので ObjectiveSystem の preferredKinds に
- *    入ることが決してない。つまり誘導中(guided)は表示されない設計であり、
- *    出ていたら候補の絞りこみが壊れたということ。sleep/enter/exit のような「常時許可」にはしない
- *    (GATHER_CATEGORIESにも入れないので、craft/place目的中でも矛盾として検出される)。
  *
  * v11で常時許可に足したもの(判定の緩和ではなく、設計の意味論への較正):
  *  - hint=catch(虫あみ): src/systems/ObjectiveSystem.ts の ALWAYS_ALLOWED に 'catch' が入り、
@@ -277,7 +285,22 @@ export function isShopPanelTitle(title) {
  *    ホタルは夜しか出ない「あとで戻れない相手」なので、依頼中に虫あみを完全に封じると
  *    「見えているのに捕れない」になるため(子どもの苦情の一因)。
  *    誘導の横取りは優先度で防いでいる(catch=32 < 採取30・庭29・報告NPC10)。
- *    なお dig は同じ場所に1日残るので、この理由は立たない = 従来どおり厳格のまま。
+ *
+ * v11.1で常時許可に足したもの(実プレイの苦情「報告しに行く間にアイテムが拾えない」への修正。
+ * 線引きは v10.1の虫とりで学んだ教訓とまったく同じ「あとで戻れる相手か」):
+ *  - hint=dig(シャベル): ALWAYS_ALLOWED に 'dig' が入った。ほりあとは日付が変わると
+ *    別の場所へ移る「その日かぎり」のもので、依頼をこなすあいだに日付は変わる。
+ *    優先度 dig=33 は 採取30・庭29・報告NPC10 より弱いので誘導は横取りしない。
+ *  - hint=時間限定の拾いもの(ほしのかけら・うきだま・カタツムリ): 上の TRANSIENT_PICKUP を参照。
+ *  - 目的=report × 採取のヒント: 報告は「その相手に会う」ことだけが条件で、
+ *    道すがら何を採っても1ミリも遅れない。ObjectiveSystem は報告の文脈に 'gather' を入れ、
+ *    素材の絞りこみ(targetItemIds)もしない。報告そのものが横取りされないことは優先度で保証。
+ *    ※ report × fish / report × shop は これまでどおり false のまま
+ *      (「報告に行かず釣りつづける」「店を開いてしまう」の検出は合否条件そのもの)。
+ *  - hint=pickup系(carry「もちかえる」/ display「いれる・とりだす」)は 従来どおり厳格のまま。
+ *    自分で置いた家具はいつでも戻れる相手で、資源も増えない(むしろ島から減る)。
+ *    ObjectiveSystem の preferredKinds に 'pickup' は入らないので、誘導中は表示されない設計。
+ *    出ていたら候補の絞りこみが壊れたということなので、常時許可にはしない。
  */
 export function isSemanticMatch(objCat, hintCat) {
   if (!hintCat || hintCat === 'none') return true;
@@ -285,13 +308,22 @@ export function isSemanticMatch(objCat, hintCat) {
   if (ANYTHING_OK_OBJ.has(objCat)) return true;
   if (hintCat === 'blocked') return true;
   if (hintCat === 'dialogue') return true;
-  // ねる・自宅の出入り・虫とりは ObjectiveSystem の ALWAYS_ALLOWED で
+  // ねる・自宅の出入り・虫とり・穴ほりは ObjectiveSystem の ALWAYS_ALLOWED で
   // 全誘導文脈に意図的に混ぜてある補助導線(上のコメントに根拠あり)
-  if (hintCat === 'sleep' || hintCat === 'enter' || hintCat === 'exit' || hintCat === 'catch') return true;
+  if (
+    hintCat === 'sleep' || hintCat === 'enter' || hintCat === 'exit' ||
+    hintCat === 'catch' || hintCat === 'dig'
+  ) {
+    return true;
+  }
+  // 時間で消える拾いもの(夜のかけら・朝のうきだま・雨のカタツムリ)も同じ扱い
+  if (TRANSIENT_PICKUP.has(hintCat)) return true;
   if (hintCat === 'unknown') return true;
   if (hintCat === 'shop') return false;
   if (objCat === hintCat) return true;
   if (objCat === 'report' && hintCat === 'talk') return true;
+  // 報告のとちゅうの採取は寄り道ではない(釣り・店は上で false のまま)
+  if (objCat === 'report' && GATHER.has(hintCat)) return true;
   if ((objCat === 'craft' || objCat === 'place') && GATHER.has(hintCat)) return true;
   if (objCat === 'unknown') return true;
   return false;

@@ -154,17 +154,42 @@ describe('isSemanticMatch(既知の矛盾を検出する)', () => {
     expect(isSemanticMatch('report', 'catch')).toBe(true);
     expect(isSemanticMatch('fish', 'catch')).toBe(true);
     expect(isSemanticMatch('sleep', 'catch')).toBe(true);
-    // シャベル(dig)は同じ場所に1日残るので従来どおり厳格のまま
-    expect(isSemanticMatch('gatherWood', 'dig')).toBe(false);
-    expect(isSemanticMatch('report', 'dig')).toBe(false);
   });
-  it('受注済みの段階(guided)は較正後も厳格なまま', () => {
-    // 報告は「はなす」だけがtrue。ここを緩めると「報告に行かず釣り続ける」が見逃される
-    expect(isSemanticMatch('report', 'gatherFiber')).toBe(false);
+  it('v11.1 シャベル(dig)も常時許可(ほりあとは日付が変わると別の場所へ移る)', () => {
+    // ObjectiveSystem の ALWAYS_ALLOWED に 'dig' が入った。判定器も同じ意味論へそろえる。
+    for (const obj of ['gatherWood', 'gatherOre', 'fish', 'report', 'craft', 'place', 'sleep']) {
+      expect(isSemanticMatch(obj, 'dig'), `${obj} x dig`).toBe(true);
+    }
+  });
+  it('v11.1 時間限定の拾いもの(かけら・うきだま・カタツムリ)はどの目的中でも許可', () => {
+    // 夜だけ・朝だけ・雨の日だけ出て、時間がすぎると消える=「あとで戻れない相手」。
+    for (const obj of ['gatherWood', 'gatherOre', 'fish', 'report', 'craft', 'place', 'sleep']) {
+      for (const hint of ['gatherStar', 'gatherFloat', 'gatherSnail']) {
+        expect(isSemanticMatch(obj, hint), `${obj} x ${hint}`).toBe(true);
+      }
+    }
+    // 復活するふつうの採取ノードは較正の対象外(別素材の検出はこれまでどおり効く)
+    expect(isSemanticMatch('gatherWood', 'gatherMoss')).toBe(false);
+    expect(isSemanticMatch('gatherMoss', 'gatherStone')).toBe(false);
+  });
+  it('v11.1 報告のとちゅうの採取は矛盾ではない(釣り・店・もちかえるは従来どおりfalse)', () => {
+    // 報告は「その相手に会う」ことだけが条件。道すがら何を採っても遅れない
+    // (実プレイの苦情「報告しに行く間にアイテムが拾えない」への修正に合わせた較正)。
+    expect(isSemanticMatch('report', 'gatherFiber')).toBe(true);
+    expect(isSemanticMatch('report', 'gatherWood')).toBe(true);
+    expect(isSemanticMatch('report', 'gatherFlower')).toBe(true);
+    // ここは合否条件そのものなので ぜったいに緩めない
     expect(isSemanticMatch('report', 'fish')).toBe(false);
     expect(isSemanticMatch('report', 'shop')).toBe(false);
     expect(isSemanticMatch('report', 'carry')).toBe(false);
-    // 採取・釣り・就寝の段階も従来どおり
+    expect(isSemanticMatch('report', 'display')).toBe(false);
+  });
+  it('受注済みの段階(guided)は較正後も厳格なまま', () => {
+    // 報告のあいだ 釣り・店をつづけるのは見逃さない
+    expect(isSemanticMatch('report', 'fish')).toBe(false);
+    expect(isSemanticMatch('report', 'shop')).toBe(false);
+    expect(isSemanticMatch('report', 'carry')).toBe(false);
+    // 採取・釣り・就寝の段階も従来どおり(復活するふつうの素材どうし)
     expect(isSemanticMatch('gatherFiber', 'gatherMoss')).toBe(false);
     expect(isSemanticMatch('fish', 'gatherFiber')).toBe(false);
     expect(isSemanticMatch('sleep', 'gatherWood')).toBe(false);
@@ -435,9 +460,10 @@ describe('v6の新しい採取ヒント(4種)', () => {
   it('別素材どうしは矛盾・同じ素材は一致・craft/place中の採取は許す', () => {
     expect(isSemanticMatch('gatherFlower', 'gatherFlower')).toBe(true);
     expect(isSemanticMatch('gatherFlower', 'gatherMushroom')).toBe(false);
-    expect(isSemanticMatch('gatherShell', 'gatherStar')).toBe(false);
+    // ほしのかけらは v11.1 から常時許可(時間限定の拾いもの)なので、ここは true
+    expect(isSemanticMatch('gatherShell', 'gatherStar')).toBe(true);
     expect(isSemanticMatch('gatherMoss', 'gatherShell')).toBe(false);
-    expect(isSemanticMatch('report', 'gatherFlower')).toBe(false);
+    expect(isSemanticMatch('report', 'gatherFlower')).toBe(true);
     expect(isSemanticMatch('craft', 'gatherShell')).toBe(true);
     expect(isSemanticMatch('place', 'gatherStar')).toBe(true);
     expect(isSemanticMatch('free', 'gatherStar')).toBe(true);

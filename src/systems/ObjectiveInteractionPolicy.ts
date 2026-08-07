@@ -16,7 +16,9 @@ export function matchesObjective(c: InteractionCandidate, ctx: ObjectiveActionCo
       // 目的の相手以外との会話は無関係あつかい(進行中の雑談がEを奪わない)
       return ctx.targetNpcId === undefined || c.targetId === ctx.targetNpcId;
     case 'gather':
-      // targetItemIds があるときは、その素材が採れる候補だけ(空配列=どれも許可しない)
+      // targetItemIds があるときは、その素材が採れる候補だけ。
+      // v11.1: 一覧には「案内している素材」に加えて、時間で消える拾いもの
+      // (ObjectiveSystem の TRANSIENT_PICKUPS)が入る。報告の段階だけは undefined = 全部通す。
       return (
         ctx.targetItemIds === undefined ||
         (c.itemId !== undefined && ctx.targetItemIds.includes(c.itemId))

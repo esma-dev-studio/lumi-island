@@ -4,14 +4,20 @@ import type { ItemId } from '../data/items';
 
 /**
  * 候補の意味(いまの目的と一致するかの判定に使う)。
- * enter/exit は自宅の出入り。sleepと同じで「どの目的の最中でも押してよい」補助導線
- * (ObjectiveSystem の ALWAYS_ALLOWED を参照)。
+ *
+ * enter/exit は自宅の出入りと ふねの のりば/帰りの桟橋。sleepと同じで
+ * 「どの目的の最中でも押してよい」補助導線(ObjectiveSystem の ALWAYS_ALLOWED を参照)。
+ * とくに乗り降り(移動手段)は、どんな誘導中でも隠してはいけない——隠すと
+ * 「入り江から帰れない」のような進行不能になる(tests/unit/objective.test.ts が機械検査)。
+ *
+ * 誘導中(guided)に隠れるのは shop / fish / place / pickup の4種だけ。
+ * v11.1 から catch(虫とり)・dig(穴ほり)・時間限定の拾いもの は隠さない
+ * (理由は ObjectiveSystem の ALWAYS_ALLOWED / TRANSIENT_PICKUPS のコメント)。
  */
 export type InteractionKind =
   | 'talk' | 'gather' | 'shop' | 'fish' | 'place' | 'pickup' | 'sleep' | 'enter' | 'exit'
-  // v9: 虫とり・穴ほり。どちらも依頼の目的にはならないので、
-  // ObjectiveSystem の preferredKinds には決して入らない = 誘導中は自動で隠れる
-  // (matchesObjective の最初の1行で落ちる。gatherと同じ流儀)
+  // v9: 虫とり・穴ほり。どちらも依頼の目的にはならないが、
+  // v11(catch)・v11.1(dig)から ALWAYS_ALLOWED に入れて 誘導中でも押せるようにしてある
   | 'catch' | 'dig';
 
 export interface InteractionCandidate {
