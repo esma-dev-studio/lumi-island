@@ -331,13 +331,40 @@ export function currentObjective(
           ),
     }, npcAvail);
   }
-  // 4) 全部クリア
+  // 4) 開いている依頼が1件もない。章のあいだ(依頼と依頼のすきま)なら 橋わたしをする
+  const bridge = chapterBridge(state);
+  if (bridge) return bridge;
+  // 5) 全部クリア。
+  // area は 'any' ではなく 'island'(=島でくらす)。こうしておくと、点灯のあと
+  // 入り江に立ったままでも withAreaTravel が「ふねで しまへ もどろう」に差しかえる
+  // (島に帰れば これまでどおり「クリア! 島で じゆうに くらそう」に戻る)。
   return {
     id: 'free', headline: 'クリア!',
     label: '島で じゆうに くらそう',
     target: { kind: 'none' },
-    area: 'any',
+    area: 'island',
   };
+}
+
+/**
+ * 章のあいだの橋わたし(v11第2章)。
+ *
+ * なぜ要るか: ふねが なおってから はじめて入り江へ わたるまでの間だけ、
+ * 開いている依頼が0件になる。次の依頼 q2_meet の解放条件が flags.roka_arrived(初上陸)で、
+ * 上陸するまで locked のままだからで、そこを素通りすると「クリア! 島で じゆうに くらそう」に
+ * 落ちて 章の続きへの誘導が消える(回帰ボットの実キー通し走行3本で再現)。
+ *
+ * 直しかた: 「依頼が0件=free」の一般則は変えず、この1区間だけを橋わたしする。
+ * 目的は withAreaTravel と同じ「ふねの のりば」なので、文も目的地も sailObjective で共有する
+ * (画面に出る文が1本化されるので、意味チェッカー(tools/ux_semantic_check.mjs)の分類も
+ * 'sail' のまま増えない)。
+ */
+function chapterBridge(state: GameState): Objective | null {
+  // ふねは なおった(boat_repaired) けれど、まだ 入り江へ 行っていない
+  if (state.flags.boat_repaired === true && state.flags.roka_arrived !== true) {
+    return sailObjective('ch2_first_sail', 'cove');
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -347,6 +374,35 @@ export function currentObjective(
 export const SAIL_TO_ISLAND_LABEL = 'ふねで しまへ もどろう';
 /** 島にいるのに、目的が入り江にあるとき */
 export const SAIL_TO_COVE_LABEL = 'ふねで よるの入り江へ わたろう';
+
+/**
+ * 「ふねの のりばへ行こう」の目的。行き先(to)は これから わたる場所。
+ * 場所ちがいの差しかえ(withAreaTravel)と 章のあいだの橋わたし(chapterBridge)で共有する
+ * ので、画面に出る文・目的地・自由あつかい(sail)が どちらの入口からでも同じになる。
+ */
+function sailObjective(id: string, to: 'island' | 'cove'): Objective {
+  return to === 'island'
+    ? {
+        id, headline: 'いまやること',
+        label: SAIL_TO_ISLAND_LABEL,
+        target: { kind: 'poi', id: COVE_RETURN_POI },
+        area: 'cove', sail: true,
+        lostHint: byInput(
+          '帰りの さんばしの先で <kbd>E</kbd>を おすと しまへ もどれるよ。',
+          '帰りの さんばしの先で 右下の 大きいボタンを おすと しまへ もどれるよ。'
+        ),
+      }
+    : {
+        id, headline: 'いまやること',
+        label: SAIL_TO_COVE_LABEL,
+        target: { kind: 'poi', id: ISLAND_BOAT_POI },
+        area: 'island', sail: true,
+        lostHint: byInput(
+          '南の さんばしの ふねの ところで <kbd>E</kbd>を おすと わたれるよ。',
+          '南の さんばしの ふねの ところで 右下の 大きいボタンを おすと わたれるよ。'
+        ),
+      };
+}
 
 /**
  * いる場所と目的の場所がちがうときに、「ふねの のりば」へ案内しなおす。
@@ -365,26 +421,8 @@ export function withAreaTravel(o: Objective, inCove: boolean): Objective {
   const here: ObjectiveArea = inCove ? 'cove' : 'island';
   if (want === here) return o;
   return inCove
-    ? {
-        id: `${o.id}_sail_island`, headline: 'いまやること',
-        label: SAIL_TO_ISLAND_LABEL,
-        target: { kind: 'poi', id: COVE_RETURN_POI },
-        area: 'cove', sail: true,
-        lostHint: byInput(
-          '帰りの さんばしの先で <kbd>E</kbd>を おすと しまへ もどれるよ。',
-          '帰りの さんばしの先で 右下の 大きいボタンを おすと しまへ もどれるよ。'
-        ),
-      }
-    : {
-        id: `${o.id}_sail_cove`, headline: 'いまやること',
-        label: SAIL_TO_COVE_LABEL,
-        target: { kind: 'poi', id: ISLAND_BOAT_POI },
-        area: 'island', sail: true,
-        lostHint: byInput(
-          '南の さんばしの ふねの ところで <kbd>E</kbd>を おすと わたれるよ。',
-          '南の さんばしの ふねの ところで 右下の 大きいボタンを おすと わたれるよ。'
-        ),
-      };
+    ? sailObjective(`${o.id}_sail_island`, 'island')
+    : sailObjective(`${o.id}_sail_cove`, 'cove');
 }
 
 /**

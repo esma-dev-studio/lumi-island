@@ -1,0 +1,29 @@
+第1章クリア後: {"head":"いまやること","label":"ミナモの はなしを聞こう","sub":"→ 27m","arrowShown":true,"arrowDist":"27m","objId":"q2_boat_offer","inCove":false,"openQuests":["q2_boat"],"boatRepaired":false,"rokaArrived":false,"lit":false}
+修理直後: {"head":"いまやること","label":"ふねで よるの入り江へ わたろう","sub":"→ 32m","arrowShown":true,"arrowDist":"32m","objId":"ch2_first_sail","inCove":false,"openQuests":[],"boatRepaired":true,"rokaArrived":false,"lit":false}
+  OK  ふねが なおっている
+  OK  まだ入り江へ行っていない
+  OK  開いている依頼が0件(章のすきま) — []
+ひろば: {"head":"いまやること","label":"ふねで よるの入り江へ わたろう","sub":"→ 36m","arrowShown":true,"arrowDist":"36m","objId":"ch2_first_sail","inCove":false,"openQuests":[],"boatRepaired":true,"rokaArrived":false,"lit":false}
+  OK  見出しが「クリア!」ではない — いまやること
+  OK  目標が「ふねで よるの入り江へ わたろう」 — ふねで よるの入り江へ わたろう
+  OK  矢印が出ている — 36m
+  OK  距離が出ている — 36m
+  撮影 01_after_repair_plaza.png
+浜べ: {"head":"いまやること","label":"ふねで よるの入り江へ わたろう","sub":"→ 9m","arrowShown":true,"arrowDist":"9m","objId":"ch2_first_sail","inCove":false,"openQuests":[],"boatRepaired":true,"rokaArrived":false,"lit":false}
+  OK  浜べでも同じ案内が出る — ふねで よるの入り江へ わたろう
+  撮影 02_after_repair_beach.png
+  撮影 03_boat_hint.png
+入り江に到着: {"head":"いまやること","label":"ロカと はなそう","sub":"→ 15m","arrowShown":true,"arrowDist":"15m","objId":"q2_meet_offer","inCove":true,"openQuests":["q2_meet"],"boatRepaired":true,"rokaArrived":true,"lit":false}
+  OK  上陸で ロカの依頼が開く — ["q2_meet"]
+  OK  目標が「ロカと はなそう」 — ロカと はなそう
+  撮影 04_cove_arrived.png
+点灯後(入り江): {"head":"いまやること","label":"ふねで しまへ もどろう","sub":"→ 13m","arrowShown":true,"arrowDist":"13m","objId":"free_sail_island","inCove":true,"openQuests":[],"boatRepaired":true,"rokaArrived":true,"lit":true}
+  OK  依頼はぜんぶ おわっている — []
+  OK  目標が「ふねで しまへ もどろう」 — ふねで しまへ もどろう
+  OK  矢印が出ている(帰りの桟橋) — 13m
+  撮影 05_after_lit_in_cove.png
+島へ帰着: {"head":"クリア!","label":"島で じゆうに くらそう","sub":"","arrowShown":false,"arrowDist":"13m","objId":"free","inCove":false,"openQuests":[],"boatRepaired":true,"rokaArrived":true,"lit":true}
+  OK  見出しが「クリア!」に戻る — クリア!
+  OK  目標が「島で じゆうに くらそう」 — 島で じゆうに くらそう
+  撮影 06_back_on_island_free.png
+RESULT {"verdict":"PASS","checks":15,"ng":[],"errors":[]}

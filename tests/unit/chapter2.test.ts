@@ -410,6 +410,93 @@ describe('島 ⇄ 入り江 のまたぎ(誘導のエリア切りかえ)', () =>
   });
 });
 
+// ---------------------------------------------------------------------------
+// 章のあいだの橋わたし(v11の修正)
+//
+// 見つかりかた: 回帰ボットの実キー通し走行3本で、ふねの修理が おわった瞬間に
+// 左上の目標が「クリア! 島で じゆうに くらそう」に落ち、章の続きへの誘導が消えた。
+// 原因は「開いている依頼が0件」= q2_meet の解放条件(flags.roka_arrived)が
+// 初上陸まで立たないこと。依頼が0件=free の一般則は変えずに、この区間だけを橋わたしする。
+// ---------------------------------------------------------------------------
+describe('章のあいだの橋わたし(依頼が0件でも 誘導を切らさない)', () => {
+  /** ふねは なおったが、まだ 入り江へ わたっていない(実プレイの通しで必ず通る状態) */
+  const afterRepair = (): GameState => {
+    const s = afterChapter1();
+    s.quests.q2_boat = 'done';
+    s.flags.boat_repaired = true;
+    syncQuestUnlocks(s);
+    return s;
+  };
+
+  it('この区間は ほんとうに「開いている依頼が0件」になっている', () => {
+    const s = afterRepair();
+    expect(s.quests.q2_meet).toBe('locked'); // 上陸するまで開かない
+    expect(QUESTS.filter((q) => s.quests[q.id] === 'open')).toEqual([]);
+  });
+
+  it('修理直後の目標は「クリア!」ではなく「ふねで よるの入り江へ わたろう」', () => {
+    const s = afterRepair();
+    const o = withAreaTravel(currentObjective(s), false);
+    expect(o.id).not.toBe('free');
+    expect(o.headline).toBe('いまやること');
+    expect(o.label).toBe(SAIL_TO_COVE_LABEL);
+    expect(o.target).toEqual({ kind: 'poi', id: ISLAND_BOAT_POI }); // 矢印と距離が出る目的地
+    expect(o.sail).toBe(true);
+    expect(o.area).toBe('island');
+    expect(withAreaTravel(o, false).id).toBe(o.id); // もう差しかわらない
+    // のりばまでは ただの移動。道すがらの採取・釣りはふさがない(sailの較正どおり)
+    expect(objectiveActionContext(o).guided).toBe(false);
+    expect(categorizeObjective(o.label)).toBe('sail');
+  });
+
+  it('ふねが なおる前は 橋わたしをしない(第1章クリア直後の表示は不変)', () => {
+    // 第1章だけ終えたセーブ: q2_boat が開いているので これまでどおり ミナモの話
+    expect(currentObjective(afterChapter1()).id).toBe('q2_boat_offer');
+    // 第2章を持たない古いセーブ(依頼0件・ふねも なおっていない)は「クリア!」のまま
+    const old = newGameState();
+    old.quests = { q_wood: 'done', q_fish: 'done', q_ore: 'done', q_lantern: 'done', q_lumi: 'done' };
+    const o = currentObjective(old);
+    expect(o.id).toBe('free');
+    expect(o.headline).toBe('クリア!');
+    expect(o.label).toBe('島で じゆうに くらそう');
+  });
+
+  it('上陸すると橋わたしは消え、ロカの依頼にバトンが渡る', () => {
+    const s = afterRepair();
+    s.flags.roka_arrived = true; // GameScene.meetRokaOnFirstLanding が立てるフラグ
+    syncQuestUnlocks(s);
+    expect(currentObjective(s).id).toBe('q2_meet_offer');
+    expect(withAreaTravel(currentObjective(s), true).label).toBe('ロカと はなそう');
+  });
+
+  it('点灯のあと 入り江にいるあいだは「ふねで しまへ もどろう」', () => {
+    const s = accept(afterLanding(), 'q2_light');
+    for (const id of ['q2_meet', 'q2_shell', 'q2_starweed', 'q2_lens']) s.quests[id] = 'done';
+    s.flags.lighthouse_lit = true;
+    completeQuest(s, QUEST_BY_ID.q2_light);
+    const free = currentObjective(s);
+    expect(free.id).toBe('free'); // 依頼はぜんぶ おわっている
+    const o = withAreaTravel(free, true);
+    expect(o.label).toBe(SAIL_TO_ISLAND_LABEL);
+    expect(o.target).toEqual({ kind: 'poi', id: COVE_RETURN_POI });
+    expect(o.sail).toBe(true);
+    expect(categorizeObjective(o.label)).toBe('sail');
+  });
+
+  it('島へ 帰りついたら これまでどおり「クリア! 島で じゆうに くらそう」', () => {
+    const s = accept(afterLanding(), 'q2_light');
+    for (const id of ['q2_meet', 'q2_shell', 'q2_starweed', 'q2_lens']) s.quests[id] = 'done';
+    s.flags.lighthouse_lit = true;
+    completeQuest(s, QUEST_BY_ID.q2_light);
+    const o = withAreaTravel(currentObjective(s), false);
+    expect(o.id).toBe('free');
+    expect(o.headline).toBe('クリア!');
+    expect(o.label).toBe('島で じゆうに くらそう');
+    expect(categorizeObjective(o.label, o.headline)).toBe('free');
+    expect(objectiveActionContext(o).guided).toBe(false);
+  });
+});
+
 describe('ロカの立ち位置(入り江の実測)', () => {
   const SPOTS = NPC_SPOTS.roka;
   const canStand = (x: number, z: number): boolean => {

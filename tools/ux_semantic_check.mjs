@@ -77,8 +77,10 @@ export const OBJ_RULES = [
   { cat: 'talk', re: /はなしを聞こう|話しかけよう|と はなそう/, src: 'ObjectiveSystem: ◯◯の はなしを聞こう / quests.ts offerLabel: ロカと はなそう' },
   // v11第2章 ふねの しゅうり代をためる段階。ためかたを絞らないので ANYTHING_OK_OBJ に入れてある
   { cat: 'money', re: /ルミナを ためよう/, src: 'ObjectiveSystem: しゅうり代の 500ルミナを ためよう(ツムギ工房で もちものを うろう)' },
-  // v11第2章 島 ⇄ よるの入り江 のまたぎ(withAreaTravel)
-  { cat: 'sail', re: /ふねで .*(もどろう|わたろう)/, src: 'ObjectiveSystem: ふねで しまへ もどろう / ふねで よるの入り江へ わたろう' },
+  // v11第2章 島 ⇄ よるの入り江 のまたぎ(withAreaTravel)と、
+  // 章のあいだの橋わたし(chapterBridge: ふねが なおってから 初上陸までの区間)。
+  // どちらも ObjectiveSystem の sailObjective が作るので、画面に出る文はこの2つだけ
+  { cat: 'sail', re: /ふねで .*(もどろう|わたろう)/, src: 'ObjectiveSystem sailObjective: ふねで しまへ もどろう / ふねで よるの入り江へ わたろう' },
   // v11第2章 とうだいに レンズを つける段階
   { cat: 'lighthouse', re: /とうだいに .*つけよう/, src: 'ObjectiveSystem: とうだいに レンズを つけよう' },
   { cat: 'craft', re: /ざいりょうが そろった|Cで .+を作ろう/, src: 'ObjectiveSystem: ざいりょうが そろったよ! <kbd>C</kbd>で ◯◯を作ろう' },
