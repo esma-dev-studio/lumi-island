@@ -96,6 +96,12 @@ export class InteractionSystem {
   currentNode: GatherNodeRuntime | null = null;
   hint: Hint | null = null;
   busy = false;
+  /**
+   * v12 りょうりの効果「てぎわ よし」の倍率(1=ふだんどおり)。
+   * 大きいほど 採取・虫とり・穴ほりの動作が 早く終わる。GameScene が毎フレーム入れる。
+   * 手に入るものは まったく変わらない(早く終わるだけ)。
+   */
+  actionSpeed = 1;
   /** ヒット時にGameSceneが差し込む演出(カメラシェイク・ヒットストップ) */
   onHit: (() => void) | null = null;
 
@@ -261,8 +267,10 @@ export class InteractionSystem {
       state: 'windup',
       elapsed: 0,
       rewarded: false,
-      hitAt: anim === 'interact' ? 0.48 : 0.62,
-      endAt: anim === 'interact' ? 1.0 : 1.2,
+      // りょうりの効果ぶんだけ 手ばやく終わる(actionSpeed=1なら これまでと同じ値)。
+      // ヒットの順番・回数は変わらないので、素材が二重に入ることはない
+      hitAt: (anim === 'interact' ? 0.48 : 0.62) / this.actionSpeed,
+      endAt: (anim === 'interact' ? 1.0 : 1.2) / this.actionSpeed,
     };
     player.locked = true;
     player.face(a.x, a.z);

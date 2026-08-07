@@ -102,6 +102,14 @@ export class NPCSystem {
    * 場所での出し分けを NPCSystem 側に持たせて、島の人が海の上に立つ絵を構造的に無くす。
    */
   private area: NpcArea = 'island';
+  /**
+   * v12 いま「家の中で会っている」住人のid(島にいるあいだは null)。
+   *
+   * この人だけは スケジュールの更新をまるごと止め、指定された部屋の中の立ち位置に置く。
+   * ほかの島の人は見た目を消す(部屋は島から60m以上はなれた別空間なので、
+   * 消さないとドールハウスの構図のすみに 島の人が小さく写りこむ)。
+   */
+  private hostId: string | null = null;
   /** 庭先の立ち位置(init で島の当たり判定から実測して決める) */
   private visitSpot = { x: HOME_DOOR_OUT.x + VISIT_DIST, z: HOME_DOOR_OUT.z, rotY: 0, wanderR: 0.9 };
   /** きょう遊びに来ているNPC(いない日は null)。day が変わるまで結果を変えない */
@@ -233,6 +241,68 @@ export class NPCSystem {
     return hour >= VISIT_FROM && hour < VISIT_TO && this.visitorToday(day) === id;
   }
 
+  /**
+   * v12 そのNPCが いま自宅にいるか(=家に おじゃまできるか)の唯一の情報源。
+   *
+   * 時間割(npcs.ts の isHomeHour)だけでは決まらない。resolveEntry を通すことで、
+   * つぎの3つが そのまま「家に入れない理由」になる:
+   *   - 依頼の受注・報告相手になっている人は 家に入らず外で待っている(questEntry)
+   *   - 朝の来訪中(7〜9時)は こちらの家の庭先にいる(VISIT_ENTRY)
+   *   - 最初の依頼を受けるまでの ツムギは 工房前から動かない
+   * 島にくらしていない人(よるの入り江のロカ)は いつでも false。
+   */
+  isAtHome(id: string, hour: number): boolean {
+    const rt = this.npcs.get(id);
+    if (!rt) return false;
+    if (this.areaOf(rt) !== 'island') return false;
+    if (this.hostId === id) return true; // もう家の中で会っている(出るまで留守にしない)
+    return this.resolveEntry(rt, hour).activity === 'home';
+  }
+
+  /**
+   * v12 家の中の立ち位置へ住人を出す(id=null で島のスケジュールへ戻す)。
+   * 家に入る/出る瞬間に GameScene が1回だけ呼ぶ。
+   *
+   * @param pos  部屋の中の立ち位置と、顔を向ける先(入口)。世界座標
+   * @param hour 戻すときのスケジュール解決に使う時刻
+   */
+  setIndoorHost(
+    id: string | null,
+    pos: { x: number; z: number; faceX: number; faceZ: number } | null,
+    hour: number
+  ): void {
+    const prev = this.hostId;
+    this.hostId = null;
+    if (prev && prev !== id) {
+      const back = this.npcs.get(prev);
+      // 部屋の座標に置いたままにすると、島へ戻ったあと80m先へ歩き出してしまう。
+      // 島のスケジュールの場所へ そのまま返す(見えないところで入れかわる)
+      if (back) this.snapOne(back, hour);
+    }
+    if (!id || !pos) {
+      for (const rt of this.npcs.values()) this.apply(rt);
+      return;
+    }
+    const rt = this.npcs.get(id);
+    if (!rt) return;
+    this.hostId = id;
+    rt.hidden = false;
+    rt.talking = false;
+    rt.subTarget = null;
+    rt.entry = null;
+    rt.x = pos.x;
+    rt.z = pos.z;
+    rt.y = this.island.groundY(pos.x, pos.z);
+    rt.rotY = Math.atan2(pos.faceX - pos.x, pos.faceZ - pos.z) + Math.PI;
+    rt.view.play('idle');
+    for (const other of this.npcs.values()) this.apply(other);
+  }
+
+  /** いま家の中で会っている住人(島にいるなら null)。検証・撮影用に読めるようにしておく */
+  get indoorHost(): string | null {
+    return this.hostId;
+  }
+
   /** 来訪中のスポット(いまの立ち位置。撮影・テスト用に読み取れるようにしておく) */
   get visitStand(): { x: number; z: number } {
     return { x: this.visitSpot.x, z: this.visitSpot.z };
@@ -287,7 +357,9 @@ export class NPCSystem {
     if (on) {
       // 会話中に足が水に浸からないよう、水ぎわに立っていたら乾いた地面へ寄せる
       // (カメラの切り替わりと同時なので見た目には出ない。会話中はupdateが止まるのでそのまま保たれる)
-      if (waterClearance(rt.x, rt.z, SHORE_CLEAR) < SHORE_CLEAR) {
+      // 家の中で会っている住人は動かさない: 部屋は島の地形の上では「深い海」なので、
+      // 水ぎわの寄せをそのまま通すと 部屋の中で立ち位置を探しまわることになる
+      if (this.hostId !== id && waterClearance(rt.x, rt.z, SHORE_CLEAR) < SHORE_CLEAR) {
         const dry = findDryStand(this.island, rt.x, rt.z);
         rt.x = dry.x;
         rt.z = dry.z;
@@ -320,6 +392,7 @@ export class NPCSystem {
 
   update(dt: number, hour: number, px: number, pz: number): void {
     for (const rt of this.npcs.values()) {
+      if (rt.def.id === this.hostId) continue; // 家の中で会っている人は そこから動かさない
       if (rt.talking) continue; // 会話中はその場でtalk
       const entry = this.resolveEntry(rt, hour);
       const spot = this.spotFor(rt, entry);
@@ -452,22 +525,33 @@ export class NPCSystem {
   snapToSchedule(hour: number): void {
     for (const rt of this.npcs.values()) {
       if (rt.talking) continue;
-      const entry = this.resolveEntry(rt, hour);
-      const spot = this.spotFor(rt, entry);
-      rt.entry = entry;
-      rt.subTarget = null;
-      rt.x = spot.x;
-      rt.z = spot.z;
-      rt.y = this.island.groundY(spot.x, spot.z);
-      if (spot.rotY !== undefined) rt.rotY = spot.rotY;
-      rt.hidden = entry.activity === 'home';
-      if (rt.view.current?.name === 'walk') rt.view.play('idle');
-      this.apply(rt);
+      if (rt.def.id === this.hostId) continue; // 家の中で会っている人は動かさない
+      this.snapOne(rt, hour);
     }
   }
 
+  /** そのNPCだけを いまのスケジュールの立ち位置へ即時配置する */
+  private snapOne(rt: NpcRuntime, hour: number): void {
+    const entry = this.resolveEntry(rt, hour);
+    const spot = this.spotFor(rt, entry);
+    rt.entry = entry;
+    rt.subTarget = null;
+    rt.x = spot.x;
+    rt.z = spot.z;
+    rt.y = this.island.groundY(spot.x, spot.z);
+    if (spot.rotY !== undefined) rt.rotY = spot.rotY;
+    rt.hidden = entry.activity === 'home';
+    if (rt.view.current?.name === 'walk') rt.view.play('idle');
+    this.apply(rt);
+  }
+
   private apply(rt: NpcRuntime): void {
-    rt.view.setEnabled(!rt.hidden && this.areaOf(rt) === this.area);
+    // 家の中にいるあいだは その家の住人だけを出す(ほかの島の人は 60m先に立っているので消す)
+    rt.view.setEnabled(
+      this.hostId !== null
+        ? this.hostId === rt.def.id
+        : !rt.hidden && this.areaOf(rt) === this.area
+    );
     rt.view.root.position.set(rt.x, rt.y, rt.z);
     rt.view.root.rotation.y = rt.rotY + Math.PI;
   }

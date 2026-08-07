@@ -1,7 +1,9 @@
 // ずかん(Z): 上段「あつめたもの」(累計入手数)+下段「じっせき」
 // 見た目の言語は他のパネル(もちもの・おねがい)と同じものを使い回す。
 import type { GameState } from '../game/GameState';
-import { ITEMS, type ItemId } from '../data/items';
+import { ITEMS, RECIPES, type ItemId } from '../data/items';
+import { COMBOS, COMBO_GROUPS } from '../data/combos';
+import { isDiscovered } from '../systems/ComboSystem';
 import { ACHIEVEMENTS, achievedCount, achievementRows } from '../systems/AchievementSystem';
 import { icon } from './icons';
 import { byInput } from './inputMode';
@@ -68,10 +70,33 @@ export class CodexUI {
       })
       .join('');
 
+    // v12 くみあわせ: 見つけたものは 名前と絵、まだのものは「?」のシルエットわく。
+    // 未発見でも「なかま(りょうり/いろ/かざり)」だけは見せる=何を ためせばよいかの
+    // 手がかりになり、それでいて 答えは まだ分からない
+    let comboFound = 0;
+    const comboCells = COMBOS.map((c) => {
+      const g = COMBO_GROUPS[c.group];
+      if (isDiscovered(s, c)) {
+        comboFound++;
+        const recipe = RECIPES.find((r) => r.id === c.recipe);
+        const out = recipe?.out ?? 'lumina';
+        return `<div class="codex-cell got" title="${g.hint}">
+          <span class="inv-ico">${icon(out)}</span>
+          <span class="codex-name">${recipe?.name ?? '?'}</span>
+        </div>`;
+      }
+      return `<div class="codex-cell unknown combo" title="${g.hint}">
+        <span class="inv-ico">${icon('combo_unknown')}</span>
+        <span class="codex-name">? <small>${g.label}</small></span>
+      </div>`;
+    }).join('');
+
     this.el.innerHTML = `
       <div class="panel-title">ずかん <span class="panel-close" data-close>${byInput('とじる(Z)', 'とじる')}</span></div>
       <div class="panel-sub first">あつめたもの <small>${found} / ${CODEX_ITEMS.length}</small></div>
       <div class="codex-grid">${cells}</div>
+      <div class="panel-sub">くみあわせ <small>${comboFound} / ${COMBOS.length}</small></div>
+      <div class="codex-grid">${comboCells}</div>
       <div class="panel-sub">じっせき <small>${achievedCount(s)} / ${ACHIEVEMENTS.length}</small></div>
       <div class="ach-list">${achRows}</div>
     `;

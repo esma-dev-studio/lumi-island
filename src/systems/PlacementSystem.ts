@@ -6,9 +6,10 @@ import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { IslandScene } from '../scenes/IslandScene';
 import type { GameState, PlacedFurniture } from '../game/GameState';
 import { invAdd, invRemove, statAdd } from '../game/GameState';
-import { makeFurnitureMesh } from '../entities/furniture';
+import { makeFurnitureMesh, tintFurnitureMesh } from '../entities/furniture';
 import {
-  DISPLAY_FURNITURE, ITEMS, canDisplayIn, isDisplayFurniture, type ItemId,
+  DISPLAY_FURNITURE, ITEMS, PAINT_COLORS, canDisplayIn, isDisplayFurniture, isPaint, isPlaceable,
+  type ItemId, type PaintId,
 } from '../data/items';
 import type { PlayerController } from './PlayerController';
 import { toast } from '../ui/Toast';
@@ -220,6 +221,9 @@ export class PlacementSystem {
   private spawn(f: PlacedFurniture): void {
     // 展示家具(すいそう・むしかご)は中身つきで作る。中身は出し入れのたびに作り直す(respawn)
     const fm = makeFurnitureMesh(this.island.scene, f.item, f.content);
+    // v12 いろみずで ぬった色。作った直後(親付け・光だまりの前)に1回だけ塗る。
+    // 色を変えるたびにメッシュごと作り直す(respawn)ので、データと絵がずれない
+    if (f.color) tintFurnitureMesh(fm.root, f.color);
     const y = this.island.groundY(f.x, f.z) - 0.01;
     const indoor = this.isIndoorSpot(f.x, f.z);
     const home = indoor ? (this.island.home?.root ?? null) : null;
@@ -250,6 +254,7 @@ export class PlacementSystem {
 
   /** 配置モード開始(インベントリから) */
   begin(item: ItemId): boolean {
+    if (!isPlaceable(item)) return false; // 置けないもの(素材・いろみず)は配置モードに入れない
     if ((this.state.inventory[item] ?? 0) < 1) return false;
     this.cancel();
     const fm = makeFurnitureMesh(this.island.scene, item);
@@ -451,6 +456,40 @@ export class PlacementSystem {
     sfx('pickup');
     save(this.state);
     return content;
+  }
+
+  // ---- v12 いろみず(おいてある家具に 色を ぬる) ----
+  //
+  // いろみずは **使っても無くならない**(かべがみ・ゆかいたと同じ)。
+  // 子どもが 何度でも ぬりなおして 見くらべられるようにするため。
+  // 色は PlacedFurniture.color に hex で持ち、見た目は家具ごと作り直して合わせる
+  // (展示家具の中身と まったく同じ流儀。「データを直したのに絵が古いまま」を起こさない)。
+
+  /**
+   * その家具に いろみずを ぬる。paint に null を渡すと もとの色にもどす。
+   * 持っていない いろみず・すでに同じ色のときは false(状態も見た目も変えない)。
+   */
+  paint(p: PlacedRuntime, paint: PaintId | null): boolean {
+    const hex = paint === null ? undefined : PAINT_COLORS[paint].hex;
+    if (paint !== null && (this.state.inventory[paint] ?? 0) < 1) return false;
+    if ((p.data.color ?? undefined) === hex) return false;
+    if (hex === undefined) delete p.data.color;
+    else p.data.color = hex;
+    this.respawn(p);
+    toast(
+      hex === undefined
+        ? `${ITEMS[p.data.item].name}を もとの色に もどした`
+        : `${ITEMS[p.data.item].name}を ${PAINT_COLORS[paint as PaintId].label}に ぬった`,
+      paint ?? p.data.item
+    );
+    sfx('place');
+    save(this.state);
+    return true;
+  }
+
+  /** その家具に いろみずを ぬれるか(いろみずを1つでも持っていること) */
+  canPaint(): boolean {
+    return (Object.keys(PAINT_COLORS) as PaintId[]).some((id) => isPaint(id) && (this.state.inventory[id] ?? 0) > 0);
   }
 
   /** 置けない理由(置けるときはnull) */

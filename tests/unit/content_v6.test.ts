@@ -97,11 +97,12 @@ describe('新レシピ4種', () => {
     expect(ITEMS.f_shelldeco.glow).toBeUndefined();
     const glowing = (Object.keys(ITEMS) as ItemId[]).filter((k) => ITEMS[k].glow);
     // v7-P2で「はなかざり」(室内向け・弱い光)、v8で「うみのモビール」(弱い光)、
-    // v11第2章で「とうだいのランタン」(ロカのお礼レシピ)が加わった。
+    // v11第2章で「とうだいのランタン」(ロカのお礼レシピ)、
+    // v12のくみあわせで「うみのランプ」「ほしのモビール」「こけのびん」が加わった。
     // 数え方(ITEMSのglowフラグ)は変えていない
     expect(glowing.sort()).toEqual([
-      'f_flowervase', 'f_lantern', 'f_lighthouse_lantern', 'f_mushlamp', 'f_seamobile',
-      'f_starlantern', 'f_stonelamp',
+      'f_flowervase', 'f_lantern', 'f_lighthouse_lantern', 'f_mushlamp', 'f_sealamp', 'f_seamobile',
+      'f_starlantern', 'f_starmobile', 'f_stonelamp', 'f_terrarium',
     ]);
   });
 
@@ -119,6 +120,8 @@ describe('新レシピ4種', () => {
       'r_bookcase', 'r_dishrack', 'r_flowervase', 'r_wall_leaf', 'r_floor_rug',
       'r_broom', 'r_jar', 'r_gardentable',
       'r_net', 'r_shovel', 'r_strawmat',
+      // v12: キッチンだい(くみあわせの りょうりの入口)も最初から見せる
+      'r_kitchen',
     ]);
   });
 

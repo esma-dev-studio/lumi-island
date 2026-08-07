@@ -51,6 +51,10 @@ export function nextDisplayHint(s: GameState): DisplayHint | null {
   return null;
 }
 
+/** v12 くみあわせタブの案内(はじめてクラフト画面を開いた日に1回だけ)を出した印 */
+export const COMBO_HINT_FLAG = 'hint_combo';
+export const COMBO_HINT_TEXT = 'クラフトの「くみあわせ」タブで いろいろ ためしてみよう。はずれても なにも なくならないよ';
+
 export interface KeyGates {
   inventory: boolean;
   craft: boolean;
@@ -129,6 +133,19 @@ export class TutorialSystem {
       this.state.flags.unlock_place = true;
       toast('「もちもの」から家具を「おく」で配置できるよ', 'f_lantern');
     }
+  }
+  /**
+   * v12 くみあわせタブの案内(クラフト画面を はじめて開いたときの1回だけ)。
+   *
+   * 出す場所を「クラフトを開いた瞬間」にしているのは、その画面にタブが見えているから
+   * ——別の場面で言われても、どこを見ればよいか 分からない。
+   * 記録は flags の boolean 1つなので、セーブの検証は増えない(onFirstItem などと同じ流儀)。
+   * 文は指示形にせず「ためしてみよう」の さそいにとどめる(寄り道の遊びなので)。
+   */
+  onCraftOpened(): void {
+    if (this.state.flags[COMBO_HINT_FLAG] === true) return;
+    this.state.flags[COMBO_HINT_FLAG] = true;
+    toast(COMBO_HINT_TEXT, 'jam');
   }
   /**
    * かざる遊びの案内(すいそう・むしかご)。onFirstItem と同じ場所から毎フレーム呼ばれるが、

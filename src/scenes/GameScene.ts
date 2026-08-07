@@ -6,6 +6,10 @@ import { CameraController } from './CameraController';
 import { SequenceDirector } from './SequenceDirector';
 import { routeInteraction, HOME_EXIT } from './InteractionRouting';
 import { homeShot, HOME_SPAWN, HOME_BED, insideHomeFloor, setHomeExpandedLayout } from './HomeInterior';
+import {
+  NPC_HOMES, NPC_HOME_BY_ID, canStandInNpcHome, npcHomeFlag, npcHomeHostWorld, npcHomeShot,
+  npcHomeSpawnWorld, npcHomeVisitStat, type NpcHomeDef,
+} from './NpcInteriors';
 import { COVE_DOOR, COVE_RETURN, COVE_SPAWN, ISLAND_BOAT_POINT } from './CoveArea';
 import { WorldMarkerController, type MarkerNpc } from './WorldMarkerController';
 import { QuestDialogueController } from './QuestDialogueController';
@@ -16,14 +20,16 @@ import { InputRouter } from './InputRouter';
 import { CharacterView } from '../characters/CharacterView';
 import { CHARACTERS } from '../data/characters';
 import { POIS } from '../data/island';
-import { ITEMS, validateItemData } from '../data/items';
-import { applyHomeStyle, invAddRecorded, invRemove, newGameState, statAdd, type GameState } from '../game/GameState';
+import { ITEMS, isCookedFood, validateItemData } from '../data/items';
+import {
+  applyHomeStyle, invAddRecorded, invRemove, newGameState, statAdd, type GameState,
+} from '../game/GameState';
 import { PlayerController, type InputState } from '../systems/PlayerController';
 import { InteractionSystem } from '../systems/InteractionSystem';
 import { FishingSystem } from '../systems/FishingSystem';
 import { PlacementSystem, type PlacedRuntime } from '../systems/PlacementSystem';
 import { NPCSystem, visitPraiseFacts } from '../systems/NPCSystem';
-import { NPC_BY_ID, visitPraiseLines } from '../data/npcs';
+import { NPC_BY_ID, greetingTier, homeGiftFor, homeTalkLine, visitPraiseLines } from '../data/npcs';
 import { TutorialSystem } from '../systems/TutorialSystem';
 import {
   LIGHTHOUSE_LIT_KEY, evaluate as evaluateAchievements, statCount,
@@ -43,6 +49,7 @@ import { ObjectiveHud } from '../ui/ObjectiveHud';
 import { InventoryUI } from '../ui/InventoryUI';
 import { CraftUI } from '../ui/CraftUI';
 import { DisplayUI } from '../ui/DisplayUI';
+import { PaintUI } from '../ui/PaintUI';
 import { ShopUI } from '../ui/ShopUI';
 import { DialogueUI } from '../ui/DialogueUI';
 import { QuestLogUI } from '../ui/QuestLogUI';
@@ -53,7 +60,10 @@ import { TouchControls } from '../ui/TouchControls';
 import { save } from '../save/SaveSystem';
 import { toast } from '../ui/Toast';
 import { sfx, setAmbient, setMusic, setRain } from '../audio/AudioSystem';
-import { updateEffects, updateWeatherFx, snailWorldPos, burst, flyItem } from '../entities/effects';
+import { updateEffects, updateWeatherFx, snailWorldPos, burst, flyItem, setCookGlow } from '../entities/effects';
+import { sharedCooking, validateCookingData } from '../systems/CookingEffects';
+import { setBugFleeScale } from '../systems/BugSystem';
+import { validateComboData } from '../data/combos';
 import { installLumiDebugApi } from '../debug/LumiDebugApi';
 
 /** ?weather= に書ける値(検証・撮影・回帰ボット用)。それ以外は日付から決める */
@@ -87,6 +97,8 @@ export class GameScene {
   craftUI!: CraftUI;
   /** 展示家具(すいそう・むしかご)に いきものを入れる選択パネル */
   displayUI!: DisplayUI;
+  /** v12 おいてある家具に いろみずを ぬる選択パネル */
+  paintUI!: PaintUI;
   shopUI!: ShopUI;
   dialogue!: DialogueUI;
   questLog!: QuestLogUI;
@@ -103,7 +115,19 @@ export class GameScene {
    * 両方が同時に true になることはない(入り江へは島の桟橋からしか行けない)。
    */
   inCove = false;
+  /**
+   * v12 いま だれの家に おじゃましているか(島にいるなら null)。
+   * セーブは flags.npchome_◯◯(flagsはbooleanしか通さないので1軒1キー)。
+   * indoor(マイホーム)・inCove とは同時に立たない——applyNpcHome / applyIndoor / applyCove が
+   * かならず1つだけになるように書きかえる。
+   */
+  npcHome: string | null = null;
   wantInteract = false;
+  /**
+   * v12 りょうりを たべたときの効果(セーブしない。リロードで消える仕様)。
+   * 共有インスタンスなのは GiftSystem(なかよし度の +1)も 同じものを見るため。
+   */
+  readonly cooking = sharedCooking();
   input: InputState = { up: false, down: false, left: false, right: false, run: false };
   private shownHint = ''; // HUDに出ている操作ヒント(タッチの行動ボタンが同じ内容を出す)
   private lastDay = 1;
@@ -134,7 +158,7 @@ export class GameScene {
     return (
       this.invUI.open || this.craftUI.open || this.shopUI.open ||
       this.questLog.open || this.codexUI.open || this.dialogue.open || this.questComplete.open ||
-      this.displayUI.open
+      this.displayUI.open || this.paintUI.open
     );
   }
 
@@ -164,6 +188,11 @@ export class GameScene {
     this.invUI = new InventoryUI(() => this.state, () => this.indoor);
     this.craftUI = new CraftUI(() => this.state);
     this.displayUI = new DisplayUI(() => this.state);
+    this.paintUI = new PaintUI(() => this.state);
+    // りょうりの効果はセーブしない。シーンを作るたびに 必ず「かかっていない」状態から始める
+    this.cooking.clear();
+    setBugFleeScale(1);
+    setCookGlow(false);
     this.shopUI = new ShopUI(() => this.state);
     this.dialogue = new DialogueUI();
     this.questLog = new QuestLogUI(() => this.state);
@@ -223,7 +252,11 @@ export class GameScene {
       save(this.state);
       location.reload();
     };
-    this.invUI.onPlace = (item) => this.placement.begin(item);
+    // 家具を置けるのは 島の上と マイホームの室内だけ。よその家の中では配置モードに入らない
+    // (入れてしまうと「ここには おけない」を出しつづける行き止まりのモードになる)
+    this.invUI.onPlace = (item) => {
+      if (this.npcHome === null) this.placement.begin(item);
+    };
     // 模様替え(かべがみ・ゆかいた): その場で見た目が替わる。アイテムは消費しない
     this.invUI.onUse = (item) => {
       if (!this.indoor || !applyHomeStyle(this.state, item)) return;
@@ -232,12 +265,24 @@ export class GameScene {
       sfx('place');
       save(this.state);
     };
+    // v12 りょうりを たべる: 効果が しばらくつづく(セーブしない)。もちものは1つ減る
+    this.invUI.onEat = (item) => {
+      if (!isCookedFood(item)) return;
+      if (!invRemove(this.state, item, 1)) return;
+      const eff = this.cooking.eat(item);
+      if (eff) toast(`${ITEMS[item].name}を たべた! ${eff.name}(${eff.desc})`, eff.icon);
+      sfx('pickup');
+      save(this.state); // へった もちものは のこす(効果そのものは保存しない)
+    };
     this.craftUI.onCrafted = () => {
       if (Object.keys(this.state.inventory).some((k) => ITEMS[k as keyof typeof ITEMS]?.kind === 'furniture')) {
         this.tutorial.onFirstFurniture();
       }
       save(this.state);
     };
+    // v12 くみあわせタブ: はじめて開いた1回だけ案内する / 発見したら すぐ保存する
+    this.craftUI.onOpened = () => this.tutorial.onCraftOpened();
+    this.craftUI.onDiscovered = () => save(this.state);
     this.shopUI.onTrade = () => {
       sfx('coin');
       save(this.state);
@@ -264,9 +309,15 @@ export class GameScene {
     // 保存位置が室内の床から外れていたら入口へ戻す(壊れたセーブで海に立たせない)
     this.indoor = this.state.flags.indoor === true;
     this.island.home.setActive(this.indoor);
+    // v12 NPCの家の中で保存したセーブは その家から始める(フラグの無い旧セーブは島あつかい)。
+    // マイホームの室内が立っていたら そちらを優先し、複数の家のフラグが同時に立っていたら
+    // NPC_HOMES の順で先の1つだけを採る(壊れたセーブで「どこにもいない」状態を作らない)
+    this.npcHome = this.indoor ? null : (NPC_HOMES.find((h) => this.state.flags[npcHomeFlag(h.id)] === true)?.id ?? null);
+    for (const h of NPC_HOMES) this.state.flags[npcHomeFlag(h.id)] = h.id === this.npcHome;
+    this.island.npcHomes.setActive(this.npcHome);
     // v11 よるの入り江で保存したセーブは入り江から始める(in_coveが無い旧セーブは島あつかい)。
     // 室内フラグとぶつかったら室内を優先する(両方立つことはないが、壊れたセーブで海に立たせない)
-    this.inCove = !this.indoor && this.state.flags.in_cove === true;
+    this.inCove = !this.indoor && !this.npcHome && this.state.flags.in_cove === true;
     this.island.cove.setActive(this.inCove);
     this.npcs.setArea(this.inCove ? 'cove' : 'island'); // 別の場所の住人は出さない
     this.island.applyBoatRepaired(this.state.flags.boat_repaired === true);
@@ -282,12 +333,26 @@ export class GameScene {
         this.player.face(HOME_BED.x, HOME_BED.z);
       }
       this.camCtl.beginRoom(homeShot(), true);
+    } else if (this.npcHome) {
+      const def = NPC_HOME_BY_ID[this.npcHome];
+      // 保存位置が部屋の床から外れていたら入口へ戻す(壊れたセーブで壁の中に立たせない)
+      if (!canStandInNpcHome(def, this.player.x, this.player.z)) {
+        const sp = npcHomeSpawnWorld(def);
+        this.player.teleport(sp.x, sp.z);
+      }
+      const host = npcHomeHostWorld(def);
+      this.player.face(host.x, host.z);
+      // 家の中で保存したのだから、その家の住人は かならず中にいる(時刻の判定はやり直さない)
+      this.placeHomeHost(def);
+      this.camCtl.beginRoom(npcHomeShot(def), true);
     } else {
       this.camCtl.snapTo(this.player.x, this.player.y, this.player.z);
     }
     window.addEventListener('beforeunload', () => save(this.state));
     for (const p of validateItemData()) console.warn('[data]', p);
     for (const p of validateGiftData()) console.warn('[data]', p);
+    for (const p of validateComboData()) console.warn('[data]', p);
+    for (const p of validateCookingData()) console.warn('[data]', p);
     this.inputRouter.attach();
     this.touch.attach();
     if (this.opts.debug) installLumiDebugApi(this); // 決定的テスト用のAPI(実プレイ検証はデバッグなしで行う)
@@ -349,7 +414,8 @@ export class GameScene {
     // よるの入り江では v11第2章から出す: 目的地(灯台・ロカ・素材・帰りの桟橋)が
     // 入り江の中にあり、足もとの高さも WorldMarkerController の heightAt が
     // 別空間ごと知っているので、島と同じ精度で矢印と距離が出せる
-    if (this.modalOpen || this.seq.active || this.indoor) {
+    // v12 NPCの家の中も 室内と同じあつかい(ドアと家主しかない1部屋なので迷いようがない)
+    if (this.modalOpen || this.seq.active || this.indoor || this.npcHome !== null) {
       this.markers.hideAll();
     } else {
       this.markers.update(tp, tp?.isNpc ?? false, this.player.x, this.player.z, marks, reportMode);
@@ -369,7 +435,7 @@ export class GameScene {
   private routeWithSnail(uiOpen: boolean): string {
     const want = this.wantInteract;
     const snail =
-      !uiOpen && !this.indoor && !this.inCove && !this.seq.active && !this.inter.busy &&
+      !uiOpen && !this.indoor && !this.inCove && this.npcHome === null && !this.seq.active && !this.inter.busy &&
       !this.fishing.locksPlayer && !this.placement.active
         ? this.weather.snailWithinReach(this.player.x, this.player.z)
         : null;
@@ -522,6 +588,22 @@ export class GameScene {
     this.displayUI.show(kind);
   }
 
+  // ---------- v12 いろみず(おいてある家具に 色を ぬる) ----------
+  /**
+   * 色をえらぶパネルを開く。ぬる・もどす・もちかえるの実処理は PlacementSystem が受けもち、
+   * セーブ・見た目の作り直し・トーストまで あちらで完結する(ここは配線だけ)。
+   * DisplayUI(すいそう・むしかご)と まったく同じ形にそろえてある。
+   */
+  openPaint(p: PlacedRuntime): void {
+    this.paintUI.onChoose = (paint) => {
+      this.placement.paint(p, paint);
+    };
+    this.paintUI.onCarry = () => {
+      this.placement.pickUp(p);
+    };
+    this.paintUI.show(p.data.item, p.data.color);
+  }
+
   // ---------- じっせき ----------
   /**
    * 達成判定(1秒に1回)。達成の瞬間だけ、小さくお祝いする
@@ -565,6 +647,105 @@ export class GameScene {
     this.island.dayNight.update(this.island.time.hour, this.player.x, this.player.z);
     this.state.player = { x: this.player.x, z: this.player.z, rotY: this.player.rotY };
     save(this.state);
+  }
+
+  // ---------- v12 NPCの家の出入り ----------
+  /** その家の住人を 部屋の中の立ち位置へ出す(顔は入口のほうへ向ける) */
+  private placeHomeHost(def: NpcHomeDef): void {
+    const host = npcHomeHostWorld(def);
+    const sp = npcHomeSpawnWorld(def);
+    this.npcs.setIndoorHost(
+      def.id,
+      { x: host.x, z: host.z, faceX: sp.x, faceZ: sp.z },
+      this.island.time.hour
+    );
+  }
+
+  /**
+   * NPCの家に入る/出る(null=島へもどる)。
+   * SequenceDirectorが暗転しきった一瞬に1回だけ呼ぶ(applyIndoor と同じ考え方)。
+   *
+   * 出るときの立ち位置は、島のコライダーから実測した点(IslandScene.npcHomeExits)を使う。
+   * ドアの前そのものは建物の当たり判定の内がわのことがあり、そこへ出すと
+   * 壁にめりこんだ状態から始まってしまう(教訓4)。
+   */
+  applyNpcHome(id: string | null): void {
+    const prev = this.npcHome;
+    const def = id ? (NPC_HOME_BY_ID[id] ?? null) : null;
+    this.npcHome = def?.id ?? null;
+    for (const h of NPC_HOMES) this.state.flags[npcHomeFlag(h.id)] = h.id === this.npcHome;
+    this.island.npcHomes.setActive(this.npcHome);
+    this.restoreAllOcclusionImmediately(); // 半透明のまま画がすり替わらないように
+    if (def) {
+      const sp = npcHomeSpawnWorld(def);
+      const host = npcHomeHostWorld(def);
+      this.player.teleport(sp.x, sp.z);
+      this.player.face(host.x, host.z); // 入ったら家主のほうを向く
+      this.placeHomeHost(def);
+      this.camCtl.beginRoom(npcHomeShot(def), true);
+      // じっせき「はじめて おじゃました」「みんなの おうち」のカウンタ(1軒につき1回だけ)
+      const key = npcHomeVisitStat(def.id);
+      if (statCount(this.state, key) < 1) {
+        statAdd(this.state, key);
+        toast(`${def.title}に おじゃました`, 'f_birdhouse');
+      }
+    } else {
+      const from = prev ? (NPC_HOME_BY_ID[prev] ?? null) : null;
+      this.npcs.setIndoorHost(null, null, this.island.time.hour); // 住人は島のスケジュールへ戻す
+      const exit = (prev ? this.island.npcHomeExits.get(prev) : null) ??
+        (from ? { x: from.outDoor.x, z: from.outDoor.z } : { x: this.player.x, z: this.player.z });
+      this.player.teleport(exit.x, exit.z);
+      if (from) this.player.face(exit.x + from.outDoor.outX * 2.4, exit.z + from.outDoor.outZ * 2.4);
+      this.camCtl.endRoom();
+      this.camCtl.snapTo(this.player.x, this.player.y, this.player.z);
+    }
+    this.island.dayNight.update(this.island.time.hour, this.player.x, this.player.z);
+    this.state.player = { x: this.player.x, z: this.player.z, rotY: this.player.rotY };
+    save(this.state);
+  }
+
+  /**
+   * 家の中で家主に話しかけたときの会話。
+   *
+   * カメラは ドールハウス構図のままにする: 会話カメラ(DialogueCameraPlanner)は
+   * 島の地形・水ぎわ・建物を見て構図を選ぶので、島の外にある部屋では使えない。
+   * 5×4mの部屋を南から見おろす構図なら、ふたりとも必ず画に入る。
+   *
+   * 中身は「あいさつ(なかよし度の段階)+その日の家の話」。屋外の あいさつ+ひとことと
+   * 同じ並びにしてあるので、子どもから見た会話の作りが変わらない。
+   * なかよし度3以上で「おみやげの日」なら、いちばん最後に一言と素材1こが つく。
+   */
+  startHomeTalk(npcId: string): void {
+    const def = NPC_BY_ID[npcId];
+    const rt = this.npcs.npcs.get(npcId);
+    if (!def || !rt) return;
+    const st = this.state.npcs[npcId];
+    const day = this.island.time.day;
+    this.npcs.setTalking(npcId, true, this.player.x, this.player.z);
+    this.player.face(rt.x, rt.z);
+    const friendship = st?.friendship ?? 0;
+    const greet = def.greetings[greetingTier(friendship)];
+    const lines = [greet[(day + friendship) % greet.length]];
+    const home = homeTalkLine(def, day);
+    if (home) lines.push(home);
+    const gift = homeGiftFor(def, day, friendship, st?.homeGiftedDay);
+    if (gift) lines.push(gift.line.replace('{item}', ITEMS[gift.item].name));
+    this.dialogue.show(def.name, lines, () => {
+      this.npcs.setTalking(npcId, false);
+      if (st && !st.talkedToday) {
+        st.talkedToday = true;
+        st.friendship += 1;
+      }
+      if (gift && st) {
+        // もらえる日は1日1回(日づけを記録するので、出入りをくり返しても増えない)
+        st.homeGiftedDay = day;
+        invAddRecorded(this.state, gift.item, 1);
+        burst(rt.x, rt.y + 1.25, rt.z, 'berry', 12);
+        toast(`+1 ${ITEMS[gift.item].name}`, gift.item);
+        sfx('pickup');
+      }
+      save(this.state);
+    });
   }
 
   // ---------- v11 よるの入り江の出入り ----------
@@ -709,6 +890,16 @@ export class GameScene {
         this.worldPause.updateWorld(dt);
         // 世界が止まっていても、プレイヤーと演出の更新だけは走らせる
         this.player.locked = frozen || this.inter.busy || this.fishing.locksPlayer;
+        // v12 りょうりの効果: 時間を進めてから、各システムへ倍率を配る。
+        // 世界が凍っているあいだ(会話・パネル)は数えない
+        // =「話しこんでいるうちに 効果が切れていた」が起きない
+        this.cooking.update(frozen ? 0 : dt);
+        this.player.speedMul = this.cooking.walkMul;
+        this.fishing.waitMul = this.cooking.fishWaitMul;
+        this.inter.actionSpeed = this.cooking.gatherSpeedMul;
+        setBugFleeScale(this.cooking.bugFleeMul);
+        setCookGlow(this.cooking.has('glow'));
+        this.hud.setEffects(this.cooking.active());
         this.player.update(dt, this.input);
         this.placement.update(this.player);
         updateEffects(dt, this.player.x, this.player.y, this.player.z);
@@ -721,7 +912,8 @@ export class GameScene {
         // 天気の見た目(雨脚・水たまり・虹・カタツムリ)は島の座標に置いてあるので、
         // 別空間(室内・よるの入り江)では出さない。屋根のない入り江でも同じあつかいにして、
         // 「島の水たまりが海の上に浮かぶ」ような絵が出ないようにする
-        const sheltered = this.indoor || this.inCove;
+        // v12 NPCの家の中も「島の天気の見た目を出さない場所」(部屋は島の外にある)
+        const sheltered = this.indoor || this.inCove || this.npcHome !== null;
         updateWeatherFx(wx, this.player.x, this.player.y, this.player.z, !sheltered);
         setRain(sheltered ? wx.rain * 0.4 : wx.rain);
         // 虹は見おろしカメラだと画面に入らないので、出た瞬間に1回だけ「見上げるあそび」へ誘う
@@ -756,7 +948,7 @@ export class GameScene {
         }
         setAmbient(this.island.time.isNight ? 'night' : 'day');
         // 夜のオルゴールBGM(19:00〜翌4:30)。演出中は少し下げて効果音とぶつけない
-        setMusic(this.island.time.day, this.island.time.hour, this.indoor, this.seq.active);
+        setMusic(this.island.time.day, this.island.time.hour, this.indoor || this.npcHome !== null, this.seq.active);
         this.hud.setClock(this.island.time.label(), this.island.time.day);
         this.hud.setLumina(this.state.lumina);
         this.state.time = { day: this.island.time.day, hour: this.island.time.hour };
@@ -780,7 +972,8 @@ export class GameScene {
       sequenceActive: this.seq.active,
       panelOpen:
         this.invUI.open || this.craftUI.open || this.shopUI.open ||
-        this.questLog.open || this.codexUI.open || this.pauseMenu.open || this.displayUI.open,
+        this.questLog.open || this.codexUI.open || this.pauseMenu.open || this.displayUI.open ||
+        this.paintUI.open,
     });
     this.scene.render();
   }

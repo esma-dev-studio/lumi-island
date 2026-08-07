@@ -83,6 +83,11 @@ const CATCH_NOTE: Partial<Record<ItemId, string>> = {
 
 export class FishingSystem {
   state: FishingState = 'idle';
+  /**
+   * v12 りょうりの効果「つりの こつ」の倍率(1=ふだんどおり)。
+   * あたりが来るまでの まち時間に かける。GameScene が毎フレーム入れる。
+   */
+  waitMul = 1;
   private waitT = 0;
   private biteT = 0;
   private castT = 0;
@@ -260,7 +265,8 @@ export class FishingSystem {
     // 雨のあいだは待ち時間が短くなる(はれ・くもり・雨上がりは 1.0 のまま)。
     // 倍率の決め方は src/systems/WeatherSystem.ts にまとめてある
     const wet = sharedWeather().fishWaitScale(this.game.time.day, this.game.time.hour);
-    this.waitT = (this.debug ? 1.0 : 2.2 + Math.random() * 3.2) * wet;
+    // りょうり「やきざかな」の効果ぶんも かける(waitMul=1なら これまでと同じ)
+    this.waitT = (this.debug ? 1.0 : 2.2 + Math.random() * 3.2) * wet * this.waitMul;
   }
 
   /** 巻き上げ完了。ここで初めて片付けとプレイヤーの操作解除を行う */

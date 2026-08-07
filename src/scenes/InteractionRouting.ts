@@ -13,6 +13,9 @@ import { canPlant, nearestPlot, stageOf } from '../systems/GardenSystem';
 import type { PlacedRuntime } from '../systems/PlacementSystem';
 import { HOME_DOOR, HOME_BED, HOME_ACT_R } from './HomeInterior';
 import {
+  NPC_HOMES, NPC_HOME_ACT_R, NPC_HOME_BY_ID, NPC_HOME_DOOR_R, npcHomeDoorWorld,
+} from './NpcInteriors';
+import {
   BOAT_ACT_R, COVE_ACT_R, COVE_DOOR, COVE_RETURN, ISLAND_BOAT_POINT, boatPrompt, lighthousePrompt,
 } from './CoveArea';
 import type { GameScene } from './GameScene';
@@ -61,6 +64,36 @@ function displayCandidate(gs: GameScene, near: PlacedRuntime, px: number, pz: nu
       if (content) gs.placement.takeOut(near);
       else gs.openDisplay(near);
     },
+  };
+}
+
+/**
+ * v12 いろみずで「いろを ぬる」E候補。
+ *
+ * 出る条件は「いろみずを1つでも持っている」ことだけ。持っていない子には
+ * これまでどおり「◯◯を もちかえる」が出る=既存の遊びは1ミリも変わらない。
+ *
+ * 優先度は もちかえる(60)より1つだけ強い59。ぬれるのは「わざわざ家具に近づいた」ときだけなので、
+ * 採取・会話・ドアなど ほかの候補を横取りすることはない。
+ * もちかえる が消えてしまわないよう、PaintUI のパネルの中に「もちかえる」を置いてある
+ * (すいそう・むしかご(DisplayUI)と まったく同じ考え方)。
+ *
+ * kind は 'pickup'。ObjectiveSystem の preferredKinds に pickup は入らないので、
+ * 依頼の誘導中(guided)は自動で隠れる。
+ */
+function paintCandidate(gs: GameScene, near: PlacedRuntime, px: number, pz: number): InteractionCandidate | null {
+  if (!gs.placement.canPaint()) return null;
+  if (gs.placement.displayKindOf(near) !== null) return null; // 展示家具は「いれる/とりだす」が主役
+  return {
+    id: `paint_${near.data.id}`,
+    kind: 'pickup',
+    targetId: String(near.data.id),
+    itemId: near.data.item,
+    priority: PRIORITY.furniture - 1,
+    distance: Math.hypot(px - near.data.x, pz - near.data.z),
+    enabled: true,
+    hint: '<kbd>E</kbd>いろを ぬる',
+    run: () => gs.openPaint(near),
   };
 }
 
@@ -185,6 +218,8 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     if (inNear) {
       const disp = displayCandidate(gs, inNear, px, pz);
       if (disp) cands.push(disp);
+      const inPaint = paintCandidate(gs, inNear, px, pz);
+      if (inPaint) cands.push(inPaint);
       cands.push({
         id: `furn_${inNear.data.id}`, kind: 'pickup',
         targetId: String(inNear.data.id), itemId: inNear.data.item,
@@ -198,6 +233,44 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     if (!inBest) return '';
     if (want) inBest.run();
     return inBest.hint;
+  }
+
+  // ---- v12 NPCの家の中にいるときは、その家のことだけ ----
+  // 島の候補(採取・店・釣り・自宅)はどれも60m以上はなれていて距離条件に入らないが、
+  // 「よその家では、家主と話すことと 外へ出ることだけ」を構造で保証するために早く返す。
+  // 家具の持ち帰り・配置はここには無い(よその家の物には手を出さない)。
+  if (gs.npcHome) {
+    const def = NPC_HOME_BY_ID[gs.npcHome];
+    if (def) {
+      const door = npcHomeDoorWorld(def);
+      const doorD = Math.hypot(px - door.x, pz - door.z);
+      if (doorD < NPC_HOME_ACT_R) {
+        cands.push({
+          id: 'exit_npc_home', kind: 'exit', targetId: def.id,
+          priority: PRIORITY.door, distance: doorD, enabled: true,
+          hint: '<kbd>E</kbd>そとへ でる',
+          run: () => gs.seq.leaveNpcHome(),
+        });
+      }
+      // 家主との会話。ドアのEの輪(1.4m)と 会話の輪(1.8m)は 3.2m以上はなれた
+      // 立ち位置に置いてあるので、どちらか一方しか射程に入らない
+      // (tests/unit/npc_home.test.ts が機械検査する)
+      const host = gs.npcs.nearest(px, pz);
+      if (host) {
+        const rt = host as unknown as { def: { id: string; name: string }; x: number; z: number };
+        cands.push({
+          id: `npc_${rt.def.id}`, kind: 'talk', targetId: rt.def.id,
+          priority: PRIORITY.gather + 5,
+          distance: Math.hypot(px - rt.x, pz - rt.z), enabled: true,
+          hint: `<kbd>E</kbd>${rt.def.name}と はなす`,
+          run: () => gs.startHomeTalk(rt.def.id),
+        });
+      }
+    }
+    const homeBest = selectInteraction(cands, objectiveActionContext(gs.lastObjective));
+    if (!homeBest) return '';
+    if (want) homeBest.run();
+    return homeBest.hint;
   }
 
   // ---- v11 よるの入り江にいるときは、入り江のことだけ ----
@@ -366,6 +439,39 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
       },
     });
   }
+  // v12 島の3人の家のドア: 住人が在宅のときだけ おじゃまできる。
+  //
+  //   在宅  : <kbd>E</kbd>おじゃまする(kind='enter'。自宅の出入りと同じ「常時許可」なので、
+  //           どの目的の最中でも押せる=家に入って会う道すじを ふさがない)
+  //   るす  : 「るすみたい。また こよう」の表示だけ(kind='place' なので、依頼の誘導中は
+  //           自動で隠れる。押しても何も起きない=灯台のとびら・しゅうりちゅうの船と同じ流儀)
+  //
+  // 優先度はどちらも自宅のドア(35)より弱くしてある。会話(35)と同じ点に立つことがある
+  // ——ミナモとノクトの「家にいる時間帯の立ち位置」はドアの前そのもの——ので、
+  // 弱くしておくと「家に帰るところを見かけたら まず話しかけられる」が保たれる。
+  //
+  // Eのとどく距離(NPC_HOME_DOOR_R=1.5m)は、まわりの採取ノード・ほりあと・虫・店の
+  // 判定圏と重ならない値。根拠と実測値は tests/unit/npc_home.test.ts にある。
+  for (const home of NPC_HOMES) {
+    const d = Math.hypot(px - home.outDoor.x, pz - home.outDoor.z);
+    if (d >= NPC_HOME_DOOR_R) continue;
+    const atHome = gs.npcs.isAtHome(home.id, gs.island.time.hour);
+    cands.push(
+      atHome
+        ? {
+            id: `enter_home_${home.id}`, kind: 'enter', targetId: home.id,
+            priority: PRIORITY.door + 1, distance: d, enabled: true,
+            hint: '<kbd>E</kbd>おじゃまする',
+            run: () => gs.seq.enterNpcHome(home.id),
+          }
+        : {
+            id: `away_home_${home.id}`, kind: 'place', targetId: home.id,
+            priority: PRIORITY.door + 2, distance: d, enabled: true,
+            hint: 'るすみたい。また こよう',
+            run: () => {},
+          }
+    );
+  }
   // 自宅のドア: 家の中へ入る(ねるのは室内のベッド)
   const homeD = Math.hypot(px - HOME_POINT.x, pz - HOME_POINT.z);
   if (homeD < 2.0) {
@@ -417,6 +523,8 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
   if (near) {
     const disp = displayCandidate(gs, near, px, pz);
     if (disp) cands.push(disp);
+    const paint = paintCandidate(gs, near, px, pz);
+    if (paint) cands.push(paint);
     cands.push({
       id: `furn_${near.data.id}`, kind: 'pickup',
       targetId: String(near.data.id), itemId: near.data.item,

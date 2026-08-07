@@ -130,6 +130,12 @@ export class PlayerController {
   speed = 0; // 現在の移動速さ
   moving = false;
   locked = false; // 会話・メニュー・演出中
+  /**
+   * v12 りょうりの効果「あしが かるい」の倍率(1=ふだんどおり)。
+   * GameScene が毎フレーム入れる。1のときは式が恒等になるので、
+   * 効果を使っていないプレイヤーの歩き・走りは これまでと1ミリも変わらない。
+   */
+  speedMul = 1;
   private vx = 0;
   private vz = 0;
   private stepAcc = 0;
@@ -198,7 +204,8 @@ export class PlayerController {
     const len = Math.hypot(ix, iz);
     // アナログでは倒し量で歩き/走りを切り替える(booleanのrunはShift用のまま)
     const running = input.run || (analog && len > ANALOG_RUN);
-    const target = len > 0 ? (running ? def.runSpeed : def.walkSpeed) : 0;
+    // りょうりの効果ぶんだけ 目標の速さを上げる(speedMul=1なら これまでと同じ値)
+    const target = len > 0 ? (running ? def.runSpeed : def.walkSpeed) * this.speedMul : 0;
     const dirX = len > 0 ? ix / len : this.vx === 0 && this.vz === 0 ? 0 : this.vx / (Math.hypot(this.vx, this.vz) || 1);
     const dirZ = len > 0 ? iz / len : this.vz === 0 && this.vx === 0 ? 0 : this.vz / (Math.hypot(this.vx, this.vz) || 1);
 

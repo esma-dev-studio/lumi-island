@@ -71,6 +71,24 @@ export interface VisitPraiseFacts {
   bloom: boolean;
 }
 
+/**
+ * v12 家に おじゃましたときの おみやげ。
+ *   item  : くれる素材(1こ)。どの依頼の必要素材でもないものだけを選んである
+ *           (もらえたぶんだけ依頼が進む、という近道を作らない)
+ *   phase : 何日めにくれるか(day % HOME_GIFT_CYCLE === phase)。3人で日をずらす
+ *   line  : そのときの一言。{item} は くれるものの名前に置きかわる
+ */
+export interface HomeGift {
+  item: ItemId;
+  phase: number;
+  line: string;
+}
+
+/** おみやげの周期(日)。4日に1度、だれか1人がくれる勘定になる */
+export const HOME_GIFT_CYCLE = 4;
+/** おみやげをもらえる なかよし度のさかいめ(これ未満はもらえない) */
+export const HOME_GIFT_FRIENDSHIP = 3;
+
 /** 来訪したNPCが話す行(純関数。表示側はふつうの会話と同じ道すじで出す) */
 export function visitPraiseLines(def: NpcDef, facts: VisitPraiseFacts): string[] {
   const p = def.visitPraise;
@@ -131,6 +149,17 @@ export interface NpcDef {
    * 話題は日付で1つ選ぶので、同じ日に何度話しても同じ・翌日には変わる。
    */
   dailyLines?: string[];
+  /**
+   * v12 家の中で話しかけたときの話(4本。日付で1本えらぶ)。
+   *
+   * ふだんの あいさつ(greetings)・ひとこと(dailyLines)とは別に持つ:
+   *   家の中でしか言えない話——かべに かけてあるもの、つくえの上のもの、部屋のにおい——を
+   *   ここに置くことで、「入ると 何かある」を 会話だけで作れる。
+   * 家を持たないNPC(よるの入り江のロカ)は省略する。
+   */
+  homeLines?: string[];
+  /** v12 なかよし度3以上のとき、4日に1度くれる おみやげ(家を持つNPCだけ) */
+  homeGift?: HomeGift;
 }
 
 /**
@@ -149,6 +178,62 @@ export function dailyLine(def: NpcDef, day: number): string | null {
   if (!lines || lines.length === 0) return null;
   const d = Number.isFinite(day) ? Math.floor(day) : 1;
   return lines[((d % lines.length) + lines.length) % lines.length];
+}
+
+/**
+ * v12 家の中の話(日付で決まる。乱数を使わないので、同じ日は何度入っても同じ・翌日は変わる)。
+ * 家を持たないNPCは null。
+ */
+export function homeTalkLine(def: NpcDef, day: number): string | null {
+  const lines = def.homeLines;
+  if (!lines || lines.length === 0) return null;
+  const d = Number.isFinite(day) ? Math.floor(day) : 1;
+  return lines[((d % lines.length) + lines.length) % lines.length];
+}
+
+/**
+ * v12 その日に おみやげをくれる家か(なかよし度は見ない。呼ぶ側が足す)。
+ * 4日周期で、家ごとに phase をずらしてある = 3軒まわっても もらえるのは多くて1つ。
+ */
+export function isHomeGiftDay(def: NpcDef, day: number): boolean {
+  const g = def.homeGift;
+  if (!g) return false;
+  const d = Number.isFinite(day) ? Math.floor(day) : 1;
+  return ((d % HOME_GIFT_CYCLE) + HOME_GIFT_CYCLE) % HOME_GIFT_CYCLE === g.phase;
+}
+
+/**
+ * v12 いま その家で もらえる おみやげ(もらえないときは null)。
+ *
+ * 決まりかたは3つだけで、どれも乱数を使わない:
+ *   1. なかよし度が HOME_GIFT_FRIENDSHIP(3)以上
+ *   2. その日が その家の おみやげの日(day % 4 === phase)
+ *   3. きょうまだ その家で もらっていない(lastGiftedDay がきょうでない)
+ * 同じ日に何度 出入りしても、もらえるのは1回だけ。
+ *
+ * @param lastGiftedDay GameState.npcs[id].homeGiftedDay(まだなら undefined)
+ */
+export function homeGiftFor(
+  def: NpcDef, day: number, friendship: number, lastGiftedDay?: number
+): HomeGift | null {
+  const g = def.homeGift;
+  if (!g) return null;
+  if (!Number.isFinite(friendship) || friendship < HOME_GIFT_FRIENDSHIP) return null;
+  if (!isHomeGiftDay(def, day)) return null;
+  const d = Number.isFinite(day) ? Math.floor(day) : 1;
+  if (lastGiftedDay === d) return null;
+  return g;
+}
+
+/**
+ * v12 スケジュールの上で「家にいる時間帯」か(純ロジック)。
+ *
+ * これは時間割だけの答え。実際に家にいるかは、依頼の受注・報告相手になっている
+ * (家に入らず外で待つ)・朝の来訪中(自宅の庭先にいる)といった差しかえを通したあとに決まるので、
+ * ゲーム中の判定は src/systems/NPCSystem.ts の isAtHome を使うこと。
+ */
+export function isHomeHour(def: NpcDef, hour: number): boolean {
+  return scheduleEntryAt(def.schedule, hour).activity === 'home';
 }
 
 export const NPCS: NpcDef[] = [
@@ -192,6 +277,18 @@ export const NPCS: NpcDef[] = [
       '桟橋の よこの ふね、見た? ぼくの じまんの ふねなんだ……いまは やすんでるけどね。',
       'ヨザカナは 夜の池で 光るんだ。海の 夜も いつか 見てみたいな。',
     ],
+    // 小屋の中でしか言えない話(かべの さお・魚の絵・水がめ・網)
+    homeLines: [
+      'いらっしゃい! せまいけど、まどから 池が よく 見えるんだ。',
+      'かべの さおはね、ぜんぶ じぶんで けずったんだよ。にぎるところが 大事なんだ。',
+      'あの 魚の絵、はじめて つった 大きいやつ。にてるかな?',
+      '水がめの 水は あさ くんできたばかり。手を あらうなら つかっていいよ。',
+    ],
+    homeGift: {
+      item: 'shell',
+      phase: 0,
+      line: 'そうだ、これ あげる。浜で ひろった とっておきの {item}だよ。',
+    },
   },
   {
     id: 'nokto',
@@ -231,6 +328,18 @@ export const NPCS: NpcDef[] = [
       'あの あかりはな、ふねに「ここだよ」と おしえておったのじゃ。',
       '星は しずまん。じゃが 人の ともす あかりは 消えることが ある。さびしいものよ。',
     ],
+    // 家の中でしか言えない話(ぼうえんきょう・星の地図・つみあげた本・ランプ)
+    homeLines: [
+      'ほう、よく来たのう。ちらかっておるが、すきなところに すわってくれ。',
+      'その ぼうえんきょうはな、ワシが 40年 のぞいておる ともじゃ。',
+      '本は かたづけんのじゃ。つみあげたほうが、どこに 何が あるか わかる。',
+      'この ランプは わざと あかるくない。星を見る目には これで ちょうど よいのじゃ。',
+    ],
+    homeGift: {
+      item: 'shiny_stone',
+      phase: 1,
+      line: 'ちょっと 待て。……ほれ、{item}じゃ。ワシには 2つ ある。もっていけ。',
+    },
   },
   {
     id: 'tsumugi',
@@ -265,6 +374,18 @@ export const NPCS: NpcDef[] = [
       ['あら、こんにちは! 今日は何を作ろうかしら。', 'あなたの置いた家具、いいセンスね。'],
       ['あなたが来てから、島がにぎやかになったわ。', 'ベリージャム、こんど一緒に作りましょうよ。'],
     ],
+    // 工房の おくの すまいでしか言えない話(作業台・道具の壁かけ・木材・織りかけの布)
+    homeLines: [
+      'あら、いらっしゃい。木くずだらけで ごめんなさいね。',
+      'この 作業台、おじいさんから ゆずられたの。もう 50年 つかっているのよ。',
+      'かべの 道具はね、つかう じゅんばんに ならべてあるの。手が おぼえてしまって。',
+      'おりかけの ぬの、あと すこしで できあがるわ。何に しようかしら。',
+    ],
+    homeGift: {
+      item: 'cutgrass',
+      phase: 2,
+      line: 'そうそう、これ もっていって。やわらかい {item}、あなたに つかってほしいの。',
+    },
   },
   // ---------------------------------------------------------------------------
   // v11第2章 ロカ(ペンギンの灯台守の子)。くらしているのは島ではなく「よるの入り江」。

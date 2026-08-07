@@ -1,0 +1,27 @@
+起動: 自由行動・キッチンだいは家の中・ベンチは島
+  [shot] 01_combo_tab.png
+  えらんでいる: ["fish","wood"]
+  [shot] 02_combo_found.png
+  おぼえたレシピ: r_grillfish=true
+  [shot] 03_recipe_tab_new_badge.png
+  やきざかな×2
+  [shot] 04_inventory_eat_button.png
+  [shot] 05_effect_active.png
+  効果: ["fish"]
+  [shot] 06_paint_before.png (接写)
+  ぬる前のベンチの色(頂点カラー平均): [0.432,0.314,0.211]
+  [shot] 07_combo_found_paint.png
+  あかみず×1
+  ヒント: 
+  [shot] 08_paint_panel.png
+  [shot] 09_paint_after.png (接写)
+  ぬった後のベンチの色(頂点カラー平均): [0.61,0.356,0.282]
+  ベンチの色(セーブ): #c9705c
+  [shot] 10_codex_combo_unknown.png
+  こけのびん×1
+  [shot] 11_terrarium_night.png (接写)
+  置いた家具: 3こ
+  [shot] 12_new_furniture_day.png
+  [shot] 13_new_furniture_night.png
+  ならべた家具: 11こ
+コンソールエラー: なし

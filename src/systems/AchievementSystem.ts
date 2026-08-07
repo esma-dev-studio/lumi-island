@@ -76,6 +76,23 @@ export function filledBugCageCount(s: GameState): number {
 }
 
 /**
+ * v12 おじゃましたことのある家の数(実績 a_home_visit1 / a_home_visit3 が読む)。
+ *
+ * 数えるのは stats のキー visited_home_◯◯(NpcInteriors.npcHomeVisitStat)で、
+ * 家に はじめて入った瞬間に1だけ立つ。ここに家の一覧を書かずに接頭辞で数えるのは、
+ * このファイルを「描画にもシーンにも依存しない純ロジック」のままにするため
+ * (家の定義 NPC_HOMES は Babylon のメッシュを読みこむ側にある)。
+ */
+export const HOME_VISIT_PREFIX = 'visited_home_';
+export function npcHomeVisitCount(s: GameState): number {
+  let n = 0;
+  for (const [k, v] of Object.entries((s.stats ?? {}) as Record<string, number>)) {
+    if (k.startsWith(HOME_VISIT_PREFIX) && typeof v === 'number' && v >= 1) n++;
+  }
+  return n;
+}
+
+/**
  * いちばん なかよしなNPCの なかよし度(実績 a_friend10 が読む)。
  * npcsが無い・壊れた古い状態でも0を返すだけで壊れない(codexCountと同じ考え方)。
  */
@@ -177,6 +194,18 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   {
     id: 'a_lighthouse', name: 'とうだいの ひかり', desc: 'よるの入り江の とうだいに あかりを ともそう',
     target: 1, icon: 'f_lighthouse_lantern', progress: (s) => statCount(s, LIGHTHOUSE_LIT_KEY),
+  },
+  // ---- v12 みんなの家に おじゃまする ----
+  // 数え方は stats の visited_home_◯◯(その家に はじめて入った日に1だけ立つ)。
+  // 「はじめて」と「3軒ぜんぶ」を分けてあるのは、1軒めで達成の手ごたえを出しつつ、
+  // 「ほかの家にも 入れるらしい」と気づかせるため(未達成欄の desc がヒントになる)。
+  {
+    id: 'a_home_visit1', name: 'はじめて おじゃました', desc: '住んでいる人が いる家に おじゃましてみよう',
+    target: 1, icon: 'f_birdhouse', progress: npcHomeVisitCount,
+  },
+  {
+    id: 'a_home_visit3', name: 'みんなの おうち', desc: '島の3人の家 ぜんぶに おじゃましよう',
+    target: 3, icon: 'f_dishrack', progress: npcHomeVisitCount,
   },
   {
     id: 'a_all_quests', name: 'おねがいマスター', desc: '島のみんなの おねがいを 5つ かなえよう',

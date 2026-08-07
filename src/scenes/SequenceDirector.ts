@@ -2,6 +2,7 @@
 // 睡眠はsetTimeoutを使わずタイムラインで処理し、多重実行できない。
 import { POIS } from '../data/island';
 import { homeShot } from './HomeInterior';
+import { NPC_HOME_BY_ID, npcHomeShot } from './NpcInteriors';
 import {
   COVE_BOAT, COVE_BOAT_OFFSHORE, ISLAND_BOAT, ISLAND_BOAT_OFFSHORE, coveNightLevel, type BoatPose,
 } from './CoveArea';
@@ -60,6 +61,8 @@ export class SequenceDirector {
   private sleepFade: HTMLElement | null = null;
   private travelFade: HTMLElement | null = null;
   private travelTo: 'in' | 'out' = 'in';
+  /** v12 出入りする先。null=マイホーム / NPCのid=その人の家 */
+  private travelNpc: string | null = null;
   private travelApplied = false;
   private mossQueue: { x: number; y: number; z: number }[] = []; // 開花に呼応するコケ
   private npcReacted = false;
@@ -126,6 +129,9 @@ export class SequenceDirector {
     this.gs.camCtl.endEvent();
     // 万一 室内で見せ場が走っても、終わったらドールハウス構図へ戻す(追従カメラのまま残さない)
     if (this.gs.indoor) this.gs.camCtl.beginRoom(homeShot(), true);
+    else if (this.gs.npcHome && NPC_HOME_BY_ID[this.gs.npcHome]) {
+      this.gs.camCtl.beginRoom(npcHomeShot(NPC_HOME_BY_ID[this.gs.npcHome]), true);
+    }
   }
 
   // ---------- 自宅の出入り ----------
@@ -137,16 +143,27 @@ export class SequenceDirector {
   leaveHome(): void {
     this.travel('out');
   }
+  /**
+   * v12 NPCの家に おじゃまする / そこから出る。
+   * マイホームの出入りと同じ短い暗転をそのまま使う(見え方・所要時間をそろえる)。
+   */
+  enterNpcHome(id: string): void {
+    this.travel('in', id);
+  }
+  leaveNpcHome(): void {
+    this.travel('out', this.gs.npcHome);
+  }
   /** いま出入りの暗転中か(検証・ボット用) */
   get traveling(): boolean {
     return this.state === 'travel';
   }
 
-  private travel(to: 'in' | 'out'): void {
+  private travel(to: 'in' | 'out', npcId: string | null = null): void {
     if (this.state !== 'idle') return; // 排他: 演出・就寝中は動かさない
     this.state = 'travel';
     this.t = 0;
     this.travelTo = to;
+    this.travelNpc = npcId;
     this.travelApplied = false;
     if (!this.travelFade) {
       const el = document.createElement('div');
@@ -347,7 +364,7 @@ export class SequenceDirector {
     const gs = this.gs;
     // 初回の夜: 夕方開始から日没を迎えた瞬間に一度だけ(UIを開いている間・家の中にいる間は待つ)。
     // 室内で始めると、島のルミの木へカメラが飛んで部屋の構図が壊れる
-    if (this.state === 'idle' && !gs.modalOpen && !gs.indoor && !gs.state.flags.intro_done && gs.island.time.hour >= 19.4 && gs.island.time.hour < 22) {
+    if (this.state === 'idle' && !gs.modalOpen && !gs.indoor && !gs.npcHome && !gs.state.flags.intro_done && gs.island.time.hour >= 19.4 && gs.island.time.hour < 22) {
       gs.state.flags.intro_done = true;
       this.start('intro');
       sfx('bloom');
@@ -359,7 +376,9 @@ export class SequenceDirector {
       // 暗転しきったところで入れかえる(明るいまま部屋が差し替わるのを見せない)
       if (!this.travelApplied && this.t >= TRAVEL_SWAP) {
         this.travelApplied = true;
-        gs.applyIndoor(this.travelTo === 'in');
+        // 行き先がNPCの家なら そちらへ。null(マイホーム)なら これまでどおり
+        if (this.travelNpc) gs.applyNpcHome(this.travelTo === 'in' ? this.travelNpc : null);
+        else gs.applyIndoor(this.travelTo === 'in');
         if (this.travelFade) this.travelFade.style.opacity = '0';
       }
       if (this.t >= TRAVEL_TOTAL) this.state = 'idle';

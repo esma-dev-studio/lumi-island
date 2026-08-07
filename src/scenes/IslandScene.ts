@@ -30,6 +30,10 @@ import {
 } from '../data/island';
 import { DayNight } from './DayNight';
 import { HomeInterior, homeFloorY, insideHomeFloor, HOME_RECTS, HOME_CIRCLES } from './HomeInterior';
+import {
+  NpcInteriors, NPC_HOMES, NPC_HOME_BODY_R, insideNpcHomeFloor, measureDoorStand,
+  npcHomeCircles, npcHomeFloorY, npcHomeRects,
+} from './NpcInteriors';
 import { CoveArea, COVE_CIRCLES, COVE_NODES, ISLAND_BOAT, coveNightLevel } from './CoveArea';
 import { makeBoat, makeHorizonSpark, type BoatMesh } from '../entities/cove';
 import { buildGarden, type GardenView } from '../entities/garden';
@@ -80,6 +84,12 @@ export class IslandScene {
   terrain!: Terrain;
   water!: WaterRefs;
   home!: HomeInterior; // マイホームの室内(屋外にいるあいだは消えている)
+  npcHomes!: NpcInteriors; // v12 島の3人の家の中(島にいるあいだは消えている)
+  /**
+   * v12 島がわのドアから外へ出たときに立つ点(NPC id → 世界座標)。
+   * ドアの前そのものは建物のコライダーの内がわのことがあるので、build のあとに実測する。
+   */
+  readonly npcHomeExits = new Map<string, { x: number; z: number }>();
   cove!: CoveArea; // v11 よるの入り江(島にいるあいだは消えている)
   islandBoat!: BoatMesh; // 島の桟橋によこづけしてある小舟(しゅうり前は こわれた部品つき)
   /** v11第2章 島から見える 水平線のきらめき(とうだいが ともってからの夜だけ出る) */
@@ -428,6 +438,16 @@ export class IslandScene {
     for (const r of HOME_RECTS) this.rects.push(r);
     for (const c of HOME_CIRCLES) this.circles.push(c);
 
+    // ---- v12 島の3人の家の中(それぞれ島の外。島にいるあいだは消えている) ----
+    // マイホームの部屋と同じく遮蔽フェード(occludables)には入れない。
+    // 部屋は作りなおさないので、影の登録は1回だけでよい
+    this.npcHomes = new NpcInteriors(s, [this.terrain.mesh, this.water.sea], (m) => {
+      this.shadows.addShadowCaster(m, true);
+      m.receiveShadows = true;
+    });
+    for (const r of npcHomeRects()) this.rects.push(r);
+    for (const c of npcHomeCircles()) this.circles.push(c);
+
     // ---- v11 ミナモの桟橋のよこ: しゅうりちゅうの小舟 ----
     // 水にうかんでいるので当たり判定は付けない(そこは walkableGround が海=歩けない)。
     // 桟橋の東がわ1.0mなので、桟橋の上を歩く道すじ(x=4±1.3)には かからない。
@@ -466,7 +486,21 @@ export class IslandScene {
       if (root) this.nodes.set(def.id, { def, root, y: this.groundY(def.x, def.z) });
     }
 
+    // ---- v12 NPCの家から外へ出たときに立つ点を実測する ----
+    // コライダー(建物・木・岩)がぜんぶ出そろってから測る。ドアの前そのものは
+    // 建物の当たり判定+体半径の内がわのことがあるので、目印のまま使ってはいけない(教訓4)
+    for (const def of NPC_HOMES) {
+      this.npcHomeExits.set(def.id, measureDoorStand(def, (x, z) => this.canStandOutdoor(x, z)));
+    }
+
     this.dayNight.update(this.time.hour);
+  }
+
+  /** 島の上でそこに立てるか(歩けて、コライダーに押し出されない)。出口の実測に使う */
+  private canStandOutdoor(x: number, z: number): boolean {
+    if (!walkableGround(x, z)) return false;
+    const [rx, rz] = this.resolveCollision(x, z, NPC_HOME_BODY_R);
+    return Math.hypot(rx - x, rz - z) < 0.01;
   }
 
   /** ふねが なおっているかを、島がわ・入り江がわの見た目へ反映する */
@@ -538,6 +572,8 @@ export class IslandScene {
     if (cove !== null) return cove;
     const home = homeFloorY(x, z);
     if (home !== null) return home;
+    const npcHome = npcHomeFloorY(x, z);
+    if (npcHome !== null) return npcHome;
     if (onPier(x, z)) return PIER.y;
     const deck = deckGroundY(x, z);
     if (deck !== null) return deck;
@@ -550,6 +586,8 @@ export class IslandScene {
     if (insideCoveArea(x, z)) return coveWalkable(x, z);
     // マイホームの室内。部屋のまわりは島の規則どおり「海の中」なので外へは抜けられない
     if (insideHomeFloor(x, z)) return true;
+    // v12 NPCの家の中。まわりが「海の中」なのはマイホームと同じ
+    if (insideNpcHomeFloor(x, z)) return true;
     if (onPier(x, z)) return true;
     return walkableGround(x, z); // 高さの規則はterrain.tsに1本化(釣りの水面判定と同じ情報源)
   }
@@ -587,6 +625,7 @@ export class IslandScene {
   update(dtSec: number): void {
     this.time.advance(dtSec);
     this.home.update(this.time.hour); // 室内灯(室内にいるときだけ効く)
+    this.npcHomes.update(this.time.hour); // NPCの家のあかり(その家にいるときだけ効く)
     this.cove.update(dtSec, this.time.hour); // 波うちぎわの燐光・草のゆれ(入り江にいるときだけ効く)
     this.updateHorizonSpark(dtSec); // 島から見える とうだいの あかり(点いていなければ即return)
     // ほしのかけら: この関数はWorldPauseControllerが「凍っていないフレーム」だけ呼ぶので、

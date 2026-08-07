@@ -83,6 +83,24 @@ body { font-family: var(--font); color: var(--ink); }
   padding: 0 6px; margin-right: 6px; font-size: 0.8rem;
 }
 
+/* ---- v12 りょうりの効果(時計の下。かかっているあいだだけ出る) ---- */
+.hud-fx {
+  position: absolute; top: calc(var(--sa-t) + 52px); right: calc(var(--sa-r) + 14px);
+  display: none; flex-direction: column; gap: 5px; align-items: flex-end; pointer-events: none;
+}
+.hud-fx.show { display: flex; }
+.fx-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 4px 10px; font-size: 0.76rem; font-weight: 700; color: var(--ink);
+  box-shadow: 0 2px 8px rgba(30, 24, 12, 0.12);
+}
+.fx-chip .inv-ico { font-size: 1.1rem; color: var(--amber); }
+.fx-name { line-height: 1.35; }
+.fx-name small { display: block; font-weight: 500; font-size: 0.66rem; color: var(--ink-soft); }
+.fx-bar { width: 42px; height: 4px; background: #e2d9c6; border-radius: 999px; overflow: hidden; }
+.fx-bar i { display: block; height: 100%; background: var(--amber); }
+
 /* ---- いまやること(左上) ---- */
 .obj-hud {
   position: absolute; left: calc(var(--sa-l) + 14px); top: calc(var(--sa-t) + 14px);
@@ -186,6 +204,12 @@ body { font-family: var(--font); color: var(--ink); }
 .inv-ico { font-size: 1.25rem; line-height: 0; display: flex; }
 .inv-name { flex: 1; font-weight: 700; }
 .inv-count { color: var(--ink-soft); font-weight: 700; }
+/* v12 ボタンが2つ入るマス(りょうりの「たべる」+「おく」)は2列ぶんの幅をとる。
+   1列のままだと 名前もボタンも1文字ずつ縦に割れて読めない(実機のスクショで確認)。
+   幅をひろげたうえで、名前だけ はみ出したら「…」にする(ボタンは押せる大きさのまま) */
+.inv-slot.wide { grid-column: span 2; }
+.inv-slot.wide .inv-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inv-slot.wide .craft-btn { flex: none; white-space: nowrap; }
 .inv-empty { grid-column: 1 / -1; color: var(--ink-soft); font-size: 0.84rem; padding: 12px 4px; line-height: 1.7; }
 .inv-tools { display: flex; gap: 6px; flex-wrap: wrap; }
 .inv-tool {
@@ -229,6 +253,80 @@ body { font-family: var(--font); color: var(--ink); }
 }
 .shop-tab.on { background: var(--amber); border-color: var(--amber); color: #fff; }
 .bite { color: #cf4f2e; font-size: 1.1rem; }
+
+/* ---- v12 くみあわせタブ ---- */
+.combo-lead {
+  font-size: 0.8rem; line-height: 1.75; color: var(--ink-soft);
+  background: #fffaf0; border: 1px solid var(--line); border-radius: 5px; padding: 8px 10px;
+}
+.combo-lead b { color: var(--ink); }
+.combo-lead small { display: block; font-weight: 900; color: var(--amber); margin-top: 3px; }
+.combo-tray { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 10px 0 6px; }
+.combo-slot {
+  font-family: var(--font); display: inline-flex; align-items: center; gap: 4px;
+  background: #fff; border: 1px solid var(--amber); border-radius: 5px;
+  padding: 5px 9px; font-size: 0.8rem; font-weight: 700; color: var(--ink); cursor: pointer;
+}
+.combo-slot .inv-ico { font-size: 1.15rem; }
+.combo-slot.empty {
+  border-style: dashed; border-color: var(--line); color: var(--ink-soft);
+  font-weight: 900; letter-spacing: 0.06em; padding: 5px 14px; cursor: default;
+}
+.combo-plus { color: var(--ink-soft); font-weight: 900; }
+.combo-tag {
+  display: inline-block; font-size: 0.76rem; font-weight: 700;
+  border-radius: 999px; padding: 3px 12px; line-height: 1.6;
+}
+.combo-tag.known { background: #eef4ea; color: #4f7a50; }
+.combo-tag.locked { background: #fdf0e6; color: #a8703d; }
+.combo-msg {
+  margin-top: 8px; font-size: 0.84rem; font-weight: 700; line-height: 1.7; color: var(--ink-soft);
+  border-top: 1px solid var(--line); padding-top: 8px;
+}
+.combo-msg.ok { color: #4f7a50; }
+.combo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5em, 1fr)); gap: 6px; }
+.combo-cell {
+  font-family: var(--font); display: flex; align-items: center; gap: 5px;
+  background: #fff; border: 1px solid var(--line); border-radius: 5px;
+  padding: 6px 8px; font-size: 0.78rem; color: var(--ink); cursor: pointer; text-align: left;
+}
+.combo-cell:hover { border-color: var(--amber); }
+.combo-cell.off { background: #ece5d6; color: var(--ink-soft); cursor: default; }
+.combo-cell.off .inv-ico { opacity: 0.45; }
+.combo-cell-name { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* ずかんの「くみあわせ」の未はっけんわく(あつめたものの ? とは別あつかい) */
+.codex-cell.combo .inv-ico { filter: none; opacity: 0.75; }
+.codex-cell.combo .codex-name small { font-weight: 700; letter-spacing: 0; margin-left: 4px; }
+
+/* ---- v12 くみあわせの発見演出(craft-popより 大きく・長く) ---- */
+.combo-found {
+  position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(0.86);
+  background: var(--paper); border: 2px solid var(--amber); border-radius: 10px;
+  padding: 16px 34px 18px; text-align: center; min-width: 260px;
+  opacity: 0; transition: all 0.22s; pointer-events: none; z-index: 12;
+  box-shadow: 0 8px 30px rgba(30, 24, 12, 0.32);
+}
+.combo-found.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.cf-rays { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+.cf-ray {
+  position: absolute; left: -1.5px; top: -104px; width: 3px; height: 62px;
+  background: linear-gradient(rgba(201, 138, 61, 0), rgba(201, 138, 61, 0.55));
+  transform-origin: 1.5px 104px; border-radius: 2px;
+}
+.cf-band {
+  display: inline-block; background: var(--amber); color: #fff; font-weight: 900;
+  letter-spacing: 0.12em; font-size: 0.76rem; border-radius: 999px; padding: 2px 16px;
+}
+.cf-ico { font-size: 3rem; line-height: 1; margin: 10px 0 4px; color: var(--ink); }
+.cf-ico svg { width: 1em; height: 1em; }
+.cf-name { font-size: 1.2rem; font-weight: 900; }
+.cf-sub { font-size: 0.78rem; color: var(--ink-soft); margin-top: 6px; line-height: 1.7; }
+
+/* ---- v12 いろみずパネル ---- */
+.paint-chip {
+  width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(74, 59, 44, 0.35);
+  display: inline-block; flex: none;
+}
 
 /* ---- タイトル ---- */
 .title-screen {
@@ -399,6 +497,10 @@ html.touch-ui .inv-empty { font-size: 0.9rem; }
 html.touch-ui .q-title { font-size: 0.92rem; }
 html.touch-ui .q-status { font-size: 0.84rem; }
 html.touch-ui .codex-cell, html.touch-ui .ach-row { min-height: 52px; font-size: 0.86rem; }
+/* v12 くみあわせタブ: えらぶマスと えらんだ枠も 指で押せる大きさにする */
+html.touch-ui .combo-cell, html.touch-ui .combo-slot { min-height: 52px; font-size: 0.86rem; }
+html.touch-ui .combo-lead { font-size: 0.86rem; }
+html.touch-ui .combo-grid { grid-template-columns: repeat(auto-fill, minmax(10em, 1fr)); }
 
 /* --- タイトル --- */
 html.touch-ui .title-inner { max-width: 520px; }
@@ -414,6 +516,7 @@ html.touch-ui .tc-btns .title-btn { width: 150px; padding: 12px 0; }
   html.touch-ui .panel { min-width: min(560px, 92vw); }
   html.touch-ui .inv-grid { grid-template-columns: repeat(2, 1fr); }
   html.touch-ui .codex-grid { grid-template-columns: repeat(2, 1fr); }
+  html.touch-ui .combo-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* たてむきの案内(数秒で消える・タップでも消せる) */

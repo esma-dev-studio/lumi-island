@@ -468,8 +468,9 @@ describe('オルゴールBGM: 配線', () => {
 
   it('GameSceneが毎フレーム時刻・室内・演出をBGMへ渡す', () => {
     expect(scene).toMatch(/import \{[^}]*setMusic[^}]*\} from '\.\.\/audio\/AudioSystem'/);
+    // v12「室内」には NPCの家の中もふくむ(部屋のBGMの聞こえかたを 自宅とそろえる)
     expect(scene).toMatch(
-      /setMusic\(\s*this\.island\.time\.day,\s*this\.island\.time\.hour,\s*this\.indoor,\s*this\.seq\.active\s*\)/
+      /setMusic\(\s*this\.island\.time\.day,\s*this\.island\.time\.hour,\s*this\.indoor \|\| this\.npcHome !== null,\s*this\.seq\.active\s*\)/
     );
   });
 

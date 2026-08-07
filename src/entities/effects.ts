@@ -55,6 +55,11 @@ export function initEffects(s: Scene): void {
   flies.length = 0;
   flyPool.length = 0;
   glowSources.length = 0;
+  // v12 りょうりの光の玉(旧シーンのメッシュを持ちこさない。効果はセーブしないので必ず消えた状態から)
+  cookMotes = [];
+  cookMoteMat = null;
+  cookGlowOn = false;
+  cookGlowT = 0;
   // 丸いドットのテクスチャ(外部素材なし)
   const tex = new DynamicTexture('fxDot', { width: 32, height: 32 }, s, false);
   const ctx = tex.getContext() as CanvasRenderingContext2D;
@@ -631,8 +636,71 @@ export function updateWeatherFx(
   }
 }
 
+// ---------------------------------------------------------------------------
+// v12 りょうり「ほんのり ひかる」の見た目。
+//
+// プレイヤーのまわりを ゆっくり まわる 小さな光の玉3つ。
+// 追従カメラの じゃまにならないよう、頭より すこし低い高さで 半径0.55mに収める。
+// 光だまり(attachLightPool)を使わないのは、あれが地形にそって貼りつく板で
+// 「プレイヤーについて動く」用途に向かないため。
+// 動きは時計(cookGlowT)だけで決まる=乱数なし(スクショが毎回おなじ画になる)。
+// ---------------------------------------------------------------------------
+const COOK_MOTES = 3;
+const COOK_MOTE_R = 0.55;
+let cookMotes: Mesh[] = [];
+let cookMoteMat: StandardMaterial | null = null;
+let cookGlowOn = false;
+let cookGlowT = 0;
+
+/** りょうりの「ほんのり ひかる」を 出す/消す(GameSceneが毎フレーム入れる) */
+export function setCookGlow(on: boolean): void {
+  cookGlowOn = on;
+}
+/** いま出ているか(検証・テスト用) */
+export function cookGlowActive(): boolean {
+  return cookGlowOn && cookMotes.length > 0 && cookMotes[0].isEnabled();
+}
+
+function ensureCookMotes(): void {
+  if (!scene || cookMotes.length > 0) return;
+  if (!cookMoteMat) {
+    const m = new StandardMaterial('cookGlowMote', scene);
+    m.diffuseColor = Color3.FromHexString('#f2e8c8');
+    m.emissiveColor = Color3.FromHexString('#e8d08a');
+    m.specularColor = Color3.Black();
+    m.alpha = 0.92;
+    cookMoteMat = m;
+  }
+  for (let i = 0; i < COOK_MOTES; i++) {
+    const A = A0();
+    appendBlob(A, 0, 0, 0, 0.055, 0.055, 0.055, Color3.FromHexString('#fff4d8'), { segs: 6, noise: 0.05, seed: 90 + i });
+    const mesh = toMesh(scene, `cookMote${i}`, A);
+    mesh.material = cookMoteMat;
+    mesh.isPickable = false;
+    mesh.setEnabled(false);
+    cookMotes.push(mesh);
+  }
+}
+
+function updateCookGlow(dt: number, px: number, py: number, pz: number): void {
+  if (!cookGlowOn) {
+    for (const m of cookMotes) m.setEnabled(false);
+    return;
+  }
+  ensureCookMotes();
+  cookGlowT += dt;
+  for (let i = 0; i < cookMotes.length; i++) {
+    const a = cookGlowT * 0.9 + (i / COOK_MOTES) * Math.PI * 2;
+    const bob = Math.sin(cookGlowT * 1.7 + i * 2.1) * 0.12;
+    cookMotes[i].setEnabled(true);
+    cookMotes[i].position.set(px + Math.cos(a) * COOK_MOTE_R, py + 0.95 + bob, pz + Math.sin(a) * COOK_MOTE_R);
+    cookMotes[i].scaling.setAll(0.85 + 0.25 * Math.sin(cookGlowT * 2.3 + i));
+  }
+}
+
 /** 毎フレーム: 飛んでいくアイテムの更新 */
 export function updateEffects(dt: number, px: number, py: number, pz: number): void {
+  updateCookGlow(dt, px, py, pz);
   for (let i = flies.length - 1; i >= 0; i--) {
     const f = flies[i];
     f.t += dt / 0.38;

@@ -11,8 +11,24 @@
 //     新しいセーブ項目を増やさずに「1回だけ」を保証できる(実績と同じ考え方)。
 import type { GameState } from '../game/GameState';
 import { invCount, invRemove, learnRecipe, statAdd } from '../game/GameState';
-import { ITEMS, RECIPES, type ItemId } from '../data/items';
+import { COOKED_FOODS, ITEMS, RECIPES, isCookedFood, type ItemId } from '../data/items';
 import { NPCS, NPC_BY_ID, type NpcDef } from '../data/npcs';
+import { sharedCooking } from './CookingEffects';
+
+/**
+ * v12 りょうりの好み。
+ *
+ * npcs.ts の giftLoves には 手を入れず、「りょうりだけの 大好物」をここに足す。
+ * こうしておくと、島のみんなの もともとの好み(ミナモ=魚、ノクト=星、ツムギ=花…)は
+ * 1つも消えないまま、料理を「その人らしい ごちそう」として重ねられる。
+ * 表に無いりょうりも、どのNPCにとっても 'like'(+1)になる(下の giftTier)。
+ */
+export const COOKED_LOVES: Record<string, readonly ItemId[]> = {
+  minamo: ['d_grillfish', 'd_shellsoup'], // 海と魚のひと
+  nokto: ['d_starmochi', 'd_nightgrill'], // 夜と星のひと
+  tsumugi: ['d_berrypie', 'd_mushsoup'], // 森と手しごとのひと
+  roka: ['d_shellsoup', 'd_grillfish'], // 入り江のとうだい番
+};
 
 /** おくりものの受け取りかた(セリフとなかよし度の増えかたが変わる) */
 export type GiftTier = 'love' | 'like' | 'ok';
@@ -59,6 +75,10 @@ export function giftTier(npcId: string, item: ItemId): GiftTier {
   const def: NpcDef | undefined = NPC_BY_ID[npcId];
   if (!def) return 'ok';
   if (def.giftLoves.includes(item)) return 'love';
+  // v12 りょうり: その人の ごちそうなら大好物、そうでなくても「うれしい」あつかいにする
+  // (手をかけて作ったものを ただの ok にしない)
+  if ((COOKED_LOVES[npcId] ?? []).includes(item)) return 'love';
+  if (isCookedFood(item)) return 'like';
   if (def.giftLikes.includes(item)) return 'like';
   return 'ok';
 }
@@ -160,7 +180,9 @@ export function applyGift(s: GameState, npcId: string, item: ItemId): GiftResult
 
   const tier = giftTier(npcId, item);
   const before = Number.isFinite(rt.friendship) ? rt.friendship : 0;
-  rt.friendship = Math.max(before, Math.min(FRIEND_MAX, before + GIFT_GAIN[tier]));
+  // v12 りょうり「ほしくさもち」の効果「おすそわけ」のあいだは +1 おまけ(効果はセーブしない)
+  const gainBase = GIFT_GAIN[tier] + sharedCooking().giftBonus;
+  rt.friendship = Math.max(before, Math.min(FRIEND_MAX, before + gainBase));
   const gain = rt.friendship - before;
   rt.giftedToday = true;
   statAdd(s, GIFT_TOTAL_KEY);
@@ -212,6 +234,20 @@ export function validateGiftData(): string[] {
     for (const [id, lines] of Object.entries(def.giftLinesByItem ?? {})) {
       if (!(id in ITEMS)) problems.push(`${def.name}の専用セリフのアイテム${id}が存在しない`);
       if (!lines || lines.length === 0) problems.push(`${def.name}の${id}専用セリフが空`);
+    }
+  }
+  // v12 りょうりの好み: 相手が実在するか・りょうりを指しているか・もとの好みと重ならないか
+  for (const [npcId, ids] of Object.entries(COOKED_LOVES)) {
+    const def = NPC_BY_ID[npcId];
+    if (!def) {
+      problems.push(`りょうりの好みのNPC${npcId}が存在しない`);
+      continue;
+    }
+    for (const id of ids) {
+      if (!(COOKED_FOODS as readonly string[]).includes(id)) problems.push(`${def.name}のりょうりの好み${id}がりょうりでない`);
+      if (def.giftLoves.includes(id) || def.giftLikes.includes(id)) {
+        problems.push(`${def.name}のりょうりの好み${id}がもとの好みと重複`);
+      }
     }
   }
   return problems;

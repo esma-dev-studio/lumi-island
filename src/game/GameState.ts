@@ -12,6 +12,12 @@ export interface PlacedFurniture {
   rotY: number;
   /** 展示家具(水槽・むしかご)の中身。入れた魚・虫のItemId。所持品から移し、もちかえると戻る */
   content?: ItemId;
+  /**
+   * v12 いろみずで ぬった色(src/data/items.ts の PAINT_COLORS の hex)。
+   * 無い=もとの木や石の色のまま。知らない色はセーブの読みこみで捨てる(isPaintColor)ので、
+   * 「色の表を減らしても 旧セーブが化けない」。
+   */
+  color?: string;
 }
 
 /** 庭の花だん区画。plantedDayからの経過日数で成長する(2日で満開) */
@@ -29,6 +35,12 @@ export interface NpcState {
   /** きょう おくりものを あげたか(回数の制限ではなく記録)。talkedTodayと同じ日次リセットに乗る */
   giftedToday?: boolean;
   questTalked?: boolean;
+  /**
+   * v12 その人の家で おみやげを もらった日(ゲーム内の日づけ)。
+   * boolean ではなく日づけで持つのは、日ごとのリセット処理を1つも増やさずに
+   * 「もらえる日は1日1回」を成り立たせるため(いまの日と くらべるだけでよい)。
+   */
+  homeGiftedDay?: number;
 }
 
 export interface GameState {

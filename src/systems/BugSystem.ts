@@ -53,6 +53,22 @@ export const BUG_HOP_R = 22;
 export const BUG_HOP_SAFE_R = 4.0;
 /** とまり直した直後、この秒数は もう にげない(追いついた子が つかまえられる) */
 export const BUG_SETTLE_SEC = 2.0;
+
+/**
+ * v12 りょうり「くしやき」の効果「むしと なかよし」。
+ * にげはじめる距離(runFlee / walkFlee)に かける倍率。1=ふだんどおり。
+ * ここをモジュールの変数にしているのは、虫の更新が IslandScene の中で
+ * 深いところから呼ばれていて、毎回 引数で配ると 途中の全部を直すことになるため
+ * (効果はセーブしないので、シーンを作り直すたびに GameScene が 1 に戻す)。
+ */
+let fleeScale = 1;
+export function setBugFleeScale(k: number): void {
+  fleeScale = Number.isFinite(k) && k > 0 ? k : 1;
+}
+/** いまの倍率(テスト・検証用) */
+export function bugFleeScale(): number {
+  return fleeScale;
+}
 /** 1匹減ってから次の1匹が出るまで(実秒) */
 export const BUG_RESPAWN_SEC = 2.5;
 /** 時間帯が変わった直後、最初の1匹が出るまで(実秒) */
@@ -304,7 +320,8 @@ export class BugScheduler {
       const d = Math.hypot(player.x - p.x, player.z - p.z);
       b.wary = d < BUG_WARY_R;
       const running = player.speed >= BUG_RUN_SPEED;
-      const tooClose = (running && d < def.runFlee) || d < def.walkFlee;
+      // v12 りょうりの効果ぶんだけ にげはじめる距離を近くする(fleeScale=1なら これまでと同じ)
+      const tooClose = (running && d < def.runFlee * fleeScale) || d < def.walkFlee * fleeScale;
       // すぐには にげない。近すぎる状態が BUG_SPOOK_SEC つづいて はじめて にげる
       // (走って突っこんできた子にも「E を押す ひと呼吸」を必ず残すため)。
       if (tooClose && b.settle <= 0) {

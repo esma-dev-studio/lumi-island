@@ -18,11 +18,17 @@ const openCodex = (s: GameState): { ui: CodexUI; el: HTMLElement } => {
   ui.toggle();
   return { ui, el: document.querySelector('.codex-panel') as HTMLElement };
 };
-const cells = (el: HTMLElement): HTMLElement[] => [...el.querySelectorAll<HTMLElement>('.codex-cell')];
+/**
+ * 上段「あつめたもの」のマスだけを見る。
+ * v12でずかんに2つめの codex-grid(くみあわせ)が増えたので、かならず1つめに絞る
+ * ——絞らないと「アイテムの数」と「くみあわせの数」が混ざって数えてしまう。
+ */
+const grid = (el: HTMLElement): HTMLElement => el.querySelector('.codex-grid') as HTMLElement;
+const cells = (el: HTMLElement): HTMLElement[] => [...grid(el).querySelectorAll<HTMLElement>('.codex-cell')];
 const cellOf = (el: HTMLElement, name: string): HTMLElement =>
   cells(el).find((c) => c.querySelector('.codex-name')?.textContent === name)!;
 /** 上段(あつめたもの)の文字だけ。下段のじっせきの説明文と混ざらないようにする */
-const gridText = (el: HTMLElement): string => el.querySelector('.codex-grid')!.textContent ?? '';
+const gridText = (el: HTMLElement): string => grid(el).textContent ?? '';
 
 describe('CodexUI(あつめたもの)', () => {
   it('道具をのぞく全アイテムをならべる', () => {

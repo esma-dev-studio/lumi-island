@@ -1,6 +1,9 @@
 // セーブ/ロード(localStorage)。スキーマ検証・サニタイズと、壊れたデータからの安全な復旧。
 import { newGameState, SAVE_VERSION, type GameState, type PlacedFurniture, type QuestState } from '../game/GameState';
-import { ITEMS, TOOLS, RECIPES, DEFAULT_HOME_STYLE, isStyleFor, type ItemId, type ToolId } from '../data/items';
+import {
+  ITEMS, TOOLS, RECIPES, DEFAULT_HOME_STYLE, isStyleFor, isPaintColor, isPlaceable,
+  type ItemId, type ToolId,
+} from '../data/items';
 import { QUESTS } from '../data/quests';
 import { NPCS } from '../data/npcs';
 
@@ -12,7 +15,9 @@ const VALID_TOOLS = new Set(Object.keys(TOOLS));
 const VALID_RECIPES = new Set(RECIPES.map((r) => r.id));
 const VALID_QUESTS = new Set(QUESTS.map((q) => q.id));
 const VALID_QSTATE = new Set(['locked', 'open', 'done']);
-const PLACEABLE = new Set(Object.values(ITEMS).filter((i) => i.kind === 'furniture').map((i) => i.id));
+// v12: 家具に加えて りょうり(テーブルの上の小物として置ける)も通す。
+// 判定の情報源は items.ts の isPlaceable ひとつ(もちものの「おく」・配置システムと同じもの)
+const PLACEABLE = new Set(Object.values(ITEMS).filter((i) => isPlaceable(i.id)).map((i) => i.id));
 /** 実績カウンタのキー(英数字と_のみ)。壊れたキーや長すぎるキーは捨てる */
 const STAT_KEY_RE = /^[A-Za-z0-9_]{1,40}$/;
 const COUNT_MAX = 9_999_999;
@@ -121,7 +126,9 @@ export function load(): GameState | null {
     if (typeof raw.npcs === 'object' && raw.npcs !== null) {
       for (const def of NPCS) {
         const id = def.id;
-        const n = (raw.npcs as Record<string, { friendship?: unknown; talkedToday?: unknown; giftedToday?: unknown }>)[id];
+        const n = (raw.npcs as Record<string, {
+          friendship?: unknown; talkedToday?: unknown; giftedToday?: unknown; homeGiftedDay?: unknown;
+        }>)[id];
         if (!n || typeof n !== 'object') continue;
         s.npcs[id] = {
           friendship: Math.floor(numIn(n.friendship, 0, 99999, 0)),
@@ -130,6 +137,12 @@ export function load(): GameState | null {
           // v11以降は回数の制限がないので、これは「きょう あげたか」の記録にすぎない
           giftedToday: n.giftedToday === true,
         };
+        // v12 その人の家で おみやげを もらった日。日づけ(time.day)と同じ範囲の整数だけ通す。
+        // 項目が無い旧セーブ・壊れた値は「まだ もらっていない」(未設定)のままにする
+        const gd = n.homeGiftedDay;
+        if (finite(gd) && Number.isInteger(gd) && gd >= 1 && gd <= 100000) {
+          s.npcs[id].homeGiftedDay = gd;
+        }
       }
     }
 
@@ -147,6 +160,10 @@ export function load(): GameState | null {
         const entry: PlacedFurniture = { id: f.id, item: f.item, x: f.x, z: f.z, rotY: f.rotY };
         // 展示家具の中身(実在ItemIdのみ。不正値は「中身なし」に落とす)
         if (typeof f.content === 'string' && VALID_ITEMS.has(f.content)) entry.content = f.content as ItemId;
+        // v12 いろみずで ぬった色。PAINT_COLORS にある色だけ通す。
+        // 知らない色・壊れた値("red"・数値・#付けわすれ)は「色なし」= もとの色にもどす
+        // (codex・homeStyle と同じ「知らない値は捨てる」方針)
+        if (isPaintColor(f.color)) entry.color = f.color;
         s.furniture.push(entry);
       }
     }

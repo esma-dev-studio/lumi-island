@@ -147,6 +147,21 @@ export function buildHouse(scene: Scene, kind: string, w: number, d: number): Ho
 
   // 種類ごとのディテール
   if (kind === 'shop') {
+    // v12 工房の うらぐち(すまいの入口)。ローカル+X面=島の北がわ、店のカウンター(+Z面)の反対どなり。
+    // 店の候補(SHOP_POINT)から6.5m以上はなれているので、Eの取り合いにはならない
+    // (src/scenes/NpcInteriors.ts の outDoor と、tests/unit/npc_home.test.ts のガードを参照)。
+    const bx = w / 2 + 0.012, bz = 0.8;
+    const bw = 0.8, bh = 1.5;
+    box(A, bx - 0.05, y0 + bh / 2 + 0.02, bz, 0.1, bh + 0.12, bw + 0.18, C_WOOD_D); // 枠
+    // 板の巻き順は box() の「右(+X)の面」とそろえる(z1→z0→z0→z1。逆にすると法線が内を向く)
+    quad(A, [
+      [bx + 0.02, y0 + 0.02, bz + bw / 2], [bx + 0.02, y0 + 0.02, bz - bw / 2],
+      [bx + 0.02, y0 + bh, bz - bw / 2], [bx + 0.02, y0 + bh, bz + bw / 2],
+    ], C_WOOD, 0.05);
+    appendBlob(A, bx + 0.05, y0 + bh * 0.5, bz - bw * 0.3, 0.04, 0.04, 0.04, Color3.FromHexString('#c9a86b'), { segs: 5, noise: 0.05 }); // 取っ手
+    box(A, bx + 0.14, y0 + bh + 0.2, bz, 0.42, 0.07, bw + 0.4, roofC); // 小ひさし
+    box(A, bx + 0.2, y0 + 0.05, bz, 0.5, 0.1, bw + 0.2, C_STONE, 0.08); // 石のふみ台
+
     // 店先のひさし(布)+作業台+看板
     for (let i = 0; i < 4; i++) {
       quad2(A, [[-w / 2 + (i * w) / 4, y0 + 1.72, dz + 0.1], [-w / 2 + ((i + 1) * w) / 4, y0 + 1.72, dz + 0.1], [-w / 2 + ((i + 1) * w) / 4, y0 + 1.46, dz + 0.85], [-w / 2 + (i * w) / 4, y0 + 1.46, dz + 0.85]], i % 2 ? Color3.FromHexString('#c9a86b') : Color3.FromHexString('#e2d5b8'), 0.04);

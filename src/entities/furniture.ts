@@ -1,6 +1,7 @@
 // 配置できる家具のメッシュ(ローカル地面=y0、正面=+Z)
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 import {
@@ -1205,10 +1206,285 @@ export function makeFurnitureMesh(scene: Scene, item: ItemId, content?: ItemId):
       );
       return { root, glowPart, colliderR: 0.26 };
     }
+    // ============================================================
+    // v12 りょうりの入口: キッチンだい(家の中に おくと くみあわせの りょうりが つくれる)
+    // ============================================================
+    case 'f_kitchen': {
+      const A = A0();
+      const TOP = Color3.FromHexString('#cfc6b2'); // 白木の天板
+      const IRON = Color3.FromHexString('#57534c'); // 鉄なべ
+      fbox(A, 0, 0.36, 0, 0.86, 0.62, 0.44, WOOD); // 台の本体
+      fbox(A, 0, 0.035, 0, 0.9, 0.07, 0.48, WOOD_D); // 台輪(床との あいだ)
+      fbox(A, 0, 0.53, 0.223, 0.78, 0.025, 0.02, WOOD_D); // 引き出しの すきま
+      for (const sx of [-0.19, 0.19]) fbox(A, sx, 0.6, 0.232, 0.15, 0.024, 0.028, WOOD_D); // とって
+      fbox(A, 0, 0.7, 0, 0.94, 0.06, 0.5, TOP); // 天板(すこし はみ出す)
+      fbox(A, 0, 0.737, -0.2, 0.9, 0.02, 0.06, WOOD_D); // 奥の ふちどり
+      // なべ(天板の左)。ふたの つまみまで作ると「だいどころ」に見える
+      appendBlob(A, -0.22, 0.79, 0.02, 0.155, 0.075, 0.155, IRON, { segs: 9, noise: 0.04, flatBottom: true });
+      fbox(A, -0.22, 0.858, 0.02, 0.29, 0.022, 0.29, jitterColor(IRON, 4, 0.14)); // ふた
+      appendBlob(A, -0.22, 0.882, 0.02, 0.028, 0.024, 0.028, WOOD_D, { segs: 5, noise: 0.05 }); // つまみ
+      // まな板と 木のカップ(天板の右)
+      fbox(A, 0.2, 0.747, 0.05, 0.26, 0.026, 0.18, jitterColor(WOOD, 7, 0.12));
+      appendBlob(A, 0.31, 0.777, -0.12, 0.055, 0.045, 0.055, TOP, { segs: 6, noise: 0.05, flatBottom: true });
+      return { root: toMesh(scene, 'f_kitchen', A, 'keep'), colliderR: 0.5 };
+    }
+    // ============================================================
+    // v12 くみあわせで見つかる かざり4種
+    // ============================================================
+    case 'f_sealamp': {
+      // ひかりの貝を 木のわくに ならべた ランプ。中の光る玉が見えるよう
+      // 「台+四すみの柱+屋根」の枠にする(教訓1: 発光を不透明な箱に入れない)
+      const A = A0();
+      fbox(A, 0, 0.035, 0, 0.34, 0.07, 0.34, WOOD_D); // 台
+      for (const sx of [-0.13, 0.13]) {
+        for (const sz of [-0.13, 0.13]) fbox(A, sx, 0.27, sz, 0.026, 0.4, 0.026, WOOD_D);
+      }
+      fbox(A, 0, 0.487, 0, 0.36, 0.03, 0.36, WOOD); // 屋根
+      // 四方に ひかりの貝(表と裏を重ねて厚みを出す)
+      const shells: [number, number, number][] = [
+        [0, 0.155, 0], [Math.PI / 2, 0.16, 1.6], [Math.PI, 0.15, 3.1], [-Math.PI / 2, 0.155, 4.7],
+      ];
+      for (let i = 0; i < shells.length; i++) {
+        const [a, r, rot] = shells[i];
+        const col = Color3.FromHexString(i % 2 === 0 ? '#dff2ff' : '#e8e2cf');
+        const sx = Math.sin(a) * 0.135, sz = Math.cos(a) * 0.135;
+        appendShellFan(A, sx, 0.26, sz, r, rot, 0.06, true, col, 40 + i * 7);
+        appendShellFan(A, sx, 0.26, sz, r, rot, 0.06, false, col, 40 + i * 7);
+      }
+      const root = toMesh(scene, 'f_sealamp', A, 'keep');
+      const glowPart = mkGlow(
+        (G) => appendBlob(G, 0, 0.26, 0, 0.085, 0.1, 0.085, Color3.FromHexString('#f4fbff'), { segs: 8, noise: 0.03 }),
+        'blue', root
+      );
+      return { root, glowPart, colliderR: 0.24 };
+    }
+    case 'f_starmobile': {
+      // ほしくさの穂を つるした モビール。うみのモビール(腕が前へ1本)と形がかぶらないよう、
+      // 腕を左右に わたした「てんびん」型にする
+      const A = A0();
+      const SILVER = Color3.FromHexString('#b8ccb8');
+      appendTrunk(A, [[0, 0, 0], [0, 1.0, 0]], 0.04, 0.03, WOOD_D, 41); // 柱
+      fbox(A, 0, 1.02, 0, 0.62, 0.045, 0.045, WOOD); // 腕(左右)
+      for (const sx of [-0.31, 0.31]) fbox(A, sx, 1.047, 0, 0.07, 0.028, 0.09, WOOD_D); // 腕さきの受け
+      const hang: [number, number][] = [[-0.29, 0.34], [-0.1, 0.5], [0.12, 0.4], [0.3, 0.56]];
+      for (let i = 0; i < hang.length; i++) {
+        const [hx, hl] = hang[i];
+        fbox(A, hx, 1.0 - hl / 2, 0, 0.018, hl, 0.018, Color3.FromHexString('#dcc99c')); // つり糸
+        // 穂(ほそ長い しずく)。銀みどりで、ほしくさの色にそろえる
+        appendBlob(A, hx, 1.0 - hl - 0.075, 0, 0.045, 0.085, 0.045,
+          jitterColor(SILVER, 50 + i, 0.1), { segs: 6, noise: 0.1, seed: 50 + i, bottomDark: 0.14 });
+      }
+      const root = toMesh(scene, 'f_starmobile', A, 'keep');
+      // まん中に 光る小さな星の玉(夜だけ ともる)
+      const glowPart = mkGlow(
+        (G) => appendBlob(G, 0, 0.63, 0, 0.06, 0.075, 0.06, Color3.FromHexString('#f2fbff'), { segs: 7, noise: 0.04 }),
+        'blue', root
+      );
+      return { root, glowPart, colliderR: 0.22 };
+    }
+    case 'f_shellwind': {
+      // こえだの アーチに かいがらを ぶらさげた ふうりん。光らない かざり
+      const A = A0();
+      fbox(A, 0, 0.04, 0, 0.3, 0.08, 0.22, WOOD_D); // 台
+      appendTrunk(A, [[-0.13, 0.07, 0], [-0.1, 0.5, 0], [0, 0.62, 0]], 0.026, 0.02, C_TWIG_PROP, 61);
+      appendTrunk(A, [[0.13, 0.07, 0], [0.1, 0.5, 0], [0, 0.62, 0]], 0.026, 0.02, C_TWIG_PROP, 63);
+      fbox(A, 0, 0.62, 0, 0.3, 0.024, 0.024, C_TWIG_PROP); // 横木
+      const hang: [number, number, number][] = [[-0.11, 0.16, 0.11], [0, 0.24, 0.14], [0.11, 0.19, 0.1]];
+      for (let i = 0; i < hang.length; i++) {
+        const [hx, hl, r] = hang[i];
+        fbox(A, hx, 0.61 - hl / 2, 0, 0.016, hl, 0.016, Color3.FromHexString('#dcc99c'));
+        const col = Color3.FromHexString(i === 1 ? '#efe3c8' : '#e6d6ae');
+        appendShellFan(A, hx, 0.61 - hl, 0, r, 0.6 + i * 2.1, 0.06, true, col, 66 + i * 9);
+        appendShellFan(A, hx, 0.61 - hl, 0, r, 0.6 + i * 2.1, 0.06, false, col, 66 + i * 9);
+      }
+      return { root: toMesh(scene, 'f_shellwind', A, 'keep'), colliderR: 0.2 };
+    }
+    case 'f_terrarium': {
+      // ガラスの うつわに ヒカリゴケを もりつけた かざり。
+      // 光る玉で うつわごと包むと「白い かたまり」にしか見えない(実機の接写で確認)ので、
+      // 光るのは こけだけにして、うつわの ふちより上に もり上げる。
+      const A = A0();
+      const GLASS = Color3.FromHexString('#dfeef2');
+      fbox(A, 0, 0.03, 0, 0.26, 0.06, 0.26, WOOD_D); // 木の受け皿
+      fbox(A, 0, 0.075, 0, 0.2, 0.032, 0.2, WOOD); // 受けの上段
+      // ガラスの うつわ(下すぼまりの おわん)と、口の ふちどり
+      appendTrunk(A, [[0, 0.085, 0], [0, 0.155, 0]], 0.105, 0.145, GLASS, 71, 0);
+      appendTrunk(A, [[0, 0.155, 0], [0, 0.175, 0]], 0.148, 0.152, jitterColor(GLASS, 73, 0.1), 73, 0);
+      // 中の土(ふちの すぐ下に見える)
+      appendBlob(A, 0, 0.135, 0, 0.115, 0.03, 0.115, Color3.FromHexString('#5c4c3a'), {
+        segs: 9, noise: 0.06, flatBottom: true, bottomDark: 0.3,
+      });
+      const root = toMesh(scene, 'f_terrarium', A, 'keep');
+      // ヒカリゴケの もり(3つの こぶ)。うつわの ふち(0.175)より上に出しつつ、
+      // ふちの ガラスが まわりに のこる大きさにする
+      // ——ふちまで おおうと、夜に「白い かたまり」に見えて うつわが消える(接写で確認)
+      const glowPart = mkGlow((G) => {
+        appendBlob(G, 0, 0.192, 0, 0.085, 0.042, 0.085, Color3.FromHexString('#bfe8c8'), { segs: 9, noise: 0.14, seed: 70 });
+        appendBlob(G, -0.038, 0.213, 0.016, 0.048, 0.034, 0.048, Color3.FromHexString('#cfeecf'), { segs: 7, noise: 0.18, seed: 71 });
+        appendBlob(G, 0.042, 0.219, -0.02, 0.04, 0.03, 0.04, Color3.FromHexString('#b4e0be'), { segs: 7, noise: 0.18, seed: 72 });
+      }, 'mint', root);
+      return { root, glowPart, colliderR: 0.2 };
+    }
+    // ============================================================
+    // v12 りょうり6種(テーブルの上の小物として かざれる)
+    // ============================================================
+    case 'd_grillfish':
+    case 'd_mushsoup':
+    case 'd_berrypie':
+    case 'd_starmochi':
+    case 'd_shellsoup':
+    case 'd_nightgrill':
+      return makeDishMesh(scene, item);
     default: {
       const A = A0();
       fbox(A, 0, 0.25, 0, 0.5, 0.5, 0.5, WOOD);
       return { root: toMesh(scene, `f_${item}`, A), colliderR: 0.35 };
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// v12 りょうりの メッシュ(6種)。
+// うつわは「おさら」か「おわん」の2つだけを使い回し、中身の形と色で見分ける。
+// 高さは0.12m前後なので、テーブルの上でも 床でも じゃまにならない。
+// colliderRは0(=通行のじゃまにならない。ラグと同じあつかい)。
+// ---------------------------------------------------------------------------
+const DISH_PLATE = Color3.FromHexString('#e8e2cf'); // 白い やきもの
+const DISH_BOWL = Color3.FromHexString('#c9b49a'); // つちの おわん
+
+/** ひらたい おさら(ふちが すこし立ちあがる) */
+function appendPlate(A: Arrays, r: number): void {
+  appendBlob(A, 0, 0.018, 0, r, 0.018, r, DISH_PLATE, { segs: 12, noise: 0.02, flatBottom: true, bottomDark: 0.28 });
+  appendBlob(A, 0, 0.032, 0, r * 0.99, 0.012, r * 0.99, jitterColor(DISH_PLATE, 3, 0.06), { segs: 12, noise: 0.03 });
+}
+
+/** ふかい おわん(スープ用)。中身の面は呼び出し側が上に足す */
+function appendBowl(A: Arrays, r: number): void {
+  appendBlob(A, 0, 0.055, 0, r, 0.055, r, DISH_BOWL, { segs: 12, noise: 0.03, flatBottom: true, bottomDark: 0.3 });
+  appendBlob(A, 0, 0.024, 0, r * 0.45, 0.024, r * 0.45, jitterColor(DISH_BOWL, 5, 0.1), { segs: 8, noise: 0.03 }); // 高台
+}
+
+export function makeDishMesh(scene: Scene, item: ItemId): FurnitureMesh {
+  const A = A0();
+  switch (item) {
+    case 'd_grillfish': {
+      // おさらの上に あぶった魚1ぴき(こんがり色)。しっぽと目まで作る
+      appendPlate(A, 0.17);
+      const BAKED = Color3.FromHexString('#c08a5c');
+      for (let i = 0; i < 4; i++) {
+        const t = i / 3;
+        appendBlob(A, -0.07 + t * 0.14, 0.062, 0, 0.05 - Math.abs(t - 0.5) * 0.02, 0.035, 0.038,
+          jitterColor(BAKED, 10 + i, 0.1), { segs: 7, noise: 0.07, seed: 10 + i, bottomDark: 0.2 });
+      }
+      for (const s of [-1, 1]) {
+        appendBlob(A, -0.115, 0.062 + s * 0.028, 0, 0.035, 0.024, 0.01,
+          jitterColor(BAKED, 15 + s, 0.12), { segs: 5, noise: 0.1, seed: 15 + s });
+      }
+      appendBlob(A, 0.075, 0.074, 0, 0.02, 0.016, 0.016, Color3.FromHexString('#3a2a20'), { segs: 5, noise: 0.03 });
+      fbox(A, 0, 0.042, 0.09, 0.16, 0.012, 0.02, Color3.FromHexString('#8a6a3d')); // そえた こえだ
+      break;
+    }
+    case 'd_mushsoup': {
+      appendBowl(A, 0.145);
+      // スープの面(黄みどり)+ うかんだ きのこ3つ
+      appendBlob(A, 0, 0.098, 0, 0.125, 0.012, 0.125, Color3.FromHexString('#cbbf7a'), { segs: 12, noise: 0.02 });
+      const MUSH = Color3.FromHexString('#c96f52');
+      for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2 + 0.4;
+        appendBlob(A, Math.cos(a) * 0.055, 0.113, Math.sin(a) * 0.055, 0.033, 0.018, 0.033,
+          jitterColor(MUSH, 20 + i, 0.1), { segs: 6, noise: 0.06, seed: 20 + i });
+      }
+      break;
+    }
+    case 'd_berrypie': {
+      appendPlate(A, 0.17);
+      // パイ生地(まるく こんもり)+ 上の あみ2本+ ベリー3つぶ
+      appendBlob(A, 0, 0.07, 0, 0.135, 0.045, 0.135, Color3.FromHexString('#dcb56a'), {
+        segs: 12, noise: 0.05, flatBottom: true, bottomDark: 0.22,
+      });
+      for (const rot of [0, Math.PI / 2]) {
+        fboxR(A, 0, 0.112, 0, 0.24, 0.016, 0.03, Color3.FromHexString('#e2cfa0'), { y: rot });
+      }
+      const BERRY = Color3.FromHexString('#c96f82');
+      for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2 + 1.1;
+        appendBlob(A, Math.cos(a) * 0.06, 0.126, Math.sin(a) * 0.06, 0.026, 0.024, 0.026,
+          jitterColor(BERRY, 30 + i, 0.1), { segs: 6, noise: 0.06, seed: 30 + i });
+      }
+      break;
+    }
+    case 'd_starmochi': {
+      appendPlate(A, 0.16);
+      // まるい おもち3つ(白)+ 上に ほしくさの穂
+      const MOCHI = Color3.FromHexString('#f2ede0');
+      const pos: [number, number][] = [[-0.055, -0.03], [0.055, -0.03], [0, 0.06]];
+      for (let i = 0; i < pos.length; i++) {
+        appendBlob(A, pos[i][0], 0.066, pos[i][1], 0.052, 0.033, 0.052,
+          jitterColor(MOCHI, 40 + i, 0.05), { segs: 8, noise: 0.05, seed: 40 + i, bottomDark: 0.18 });
+      }
+      appendBlob(A, 0, 0.108, 0.06, 0.02, 0.032, 0.02, Color3.FromHexString('#b8ccb8'), { segs: 5, noise: 0.1 });
+      break;
+    }
+    case 'd_shellsoup': {
+      appendBowl(A, 0.145);
+      // あお白い スープの面+ ひかりの貝の からを2枚
+      appendBlob(A, 0, 0.098, 0, 0.125, 0.012, 0.125, Color3.FromHexString('#cfe6f2'), { segs: 12, noise: 0.02 });
+      for (let i = 0; i < 2; i++) {
+        const a = i * Math.PI + 0.7;
+        appendShellFan(A, Math.cos(a) * 0.05, 0.107, Math.sin(a) * 0.05, 0.06, 1.2 + i * 2.4, 0.05, true,
+          Color3.FromHexString('#dff2ff'), 55 + i * 6);
+      }
+      break;
+    }
+    default: {
+      // d_nightgrill: こえだの くしに さした ヨザカナ(みどりに ひかる身)
+      appendPlate(A, 0.17);
+      fboxR(A, 0, 0.056, 0, 0.34, 0.016, 0.016, Color3.FromHexString('#8a6a3d'), { y: 0.35 }); // くし
+      const NIGHT = Color3.FromHexString('#8fd8b8');
+      for (let i = 0; i < 3; i++) {
+        const t = (i - 1) * 0.075;
+        appendBlob(A, Math.cos(0.35) * t, 0.078, -Math.sin(0.35) * t, 0.042, 0.032, 0.042,
+          jitterColor(NIGHT, 60 + i, 0.1), { segs: 7, noise: 0.08, seed: 60 + i, bottomDark: 0.2 });
+      }
+      break;
+    }
+  }
+  return { root: toMesh(scene, `dish_${item}`, A, 'keep'), colliderR: 0 };
+}
+
+/**
+ * v12 いろみずで 家具に色を ぬる(頂点カラーの ぬりかえ)。
+ *
+ * 部品のマテリアルは島じゅうで共有しているので、マテリアルの色は変えられない。
+ * かわりに、そのメッシュだけが持つ **頂点カラー** を書きかえる。
+ * 元の明暗(面ごとの陰・ゆらぎ)は そのまま残して 色みだけ ぬりかえるので、
+ * のっぺりした べた塗りにはならない(教訓1: フラット塗りは不合格)。
+ *
+ * ぬらないもの:
+ *   - 光る部品(共有の発光マテリアル)。色を変えると 光り方が こわれる。
+ *   - すいそうの ガラス・水面(半透明の別マテリアル)。
+ */
+const PAINT_STRENGTH = 0.78; // 0=元のまま / 1=まっさらな単色
+export function tintFurnitureMesh(root: Mesh, hex: string): void {
+  const c = Color3.FromHexString(hex);
+  for (const m of [root, ...root.getChildMeshes()] as Mesh[]) {
+    if ((m.material?.name ?? '').startsWith('glow')) continue; // 光る部品は そのまま
+    if (m.name.endsWith('_glass') || m.name.endsWith('_water')) continue; // 半透明の部品も そのまま
+    const src = m.getVerticesData(VertexBuffer.ColorKind);
+    if (!src) continue;
+    const cols = new Float32Array(src);
+    for (let i = 0; i < cols.length; i += 4) {
+      // 元の明るさを そのまま「陰影」として使い、色みだけ 入れかえる
+      const lum = 0.3 * cols[i] + 0.59 * cols[i + 1] + 0.11 * cols[i + 2];
+      const k = 0.55 + lum * 0.85; // 暗い面は暗いまま・明るい面は明るいまま
+      cols[i] += (Math.min(1, c.r * k) - cols[i]) * PAINT_STRENGTH;
+      cols[i + 1] += (Math.min(1, c.g * k) - cols[i + 1]) * PAINT_STRENGTH;
+      cols[i + 2] += (Math.min(1, c.b * k) - cols[i + 2]) * PAINT_STRENGTH;
+    }
+    // setVerticesData(=バッファを作り直す)を使う。updateVerticesData だと
+    // 元のバッファが「更新不可(updatable=false)」で作られているため GPU へ上がらず、
+    // データだけ変わって 画は もとの色のまま、という食いちがいが起きる
+    // (実機のスクショで before/after が1ピクセルも変わらず発覚。2026-08)。
+    m.setVerticesData(VertexBuffer.ColorKind, cols, false);
   }
 }

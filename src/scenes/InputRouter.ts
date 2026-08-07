@@ -33,6 +33,7 @@ export class InputRouter {
     gs.shopUI.close();
     gs.codexUI.close();
     gs.displayUI.close();
+    gs.paintUI.close();
     gs.invUI.toggle();
   }
 
@@ -45,6 +46,7 @@ export class InputRouter {
     gs.questLog.close();
     gs.codexUI.close();
     gs.displayUI.close();
+    gs.paintUI.close();
     gs.craftUI.toggle();
   }
 
@@ -57,6 +59,7 @@ export class InputRouter {
     gs.shopUI.close();
     gs.codexUI.close();
     gs.displayUI.close();
+    gs.paintUI.close();
     gs.questLog.toggle();
   }
 
@@ -69,6 +72,7 @@ export class InputRouter {
     gs.shopUI.close();
     gs.questLog.close();
     gs.displayUI.close();
+    gs.paintUI.close();
     gs.codexUI.toggle();
   }
 
@@ -91,10 +95,11 @@ export class InputRouter {
     const wasOpen =
       gs.invUI.open || gs.craftUI.open || gs.shopUI.open || gs.questLog.open ||
       gs.codexUI.open || gs.dialogue.open || gs.pauseMenu.open || gs.questComplete.open ||
-      gs.displayUI.open || gs.placement.active || gs.fishing.state !== 'idle';
+      gs.displayUI.open || gs.paintUI.open || gs.placement.active || gs.fishing.state !== 'idle';
     gs.invUI.close();
     gs.craftUI.close();
     gs.displayUI.close(); // 展示家具の選択パネル(何も入れずに閉じるだけ)
+    gs.paintUI.close(); // v12 いろみずの選択パネル(何も ぬらずに閉じるだけ)
     gs.shopUI.close();
     gs.questLog.close();
     gs.codexUI.close();

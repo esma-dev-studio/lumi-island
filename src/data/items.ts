@@ -17,6 +17,10 @@ export type ItemId =
   | 'starweed' | 'lightshell'
   // v11第2章 とうだいの あかりを ともす「ひかりのレンズ」(クラフトで作る だいじなもの)
   | 'lens'
+  // v12 くみあわせ: りょうり6種(キッチンだいが家にあると つくれる)
+  | 'd_grillfish' | 'd_mushsoup' | 'd_berrypie' | 'd_starmochi' | 'd_shellsoup' | 'd_nightgrill'
+  // v12 くみあわせ: いろみず4色(おいてある家具に ぬって 色を かえる)
+  | 'paint_red' | 'paint_blue' | 'paint_yellow' | 'paint_green'
   | 'f_bench' | 'f_lantern' | 'f_stonelamp' | 'f_table' | 'f_planter'
   | 'f_chair' | 'f_shelf' | 'f_rug' | 'f_pot' | 'f_sign'
   | 'f_flowerbed' | 'f_mushlamp' | 'f_shelldeco' | 'f_starlantern'
@@ -32,8 +36,13 @@ export type ItemId =
   | 'f_finetable' | 'f_fishtrophy' | 'f_starmap'
   // v11第2章 ロカのお礼レシピで作る「とうだいのランタン」(家に かざれる 小さな灯台)
   | 'f_lighthouse_lantern'
+  // v12 りょうりの入口(通常レシピ)と、くみあわせで見つかる かざり4種
+  | 'f_kitchen'
+  | 'f_sealamp' | 'f_starmobile' | 'f_shellwind' | 'f_terrarium'
   // v7-P2 模様替え(かべがみ・ゆかいた)。使っても無くならないので、各1個あれば足りる
   | 'wall_cream' | 'wall_sky' | 'wall_leaf'
+  // v12 くみあわせで見つかる かべがみの色版2枚
+  | 'wall_rose' | 'wall_night'
   | 'floor_wood' | 'floor_tile' | 'floor_rug';
 
 export type ToolId = 'axe' | 'pickaxe' | 'rod' | 'sickle' | 'net' | 'shovel';
@@ -98,6 +107,22 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     id: 'lens', name: 'ひかりのレンズ', sell: 0, kind: 'material', keyItem: true,
     desc: 'ひかりの貝と ほしくさと こうせきで つくった、とうだいの あかりの レンズ。うることは できない',
   },
+  // ---- v12 りょうり6種(くみあわせで見つかる)。食べると 小さな効果が しばらくつづく ----
+  // 「かざる」ためにも置けるので isPlaceable が true になる(kindは food のまま)。
+  // 効果の中身は src/systems/CookingEffects.ts の DISH_EFFECT がまとめて持つ。
+  d_grillfish: { id: 'd_grillfish', name: 'やきざかな', sell: 30, kind: 'food', desc: 'サカナを 木のえだで あぶった。こうばしい においが する' },
+  d_mushsoup: { id: 'd_mushsoup', name: 'きのこスープ', sell: 24, kind: 'food', desc: 'きのこを ことこと にこんだ スープ。林の においが する' },
+  d_berrypie: { id: 'd_berrypie', name: 'ベリーパイ', sell: 60, kind: 'food', desc: 'ルミベリーと ジャムの あまい パイ。やくと ほんのり 光る' },
+  d_starmochi: { id: 'd_starmochi', name: 'ほしくさもち', sell: 40, kind: 'food', desc: 'ほしくさの 穂を ついて まるめた おもち。だれかに わけたくなる' },
+  d_shellsoup: { id: 'd_shellsoup', name: 'ひかりスープ', sell: 55, kind: 'food', desc: 'ひかりの貝の スープ。のむと からだが ぽうっと あたたかい' },
+  d_nightgrill: { id: 'd_nightgrill', name: 'くしやき', sell: 50, kind: 'food', desc: 'ヨザカナを こえだの くしに さして やいた。よるの においが する' },
+  // ---- v12 いろみず4色(くみあわせで見つかる)----
+  // おいてある家具に ぬって 色を かえる。かべがみと同じで「つかっても 無くならない」
+  // (子どもが 何度でも ぬりなおせるように。src/systems/PlacementSystem.ts paint)。
+  paint_red: { id: 'paint_red', name: 'あかみず', sell: 20, kind: 'material', desc: '木の実から しぼった あかい いろみず。おいてある家具に ぬれる' },
+  paint_blue: { id: 'paint_blue', name: 'あおみず', sell: 20, kind: 'material', desc: 'こうせきと かいがらから とった あおい いろみず。おいてある家具に ぬれる' },
+  paint_yellow: { id: 'paint_yellow', name: 'きいろみず', sell: 20, kind: 'material', desc: 'のばなを にだした きいろい いろみず。おいてある家具に ぬれる' },
+  paint_green: { id: 'paint_green', name: 'みどりみず', sell: 20, kind: 'material', desc: 'ヒカリゴケと草の みどりの いろみず。おいてある家具に ぬれる' },
   f_bench: { id: 'f_bench', name: 'ウッドベンチ', sell: 30, kind: 'furniture', desc: 'すわってひと休みできるベンチ' },
   f_lantern: { id: 'f_lantern', name: 'ランタン', sell: 40, kind: 'furniture', desc: '夜をやさしく照らす', glow: true },
   f_stonelamp: { id: 'f_stonelamp', name: 'いしのランプ', sell: 55, kind: 'furniture', desc: 'ルミナこうせきの明かり', glow: true },
@@ -140,6 +165,13 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   },
   // ---- v10 展示家具: つった魚を 入れて かざる ----
   f_aquarium: { id: 'f_aquarium', name: 'すいそう', sell: 48, kind: 'furniture', desc: 'つった魚を えらんで 入れられる ガラスの水そう。中を 魚が およぐ' },
+  // ---- v12 りょうりの入口。家の中に おくと、くみあわせの りょうりが つくれるようになる ----
+  f_kitchen: { id: 'f_kitchen', name: 'キッチンだい', sell: 50, kind: 'furniture', desc: '木のてんばんと なべの ある だいどころの台。家の中に おくと りょうりが できる' },
+  // ---- v12 くみあわせで見つかる かざり4種 ----
+  f_sealamp: { id: 'f_sealamp', name: 'うみのランプ', sell: 58, kind: 'furniture', glow: true, desc: 'ひかりの貝を 木のわくに ならべた ランプ。夜は あお白く ともる' },
+  f_starmobile: { id: 'f_starmobile', name: 'ほしのモビール', sell: 54, kind: 'furniture', glow: true, desc: 'ほしくさの 穂を つるした モビール。夜は 穂が ほしくずのように 光る' },
+  f_shellwind: { id: 'f_shellwind', name: 'かいのふうりん', sell: 40, kind: 'furniture', desc: 'こえだに かいがらを ぶらさげた ふうりん。風で かろやかに 鳴る' },
+  f_terrarium: { id: 'f_terrarium', name: 'こけのびん', sell: 62, kind: 'furniture', glow: true, desc: 'ガラスの うつわに ヒカリゴケを もりつけた かざり。夜は みどりに ほんのり 光る' },
   // ---- v7-P2 模様替え(室内で「つかう」。何度でも かえられる) ----
   // 名前は6文字までにする。もちものの1マスは4文字ほどで折り返すので、
   // 「クリームのかべがみ」のような長い名前は3〜4行に割れて読みにくい(実機のスクショで確認)。
@@ -147,6 +179,9 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   wall_cream: { id: 'wall_cream', name: 'クリームかべ', sell: 40, kind: 'decor', desc: 'あたたかいクリーム色のかべがみ。しっくいのような ざらり感' },
   wall_sky: { id: 'wall_sky', name: 'そら色のかべ', sell: 40, kind: 'decor', desc: 'あわいそら色に 白いたてじまのかべがみ' },
   wall_leaf: { id: 'wall_leaf', name: 'わかばのかべ', sell: 40, kind: 'decor', desc: 'わかば色の地に 小さな葉っぱのもようのかべがみ' },
+  // v12 くみあわせで見つかる かべがみの色版2枚(いろみずと同じ「色であそぶ」なかま)
+  wall_rose: { id: 'wall_rose', name: 'ももいろかべ', sell: 40, kind: 'decor', desc: '木の実で そめた ももいろの かべがみ。小さな 白い水玉つき' },
+  wall_night: { id: 'wall_night', name: 'ほしぞらかべ', sell: 40, kind: 'decor', desc: 'こんいろの地に ほしのかけらを ちりばめた かべがみ' },
   floor_wood: { id: 'floor_wood', name: '木のゆか', sell: 40, kind: 'decor', desc: 'いた目のある あたたかい木のゆかいた' },
   floor_tile: { id: 'floor_tile', name: 'タイルのゆか', sell: 40, kind: 'decor', desc: '白いタイルと めじの線。すっきりしたゆかいた' },
   floor_rug: { id: 'floor_rug', name: 'ラグのゆか', sell: 40, kind: 'decor', desc: '一面がおりもののゆかいた。ふかふかに見える' },
@@ -186,9 +221,74 @@ export function canDisplayIn(furniture: DisplayFurnitureId, item: string): boole
   return (DISPLAY_FURNITURE[furniture].accepts as readonly string[]).includes(item);
 }
 
+// ---------------------------------------------------------------------------
+// v12 りょうり(くみあわせで見つかる 食べもの)。
+//
+// この配列だけが「りょうりか どうか」の情報源。ここに載っているものは
+//   - もちものに「たべる」が出る(効果は src/systems/CookingEffects.ts)
+//   - 家に かざれる(isPlaceable が true。テーブルの上の小物として置ける)
+//   - おくりものにできる(kind が food なので giftableItems にそのまま乗る)
+// の3つが同時に成り立つ。ItemDef.kind は 'food' のままにしてある:
+// kind を furniture にすると「もちもの」で食べものに見えなくなるため。
+// ---------------------------------------------------------------------------
+export const COOKED_FOODS = [
+  'd_grillfish', 'd_mushsoup', 'd_berrypie', 'd_starmochi', 'd_shellsoup', 'd_nightgrill',
+] as const satisfies readonly ItemId[];
+
+export type CookedFoodId = (typeof COOKED_FOODS)[number];
+
+/** りょうりか(「たべる」ボタン・かざれるかの判定はここを通す) */
+export function isCookedFood(item: string): item is CookedFoodId {
+  return (COOKED_FOODS as readonly string[]).includes(item);
+}
+
+/**
+ * 置ける(配置モードに入れる)ものか。
+ * ふつうの家具に加えて、りょうりも「テーブルの上の小物」として置ける。
+ * もちものの「おく」ボタン・セーブの家具の検証・配置システムは すべてここを通す
+ * (どこか1か所だけ通し忘れると「置けたのにロードで消える」が起きる)。
+ */
+export function isPlaceable(item: string): boolean {
+  if (!(item in ITEMS)) return false;
+  return ITEMS[item as ItemId].kind === 'furniture' || isCookedFood(item);
+}
+
+// ---------------------------------------------------------------------------
+// v12 いろみず(おいてある家具の 色を かえる)。
+//
+// 色は「決定論のパレット」: ゲームの中で すでに使っている色から取っている
+// (赤=とうだいの帯 / 青=トロフィーの魚 / 黄=ランタンの灯り / 緑=草)。
+// 彩度を上げすぎると 原色のおもちゃに見える(教訓1)ので、どれも にごった色にそろえる。
+// 保存するのは この表の hex だけ(SaveSystem が検証して、知らない色は捨てる)。
+// ---------------------------------------------------------------------------
+export const PAINT_COLORS = {
+  paint_red: { label: 'あか', hex: '#c9705c' },
+  paint_blue: { label: 'あお', hex: '#7aa8d4' },
+  paint_yellow: { label: 'きいろ', hex: '#dcb56a' },
+  paint_green: { label: 'みどり', hex: '#7aa85f' },
+} as const satisfies Partial<Record<ItemId, { label: string; hex: string }>>;
+
+export type PaintId = keyof typeof PAINT_COLORS;
+
+/** いろみずか(もちものの「ぬる」・Eの候補の判定はここを通す) */
+export function isPaint(item: string): item is PaintId {
+  return Object.prototype.hasOwnProperty.call(PAINT_COLORS, item);
+}
+
+/** 保存してよい家具の色か(セーブの検証。この表にない色は「色なし」に落とす) */
+export function isPaintColor(hex: unknown): hex is string {
+  return typeof hex === 'string' && Object.values(PAINT_COLORS).some((p) => p.hex === hex);
+}
+
+/** もちものの中の いろみず(ならびは PAINT_COLORS の順で固定) */
+export function ownedPaints(inventory: Partial<Record<ItemId, number>>): PaintId[] {
+  return (Object.keys(PAINT_COLORS) as PaintId[]).filter((id) => (inventory[id] ?? 0) > 0);
+}
+
 /** 模様替えアイテムが かべ・ゆか のどちらを かえるか(この表にあるものだけ「つかう」が出る) */
 export const DECOR_SLOT = {
   wall_cream: 'wall', wall_sky: 'wall', wall_leaf: 'wall',
+  wall_rose: 'wall', wall_night: 'wall',
   floor_wood: 'floor', floor_tile: 'floor', floor_rug: 'floor',
 } as const satisfies Partial<Record<ItemId, 'wall' | 'floor'>>;
 
@@ -290,6 +390,29 @@ export const RECIPES: RecipeDef[] = [
   { id: 'r_lens', name: 'ひかりのレンズ', out: 'lens', outKind: 'item', cost: { lightshell: 3, starweed: 2, ore: 2 } },
   // とうだいのランタン: ロカと なかよし度5の お礼でおぼえる(ほかの3人と同じ流儀)
   { id: 'r_lighthouse_lantern', name: 'とうだいのランタン', out: 'f_lighthouse_lantern', outKind: 'item', cost: { lightshell: 2, wood: 2 } },
+  // ---- v12 りょうりの入口。ふつうのレシピ(最初から見える)----
+  // これを家の中に おくと、くみあわせタブの りょうりが つくれるようになる。
+  { id: 'r_kitchen', name: 'キッチンだい', out: 'f_kitchen', outKind: 'item', cost: { wood: 4, stone: 2, clay: 1 } },
+  // ---- v12 くみあわせで見つかる16種 ----
+  // どれも INITIAL_RECIPES にも RECIPE_DISCOVERY にも入れない。
+  // 入手経路は「くみあわせタブで ためして 当てる」だけ(src/data/combos.ts)。
+  // 材料は COMBOS の inputs と必ず同じにする(validateComboData が機械検査する)。
+  { id: 'r_grillfish', name: 'やきざかな', out: 'd_grillfish', outKind: 'item', cost: { fish: 1, wood: 1 } },
+  { id: 'r_mushsoup', name: 'きのこスープ', out: 'd_mushsoup', outKind: 'item', cost: { mushroom: 2, cutgrass: 1 } },
+  { id: 'r_berrypie', name: 'ベリーパイ', out: 'd_berrypie', outKind: 'item', cost: { berry: 2, jam: 1 } },
+  { id: 'r_starmochi', name: 'ほしくさもち', out: 'd_starmochi', outKind: 'item', cost: { starweed: 2, straw: 1 } },
+  { id: 'r_shellsoup', name: 'ひかりスープ', out: 'd_shellsoup', outKind: 'item', cost: { lightshell: 2, moss: 1 } },
+  { id: 'r_nightgrill', name: 'くしやき', out: 'd_nightgrill', outKind: 'item', cost: { nightfish: 1, twig: 1 } },
+  { id: 'r_paint_red', name: 'あかみず', out: 'paint_red', outKind: 'item', cost: { berry: 3 } },
+  { id: 'r_paint_blue', name: 'あおみず', out: 'paint_blue', outKind: 'item', cost: { ore: 1, shell: 2 } },
+  { id: 'r_paint_yellow', name: 'きいろみず', out: 'paint_yellow', outKind: 'item', cost: { flower: 3 } },
+  { id: 'r_paint_green', name: 'みどりみず', out: 'paint_green', outKind: 'item', cost: { moss: 2, cutgrass: 1 } },
+  { id: 'r_wall_rose', name: 'ももいろかべ', out: 'wall_rose', outKind: 'item', cost: { berry: 2, fiber: 1 } },
+  { id: 'r_wall_night', name: 'ほしぞらかべ', out: 'wall_night', outKind: 'item', cost: { starshard: 1, moss: 2 } },
+  { id: 'r_sealamp', name: 'うみのランプ', out: 'f_sealamp', outKind: 'item', cost: { lightshell: 2, wood: 1 } },
+  { id: 'r_starmobile', name: 'ほしのモビール', out: 'f_starmobile', outKind: 'item', cost: { starweed: 2, fiber: 1 } },
+  { id: 'r_shellwind', name: 'かいのふうりん', out: 'f_shellwind', outKind: 'item', cost: { shell: 2, twig: 1 } },
+  { id: 'r_terrarium', name: 'こけのびん', out: 'f_terrarium', outKind: 'item', cost: { moss: 2, glassfloat: 1 } },
 ];
 
 // 最初から知っているレシピ。
@@ -302,11 +425,14 @@ export const RECIPES: RecipeDef[] = [
 // v9: 道具(虫あみ・シャベル)は「作ると新しい素材がとれる」階段の入口なので最初から見せる。
 // わらのマットも同じ理由(カマ→わら→マット の1歩目を見せる)。
 // むしかご・いにしえのつぼ・かかしは、その道具でとれた素材の初回入手でひらめく。
+// v12: キッチンだいも最初から見せる。くみあわせタブの りょうりが
+// 「キッチンだいが あれば つくれそう」と出たときに、作りかたが すぐ見つかるようにする。
 export const INITIAL_RECIPES = [
   'r_sickle', 'r_rod', 'r_flowerbed', 'r_shelldeco',
   'r_bookcase', 'r_dishrack', 'r_flowervase', 'r_wall_leaf', 'r_floor_rug',
   'r_broom', 'r_jar', 'r_gardentable',
   'r_net', 'r_shovel', 'r_strawmat',
+  'r_kitchen',
 ];
 
 // ツムギの店で買える家具・かべがみ・ゆかいた
@@ -362,6 +488,20 @@ export function validateItemData(): string[] {
     for (const it of accepts) {
       if (!(it in ITEMS)) problems.push(`展示家具${id}に入れる${it}が存在しない`);
     }
+  }
+  // v12 りょうり: 実在して kind が food か(kindがちがうと「たべる」が出ない)
+  for (const id of COOKED_FOODS) {
+    if (!(id in ITEMS)) problems.push(`りょうり${id}が存在しない`);
+    else if (ITEMS[id].kind !== 'food') problems.push(`りょうり${id}のkindがfoodでない`);
+    else if (!isPlaceable(id)) problems.push(`りょうり${id}が置けない`);
+  }
+  // v12 いろみず: 実在して、色が重ならないか(同じ色が2つあると ぬり分けが見分けられない)
+  const hexes = new Set<string>();
+  for (const [id, def] of Object.entries(PAINT_COLORS)) {
+    if (!(id in ITEMS)) problems.push(`いろみず${id}が存在しない`);
+    if (!/^#[0-9a-f]{6}$/.test(def.hex)) problems.push(`いろみず${id}の色が不正`);
+    if (hexes.has(def.hex)) problems.push(`いろみず${id}の色が重複`);
+    hexes.add(def.hex);
   }
   return problems;
 }

@@ -221,10 +221,88 @@ function drawFloorRug(c: Ctx): void {
   }
 }
 
+/**
+ * v12 くみあわせで見つかる かべがみ「ももいろのかべ」。
+ * 木の実で そめた ももいろの地に、白い水玉と 紙の目。
+ * 水玉は はみ出したぶんを 反対がわにも描いて タイルをつなげる(わかばのかべと同じ流儀)。
+ */
+function drawWallRose(c: Ctx): void {
+  c.fillStyle = '#e8cdd2';
+  c.fillRect(0, 0, TEX, TEX);
+  // そめむら(たての はけ目)。単色べた塗りにしない
+  for (let i = 0; i < 26; i++) {
+    c.fillStyle = rnd(i * 7 + 3) > 0.5 ? 'rgba(240,214,218,0.5)' : 'rgba(206,158,166,0.28)';
+    c.fillRect(rnd(i * 7 + 5) * TEX, 0, M(0.02 + rnd(i * 7 + 9) * 0.03), TEX);
+  }
+  // 白い水玉(直径6cm・25cm間かくの ちどり)
+  const pitch = TEX / 4;
+  for (let gy = 0; gy < 4; gy++) {
+    for (let gx = 0; gx < 4; gx++) {
+      const cx = gx * pitch + (gy % 2 ? pitch * 0.5 : 0) + pitch * 0.25;
+      const cy = gy * pitch + pitch * 0.25;
+      for (const [ox, oy] of [[0, 0], [TEX, 0], [-TEX, 0], [0, TEX], [0, -TEX]]) {
+        c.beginPath();
+        c.arc(cx + ox, cy + oy, M(0.03), 0, Math.PI * 2);
+        c.fillStyle = 'rgba(252,246,244,0.92)';
+        c.fill();
+        c.strokeStyle = 'rgba(214,166,174,0.5)';
+        c.lineWidth = M(0.005);
+        c.stroke();
+      }
+    }
+  }
+  // 紙のざらり感
+  for (let i = 0; i < 1400; i++) {
+    c.fillStyle = rnd(i * 3 + 17) > 0.5 ? 'rgba(255,250,250,0.45)' : 'rgba(196,146,154,0.24)';
+    c.fillRect(rnd(i * 3 + 19) * TEX, rnd(i * 3 + 23) * TEX, M(0.008), M(0.008));
+  }
+}
+
+/**
+ * v12 くみあわせで見つかる かべがみ「ほしぞらのかべ」。
+ * こんいろの地(ほしぞらのちず f_starmap と同じ系統の色)に 星を ちりばめる。
+ * 星は大きさを3段階にして ならびも ふぞろいにする
+ * (等間かくだと「もよう」に見えて 空にならない)。
+ */
+function drawWallNight(c: Ctx): void {
+  c.fillStyle = '#2f3e5c';
+  c.fillRect(0, 0, TEX, TEX);
+  // 夜空の むら(うすい雲)
+  for (let i = 0; i < 22; i++) {
+    c.beginPath();
+    c.arc(rnd(i * 11 + 3) * TEX, rnd(i * 11 + 7) * TEX, M(0.12 + rnd(i * 11 + 13) * 0.18), 0, Math.PI * 2);
+    c.fillStyle = rnd(i * 11 + 17) > 0.5 ? 'rgba(70,92,132,0.24)' : 'rgba(30,42,68,0.28)';
+    c.fill();
+  }
+  // 星(60こ)。3段階の大きさ+大きいものだけ 十字の光すじ
+  for (let i = 0; i < 60; i++) {
+    const x = rnd(i * 5 + 1) * TEX;
+    const y = rnd(i * 5 + 2) * TEX;
+    const big = rnd(i * 5 + 3);
+    const r = M(big > 0.9 ? 0.016 : big > 0.6 ? 0.009 : 0.005);
+    c.beginPath();
+    c.arc(x, y, r, 0, Math.PI * 2);
+    c.fillStyle = i % 5 === 1 ? '#fff6d8' : '#e8eeff';
+    c.fill();
+    if (big > 0.9) {
+      c.strokeStyle = 'rgba(232,238,255,0.6)';
+      c.lineWidth = M(0.004);
+      c.beginPath();
+      c.moveTo(x - r * 2.6, y);
+      c.lineTo(x + r * 2.6, y);
+      c.moveTo(x, y - r * 2.6);
+      c.lineTo(x, y + r * 2.6);
+      c.stroke();
+    }
+  }
+}
+
 const PAINTERS: Record<DecorId, (c: Ctx) => void> = {
   wall_cream: drawWallCream,
   wall_sky: drawWallSky,
   wall_leaf: drawWallLeaf,
+  wall_rose: drawWallRose,
+  wall_night: drawWallNight,
   floor_wood: drawFloorWood,
   floor_tile: drawFloorTile,
   floor_rug: drawFloorRug,
