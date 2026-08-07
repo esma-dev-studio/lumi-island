@@ -56,6 +56,6 @@
  "nodeCount": 81,
  "bugSpots": 1,
  "digSpots": 4,
- "circleColliders": 101,
- "rectColliders": 16
+ "circleColliders": 105,
+ "rectColliders": 22
 }
