@@ -5,6 +5,10 @@ import { ACHIEVEMENTS } from '../systems/AchievementSystem';
 import { rewardKey } from '../systems/AchievementRewards';
 import { errandsOfDay } from '../systems/BulletinSystem';
 import { todayCard } from '../systems/TodayCard';
+import {
+  festivalAttendees, festivalFlyCount, isFestivalDay, isFestivalTime,
+} from '../systems/FestivalSystem';
+import { lanternFlightState } from '../entities/effects';
 
 /** debugフラグのときだけ window.__lumiDebug を生やす */
 export function installLumiDebugApi(gs: GameScene): void {
@@ -35,6 +39,24 @@ export function installLumiDebugApi(gs: GameScene): void {
     errands: () => errandsOfDay(gs.state, gs.island.time.day),
     /** v15 朝の「きょうの島」カードの中身。読み取りだけ(出すかどうかは GameScene が決める) */
     todayCard: () => todayCard(gs.state, gs.island.time.day),
+    /**
+     * v16 ほしまつりの ようす(読み取りだけ)。
+     * E2E・撮影ハーネスが「かざりが出ているか・だれが集まっているか・
+     * ランタンが何こ のぼっているか」を そのまま読めるようにしてある。
+     */
+    festival: () => ({
+      day: gs.island.time.day,
+      hour: gs.island.time.hour,
+      isDay: isFestivalDay(gs.island.time.day),
+      isTime: isFestivalTime(gs.island.time.day, gs.island.time.hour),
+      decor: gs.island.festivalDecorOn,
+      attendees: festivalAttendees(gs.state),
+      stands: festivalAttendees(gs.state).map((id) => gs.npcs.positionOf(id)),
+      progress: gs.state.festival ?? null,
+      flyTotal: festivalFlyCount(gs.state),
+      sequence: gs.seq.current,
+      lanterns: lanternFlightState(),
+    }),
     /**
      * v13 じっせきの ごほうびを「もう受けとった」ことにする(何も もらわずに 印だけ立てる)。
      *

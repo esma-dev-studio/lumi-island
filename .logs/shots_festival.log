@@ -1,0 +1,22 @@
+  saved v16_card_eve.png
+  saved v16_card_day.png
+  saved v16_morning_pier.png
+  saved v16_morning_close.png
+  festival: {"day":7,"hour":18.50858800000191,"isDay":true,"isTime":true,"decor":true,"attendees":["minamo","nokto","tsumugi","roka"],"stands":[{"x":4.157084590215854,"y":0.6167600454410539,"z":34.49347292806197,"hidden":false},{"x":2.0999999999999996,"y":0.7423138745457233,"z":33.2,"hidden":false},{"x":3.6662717980198893,"y":0.9229874027573786,"z":30.977244301350467,"hidden":false},{"x":5.404919837496675,"y":0.6846190994279856,"z":33.73244891001862,"hidden":false}],"progress":null,"flyTotal":0,"sequence":"idle","lanterns":{"count":0,"t":0,"topY":0,"reflections":0}}
+  saved v16_gather.png
+  saved v16_gather_close.png
+  hint@stand: Eほしランタンを もらう
+  saved v16_stand_hint.png
+  got: {"day":7,"got":true,"flown":false}
+  hint@tip: Eランタンを とばす
+  saved v16_fly_hint.png
+  saved v16_fly_1.png
+  saved v16_fly_2.png
+  saved v16_fly_3.png
+  saved v16_fly_wide.png
+  lanterns: {"count":7,"t":9.961399999976155,"topY":11.455609999972578,"reflections":7}
+  saved v16_fly_after.png
+  after: {"day":7,"got":false,"flown":true}
+  next morning decor: false
+  saved v16_next_morning.png
+コンソールエラー: なし

@@ -1,0 +1,6 @@
+[31merror when starting dev server:
+Error: Port 5204 is already in use
+    at Server.onError (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:25119:18)
+    at Server.emit (node:events:508:28)
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)[39m

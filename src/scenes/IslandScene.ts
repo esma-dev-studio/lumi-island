@@ -24,8 +24,11 @@ import { makeBugMesh, type BugMesh } from '../entities/bugs';
 import { buildHouse, makeBench, makeLamp, makeStoneRing } from '../entities/buildings';
 import {
   makeLogPile, makeCrate, makeBucketRod, makeTelescope, makeDriftwood, makeStump, makeMessageBottle,
-  makeBulletinBoard,
+  makeBulletinBoard, makeFestivalGarland, makeFestivalPole, makeFestivalStand,
 } from '../entities/props';
+import {
+  FESTIVAL_PLAZA, FESTIVAL_POLES, FESTIVAL_POLE_R, FESTIVAL_STAND_R,
+} from '../systems/FestivalSystem';
 import {
   GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, STAR_SPOTS, DRIFT_SPOTS, SEABIRD_CIRCLES,
   BUG_SPOTS, DIG_SPOTS, BOTTLE_SPOTS, BULLETIN_BOARD,
@@ -162,6 +165,12 @@ export class IslandScene {
   private bugs = new BugScheduler(BUG_SPOTS);
   private bugMeshes = new Map<number, { id: BugId; m: BugMesh }>();
   private bugPool = new Map<BugId, BugMesh[]>();
+  // ---- v16 ほしまつりの かざり(まつりの日だけ 出る) ----
+  // 見た目も 当たり判定も「出ているあいだだけ」有効にする。ふだんの浜べに
+  // 見えない当たり判定が のこると、そこだけ 歩けない砂ができてしまう(教訓5の連結成分)。
+  private festivalNodes: Mesh[] = [];
+  private festivalCircles: CircleCollider[] = [];
+  private festivalOn = false;
   // ---- v9 ほりあと(毎日3〜4箇所) ----
   private digs = new DigScheduler(DIG_SPOTS.length);
   private digMeshes = new Map<number, Mesh>();
@@ -387,6 +396,9 @@ export class IslandScene {
       Math.atan2(BULLETIN_BOARD.x, BULLETIN_BOARD.z), 0.4
     );
 
+    // ---- v16 ほしまつりの かざり(桟橋のたもと。まつりの日だけ 出す) ----
+    this.buildFestivalDecor(caster);
+
     // ---- 観測コーナー(デッキの右奥にひとかたまり。ばらまかない) ----
     // 座標は据え置き(会話カメラの見どころ DIALOGUE_BACKDROPS が望遠鏡の位置を参照している)。
     // 3つともデッキの上に載るので、putPropのgroundYでデッキ床に立つ。
@@ -547,6 +559,70 @@ export class IslandScene {
     this.dayNight.update(this.time.hour);
   }
 
+  // ---------- v16 ほしまつりの かざり ----------
+  /**
+   * 桟橋のたもとの かざり一式(柱2本+旗のガーランド+ちょうちん+ランタンの台)。
+   *
+   * build のときに1回だけ作り、ふだんは setEnabled(false) でしまっておく
+   * (まつりの日の朝に GameScene が setFestivalDecor(true) を呼ぶ)。
+   * ——「出ていない間の負荷はゼロ」は 水平線のきらめき・よるの でんしゃと同じ約束。
+   * 当たり判定(柱・台)も 出ているあいだだけ effective になる(resolveCollision を参照)。
+   */
+  private buildFestivalDecor(caster: (m: Mesh, receive?: boolean) => void): void {
+    const s = this.scene;
+    // 柱2本。かざりの面(ちょうちんを つるした側)を まつりの輪のほうへ向ける
+    for (let i = 0; i < FESTIVAL_POLES.length; i++) {
+      const p = FESTIVAL_POLES[i];
+      const pole = makeFestivalPole(s, 11 + i * 7);
+      pole.position.set(p.x, this.groundY(p.x, p.z) - 0.02, p.z);
+      pole.rotation.y = Math.atan2(FESTIVAL_PLAZA.x - p.x, FESTIVAL_PLAZA.z - p.z);
+      caster(pole);
+      this.festivalNodes.push(pole);
+      this.festivalCircles.push({ x: p.x, z: p.z, r: FESTIVAL_POLE_R });
+    }
+    // 旗のガーランド(柱と柱のあいだに たるませて かける)
+    const a = FESTIVAL_POLES[0];
+    const b = FESTIVAL_POLES[1];
+    const span = Math.hypot(b.x - a.x, b.z - a.z);
+    const garland = makeFestivalGarland(s, span, 0.45, 3);
+    // ローカル+Xを 柱から柱への向きに合わせる(Y回転は +X → (cos, -sin))
+    garland.rotation.y = Math.atan2(-(b.z - a.z), b.x - a.x);
+    garland.position.set(
+      (a.x + b.x) / 2,
+      Math.min(this.groundY(a.x, a.z), this.groundY(b.x, b.z)) + 2.41,
+      (a.z + b.z) / 2
+    );
+    caster(garland, false); // うすい布と ひもなので 影は受けない(アクネ防止)
+    this.festivalNodes.push(garland);
+    // ランタンの台(輪のまん中)。布のたれた 正面(+Z)を 浜がわ(-Z)へ向ける
+    const stand = makeFestivalStand(s);
+    stand.position.set(FESTIVAL_PLAZA.x, this.groundY(FESTIVAL_PLAZA.x, FESTIVAL_PLAZA.z) - 0.02, FESTIVAL_PLAZA.z);
+    stand.rotation.y = Math.PI;
+    caster(stand);
+    this.festivalNodes.push(stand);
+    this.festivalCircles.push({ x: FESTIVAL_PLAZA.x, z: FESTIVAL_PLAZA.z, r: FESTIVAL_STAND_R });
+    // 足もとの 光だまり(夜、砂が あたたかく にじむ)。台と一緒に 出し入れする
+    const pool = attachLightPool(stand, 0, 0, 2.4, 'amber');
+    if (pool) this.festivalNodes.push(pool);
+    for (const m of this.festivalNodes) m.setEnabled(false);
+  }
+
+  /** かざりを 出す/しまう(まつりの日の朝〜夜だけ true)。連続で呼んでよい */
+  setFestivalDecor(on: boolean): void {
+    if (this.festivalOn === on) return;
+    this.festivalOn = on;
+    for (const m of this.festivalNodes) m.setEnabled(on);
+    // 夜のプレイヤー近傍ライトの「あかりのある場所」も、出ているあいだだけ登録する
+    const y = this.groundY(FESTIVAL_PLAZA.x, FESTIVAL_PLAZA.z) + 1.1;
+    if (on) registerGlowSource(FESTIVAL_PLAZA.x, y, FESTIVAL_PLAZA.z);
+    else unregisterGlowSource(FESTIVAL_PLAZA.x, FESTIVAL_PLAZA.z);
+  }
+
+  /** かざりが 出ているか(検証・撮影用) */
+  get festivalDecorOn(): boolean {
+    return this.festivalOn;
+  }
+
   /** 島の上でそこに立てるか(歩けて、コライダーに押し出されない)。出口の実測に使う */
   private canStandOutdoor(x: number, z: number): boolean {
     if (!walkableGround(x, z)) return false;
@@ -689,8 +765,23 @@ export class IslandScene {
     return walkableGround(x, z); // 高さの規則はterrain.tsに1本化(釣りの水面判定と同じ情報源)
   }
 
-  /** 円・矩形コライダーの押し出し */
+  /**
+   * 円・矩形コライダーの押し出し。
+   * v16: まつりの かざり(柱・台)は「出ているあいだだけ」当たり判定に入れる
+   * ——ふだんの浜べに 見えない壁を のこさないため。
+   */
   resolveCollision(x: number, z: number, radius: number): [number, number] {
+    if (this.festivalOn) {
+      for (const c of this.festivalCircles) {
+        const dx = x - c.x, dz = z - c.z;
+        const d = Math.hypot(dx, dz);
+        const min = c.r + radius;
+        if (d < min && d > 1e-4) {
+          x = c.x + (dx / d) * min;
+          z = c.z + (dz / d) * min;
+        }
+      }
+    }
     for (const c of this.circles) {
       const dx = x - c.x, dz = z - c.z;
       const d = Math.hypot(dx, dz);

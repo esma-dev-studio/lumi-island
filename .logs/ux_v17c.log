@@ -1,0 +1,17 @@
+
+> lumi-island@0.1.0 test:ux
+> node tools/ux_bot.mjs
+
+[00:09] タイトル表示
+[00:12] ゲーム開始
+[00:13] 目標表示: いまやること / WASDか矢印キーで あるいてみよう
+[00:14] 目標表示: いまやること / ツムギの はなしを聞こう
+[00:14] 進捗表示: → 3m
+[00:16] 最初の会話が開いた
+[00:17] 目標表示: いまやること / もくざいを あつめよう
+[00:17] (1) 最初の依頼を受注できた
+[00:17] 進捗表示: 0 / 5　→ 19m
+[00:18] 進捗表示: 0 / 5　→ 17m
+[00:19] 進捗表示: 0 / 5　→ 16m
+RESULT {"result":"error: Protocol error (Input.dispatchKeyEvent): Target closed","totalSec":38,"errors":0,"flags":{"title":true,"firstTalk":true,"accepted":true,"gathered":false,"reported":false,"second":false,"materials":false,"crafted":false,"placed":false,"placeConfirmed":false}}
+UX {"uxVerdict":"FAIL","semanticMismatchCount":0,"refishDuringReportCount":0,"shopOpens":0,"stallCount":0}

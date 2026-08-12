@@ -1,4 +1,4 @@
-// v14 バッジ(103個)の データ表。**ロジックはここに書かない**(純データ)。
+// v14 バッジ(v16で106個)の データ表。**ロジックはここに書かない**(純データ)。
 //
 // 考え方:
 //   - じっせき(AchievementSystem)は「ゲームの節目」を24個だけ ならべたもの。
@@ -80,7 +80,7 @@ export function achSource(achievementId: string): string {
 }
 
 /**
- * バッジ103個。
+ * バッジ106個。
  *
  * 数え方の出どころは3つだけ:
  *   codex … 種類ごとの累計入手数(売っても かざっても 減らない)
@@ -112,7 +112,7 @@ export const BADGES: BadgeDef[] = [
   { id: 'fi_c1', name: 'つり 3びき', desc: 'サカナを ぜんぶで 3びき つろう', cat: 'fish', tier: 'bronze', src: 'fish_total', target: 3, pict: 'fish' },
   { id: 'fi_c2', name: 'つり 15ひき', desc: 'サカナを ぜんぶで 15ひき つろう', cat: 'fish', tier: 'silver', src: 'fish_total', target: 15, pict: 'fish' },
   { id: 'fi_c3', name: 'つり 40ぴき', desc: 'サカナを ぜんぶで 40ぴき つろう', cat: 'fish', tier: 'gold', src: 'fish_total', target: 40, pict: 'rod' },
-  { id: 'fi_kinds', name: 'さかな 4しゅるい', desc: 'サカナ・ヨザカナ・あおうお・にじうおを ぜんぶ つろう', cat: 'fish', tier: 'gold', src: 'fish_kinds', target: 4, pict: 'rarefish' },
+  { id: 'fi_kinds', name: 'さかな 4しゅるい', desc: 'ちがう さかなを 4しゅるい つろう', cat: 'fish', tier: 'gold', src: 'fish_kinds', target: 4, pict: 'rarefish' },
   { id: 'fi_sea', name: 'あおうお 5ひき', desc: 'ひるの さんばしで あおうおを 5ひき つろう', cat: 'fish', tier: 'bronze', src: 'seafish', target: 5, pict: 'seafish' },
   { id: 'fi_night', name: 'ヨザカナ 5ひき', desc: 'よるの 池や海で ヨザカナを 5ひき つろう', cat: 'fish', tier: 'silver', src: 'nightfish', target: 5, pict: 'nightfish' },
   { id: 'fi_rare1', name: 'にじうお 1ぴき', desc: 'よるの さんばしで にじうおを つろう', cat: 'fish', tier: 'silver', src: 'rarefish', target: 1, pict: 'rarefish' },
@@ -125,7 +125,7 @@ export const BADGES: BadgeDef[] = [
   { id: 'bu_c1', name: 'むし 3びき', desc: '虫を ぜんぶで 3びき つかまえよう', cat: 'bug', tier: 'bronze', src: 'bug_total', target: 3, pict: 'b_shiro' },
   { id: 'bu_c2', name: 'むし 15ひき', desc: '虫を ぜんぶで 15ひき つかまえよう', cat: 'bug', tier: 'silver', src: 'bug_total', target: 15, pict: 'b_tento' },
   { id: 'bu_c3', name: 'むし 40ぴき', desc: '虫を ぜんぶで 40ぴき つかまえよう', cat: 'bug', tier: 'gold', src: 'bug_total', target: 40, pict: 'net' },
-  { id: 'bu_kinds', name: 'むし 6しゅるい', desc: '6しゅるいの 虫を ぜんぶ つかまえよう', cat: 'bug', tier: 'gold', src: 'bug_kinds', target: 6, pict: 'b_kabuto' },
+  { id: 'bu_kinds', name: 'むし 6しゅるい', desc: 'ちがう 虫を 6しゅるい つかまえよう', cat: 'bug', tier: 'gold', src: 'bug_kinds', target: 6, pict: 'b_kabuto' },
   { id: 'bu_kabuto', name: 'カブトムシ 1ぴき', desc: 'ひるの 林の木の みきを さがしてみよう', cat: 'bug', tier: 'silver', src: 'bug_kabuto', target: 1, pict: 'b_kabuto' },
   { id: 'bu_ageha', name: 'アゲハ 3びき', desc: 'アゲハチョウを 3びき つかまえよう', cat: 'bug', tier: 'silver', src: 'bug_ageha', target: 3, pict: 'b_ageha' },
   { id: 'bu_hotaru', name: 'ホタル 3びき', desc: 'よるの 池のまわりで ホタルを 3びき つかまえよう', cat: 'bug', tier: 'bronze', src: 'bug_hotaru', target: 3, pict: 'b_hotaru' },
@@ -218,6 +218,12 @@ export const BADGES: BadgeDef[] = [
   { id: 'dy_walk2', name: 'あるいた 3000m', desc: '島を あわせて 3000メートル あるこう', cat: 'daily', tier: 'silver', src: 'walk_m', target: 3000, pict: 'f_sign' },
   { id: 'dy_walk3', name: 'あるいた 10000m', desc: '島を あわせて 10000メートル あるこう', cat: 'daily', tier: 'gold', src: 'walk_m', target: 10000, pict: 'f_pinwheel' },
   { id: 'dy_lumina', name: 'ルミナ 1000', desc: 'ルミナを 1000 ためよう', cat: 'daily', tier: 'silver', src: 'lumina', target: 1000, pict: 'lumina' },
+  // v16 ほしまつり(7日ごと)。「まいにち」に入れてあるのは、
+  // 島のくらしの ものさし(日づけ・ねた回数・あるいた ながさ)と 同じ たぐいの
+  // 「つづけて あそぶと たまる」目標だから。数えるのは とばした回数だけ
+  { id: 'dy_fes1', name: 'ほしまつり 1かい', desc: 'まつりの よるに ほしランタンを とばそう', cat: 'daily', tier: 'bronze', src: 'festival_fly', target: 1, pict: 'festival' },
+  { id: 'dy_fes3', name: 'ほしまつり 3かい', desc: 'ほしランタンを ぜんぶで 3かい とばそう', cat: 'daily', tier: 'silver', src: 'festival_fly', target: 3, pict: 'festival' },
+  { id: 'dy_fes10', name: 'ほしまつり 10かい', desc: 'ほしランタンを ぜんぶで 10かい とばそう', cat: 'daily', tier: 'gold', src: 'festival_fly', target: 10, pict: 'festival' },
 
   // ============================================================
   // とくべつ(12)…… じっせきの きんバッジ。
@@ -246,7 +252,9 @@ export const BADGE_BY_ID: Record<string, BadgeDef> = Object.fromEntries(BADGES.m
  * うっかり半分に減っても、増えすぎても 起動時の検査で気づける。
  */
 export const BADGE_COUNT_MIN = 98;
-export const BADGE_COUNT_MAX = 105;
+// v16 ほしまつり3つを足して106個。上限は「うっかり増えすぎた」を見つけるための帯なので、
+// 足したぶんだけ 上へずらす(減らす側の下限は そのまま)
+export const BADGE_COUNT_MAX = 108;
 
 /** ならび順つきの カテゴリ一覧(ずかんの見出しの順) */
 export const BADGE_CATEGORY_ORDER: BadgeCategory[] = (

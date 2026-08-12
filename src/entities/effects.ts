@@ -5,6 +5,7 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
 import { ParticleSystem } from '@babylonjs/core/Particles/particleSystem';
+import { Constants } from '@babylonjs/core/Engines/constants';
 import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { Scene } from '@babylonjs/core/scene';
@@ -60,6 +61,14 @@ export function initEffects(s: Scene): void {
   cookMoteMat = null;
   cookGlowOn = false;
   cookGlowT = 0;
+  // v16 ほしまつりの ランタン(旧シーンのメッシュ・マテリアルを 持ちこさない)
+  lanterns.length = 0;
+  lanternPool.length = 0;
+  lanternT = 0;
+  lanternBodyMat = null;
+  lanternHaloMat = null;
+  lanternReflMat = null;
+  lanternGlowTex = null;
   // 丸いドットのテクスチャ(外部素材なし)
   const tex = new DynamicTexture('fxDot', { width: 32, height: 32 }, s, false);
   const ctx = tex.getContext() as CanvasRenderingContext2D;
@@ -87,6 +96,15 @@ export function initEffects(s: Scene): void {
   ps.blendMode = ParticleSystem.BLENDMODE_STANDARD;
   ps.start();
   initWeatherFx(s);
+  // v16 ほしまつりの ランタンは 上限ぶん さきに作っておく(見せ場の途中で メッシュを
+  // 作ると 一瞬ひっかかる/発光レイヤーの除外も 起動時に1回で すませたい)。
+  // ぜんぶ setEnabled(false) なので、まつりの日まで 描画には いっさい出ない。
+  //
+  // グループ1は「海より あとに 描く」ためだけに 使う(buildGlowQuadの説明)。
+  // 深度・ステンシルの 自動クリアを 切っておかないと、グループ0で 描いた
+  // 桟橋・地形の 前後関係が 消えて、板を すかして 光が もれる。
+  s.setRenderingAutoClearDepthStencil(LANTERN_GROUP, false, false, false);
+  for (let i = 0; i < LANTERN_MAX; i++) lanternPool.push(buildLantern(s, i));
 }
 
 /** 採取・クラフト等の粒バースト */
@@ -695,6 +713,319 @@ function updateCookGlow(dt: number, px: number, py: number, pz: number): void {
     cookMotes[i].setEnabled(true);
     cookMotes[i].position.set(px + Math.cos(a) * COOK_MOTE_R, py + 0.95 + bob, pz + Math.sin(a) * COOK_MOTE_R);
     cookMotes[i].scaling.setAll(0.85 + 0.25 * Math.sin(cookGlowT * 2.3 + i));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// v16 ほしまつり「ランタンとばし」の見せ場。
+//
+// 1つのランタン = 3枚のメッシュ:
+//   body : 紙のちょうちん(あたたかい発光。形が読める=ただの光の玉にしない)
+//   halo : 加算合成の かさ(暗い夜空に「光を足す」。ビーム・水平線のきらめきと同じ流儀)
+//   refl : 海面に落ちる うつりこみ(たてに のびた 光の帯。加算合成)
+// うつりこみが この演出の いちばんの ごちそうなので、海の上にいるあいだだけ 出す。
+//
+// 動きは 時計と 出発地点だけで決まる(乱数を1つも引かない)ので、
+// 同じ場面は 何度見ても 同じ画になる = 撮影・自動テストが決定的になる。
+// ---------------------------------------------------------------------------
+/** のぼる速さ(m/秒)。10秒の見せ場で およそ11m 上がる */
+const LANTERN_RISE = 1.15;
+/** 出発してから 速さが のりきるまで(秒) */
+const LANTERN_EASE = 0.9;
+/** よこゆれの はば(m)と 速さ */
+const LANTERN_SWAY = 0.22;
+const LANTERN_SWAY_SPEED = 0.85;
+/**
+ * うつりこみ。高くのぼるほど たてに のびて うすくなるが、**消しきらない**
+ * (実機で 13mで消える設定にしたら、いちばん見せたい引きの画で 海が まっ暗になった)。
+ * 幅は ほぼ そのまま、長さだけ のばすと「水面に落ちた 光の すじ」に見える。
+ */
+const LANTERN_REFL_FADE = 18;
+const LANTERN_REFL_FLOOR = 0.34;
+const LANTERN_REFL_LEN0 = 1.6;
+const LANTERN_REFL_LEN1 = 0.55;
+/**
+ * 幅。**ほそく** する。ここが いちばん 効く。
+ * 太くすると となりの すじと くっついて、水面のうつりこみではなく
+ * 「サーチライトの光の輪」に 見える(実機で 白い三角の帯になった)。
+ * ほそいと 1つ1つが 分かれて、水に 光の すじが 何本も 落ちているように 見える。
+ */
+const LANTERN_REFL_W0 = 0.3;
+const LANTERN_REFL_W1 = 0.012;
+/**
+ * かさ(halo)の 大きさ。板は ローカルで ±1 なので、見かけの さしわたしは この2倍。
+ * 大きくしすぎると 白い まるに つぶれて「紙のちょうちん」が 見えなくなる
+ * (実機のスクショで 実際に つぶれた)。ちょうちん(0.36m)より すこし大きい程度にとどめ、
+ * 高くのぼるほど ゆっくり ふくらませて 遠さを出す。
+ */
+const LANTERN_HALO_R = 0.30;
+const LANTERN_HALO_GROW = 0.018;
+/** どうじに出せる ランタンの数の上限(見せ場は 1人+人数ぶん+2個 なので 8で足りる) */
+const LANTERN_MAX = 8;
+/**
+ * ランタンの かさ・うつりこみ を描く 描画グループ。
+ * 島のほかの描画は ぜんぶ グループ0なので、1に置くと「海より あと」が 確実になる。
+ * 深度は 引きつぐ設定にするため、桟橋・地形との 前後関係は そのまま(buildGlowQuadの説明)。
+ */
+const LANTERN_GROUP = 1;
+
+export interface LanternSeed {
+  x: number;
+  z: number;
+  /** 出発までの ため(秒)。0=すぐ / 大きいほど あとから のぼる */
+  delay: number;
+}
+
+interface FlyingLantern {
+  seed: LanternSeed;
+  body: Mesh;
+  halo: Mesh;
+  refl: Mesh;
+  /** ゆれの位相(出発地点から決める=乱数なし) */
+  phase: number;
+  /** 海の上か(うつりこみを出すか) */
+  overSea: boolean;
+}
+
+const lanterns: FlyingLantern[] = [];
+const lanternPool: FlyingLantern[] = [];
+let lanternT = 0;
+let lanternBaseY = 0;
+let lanternBodyMat: StandardMaterial | null = null;
+let lanternHaloMat: StandardMaterial | null = null;
+let lanternReflMat: StandardMaterial | null = null;
+let lanternGlowTex: DynamicTexture | null = null;
+
+/** 中心が明るく ふちが消える 丸いにじみ(かさ・うつりこみで共有する1枚) */
+function getLanternGlowTex(s: Scene): DynamicTexture {
+  if (!lanternGlowTex) {
+    const tex = new DynamicTexture('fesGlowTex', { width: 128, height: 128 }, s, false);
+    const ctx = tex.getContext() as CanvasRenderingContext2D;
+    // にじみの色は **まん中まで あたたかく** する。
+    // まん中を 白(255,244,216)に すると、加算のうえに 発光レイヤーが 重なって
+    // 「白い たまご」に つぶれ、紙のちょうちんの形も 火の色も 消える(実機で そうなった)。
+    // 赤みを のこしたまま 明るさだけ 落とすと、暗い夜空のうえで 橙の あかりに 見える。
+    const g = ctx.createRadialGradient(64, 64, 2, 64, 64, 63);
+    g.addColorStop(0, 'rgba(255,206,132,1)');
+    g.addColorStop(0.28, 'rgba(255,178,96,0.5)');
+    g.addColorStop(0.62, 'rgba(255,150,70,0.16)');
+    g.addColorStop(1, 'rgba(255,132,56,0)');
+    ctx.clearRect(0, 0, 128, 128);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 128, 128);
+    tex.update();
+    tex.hasAlpha = true;
+    // 教訓1: プログラム生成テクスチャは ラップモードを明示する(既定のCLAMPで端が のびる)
+    tex.wrapU = Texture.CLAMP_ADDRESSMODE;
+    tex.wrapV = Texture.CLAMP_ADDRESSMODE;
+    lanternGlowTex = tex;
+  }
+  return lanternGlowTex;
+}
+
+/** ちょうちん本体・かさ・うつりこみの マテリアル(全ランタンで 3つだけ共有) */
+function ensureLanternMats(s: Scene): void {
+  if (!lanternBodyMat) {
+    const m = new StandardMaterial('fesLanternBody', s);
+    m.diffuseColor = Color3.FromHexString('#8a6a3d');
+    // 紙ごしの あかりの色。ここを 白っぽく(#ffd9a0)すると 発光レイヤーの にじみと
+    // 加算の かさが 重なって まん中が 白に とび、ちょうちんが ただの光の玉になる。
+    // 橙まで 落とすと、にじんでも 橙のまま = 「紙に 火が 入っている」に 見える
+    m.emissiveColor = Color3.FromHexString('#e8912e');
+    m.specularColor = Color3.Black();
+    lanternBodyMat = m;
+  }
+  if (!lanternHaloMat) {
+    const m = new StandardMaterial('fesLanternHalo', s);
+    m.diffuseColor = Color3.Black();
+    m.specularColor = Color3.Black();
+    m.emissiveColor = Color3.FromHexString('#ffb45a'); // かさも 橙(白い かさは 光の玉に見える)
+    m.emissiveTexture = getLanternGlowTex(s);
+    m.opacityTexture = getLanternGlowTex(s);
+    m.disableLighting = true;
+    m.backFaceCulling = false;
+    m.alphaMode = Constants.ALPHA_ADD; // 暗い空の上に「光を足す」
+    // 発光レイヤー(GlowLayer)にも 焼かれると 白い まるに つぶれるので、
+    // このマテリアルは 発光レイヤーから 外してある(festivalGlowExcludes を参照)。
+    // ここの濃さは「にじみ」だけを受けもつ値。
+    // 濃くすると まん中が 白にとび、紙のちょうちんの形が 見えなくなる
+    m.alpha = 0.4;
+    m.fogEnabled = false;
+    lanternHaloMat = m;
+  }
+  if (!lanternReflMat) {
+    const m = new StandardMaterial('fesLanternRefl', s);
+    m.diffuseColor = Color3.Black();
+    m.specularColor = Color3.Black();
+    // 海の色(#4f8fa8)に 足しても あたたかく見えるよう、赤みを強めた あかりの色にする
+    // (#ffcf8a のままだと 加算の結果が 青白い すじに見えた=実機のスクショで確認)。
+    // 青をさらに おとしてあるのは、すじが かさなったとき 先に 青が たまって
+    // 白っぽく なるのを ふせぐため
+    m.emissiveColor = Color3.FromHexString('#ff8c24');
+    m.emissiveTexture = getLanternGlowTex(s);
+    m.opacityTexture = getLanternGlowTex(s);
+    m.disableLighting = true;
+    m.backFaceCulling = false;
+    m.alphaMode = Constants.ALPHA_ADD;
+    // すじを ほそくして かさならなくなったぶん、1本ずつを あかるくする。
+    // ただし 上げすぎると まん中が 白に とんで(加算のクリップ)、
+    // せっかくの 橙が 水色っぽく 見えてしまう。とばない ぎりぎりに置く
+    m.alpha = 0.55;
+    m.fogEnabled = false;
+    lanternReflMat = m;
+  }
+}
+
+/** ちょうちん1つ(紙の胴+上下のふた)。近くで見ても「光の玉」にしない形にする */
+function buildLanternBody(s: Scene, i: number): Mesh {
+  const A = A0();
+  const paper = Color3.FromHexString('#ffe7b8');
+  appendBlob(A, 0, 0, 0, 0.17, 0.22, 0.17, paper, { segs: 9, noise: 0.05, seed: i * 7 + 3 });
+  appendTrunk(A, [[0, 0.19, 0], [0, 0.23, 0]], 0.07, 0.045, Color3.FromHexString('#c9a05c'), i, 0);
+  appendTrunk(A, [[0, -0.23, 0], [0, -0.19, 0]], 0.045, 0.07, Color3.FromHexString('#c9a05c'), i + 1, 0);
+  // ほのお(下の口の中。のぞきこむと 見える)
+  appendBlob(A, 0, -0.14, 0, 0.05, 0.06, 0.05, Color3.FromHexString('#fff6e0'), { segs: 6, noise: 0.1, seed: i });
+  const mesh = toMesh(s, `fesFly${i}`, A);
+  mesh.material = lanternBodyMat;
+  mesh.isPickable = false;
+  return mesh;
+}
+
+/** 板1枚(かさ・うつりこみ)。ローカルXZ平面か XY平面に張る */
+function buildGlowQuad(s: Scene, name: string, flat: boolean): Mesh {
+  const positions = flat
+    ? [-1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1]
+    : [-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0];
+  const vd = new VertexData();
+  vd.positions = positions;
+  vd.indices = [0, 1, 2, 0, 2, 3];
+  vd.uvs = [0, 0, 1, 0, 1, 1, 0, 1];
+  vd.normals = flat ? [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0] : [0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1];
+  const mesh = new Mesh(name, s);
+  vd.applyToMesh(mesh);
+  mesh.isPickable = false;
+  // 半透明の描画順: 海より **あとに** 描く。前に描くと 海(alpha 0.9)に 上ぬりされて
+  // うつりこみが ほとんど 消える(実機で 実際に消えていた)。
+  //
+  // alphaIndex では 勝てない: 海は alphaIndex を 明示していない = 既定の
+  // Number.MAX_VALUE なので、どんな有限の値を入れても 海のほうが あとになる。
+  // かといって 海を 手前に ずらすと、島じゅうの 半透明(波うちぎわの燐光・ビーム・
+  // 水そう…)の 見えかたが まとめて 変わってしまう。
+  // そこで **この演出だけ** 描画グループ1へ うつす。グループ1は グループ0の
+  // ぜんぶ(海をふくむ)を 描いたあとに 描かれる。
+  // 深度バッファは 引きつぐ(LANTERN_GROUP の setRenderingAutoClearDepthStencil(1,false))ので、
+  // 桟橋の板の下に かくれる ぶんは ちゃんと かくれたまま = 板を すかして 光らない。
+  mesh.renderingGroupId = LANTERN_GROUP;
+  mesh.alphaIndex = 5; // グループ1の中での 順(かさ と うつりこみ の 前後)
+  return mesh;
+}
+
+/** ランタン1つぶんのメッシュ3枚を作る(初期化のときに 上限ぶん だけ作って 使いまわす) */
+function buildLantern(s: Scene, i: number): FlyingLantern {
+  ensureLanternMats(s);
+  const body = buildLanternBody(s, i);
+  const halo = buildGlowQuad(s, `fesHalo${i}`, false);
+  halo.material = lanternHaloMat;
+  halo.billboardMode = Mesh.BILLBOARDMODE_ALL; // どこから見ても 丸い あかりに見せる
+  const refl = buildGlowQuad(s, `fesRefl${i}`, true);
+  refl.material = lanternReflMat;
+  for (const m of [body, halo, refl]) m.setEnabled(false);
+  return { seed: { x: 0, z: 0, delay: 0 }, body, halo, refl, phase: 0, overSea: false };
+}
+
+/**
+ * 発光レイヤーの対象から外すメッシュ(DayNightが起動時に呼ぶ)。
+ * かさ と うつりこみは すでに 加算合成の「にじみ」なので、
+ * 発光レイヤーにも 焼くと 白い まるに つぶれて 紙のちょうちんが 見えなくなる
+ * (虹を外しているのと まったく同じ理由)。
+ */
+export function festivalGlowExcludes(): Mesh[] {
+  const out: Mesh[] = [];
+  for (const f of [...lanterns, ...lanternPool]) out.push(f.halo, f.refl);
+  return out;
+}
+
+/**
+ * ランタンとばしを はじめる(SequenceDirectorが1回だけ呼ぶ)。
+ * @param seeds 1つぶんの 出発地点と ため
+ * @param baseY 出発の高さ(桟橋の板の上)
+ */
+export function startLanternFlight(seeds: LanternSeed[], baseY: number): void {
+  if (!scene) return;
+  clearLanternFlight();
+  lanternT = 0;
+  lanternBaseY = baseY;
+  for (let i = 0; i < Math.min(seeds.length, LANTERN_MAX); i++) {
+    const f = lanternPool.pop();
+    if (!f) break; // 上限まで作ってあるので ここには来ない(安全網)
+    f.seed = seeds[i];
+    // ゆれの位相は 出発地点から決める(乱数なし)。1つずつ ちがう ゆれになる
+    f.phase = (Math.abs(seeds[i].x) * 1.7 + Math.abs(seeds[i].z) * 0.9 + i * 1.3) % (Math.PI * 2);
+    f.overSea = terrainHeight(seeds[i].x, seeds[i].z) < 0.3;
+    for (const m of [f.body, f.halo, f.refl]) m.setEnabled(false);
+    lanterns.push(f);
+  }
+  updateLanternFlight(0);
+}
+
+/** とばしたランタンを ぜんぶ しまう(見せ場の終わり・シーンの作り直し) */
+export function clearLanternFlight(): void {
+  for (const f of lanterns) {
+    for (const m of [f.body, f.halo, f.refl]) m.setEnabled(false);
+    lanternPool.push(f);
+  }
+  lanterns.length = 0;
+  lanternT = 0;
+}
+
+/** いま とんでいるランタンの数と 高さ(検証・撮影用。読むだけで副作用はない) */
+export function lanternFlightState(): { count: number; t: number; topY: number; reflections: number } {
+  let topY = 0;
+  let reflections = 0;
+  for (const f of lanterns) {
+    if (f.body.isEnabled()) topY = Math.max(topY, f.body.position.y - lanternBaseY);
+    if (f.refl.isEnabled()) reflections++;
+  }
+  return { count: lanterns.length, t: lanternT, topY, reflections };
+}
+
+/** 見せ場の1フレーム(SequenceDirectorが呼ぶ)。世界が凍っていても これだけは動く */
+export function updateLanternFlight(dt: number): void {
+  if (lanterns.length === 0) return;
+  lanternT += dt;
+  for (const f of lanterns) {
+    const t = lanternT - f.seed.delay;
+    if (t < 0) continue;
+    // のぼりはじめは ゆっくり(ふわりと 手をはなれる)
+    const ease = Math.min(1, t / LANTERN_EASE);
+    const dist = LANTERN_RISE * (t - LANTERN_EASE * (1 - ease * ease * (3 - 2 * ease)) * 0.5);
+    const h = Math.max(0, dist);
+    const swayK = Math.min(1, h / 1.2);
+    const x = f.seed.x + Math.sin(t * LANTERN_SWAY_SPEED + f.phase) * LANTERN_SWAY * swayK;
+    const z = f.seed.z + Math.cos(t * LANTERN_SWAY_SPEED * 0.7 + f.phase) * LANTERN_SWAY * 0.7 * swayK;
+    const y = lanternBaseY + h;
+    if (!f.body.isEnabled()) {
+      for (const m of [f.body, f.halo]) m.setEnabled(true);
+    }
+    f.body.position.set(x, y, z);
+    f.body.rotation.y = t * 0.35 + f.phase;
+    f.body.scaling.setAll(0.94 + 0.06 * Math.sin(t * 2.1 + f.phase));
+    // かさ: 高くなるほど すこしずつ 大きく(遠くの あかりに見せる)
+    const haloR = LANTERN_HALO_R + h * LANTERN_HALO_GROW;
+    f.halo.position.set(x, y, z);
+    f.halo.scaling.set(haloR, haloR, haloR);
+    // うつりこみ: 海の上だけ。高くなるほど たてに のびて うすくなる
+    const reflOn = f.overSea && h > 0.35;
+    if (f.refl.isEnabled() !== reflOn) f.refl.setEnabled(reflOn);
+    if (reflOn) {
+      const fade = Math.max(0, 1 - h / LANTERN_REFL_FADE);
+      const len = LANTERN_REFL_LEN0 + h * LANTERN_REFL_LEN1;
+      // うつりこみは「見る人のほうへ」のびる。見せ場のカメラは かならず +Z 側(沖)に立つ
+      // (CameraController.beginEvent)ので、+Z へ のばすと 手前に 光の帯が 落ちる
+      f.refl.position.set(x, 0.32, z + len * 0.35);
+      f.refl.scaling.set(LANTERN_REFL_W0 + h * LANTERN_REFL_W1, 1, len);
+      f.refl.visibility = LANTERN_REFL_FLOOR + (1 - LANTERN_REFL_FLOOR) * fade * fade;
+    }
   }
 }
 

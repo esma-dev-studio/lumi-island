@@ -8,6 +8,7 @@
 import type { GameState } from '../game/GameState';
 import { BUG_IDS } from './BugSystem';
 import { NIGHT_TRAIN_KEY } from './NightTrainSystem';
+import { FESTIVAL_FLY_KEY } from './FestivalSystem';
 
 /** 達成の記録に使う stats のキーの接頭辞 */
 export const ACH_PREFIX = 'ach_';
@@ -182,7 +183,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     target: 5, icon: 'b_shiro', progress: (s) => BUG_IDS.reduce((n, id) => n + codexCount(s, id), 0),
   },
   {
-    id: 'a_bug_all', name: 'むしはかせ', desc: '6しゅるいの虫を ぜんぶ つかまえよう',
+    id: 'a_bug_all', name: 'むしはかせ', desc: 'ちがう 虫を 6しゅるい つかまえよう',
     target: 6, icon: 'b_kabuto', progress: (s) => BUG_IDS.filter((id) => codexCount(s, id) > 0).length,
   },
   // ---- v9 おくりもの(なかよし度) ----
@@ -253,6 +254,15 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     id: 'a_night_train', name: 'よるの でんしゃを 見た',
     desc: 'とうだいが ともった よる、うみの ずっと むこうを ながめてみよう',
     target: 1, icon: 'f_starlantern', progress: (s) => statCount(s, NIGHT_TRAIN_KEY),
+  },
+  // ---- v16 ほしまつり(7日ごとの おまつり) ----
+  // 数えるのは stats の festival_fly(桟橋の先で ランタンを とばした回数)。
+  // 未達成欄の desc は「いつ・どこへ 行けばよいか」だけを 教える
+  // (何が起きるかは 書かない。はじめて 見た夜の おどろきを のこすため)。
+  {
+    id: 'a_festival', name: 'はじめての ほしまつり',
+    desc: '7日ごとの ゆうがた、さんばしの まつりで ほしランタンを とばそう',
+    target: 1, icon: 'festival', progress: (s) => statCount(s, FESTIVAL_FLY_KEY),
   },
   {
     id: 'a_all_quests', name: 'おねがいマスター', desc: '島のみんなの おねがいを 5つ かなえよう',

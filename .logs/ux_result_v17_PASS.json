@@ -1,0 +1,1842 @@
+{
+  "result": "ok",
+  "totalSec": 325,
+  "flags": {
+    "title": true,
+    "firstTalk": true,
+    "accepted": true,
+    "gathered": true,
+    "reported": true,
+    "second": true,
+    "materials": true,
+    "crafted": true,
+    "placed": true,
+    "placeConfirmed": true
+  },
+  "marks": [
+    {
+      "sec": 8,
+      "label": "タイトル表示"
+    },
+    {
+      "sec": 12,
+      "label": "ゲーム開始"
+    },
+    {
+      "sec": 13,
+      "label": "目標表示: いまやること / WASDか矢印キーで あるいてみよう"
+    },
+    {
+      "sec": 15,
+      "label": "目標表示: いまやること / ツムギの はなしを聞こう"
+    },
+    {
+      "sec": 15,
+      "label": "進捗表示: → 2m"
+    },
+    {
+      "sec": 18,
+      "label": "最初の会話が開いた"
+    },
+    {
+      "sec": 19,
+      "label": "目標表示: いまやること / もくざいを あつめよう"
+    },
+    {
+      "sec": 19,
+      "label": "(1) 最初の依頼を受注できた"
+    },
+    {
+      "sec": 19,
+      "label": "進捗表示: 0 / 5　→ 19m"
+    },
+    {
+      "sec": 20,
+      "label": "進捗表示: 0 / 5　→ 16m"
+    },
+    {
+      "sec": 23,
+      "label": "進捗表示: 0 / 5　→ 17m"
+    },
+    {
+      "sec": 27,
+      "label": "進捗表示: 0 / 5　→ 16m"
+    },
+    {
+      "sec": 28,
+      "label": "進捗表示: 0 / 5　→ 15m"
+    },
+    {
+      "sec": 29,
+      "label": "進捗表示: 0 / 5　→ 16m"
+    },
+    {
+      "sec": 30,
+      "label": "進捗表示: 0 / 5　→ 18m"
+    },
+    {
+      "sec": 31,
+      "label": "進捗表示: 0 / 5　→ 14m"
+    },
+    {
+      "sec": 33,
+      "label": "進捗表示: 0 / 5　→ 11m"
+    },
+    {
+      "sec": 33,
+      "label": "進捗表示: 0 / 5　→ 8m"
+    },
+    {
+      "sec": 34,
+      "label": "進捗表示: 0 / 5　→ 6m"
+    },
+    {
+      "sec": 35,
+      "label": "進捗表示: 0 / 5　→ 3m"
+    },
+    {
+      "sec": 36,
+      "label": "進捗表示: 0 / 5"
+    },
+    {
+      "sec": 38,
+      "label": "目的地に着いたのに採取のヒントが出ない → 渦巻きで探す(もくざいを あつめよう / 0 / 5)"
+    },
+    {
+      "sec": 40,
+      "label": "進捗表示: 2 / 5　→ 19m"
+    },
+    {
+      "sec": 40,
+      "label": "進捗表示: 2 / 5　→ 18m"
+    },
+    {
+      "sec": 41,
+      "label": "進捗表示: 2 / 5　→ 16m"
+    },
+    {
+      "sec": 44,
+      "label": "進捗表示: 2 / 5　→ 17m"
+    },
+    {
+      "sec": 46,
+      "label": "進捗表示: 2 / 5　→ 16m"
+    },
+    {
+      "sec": 48,
+      "label": "進捗表示: 2 / 5　→ 17m"
+    },
+    {
+      "sec": 49,
+      "label": "進捗表示: 2 / 5　→ 16m"
+    },
+    {
+      "sec": 50,
+      "label": "進捗表示: 2 / 5　→ 13m"
+    },
+    {
+      "sec": 51,
+      "label": "進捗表示: 2 / 5　→ 11m"
+    },
+    {
+      "sec": 52,
+      "label": "進捗表示: 2 / 5　→ 8m"
+    },
+    {
+      "sec": 53,
+      "label": "進捗表示: 2 / 5　→ 5m"
+    },
+    {
+      "sec": 53,
+      "label": "進捗表示: 2 / 5　→ 2m"
+    },
+    {
+      "sec": 63,
+      "label": "進捗表示: 2 / 5"
+    },
+    {
+      "sec": 64,
+      "label": "進捗表示: 3 / 5　→ 9m"
+    },
+    {
+      "sec": 65,
+      "label": "進捗表示: 3 / 5　→ 7m"
+    },
+    {
+      "sec": 66,
+      "label": "進捗表示: 3 / 5　→ 5m"
+    },
+    {
+      "sec": 67,
+      "label": "進捗表示: 3 / 5　→ 2m"
+    },
+    {
+      "sec": 67,
+      "label": "進捗表示: 3 / 5"
+    },
+    {
+      "sec": 69,
+      "label": "目標表示: できた! / ツムギに ほうこくしよう"
+    },
+    {
+      "sec": 69,
+      "label": "(2) 木材5つを集めきった"
+    },
+    {
+      "sec": 69,
+      "label": "進捗表示: → 28m"
+    },
+    {
+      "sec": 70,
+      "label": "進捗表示: → 26m"
+    },
+    {
+      "sec": 71,
+      "label": "進捗表示: → 23m"
+    },
+    {
+      "sec": 71,
+      "label": "進捗表示: → 21m"
+    },
+    {
+      "sec": 72,
+      "label": "進捗表示: → 19m"
+    },
+    {
+      "sec": 73,
+      "label": "進捗表示: → 17m"
+    },
+    {
+      "sec": 74,
+      "label": "進捗表示: → 15m"
+    },
+    {
+      "sec": 75,
+      "label": "進捗表示: → 13m"
+    },
+    {
+      "sec": 78,
+      "label": "進捗表示: → 11m"
+    },
+    {
+      "sec": 79,
+      "label": "進捗表示: → 9m"
+    },
+    {
+      "sec": 80,
+      "label": "進捗表示: → 6m"
+    },
+    {
+      "sec": 81,
+      "label": "進捗表示: → 3m"
+    },
+    {
+      "sec": 84,
+      "label": "目標表示: いまやること / ミナモの はなしを聞こう"
+    },
+    {
+      "sec": 84,
+      "label": "(3) ツムギへの報告が終わった"
+    },
+    {
+      "sec": 84,
+      "label": "進捗表示: → 31m"
+    },
+    {
+      "sec": 85,
+      "label": "進捗表示: → 30m"
+    },
+    {
+      "sec": 86,
+      "label": "進捗表示: → 27m"
+    },
+    {
+      "sec": 86,
+      "label": "進捗表示: → 25m"
+    },
+    {
+      "sec": 87,
+      "label": "進捗表示: → 22m"
+    },
+    {
+      "sec": 88,
+      "label": "進捗表示: → 19m"
+    },
+    {
+      "sec": 89,
+      "label": "進捗表示: → 16m"
+    },
+    {
+      "sec": 90,
+      "label": "進捗表示: → 13m"
+    },
+    {
+      "sec": 91,
+      "label": "進捗表示: → 10m"
+    },
+    {
+      "sec": 92,
+      "label": "進捗表示: → 7m"
+    },
+    {
+      "sec": 93,
+      "label": "進捗表示: → 5m"
+    },
+    {
+      "sec": 96,
+      "label": "目標表示: いまやること / もくざいを あつめよう"
+    },
+    {
+      "sec": 96,
+      "label": "(4) つぎの依頼を受注できた"
+    },
+    {
+      "sec": 96,
+      "label": "進捗表示: 0 / 2　→ 15m"
+    },
+    {
+      "sec": 97,
+      "label": "進捗表示: 0 / 2　→ 13m"
+    },
+    {
+      "sec": 98,
+      "label": "進捗表示: 0 / 2　→ 10m"
+    },
+    {
+      "sec": 98,
+      "label": "進捗表示: 0 / 2　→ 8m"
+    },
+    {
+      "sec": 99,
+      "label": "進捗表示: 0 / 2　→ 11m"
+    },
+    {
+      "sec": 100,
+      "label": "進捗表示: 0 / 2　→ 8m"
+    },
+    {
+      "sec": 101,
+      "label": "進捗表示: 0 / 2　→ 5m"
+    },
+    {
+      "sec": 102,
+      "label": "進捗表示: 0 / 2　→ 3m"
+    },
+    {
+      "sec": 102,
+      "label": "進捗表示: 0 / 2"
+    },
+    {
+      "sec": 104,
+      "label": "進捗表示: 1 / 2　→ 48m"
+    },
+    {
+      "sec": 106,
+      "label": "進捗表示: 1 / 2　→ 45m"
+    },
+    {
+      "sec": 106,
+      "label": "進捗表示: 1 / 2　→ 42m"
+    },
+    {
+      "sec": 107,
+      "label": "進捗表示: 1 / 2　→ 39m"
+    },
+    {
+      "sec": 108,
+      "label": "進捗表示: 1 / 2　→ 37m"
+    },
+    {
+      "sec": 109,
+      "label": "進捗表示: 1 / 2　→ 34m"
+    },
+    {
+      "sec": 110,
+      "label": "進捗表示: 1 / 2　→ 31m"
+    },
+    {
+      "sec": 111,
+      "label": "進捗表示: 1 / 2　→ 29m"
+    },
+    {
+      "sec": 112,
+      "label": "進捗表示: 1 / 2　→ 26m"
+    },
+    {
+      "sec": 112,
+      "label": "進捗表示: 1 / 2　→ 24m"
+    },
+    {
+      "sec": 113,
+      "label": "進捗表示: 1 / 2　→ 22m"
+    },
+    {
+      "sec": 114,
+      "label": "進捗表示: 1 / 2　→ 20m"
+    },
+    {
+      "sec": 115,
+      "label": "進捗表示: 1 / 2　→ 17m"
+    },
+    {
+      "sec": 116,
+      "label": "進捗表示: 1 / 2　→ 14m"
+    },
+    {
+      "sec": 116,
+      "label": "進捗表示: 1 / 2　→ 11m"
+    },
+    {
+      "sec": 117,
+      "label": "進捗表示: 1 / 2　→ 8m"
+    },
+    {
+      "sec": 118,
+      "label": "進捗表示: 1 / 2　→ 5m"
+    },
+    {
+      "sec": 119,
+      "label": "進捗表示: 1 / 2　→ 2m"
+    },
+    {
+      "sec": 120,
+      "label": "進捗表示: 1 / 2"
+    },
+    {
+      "sec": 122,
+      "label": "目標表示: いまやること / いしを あつめよう"
+    },
+    {
+      "sec": 122,
+      "label": "進捗表示: 0 / 1　→ 6m"
+    },
+    {
+      "sec": 122,
+      "label": "進捗表示: 0 / 1　→ 4m"
+    },
+    {
+      "sec": 123,
+      "label": "進捗表示: 0 / 1　→ 2m"
+    },
+    {
+      "sec": 124,
+      "label": "進捗表示: 0 / 1　→ 4m"
+    },
+    {
+      "sec": 125,
+      "label": "進捗表示: 0 / 1"
+    },
+    {
+      "sec": 126,
+      "label": "目標表示: いまやること / ざいりょうが そろったよ! Cで カマを作ろう"
+    },
+    {
+      "sec": 126,
+      "label": "(5) クラフトの素材がそろった"
+    },
+    {
+      "sec": 127,
+      "label": "クラフト操作: カマ → ok"
+    },
+    {
+      "sec": 127,
+      "label": "(6) 初クラフトができた"
+    },
+    {
+      "sec": 128,
+      "label": "目標表示: いまやること / もくざいを あつめよう"
+    },
+    {
+      "sec": 128,
+      "label": "進捗表示: 0 / 2　→ 24m"
+    },
+    {
+      "sec": 129,
+      "label": "進捗表示: 0 / 2　→ 22m"
+    },
+    {
+      "sec": 130,
+      "label": "進捗表示: 0 / 2　→ 19m"
+    },
+    {
+      "sec": 131,
+      "label": "進捗表示: 0 / 2　→ 16m"
+    },
+    {
+      "sec": 133,
+      "label": "進捗表示: 0 / 2　→ 15m"
+    },
+    {
+      "sec": 136,
+      "label": "進捗表示: 0 / 2　→ 14m"
+    },
+    {
+      "sec": 138,
+      "label": "進捗表示: 0 / 2　→ 15m"
+    },
+    {
+      "sec": 139,
+      "label": "進捗表示: 0 / 2　→ 16m"
+    },
+    {
+      "sec": 141,
+      "label": "進捗表示: 0 / 2　→ 14m"
+    },
+    {
+      "sec": 142,
+      "label": "進捗表示: 0 / 2　→ 15m"
+    },
+    {
+      "sec": 144,
+      "label": "進捗表示: 0 / 2　→ 17m"
+    },
+    {
+      "sec": 146,
+      "label": "進捗表示: 0 / 2　→ 19m"
+    },
+    {
+      "sec": 147,
+      "label": "進捗表示: 0 / 2　→ 17m"
+    },
+    {
+      "sec": 148,
+      "label": "進捗表示: 0 / 2　→ 15m"
+    },
+    {
+      "sec": 149,
+      "label": "進捗表示: 0 / 2　→ 14m"
+    },
+    {
+      "sec": 151,
+      "label": "進捗表示: 0 / 2　→ 15m"
+    },
+    {
+      "sec": 152,
+      "label": "進捗表示: 0 / 2　→ 11m"
+    },
+    {
+      "sec": 153,
+      "label": "進捗表示: 0 / 2　→ 9m"
+    },
+    {
+      "sec": 154,
+      "label": "進捗表示: 0 / 2　→ 6m"
+    },
+    {
+      "sec": 161,
+      "label": "進捗表示: 0 / 2　→ 5m"
+    },
+    {
+      "sec": 162,
+      "label": "進捗表示: 0 / 2　→ 2m"
+    },
+    {
+      "sec": 163,
+      "label": "進捗表示: 0 / 2　→ 3m"
+    },
+    {
+      "sec": 164,
+      "label": "進捗表示: 0 / 2"
+    },
+    {
+      "sec": 165,
+      "label": "目標表示: いまやること / クサツルを あつめよう"
+    },
+    {
+      "sec": 165,
+      "label": "進捗表示: 0 / 2　→ 5m"
+    },
+    {
+      "sec": 166,
+      "label": "進捗表示: 0 / 2　→ 4m"
+    },
+    {
+      "sec": 167,
+      "label": "進捗表示: 0 / 2"
+    },
+    {
+      "sec": 168,
+      "label": "進捗表示: 1 / 2　→ 7m"
+    },
+    {
+      "sec": 169,
+      "label": "進捗表示: 1 / 2　→ 5m"
+    },
+    {
+      "sec": 170,
+      "label": "進捗表示: 1 / 2　→ 2m"
+    },
+    {
+      "sec": 171,
+      "label": "目標表示: いまやること / ざいりょうが そろったよ! Cで ツリザオを作ろう"
+    },
+    {
+      "sec": 172,
+      "label": "クラフト操作: ツリザオ → ok"
+    },
+    {
+      "sec": 173,
+      "label": "目標表示: いまやること / 桟橋で サカナをつろう"
+    },
+    {
+      "sec": 173,
+      "label": "進捗表示: 0 / 1　→ 54m"
+    },
+    {
+      "sec": 174,
+      "label": "進捗表示: 0 / 1　→ 51m"
+    },
+    {
+      "sec": 175,
+      "label": "進捗表示: 0 / 1　→ 48m"
+    },
+    {
+      "sec": 176,
+      "label": "進捗表示: 0 / 1　→ 45m"
+    },
+    {
+      "sec": 176,
+      "label": "進捗表示: 0 / 1　→ 43m"
+    },
+    {
+      "sec": 177,
+      "label": "進捗表示: 0 / 1　→ 40m"
+    },
+    {
+      "sec": 178,
+      "label": "進捗表示: 0 / 1　→ 37m"
+    },
+    {
+      "sec": 179,
+      "label": "進捗表示: 0 / 1　→ 34m"
+    },
+    {
+      "sec": 180,
+      "label": "進捗表示: 0 / 1　→ 31m"
+    },
+    {
+      "sec": 181,
+      "label": "進捗表示: 0 / 1　→ 28m"
+    },
+    {
+      "sec": 182,
+      "label": "進捗表示: 0 / 1　→ 26m"
+    },
+    {
+      "sec": 183,
+      "label": "進捗表示: 0 / 1　→ 23m"
+    },
+    {
+      "sec": 184,
+      "label": "進捗表示: 0 / 1　→ 20m"
+    },
+    {
+      "sec": 185,
+      "label": "進捗表示: 0 / 1　→ 17m"
+    },
+    {
+      "sec": 186,
+      "label": "進捗表示: 0 / 1　→ 14m"
+    },
+    {
+      "sec": 186,
+      "label": "進捗表示: 0 / 1　→ 11m"
+    },
+    {
+      "sec": 196,
+      "label": "進捗表示: 0 / 1　→ 12m"
+    },
+    {
+      "sec": 198,
+      "label": "進捗表示: 0 / 1　→ 14m"
+    },
+    {
+      "sec": 199,
+      "label": "進捗表示: 0 / 1　→ 12m"
+    },
+    {
+      "sec": 200,
+      "label": "進捗表示: 0 / 1　→ 11m"
+    },
+    {
+      "sec": 207,
+      "label": "進捗表示: 0 / 1　→ 10m"
+    },
+    {
+      "sec": 208,
+      "label": "進捗表示: 0 / 1　→ 9m"
+    },
+    {
+      "sec": 210,
+      "label": "進捗表示: 0 / 1　→ 8m"
+    },
+    {
+      "sec": 210,
+      "label": "進捗表示: 0 / 1　→ 11m"
+    },
+    {
+      "sec": 211,
+      "label": "進捗表示: 0 / 1　→ 8m"
+    },
+    {
+      "sec": 212,
+      "label": "進捗表示: 0 / 1　→ 11m"
+    },
+    {
+      "sec": 213,
+      "label": "進捗表示: 0 / 1　→ 8m"
+    },
+    {
+      "sec": 214,
+      "label": "進捗表示: 0 / 1　→ 6m"
+    },
+    {
+      "sec": 215,
+      "label": "進捗表示: 0 / 1　→ 4m"
+    },
+    {
+      "sec": 216,
+      "label": "進捗表示: 0 / 1　→ 2m"
+    },
+    {
+      "sec": 221,
+      "label": "目標表示: できた! / ミナモに ほうこくしよう"
+    },
+    {
+      "sec": 221,
+      "label": "進捗表示: → 38m"
+    },
+    {
+      "sec": 224,
+      "label": "進捗表示: → 35m"
+    },
+    {
+      "sec": 225,
+      "label": "進捗表示: → 34m"
+    },
+    {
+      "sec": 228,
+      "label": "進捗表示: → 31m"
+    },
+    {
+      "sec": 229,
+      "label": "進捗表示: → 28m"
+    },
+    {
+      "sec": 230,
+      "label": "進捗表示: → 26m"
+    },
+    {
+      "sec": 230,
+      "label": "進捗表示: → 23m"
+    },
+    {
+      "sec": 231,
+      "label": "進捗表示: → 20m"
+    },
+    {
+      "sec": 232,
+      "label": "進捗表示: → 17m"
+    },
+    {
+      "sec": 233,
+      "label": "進捗表示: → 15m"
+    },
+    {
+      "sec": 234,
+      "label": "進捗表示: → 13m"
+    },
+    {
+      "sec": 235,
+      "label": "進捗表示: → 12m"
+    },
+    {
+      "sec": 237,
+      "label": "進捗表示: → 10m"
+    },
+    {
+      "sec": 239,
+      "label": "進捗表示: → 7m"
+    },
+    {
+      "sec": 239,
+      "label": "進捗表示: → 4m"
+    },
+    {
+      "sec": 242,
+      "label": "目標表示: いまやること / ノクトの はなしを聞こう"
+    },
+    {
+      "sec": 242,
+      "label": "進捗表示: → 40m"
+    },
+    {
+      "sec": 243,
+      "label": "進捗表示: → 38m"
+    },
+    {
+      "sec": 244,
+      "label": "進捗表示: → 35m"
+    },
+    {
+      "sec": 245,
+      "label": "進捗表示: → 32m"
+    },
+    {
+      "sec": 245,
+      "label": "進捗表示: → 29m"
+    },
+    {
+      "sec": 246,
+      "label": "進捗表示: → 27m"
+    },
+    {
+      "sec": 247,
+      "label": "進捗表示: → 24m"
+    },
+    {
+      "sec": 248,
+      "label": "進捗表示: → 21m"
+    },
+    {
+      "sec": 249,
+      "label": "進捗表示: → 18m"
+    },
+    {
+      "sec": 249,
+      "label": "進捗表示: → 16m"
+    },
+    {
+      "sec": 250,
+      "label": "進捗表示: → 13m"
+    },
+    {
+      "sec": 251,
+      "label": "進捗表示: → 10m"
+    },
+    {
+      "sec": 252,
+      "label": "進捗表示: → 8m"
+    },
+    {
+      "sec": 253,
+      "label": "進捗表示: → 5m"
+    },
+    {
+      "sec": 254,
+      "label": "進捗表示: → 2m"
+    },
+    {
+      "sec": 256,
+      "label": "目標表示: いまやること / 高台で こうせきをほろう"
+    },
+    {
+      "sec": 256,
+      "label": "進捗表示: 0 / 3　→ 3m"
+    },
+    {
+      "sec": 257,
+      "label": "進捗表示: 0 / 3　→ 2m"
+    },
+    {
+      "sec": 259,
+      "label": "進捗表示: 1 / 3　→ 4m"
+    },
+    {
+      "sec": 259,
+      "label": "進捗表示: 1 / 3　→ 3m"
+    },
+    {
+      "sec": 260,
+      "label": "進捗表示: 1 / 3"
+    },
+    {
+      "sec": 262,
+      "label": "進捗表示: 2 / 3　→ 10m"
+    },
+    {
+      "sec": 263,
+      "label": "進捗表示: 2 / 3　→ 9m"
+    },
+    {
+      "sec": 263,
+      "label": "進捗表示: 2 / 3　→ 7m"
+    },
+    {
+      "sec": 264,
+      "label": "進捗表示: 2 / 3　→ 4m"
+    },
+    {
+      "sec": 265,
+      "label": "進捗表示: 2 / 3"
+    },
+    {
+      "sec": 267,
+      "label": "目標表示: できた! / ノクトに ほうこくしよう"
+    },
+    {
+      "sec": 267,
+      "label": "進捗表示: → 8m"
+    },
+    {
+      "sec": 267,
+      "label": "進捗表示: → 7m"
+    },
+    {
+      "sec": 275,
+      "label": "進捗表示: → 4m"
+    },
+    {
+      "sec": 275,
+      "label": "進捗表示: → 2m"
+    },
+    {
+      "sec": 279,
+      "label": "目標表示: いまやること / ツムギの はなしを聞こう"
+    },
+    {
+      "sec": 279,
+      "label": "進捗表示: → 42m"
+    },
+    {
+      "sec": 280,
+      "label": "進捗表示: → 40m"
+    },
+    {
+      "sec": 281,
+      "label": "進捗表示: → 37m"
+    },
+    {
+      "sec": 282,
+      "label": "進捗表示: → 34m"
+    },
+    {
+      "sec": 282,
+      "label": "進捗表示: → 31m"
+    },
+    {
+      "sec": 283,
+      "label": "進捗表示: → 28m"
+    },
+    {
+      "sec": 284,
+      "label": "進捗表示: → 25m"
+    },
+    {
+      "sec": 285,
+      "label": "進捗表示: → 23m"
+    },
+    {
+      "sec": 286,
+      "label": "進捗表示: → 20m"
+    },
+    {
+      "sec": 287,
+      "label": "進捗表示: → 18m"
+    },
+    {
+      "sec": 287,
+      "label": "進捗表示: → 15m"
+    },
+    {
+      "sec": 288,
+      "label": "進捗表示: → 13m"
+    },
+    {
+      "sec": 289,
+      "label": "進捗表示: → 10m"
+    },
+    {
+      "sec": 290,
+      "label": "進捗表示: → 7m"
+    },
+    {
+      "sec": 291,
+      "label": "進捗表示: → 4m"
+    },
+    {
+      "sec": 292,
+      "label": "進捗表示: → 2m"
+    },
+    {
+      "sec": 295,
+      "label": "目標表示: いまやること / もくざいを あつめよう"
+    },
+    {
+      "sec": 295,
+      "label": "進捗表示: 0 / 1　→ 19m"
+    },
+    {
+      "sec": 296,
+      "label": "進捗表示: 0 / 1　→ 17m"
+    },
+    {
+      "sec": 296,
+      "label": "進捗表示: 0 / 1　→ 16m"
+    },
+    {
+      "sec": 301,
+      "label": "進捗表示: 0 / 1　→ 15m"
+    },
+    {
+      "sec": 305,
+      "label": "進捗表示: 0 / 1　→ 16m"
+    },
+    {
+      "sec": 306,
+      "label": "進捗表示: 0 / 1　→ 12m"
+    },
+    {
+      "sec": 307,
+      "label": "進捗表示: 0 / 1　→ 10m"
+    },
+    {
+      "sec": 308,
+      "label": "進捗表示: 0 / 1　→ 7m"
+    },
+    {
+      "sec": 309,
+      "label": "進捗表示: 0 / 1　→ 4m"
+    },
+    {
+      "sec": 310,
+      "label": "進捗表示: 0 / 1　→ 2m"
+    },
+    {
+      "sec": 311,
+      "label": "目標表示: いまやること / ヒカリゴケを あつめよう"
+    },
+    {
+      "sec": 311,
+      "label": "進捗表示: 0 / 2　→ 14m"
+    },
+    {
+      "sec": 312,
+      "label": "進捗表示: 0 / 2　→ 12m"
+    },
+    {
+      "sec": 313,
+      "label": "進捗表示: 0 / 2　→ 9m"
+    },
+    {
+      "sec": 314,
+      "label": "進捗表示: 0 / 2　→ 7m"
+    },
+    {
+      "sec": 315,
+      "label": "進捗表示: 0 / 2　→ 4m"
+    },
+    {
+      "sec": 316,
+      "label": "進捗表示: 0 / 2"
+    },
+    {
+      "sec": 317,
+      "label": "進捗表示: 1 / 2　→ 10m"
+    },
+    {
+      "sec": 318,
+      "label": "進捗表示: 1 / 2　→ 8m"
+    },
+    {
+      "sec": 319,
+      "label": "進捗表示: 1 / 2　→ 5m"
+    },
+    {
+      "sec": 320,
+      "label": "進捗表示: 1 / 2　→ 3m"
+    },
+    {
+      "sec": 320,
+      "label": "進捗表示: 1 / 2"
+    },
+    {
+      "sec": 322,
+      "label": "目標表示: いまやること / ざいりょうが そろったよ! Cで ランタンを作ろう"
+    },
+    {
+      "sec": 322,
+      "label": "クラフト操作: ランタン → ok"
+    },
+    {
+      "sec": 323,
+      "label": "目標表示: いまやること / ランタンを 島に置こう(もちもの→おく)"
+    },
+    {
+      "sec": 324,
+      "label": "もちもの操作: おく → ランタン"
+    },
+    {
+      "sec": 325,
+      "label": "(7) 家具を島に置けた(ランタンを おいた)"
+    },
+    {
+      "sec": 325,
+      "label": "目標表示: できた! / ツムギに ほうこくしよう"
+    },
+    {
+      "sec": 325,
+      "label": "(8) 配置後に目標が進んだ(配置を確認)"
+    },
+    {
+      "sec": 325,
+      "label": "進捗表示: → 32m"
+    }
+  ],
+  "errors": 0,
+  "errorSamples": [],
+  "navlog": [
+    {
+      "sec": 3,
+      "url": "http://localhost:5183/"
+    },
+    {
+      "sec": 6,
+      "url": "http://localhost:5183/"
+    }
+  ],
+  "trace": [
+    {
+      "sec": 13,
+      "obj": "WASDか矢印キーで あるいてみよう",
+      "head": "いまやること",
+      "sub": "",
+      "hint": "",
+      "panel": "",
+      "arrow": null,
+      "dir": 0,
+      "objectiveCategory": "tutorial",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 18,
+      "obj": "ツムギの はなしを聞こう",
+      "head": "いまやること",
+      "sub": "",
+      "hint": "",
+      "panel": "",
+      "arrow": null,
+      "dir": 0,
+      "objectiveCategory": "talk",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 23,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "0 / 5　→ 17m",
+      "hint": "",
+      "panel": "",
+      "arrow": "1224,147/17m",
+      "dir": 3,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 29,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "0 / 5　→ 16m",
+      "hint": "",
+      "panel": "",
+      "arrow": "1224,262/16m",
+      "dir": 4,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 34,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "0 / 5　→ 6m",
+      "hint": "",
+      "panel": "",
+      "arrow": "1009,158/6m",
+      "dir": 2,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 40,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "2 / 5　→ 19m",
+      "hint": "",
+      "panel": "",
+      "arrow": "879,56/19m",
+      "dir": 1,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 45,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "2 / 5　→ 17m",
+      "hint": "",
+      "panel": "",
+      "arrow": "837,56/17m",
+      "dir": 0,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 50,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "2 / 5　→ 13m",
+      "hint": "",
+      "panel": "",
+      "arrow": "634,56/13m",
+      "dir": 1,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 63,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "2 / 5",
+      "hint": "E木をきる",
+      "panel": "",
+      "arrow": null,
+      "dir": 0,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "gatherWood",
+      "semanticMatch": true
+    },
+    {
+      "sec": 69,
+      "obj": "ツムギに ほうこくしよう",
+      "head": "できた!",
+      "sub": "→ 28m",
+      "hint": "",
+      "panel": "",
+      "arrow": "56,337/28m",
+      "dir": 2,
+      "objectiveCategory": "report",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 75,
+      "obj": "ツムギに ほうこくしよう",
+      "head": "できた!",
+      "sub": "→ 13m",
+      "hint": "",
+      "panel": "",
+      "arrow": "56,342/13m",
+      "dir": 6,
+      "objectiveCategory": "report",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 80,
+      "obj": "ツムギに ほうこくしよう",
+      "head": "できた!",
+      "sub": "→ 6m",
+      "hint": "",
+      "panel": "",
+      "arrow": "56,630/6m",
+      "dir": 6,
+      "objectiveCategory": "report",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 86,
+      "obj": "ミナモの はなしを聞こう",
+      "head": "いまやること",
+      "sub": "→ 27m",
+      "hint": "",
+      "panel": "",
+      "arrow": "56,603/27m",
+      "dir": 6,
+      "objectiveCategory": "talk",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 91,
+      "obj": "ミナモの はなしを聞こう",
+      "head": "いまやること",
+      "sub": "→ 10m",
+      "hint": "",
+      "panel": "",
+      "arrow": "56,623/10m",
+      "dir": 5,
+      "objectiveCategory": "talk",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 97,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "0 / 2　→ 13m",
+      "hint": "",
+      "panel": "",
+      "arrow": "743,664/13m",
+      "dir": 4,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 102,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "0 / 2",
+      "hint": "E木をきる",
+      "panel": "",
+      "arrow": null,
+      "dir": 4,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "gatherWood",
+      "semanticMatch": true
+    },
+    {
+      "sec": 108,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "1 / 2　→ 37m",
+      "hint": "",
+      "panel": "",
+      "arrow": "1224,246/37m",
+      "dir": 2,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 114,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "1 / 2　→ 20m",
+      "hint": "",
+      "panel": "",
+      "arrow": "1224,86/20m",
+      "dir": 2,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 119,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "1 / 2　→ 2m",
+      "hint": "",
+      "panel": "",
+      "arrow": null,
+      "dir": 1,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 125,
+      "obj": "いしを あつめよう",
+      "head": "いまやること",
+      "sub": "0 / 1",
+      "hint": "E岩をくだく",
+      "panel": "",
+      "arrow": null,
+      "dir": 6,
+      "objectiveCategory": "gatherStone",
+      "hintCategory": "gatherStone",
+      "semanticMatch": true
+    },
+    {
+      "sec": 131,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "0 / 2　→ 16m",
+      "hint": "",
+      "panel": "",
+      "arrow": "675,56/16m",
+      "dir": 0,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 137,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "0 / 2　→ 14m",
+      "hint": "",
+      "panel": "",
+      "arrow": "528,56/14m",
+      "dir": 0,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 142,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "0 / 2　→ 15m",
+      "hint": "",
+      "panel": "",
+      "arrow": "345,56/15m",
+      "dir": 6,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 148,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "0 / 2　→ 15m",
+      "hint": "",
+      "panel": "",
+      "arrow": "466,56/15m",
+      "dir": 0,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 153,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "0 / 2　→ 9m",
+      "hint": "",
+      "panel": "",
+      "arrow": "56,441/9m",
+      "dir": 6,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 159,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "0 / 2　→ 6m",
+      "hint": "",
+      "panel": "",
+      "arrow": "56,618/6m",
+      "dir": 7,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 165,
+      "obj": "クサツルを あつめよう",
+      "head": "いまやること",
+      "sub": "0 / 2　→ 5m",
+      "hint": "",
+      "panel": "",
+      "arrow": "1038,207/5m",
+      "dir": 0,
+      "objectiveCategory": "gatherFiber",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 171,
+      "obj": "ざいりょうが そろったよ! Cで ツリザオを作ろう",
+      "head": "いまやること",
+      "sub": "",
+      "hint": "",
+      "panel": "",
+      "arrow": null,
+      "dir": 1,
+      "objectiveCategory": "craft",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 176,
+      "obj": "桟橋で サカナをつろう",
+      "head": "いまやること",
+      "sub": "0 / 1　→ 43m",
+      "hint": "",
+      "panel": "",
+      "arrow": "56,649/43m",
+      "dir": 5,
+      "objectiveCategory": "fish",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 182,
+      "obj": "桟橋で サカナをつろう",
+      "head": "いまやること",
+      "sub": "0 / 1　→ 26m",
+      "hint": "",
+      "panel": "",
+      "arrow": "56,663/26m",
+      "dir": 5,
+      "objectiveCategory": "fish",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 187,
+      "obj": "桟橋で サカナをつろう",
+      "head": "いまやること",
+      "sub": "0 / 1　→ 11m",
+      "hint": "",
+      "panel": "",
+      "arrow": "163,664/11m",
+      "dir": 5,
+      "objectiveCategory": "fish",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 193,
+      "obj": "桟橋で サカナをつろう",
+      "head": "いまやること",
+      "sub": "0 / 1　→ 11m",
+      "hint": "",
+      "panel": "",
+      "arrow": "142,664/11m",
+      "dir": 3,
+      "objectiveCategory": "fish",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 199,
+      "obj": "桟橋で サカナをつろう",
+      "head": "いまやること",
+      "sub": "0 / 1　→ 12m",
+      "hint": "",
+      "panel": "",
+      "arrow": "491,664/12m",
+      "dir": 3,
+      "objectiveCategory": "fish",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 204,
+      "obj": "桟橋で サカナをつろう",
+      "head": "いまやること",
+      "sub": "0 / 1　→ 11m",
+      "hint": "",
+      "panel": "",
+      "arrow": "420,664/11m",
+      "dir": 4,
+      "objectiveCategory": "fish",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 210,
+      "obj": "桟橋で サカナをつろう",
+      "head": "いまやること",
+      "sub": "0 / 1　→ 8m",
+      "hint": "",
+      "panel": "",
+      "arrow": "537,56/8m",
+      "dir": 5,
+      "objectiveCategory": "fish",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 215,
+      "obj": "桟橋で サカナをつろう",
+      "head": "いまやること",
+      "sub": "0 / 1　→ 4m",
+      "hint": "",
+      "panel": "",
+      "arrow": "518,637/4m",
+      "dir": 3,
+      "objectiveCategory": "fish",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 220,
+      "obj": "桟橋で サカナをつろう",
+      "head": "いまやること",
+      "sub": "0 / 1　→ 2m",
+      "hint": "まってる… Escやめる",
+      "panel": "",
+      "arrow": null,
+      "dir": 5,
+      "objectiveCategory": "fish",
+      "hintCategory": "fish",
+      "semanticMatch": true
+    },
+    {
+      "sec": 226,
+      "obj": "ミナモに ほうこくしよう",
+      "head": "できた!",
+      "sub": "→ 34m",
+      "hint": "",
+      "panel": "",
+      "arrow": "286,56/34m",
+      "dir": 7,
+      "objectiveCategory": "report",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 231,
+      "obj": "ミナモに ほうこくしよう",
+      "head": "できた!",
+      "sub": "→ 20m",
+      "hint": "",
+      "panel": "",
+      "arrow": "335,56/20m",
+      "dir": 7,
+      "objectiveCategory": "report",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 236,
+      "obj": "ミナモに ほうこくしよう",
+      "head": "できた!",
+      "sub": "→ 12m",
+      "hint": "",
+      "panel": "",
+      "arrow": "540,56/12m",
+      "dir": 0,
+      "objectiveCategory": "report",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 242,
+      "obj": "ノクトの はなしを聞こう",
+      "head": "いまやること",
+      "sub": "→ 40m",
+      "hint": "Eミナモと はなす",
+      "panel": "",
+      "arrow": null,
+      "dir": 7,
+      "objectiveCategory": "talk",
+      "hintCategory": "talk",
+      "semanticMatch": true
+    },
+    {
+      "sec": 247,
+      "obj": "ノクトの はなしを聞こう",
+      "head": "いまやること",
+      "sub": "→ 24m",
+      "hint": "",
+      "panel": "",
+      "arrow": "578,56/24m",
+      "dir": 0,
+      "objectiveCategory": "talk",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 253,
+      "obj": "ノクトの はなしを聞こう",
+      "head": "いまやること",
+      "sub": "→ 5m",
+      "hint": "",
+      "panel": "",
+      "arrow": "554,131/5m",
+      "dir": 0,
+      "objectiveCategory": "talk",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 259,
+      "obj": "高台で こうせきをほろう",
+      "head": "いまやること",
+      "sub": "1 / 3　→ 4m",
+      "hint": "",
+      "panel": "",
+      "arrow": "742,664/4m",
+      "dir": 6,
+      "objectiveCategory": "gatherOre",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 264,
+      "obj": "高台で こうせきをほろう",
+      "head": "いまやること",
+      "sub": "2 / 3　→ 4m",
+      "hint": "",
+      "panel": "",
+      "arrow": "624,183/4m",
+      "dir": 0,
+      "objectiveCategory": "gatherOre",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 270,
+      "obj": "ノクトに ほうこくしよう",
+      "head": "できた!",
+      "sub": "→ 7m",
+      "hint": "",
+      "panel": "",
+      "arrow": "1224,484/7m",
+      "dir": 3,
+      "objectiveCategory": "report",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 275,
+      "obj": "ノクトに ほうこくしよう",
+      "head": "できた!",
+      "sub": "→ 2m",
+      "hint": "",
+      "panel": "",
+      "arrow": null,
+      "dir": 2,
+      "objectiveCategory": "report",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 281,
+      "obj": "ツムギの はなしを聞こう",
+      "head": "いまやること",
+      "sub": "→ 37m",
+      "hint": "",
+      "panel": "",
+      "arrow": "1223,664/37m",
+      "dir": 3,
+      "objectiveCategory": "talk",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 286,
+      "obj": "ツムギの はなしを聞こう",
+      "head": "いまやること",
+      "sub": "→ 20m",
+      "hint": "",
+      "panel": "",
+      "arrow": "1224,582/20m",
+      "dir": 3,
+      "objectiveCategory": "talk",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 291,
+      "obj": "ツムギの はなしを聞こう",
+      "head": "いまやること",
+      "sub": "→ 4m",
+      "hint": "",
+      "panel": "",
+      "arrow": "1105,664/4m",
+      "dir": 3,
+      "objectiveCategory": "talk",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 296,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "0 / 1　→ 16m",
+      "hint": "",
+      "panel": "",
+      "arrow": "1224,181/16m",
+      "dir": 2,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 302,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "0 / 1　→ 15m",
+      "hint": "",
+      "panel": "",
+      "arrow": "1224,263/15m",
+      "dir": 1,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 307,
+      "obj": "もくざいを あつめよう",
+      "head": "いまやること",
+      "sub": "0 / 1　→ 10m",
+      "hint": "",
+      "panel": "",
+      "arrow": "1224,360/10m",
+      "dir": 2,
+      "objectiveCategory": "gatherWood",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 313,
+      "obj": "ヒカリゴケを あつめよう",
+      "head": "いまやること",
+      "sub": "0 / 2　→ 9m",
+      "hint": "",
+      "panel": "",
+      "arrow": "681,67/9m",
+      "dir": 0,
+      "objectiveCategory": "gatherMoss",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 319,
+      "obj": "ヒカリゴケを あつめよう",
+      "head": "いまやること",
+      "sub": "1 / 2　→ 5m",
+      "hint": "",
+      "panel": "",
+      "arrow": "510,150/5m",
+      "dir": 7,
+      "objectiveCategory": "gatherMoss",
+      "hintCategory": "none",
+      "semanticMatch": true
+    },
+    {
+      "sec": 324,
+      "obj": "ランタンを 島に置こう(もちもの→おく)",
+      "head": "いまやること",
+      "sub": "",
+      "hint": "",
+      "panel": "もちもの とじる(Tab)",
+      "arrow": null,
+      "dir": 0,
+      "objectiveCategory": "place",
+      "hintCategory": "none",
+      "semanticMatch": true
+    }
+  ],
+  "uxVerdict": "PASS",
+  "semanticMismatchCount": 0,
+  "semanticMismatches": [],
+  "refishDuringReportCount": 0,
+  "refishDuringReport": [],
+  "shopOpens": 0,
+  "shopOpenSecs": [],
+  "stallCount": 0,
+  "stalls": [],
+  "unknownHints": [],
+  "shopHintAvoided": 0,
+  "shopHintAvoidedSamples": [],
+  "sleepHintAvoided": 0,
+  "sleepHintAvoidedSamples": []
+}

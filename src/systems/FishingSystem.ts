@@ -31,25 +31,57 @@ export function isFishNight(hour: number): boolean {
 export function seaFishUnlocked(state: Pick<GameState, 'quests'>): boolean {
   return state.quests.q_fish === 'done';
 }
+/**
+ * v17 タツノオトシゴの解禁条件。第2章(とうだいの あかりを ともす q2_light)を おえた あと。
+ * 「章をおえた ごほうびが、そのあとの まいにちに のこる」ようにするための ゲート
+ * (ひかりのレンズのように 1回きりの品ではなく、ずっと ねらえる めずらしい魚にしてある)。
+ */
+export function coveFishUnlocked(state: Pick<GameState, 'quests'>): boolean {
+  return state.quests.q2_light === 'done';
+}
 /** 昼の海であおうおが出る確率 */
 export const SEA_DAY_RATE = 0.5;
 /** 夜の海でにじうおが出る確率(レア) */
 export const SEA_NIGHT_RARE_RATE = 0.2;
 /** 夜にヨザカナが出る確率(従来どおり。残りはサカナ) */
 export const NIGHT_FISH_RATE = 0.7;
+/** v17 昼の池でコイが出る確率(残りはサカナ) */
+export const POND_KOI_RATE = 0.3;
+/** v17 昼の海でタイが出る確率(あおうおより ややレア) */
+export const SEA_DAY_RARE_RATE = 0.15;
+/** v17 第2章のあと、夜の海でタツノオトシゴが出る確率(いちばん レア) */
+export const SEA_NIGHT_COVE_RATE = 0.12;
 
 /**
  * その場所・時刻でつれる魚を1匹えらぶ。
- * - 池(pond)は従来どおり: 昼=サカナ / 夜=7割ヨザカナ。
- * - 海(sea)は解禁後だけ: 昼=5割あおうお / 夜=2割にじうお、外れたら従来の抽選。
+ * - 池(pond): 昼=3割コイ・のこりサカナ / 夜=7割ヨザカナ(夜は従来どおり)。
+ * - 海(sea)は解禁後だけ: 昼=15%タイ・50%あおうお・のこりサカナ /
+ *   夜=(第2章のあとだけ)12%タツノオトシゴ・20%にじうお、外れたら従来の抽選。
+ *
+ * 1つの時間帯では rand() を1回しか引かないで しきい値を ならべる。
+ * こうすると あとから魚を足しても、もとの魚の確率が ずれない
+ * (あおうお=50%のまま タイ=15%を足せる。tests/unit/content_v8.test.ts が これを固定している)。
  */
 export function pickFishFor(
-  zone: FishZone, hour: number, unlocked: boolean, rand: () => number = Math.random
+  zone: FishZone, hour: number, unlocked: boolean, rand: () => number = Math.random,
+  coveUnlocked = false
 ): ItemId {
   const night = isFishNight(hour);
   if (zone === 'sea' && unlocked) {
-    if (!night) return rand() < SEA_DAY_RATE ? 'seafish' : 'fish';
-    if (rand() < SEA_NIGHT_RARE_RATE) return 'rarefish';
+    if (!night) {
+      const r = rand();
+      if (r < SEA_DAY_RARE_RATE) return 'seabream';
+      return r < SEA_DAY_RARE_RATE + SEA_DAY_RATE ? 'seafish' : 'fish';
+    }
+    const r = rand();
+    if (coveUnlocked && r < SEA_NIGHT_COVE_RATE) return 'seahorse';
+    // 第2章の前は しきい値が 0..0.2(=これまでと同じ2割)。あとは 0.12..0.32 にずらす
+    if (r < (coveUnlocked ? SEA_NIGHT_COVE_RATE : 0) + SEA_NIGHT_RARE_RATE) return 'rarefish';
+  }
+  // コイも最初の釣り依頼(q_fish)が おわるまでは出さない(見なれない魚で依頼が すすまない混乱を防ぐ。海の魚と同じ原則)
+  if (zone === 'pond' && !night) {
+    const r = rand();
+    return unlocked && r < POND_KOI_RATE ? 'koi' : 'fish';
   }
   if (night) return rand() < NIGHT_FISH_RATE ? 'nightfish' : 'fish';
   return 'fish';
@@ -79,6 +111,9 @@ const CATCH_NOTE: Partial<Record<ItemId, string>> = {
   nightfish: '! よるにしか つれない魚だ',
   seafish: '! 海のあおい魚だ',
   rarefish: '! めったに つれない にじ色の魚だ',
+  koi: '! 池の 大きなコイだ',
+  seabream: '! ももいろの めでたい魚だ',
+  seahorse: '! とうだいが よんだのかな、めずらしい いきものだ',
 };
 
 export class FishingSystem {
@@ -88,6 +123,12 @@ export class FishingSystem {
    * あたりが来るまでの まち時間に かける。GameScene が毎フレーム入れる。
    */
   waitMul = 1;
+  /**
+   * v17 検証・スクショ用: つぎに つれる魚を1回だけ 決めうちする(ふだんは null)。
+   * ゲーム本体は ここに 書きこまない。tools/ の撮影ハーネスだけが使う
+   * (デバッグAPIを ふやさずに「めずらしい魚が つれた画」を とるための穴)。
+   */
+  nextFishOverride: ItemId | null = null;
   private waitT = 0;
   private biteT = 0;
   private castT = 0;
@@ -305,6 +346,12 @@ export class FishingSystem {
   }
 
   private pickFish(): ItemId {
+    // v17 検証・スクショ用の 決めうち(ふだんは null)。ゲーム本体からは 書きこまない
+    if (this.nextFishOverride) {
+      const forced = this.nextFishOverride;
+      this.nextFishOverride = null;
+      return forced;
+    }
     const h = this.game.time.hour;
     const unlocked = seaFishUnlocked(this.game);
     if (this.debug) {
@@ -313,7 +360,7 @@ export class FishingSystem {
       if (this.zone === 'sea' && unlocked) return isFishNight(h) ? 'rarefish' : 'seafish';
       return isFishNight(h) ? 'nightfish' : 'fish';
     }
-    return pickFishFor(this.zone, h, unlocked);
+    return pickFishFor(this.zone, h, unlocked, Math.random, coveFishUnlocked(this.game));
   }
 
   update(dt: number, player: PlayerController, view: CharacterView): void {

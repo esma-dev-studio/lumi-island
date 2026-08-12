@@ -65,6 +65,23 @@ export interface BulletinProgress {
   done: string[];
 }
 
+/**
+ * v16 ほしまつり(7日ごとの おまつり)の進みぐあい。
+ *
+ * ひらく日・集まる人・ごほうびは ぜんぶ 日づけから みちびけるので セーブしない
+ * (でんごんばん BulletinProgress と まったく同じ考え方)。
+ * のこすのは「その回の まつりで ランタンを もらったか・とばしたか」だけ。
+ * 日づけを 1つ持つことで、日ごとのリセット処理を 1つも増やさずに
+ * 「1回の まつりにつき 1こ」が 成り立つ。
+ */
+export interface FestivalProgress {
+  day: number;
+  /** ほしランタンを もらったか(とばすと false にもどる) */
+  got: boolean;
+  /** その回の まつりで もう とばしたか */
+  flown: boolean;
+}
+
 export type QuestState = 'locked' | 'open' | 'done';
 
 export interface NpcState {
@@ -113,6 +130,8 @@ export interface GameState {
   cardDay?: number;
   /** v15 きょうの おてつだい(でんごんばん)の進みぐあい。未設定 = きょうは まだ1件も とどけていない */
   bulletin?: BulletinProgress;
+  /** v16 ほしまつりの進みぐあい。未設定 = この回の まつりでは まだ何もしていない */
+  festival?: FestivalProgress;
 }
 
 export function newGameState(): GameState {

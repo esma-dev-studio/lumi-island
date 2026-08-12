@@ -37,9 +37,31 @@ export function mulberry32(seed: number): () => number {
   };
 }
 
+// ---------- v16 ほしまつりの夜だけの フレーズ ----------
+/**
+ * まつりの夜の たね(ふだんの夜と ぜったいに かぶらない別の数にする)。
+ * 同じ夜でも「ふだんの曲」と「まつりの曲」が 別の1曲になる。
+ */
+export const FESTIVAL_SALT = 0x2f6b3d11;
+/** まつりの夜の テンポ倍率。すこし はやくして「うきうき」を音で出す(62 → 約76) */
+export const FESTIVAL_BPM_MUL = 1.22;
+/** まつりの夜の 音域(ふだんより 上へ ずらす=明るく はずんだ音色になる) */
+const FESTIVAL_RANGE = { lo: 3, hi: 9, bLo: 5, bHi: 9, start: 5, bStart: 8 } as const;
+const NORMAL_RANGE = { lo: 1, hi: 7, bLo: 4, bHi: 9, start: 3, bStart: 6 } as const;
+
 /** 夜の通し番号 → フレーズのシード(隣り合う夜が似た曲にならないよう混ぜる) */
 export function phraseSeed(nightIdx: number): number {
   return (Math.imul(nightIdx + 1, 0x9e3779b1) ^ 0x5f356495) >>> 0;
+}
+
+/**
+ * まつりの夜の たね。ふだんの夜の たねと ぜったいに かぶらない
+ * (同じ夜でも「ふだんの曲」と「まつりの曲」が 別の1曲になる)。
+ * phraseSeed に引数を足さないのは、`[..].map(phraseSeed)` のような呼び方で
+ * うっかり 添字が わたるのを 構造的に 防ぐため。
+ */
+export function festivalSeed(nightIdx: number): number {
+  return (phraseSeed(nightIdx) ^ FESTIVAL_SALT) >>> 0;
 }
 
 // ---------- 時刻の判定 ----------
@@ -101,6 +123,8 @@ export interface MbPhrase {
   bpm: number;
   seed: number;
   nightIdx: number;
+  /** v16 まつりの夜のフレーズか(MusicBoxが 差しかえの判断に使う) */
+  festival: boolean;
 }
 
 // 1小節(4拍)のリズム型。静かに聞かせたいので、疎な型を厚めに引く
@@ -193,14 +217,20 @@ function cadenced(src: MbNote[]): MbNote[] {
 /**
  * その夜のフレーズを作る。nightIdx が同じなら必ず同じ曲になる。
  * 構成は A(4) A'(4) B(4) A''(4) の16小節。Bだけ少し高い音域にして起伏をつける。
+ *
+ * @param festival v16 ほしまつりの夜。たねも 音域も ふだんの夜とは 別にして、
+ *   「特別な夜だ」と 音だけで つたわるようにする(テンポは呼び出し側が上げる)。
+ *   組み立てかた・音階(ペンタトニック)・終止のきまりは まったく同じなので、
+ *   いつもの島の音楽の なかまのまま 明るくなるだけ。
  */
-export function generatePhrase(nightIdx: number, bpm: number = MUSIC.bpm): MbPhrase {
-  const seed = phraseSeed(nightIdx);
+export function generatePhrase(nightIdx: number, bpm: number = MUSIC.bpm, festival = false): MbPhrase {
+  const seed = festival ? festivalSeed(nightIdx) : phraseSeed(nightIdx);
   const rnd = mulberry32(seed);
   const sec = MUSIC.sectionBars;
-  const a = genSection(rnd, sec, 3, 1, 7);
-  const b = genSection(rnd, sec, 6, 4, 9);
-  const parts: MbNote[][] = [a, variedTail(a, rnd, 1, 7), b, cadenced(a)];
+  const r = festival ? FESTIVAL_RANGE : NORMAL_RANGE;
+  const a = genSection(rnd, sec, r.start, r.lo, r.hi);
+  const b = genSection(rnd, sec, r.bStart, r.bLo, r.bHi);
+  const parts: MbNote[][] = [a, variedTail(a, rnd, r.lo, r.hi), b, cadenced(a)];
 
   const notes: MbNote[] = [];
   parts.forEach((part, i) => {
@@ -223,6 +253,7 @@ export function generatePhrase(nightIdx: number, bpm: number = MUSIC.bpm): MbPhr
     bpm,
     seed,
     nightIdx,
+    festival,
   };
 }
 

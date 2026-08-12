@@ -11,6 +11,10 @@ export type ItemId =
   | 'snail'
   // v9 虫あみでつかまえる虫6種(昼4・夜2)
   | 'b_shiro' | 'b_ageha' | 'b_tento' | 'b_kabuto' | 'b_hotaru' | 'b_suzu'
+  // v17 虫を6種たして12種に(昼5・夕方1・夜1)
+  | 'b_kuwa' | 'b_kama' | 'b_semi' | 'b_batta' | 'b_tonbo' | 'b_ookuwa'
+  // v17 魚を3種たす(コイ=池の昼 / タイ=海の昼のややレア / タツノオトシゴ=第2章のあとの夜の海)
+  | 'koi' | 'seabream' | 'seahorse'
   // v9 シャベルで ほりだすもの3種 / カマでかる わら
   | 'shard_pot' | 'shiny_stone' | 'gold_piece' | 'straw'
   // v11 よるの入り江でとれる2種(道具はいらない)
@@ -97,6 +101,17 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   b_kabuto: { id: 'b_kabuto', name: 'カブトムシ', sell: 30, kind: 'material', desc: '林の木の みきに とまっている、つのの ある虫' },
   b_hotaru: { id: 'b_hotaru', name: 'ホタル', sell: 18, kind: 'material', desc: '夜の池のまわりで ちかちか 光りながら ただよう' },
   b_suzu: { id: 'b_suzu', name: 'スズムシ', sell: 12, kind: 'material', desc: '夜の草むらに いる、りんりんと鳴く虫' },
+  // ---- v17 虫6種(むしあみが ひつよう)。売値は「見つけにくさ」の順にならべてある ----
+  b_batta: { id: 'b_batta', name: 'バッタ', sell: 9, kind: 'material', desc: '草地に いる 黄みどりの虫。大きな 後ろあしで ぴょんと とぶ' },
+  b_semi: { id: 'b_semi', name: 'セミ', sell: 14, kind: 'material', desc: '昼の 木のみきで 鳴いている。羽を 屋根のように たたんでいる' },
+  b_tonbo: { id: 'b_tonbo', name: 'トンボ', sell: 16, kind: 'material', desc: '夕方の 池のそばを すいすい とぶ 赤いトンボ。羽が 4まい ある' },
+  b_kama: { id: 'b_kama', name: 'カマキリ', sell: 22, kind: 'material', desc: '草むらで じっと まちぶせする 緑の虫。前あしが かまの形' },
+  b_kuwa: { id: 'b_kuwa', name: 'クワガタ', sell: 26, kind: 'material', desc: '昼の 木のみきに いる、大きな あごの ある虫' },
+  b_ookuwa: { id: 'b_ookuwa', name: 'オオクワガタ', sell: 60, kind: 'material', desc: 'よるの 木のみきに まれに いる、つやのある 黒い大きなクワガタ' },
+  // ---- v17 魚3種 ----
+  koi: { id: 'koi', name: 'コイ', sell: 22, kind: 'food', desc: '昼の池に いる 大きな魚。だいだい色と 白の もようが ある' },
+  seabream: { id: 'seabream', name: 'タイ', sell: 45, kind: 'food', desc: '昼の海で ときどき つれる、ももいろの めでたい魚' },
+  seahorse: { id: 'seahorse', name: 'タツノオトシゴ', sell: 70, kind: 'food', desc: 'とうだいが ともってから、よるの海に まれに 見られる 小さな いきもの' },
   // ---- v9 シャベルの ほりだしもの3種 ----
   shard_pot: { id: 'shard_pot', name: 'つぼのかけら', sell: 10, kind: 'material', desc: '土の中から 出てきた、もようの ある やきものの かけら' },
   shiny_stone: { id: 'shiny_stone', name: 'きらきらの石', sell: 20, kind: 'material', desc: 'みがいたように つやつやした、ふしぎな 小石' },
@@ -237,8 +252,14 @@ export const ITEMS: Record<ItemId, ItemDef> = {
 //   それに「すいそうを 使ってみた子」にだけ次の目標が出るほうが 目標の階段として素直で、
 //   ひらめきの引き金を「素材の初回入手」に無理やり結びつけずに済む(RECIPE_DISCOVERYを汚さない)。
 // ---------------------------------------------------------------------------
-const DISPLAY_FISH = ['fish', 'nightfish', 'seafish', 'rarefish'] as const;
-const DISPLAY_BUGS = ['b_shiro', 'b_ageha', 'b_tento', 'b_kabuto', 'b_hotaru', 'b_suzu'] as const;
+// v17 いきものを ふやしたら、この2つの表に足すだけで
+// すいそう・むしかご(大小)・ずかん・おくりもの・実績が ぜんぶ ついてくる。
+// ならびは BUG_IDS(=BUG_DEFS の順)と そろえること(display_v10.test.ts が両方向を見る)。
+const DISPLAY_FISH = ['fish', 'nightfish', 'seafish', 'rarefish', 'koi', 'seabream', 'seahorse'] as const;
+const DISPLAY_BUGS = [
+  'b_shiro', 'b_ageha', 'b_tento', 'b_kabuto', 'b_hotaru', 'b_suzu',
+  'b_batta', 'b_kuwa', 'b_kama', 'b_semi', 'b_tonbo', 'b_ookuwa',
+] as const;
 
 export const DISPLAY_FURNITURE = {
   f_aquarium: {

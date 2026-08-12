@@ -335,8 +335,11 @@ export function rainState(): Record<string, unknown> | null {
  * @param hour   ゲーム内時刻(0〜24)
  * @param indoor 室内にいるか(ローパスで少しこもらせる)
  * @param duck   見せ場・就寝の演出中か(効果音とぶつからないよう少し下げる)
+ * @param festival v16 ほしまつりの時間か(その あいだだけ まつりのフレーズに 差しかわる)
  */
-export function setMusic(day: number, hour: number, indoor = false, duck = false): void {
+export function setMusic(
+  day: number, hour: number, indoor = false, duck = false, festival = false
+): void {
   const want = enabled && isMusicHour(hour);
   if (!music) {
     if (!want) return; // 昼は何も作らない
@@ -345,7 +348,7 @@ export function setMusic(day: number, hour: number, indoor = false, duck = false
   }
   music.setIndoor(indoor);
   music.setDuck(duck);
-  music.setNight(want, nightIndex(day, hour));
+  music.setNight(want, nightIndex(day, hour), festival);
 }
 
 /** BGMの内部状態(検証・デバッグ用。読むだけで副作用はない) */

@@ -7,7 +7,9 @@
 //
 // 音量は環境音(AudioSystemのchirp/cricket)より控えめに置く。効果音(sfx)とは
 // 2桁近い差があるので、開花・就寝の演出音とぶつからない。
-import { MUSIC, MusicScheduler, clamp, generatePhrase, midiToFreq, type MbPhrase } from './musicPhrase';
+import {
+  FESTIVAL_BPM_MUL, MUSIC, MusicScheduler, clamp, generatePhrase, midiToFreq, type MbPhrase,
+} from './musicPhrase';
 
 /** MusicBoxが使うAudioContextの最小面(テストではモックを渡す) */
 export interface MbAudioContext {
@@ -41,6 +43,8 @@ export class MusicBox {
   private sched: MusicScheduler;
   private timer: ReturnType<typeof setInterval> | null = null;
   private nightIdx = Number.NaN;
+  /** v16 いま まつりのフレーズを鳴らしているか(差しかえの判断に使う) */
+  private festival = false;
   private wantPlay = false; // 「夜なので鳴らしたい」状態
   private active = false; // フェードアウト中も true(余韻を鳴らしきる)
   private fadeEndsAt = 0;
@@ -117,9 +121,10 @@ export class MusicBox {
       ducked: this.ducked,
       hidden: this.hidden,
       nightIdx: this.nightIdx,
+      festival: this.festival,
       seed: this.sched.phrase.seed,
       notes: this.sched.phrase.notes.length,
-      bpm: this.bpm,
+      bpm: this.sched.phrase.bpm,
       gain: this.fade.gain.value,
       cutoff: this.tone.frequency.value,
     };
@@ -130,12 +135,16 @@ export class MusicBox {
    * 夜かどうかを伝える。夜が変わったらフレーズを作り直す。
    * @param on 鳴らしたいか(19:00〜翌4:30)
    * @param nightIdx 夜の通し番号(同じ夜なら同じ曲)
+   * @param festival v16 ほしまつりの時間か。同じ夜でも まつりのあいだだけ
+   *   別のフレーズ(たね・音域・テンポがちがう)に 差しかわり、終わると もとの曲へ もどる
    */
-  setNight(on: boolean, nightIdx: number): void {
+  setNight(on: boolean, nightIdx: number, festival = false): void {
     if (on) {
-      if (nightIdx !== this.nightIdx) {
+      if (nightIdx !== this.nightIdx || festival !== this.festival) {
         this.nightIdx = nightIdx;
-        this.sched.setPhrase(generatePhrase(nightIdx, this.bpm), this.ctx.currentTime + 0.25);
+        this.festival = festival;
+        const bpm = festival ? this.bpm * FESTIVAL_BPM_MUL : this.bpm;
+        this.sched.setPhrase(generatePhrase(nightIdx, bpm, festival), this.ctx.currentTime + 0.25);
       }
       if (!this.wantPlay) this.start();
     } else if (this.wantPlay) {

@@ -1,0 +1,30 @@
+
+> lumi-island@0.1.0 test:regression
+> node tools/playtest_bot.mjs
+
+[00:26] タイトル表示
+[00:29] ゲーム開始(新規)
+[00:30] 目標: tut_move
+[00:31] 目標: q_wood_offer
+[00:33] 目標: q_wood_gather
+nav 38s 迂回はじめ: (-20.0,-6.0)へ 15.2m で足ぶみ → 45度 左まわり(24秒まで)
+nav 39s 迂回: 45度でも進めない → 90度に広げる
+nav 42s 迂回おわり: 15.2m→11.5m まで近づけた
+[00:48] はじめての採取
+hb 50s pos=(-25.1,-3.9) obj=q_wood_gather hour=19.3
+hb 71s pos=(-25.9,5.1) obj=q_wood_gather hour=19.6
+nav 87s 迂回はじめ: (-26.0,14.0)へ 3.7m で足ぶみ → 45度 左まわり(22秒まで)
+hb 98s pos=(-26.5,12.0) obj=q_wood_gather hour=19.8
+hb 110s pos=(-27.2,15.2) obj=q_wood_gather hour=19.9
+[01:50] はじめての夜(発光を確認)
+hb 136s pos=(-17.2,7.7) obj=q_wood_gather hour=20.3
+hb 152s pos=(-16.2,3.5) obj=q_wood_gather hour=20.5
+hb 172s pos=(-16.2,-0.1) obj=q_wood_gather hour=20.6
+hb 197s pos=(-16.2,-10.2) obj=q_wood_gather hour=20.9
+nav 197s 迂回はじめ: (-16.0,-25.0)へ 14.8m で足ぶみ → 45度 左まわり(8秒まで)
+nav 204s 迂回おわり: 14.8m→11.0m まで近づけた
+hb 210s pos=(-14.9,-14.3) obj=q_wood_gather hour=21.1
+hb 233s pos=(-20.7,-7.5) obj=q_wood_gather hour=21.4
+hb 252s pos=(-24.7,-3.7) obj=q_wood_report hour=21.8
+BOT FAILED: Protocol error (Runtime.evaluate): Target closed
+EXIT=2

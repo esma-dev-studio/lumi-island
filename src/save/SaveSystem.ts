@@ -238,6 +238,19 @@ export function load(): GameState | null {
       }
     }
 
+    // v16 ほしまつりの進みぐあい。
+    // 中身(ひらく日・集まる人)は 日づけから みちびけるので、ここで見るのは
+    // 「いつの まつりの ぶんか(day)」と「もらったか・とばしたか」だけ。
+    // 日づけが 範囲の外・こわれた値なら まるごと捨てる(= その回は まだ何もしていない
+    // あつかいに もどる。stats・bulletin と同じ「知らない値は通さない」方針)。
+    const fs = raw.festival as { day?: unknown; got?: unknown; flown?: unknown } | undefined;
+    if (fs && typeof fs === 'object' && !Array.isArray(fs)) {
+      const day = fs.day;
+      if (finite(day) && Number.isInteger(day) && day >= 1 && day <= 100000) {
+        s.festival = { day, got: fs.got === true, flown: fs.flown === true };
+      }
+    }
+
     s.islandLevel = intIn(raw.islandLevel, 0, 2, 0);
 
     // マイホームの模様替え(かべ・ゆか): 既知のIDで、しかも正しいスロットのものだけ通す。

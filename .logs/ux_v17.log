@@ -1,0 +1,28 @@
+
+> lumi-island@0.1.0 test:ux
+> node tools/ux_bot.mjs
+
+[launch_browser] spawn+connect に失敗したので launch() を試す: Edgeを起動できない(port 9722 が応答しない)
+[00:24] タイトル表示
+[00:26] ゲーム開始
+[00:28] 目標表示: いまやること / WASDか矢印キーで あるいてみよう
+[00:29] 目標表示: いまやること / ツムギの はなしを聞こう
+[00:29] 進捗表示: → 3m
+[00:30] 最初の会話が開いた
+[00:31] 目標表示: いまやること / もくざいを あつめよう
+[00:31] (1) 最初の依頼を受注できた
+[00:31] 進捗表示: 0 / 5　→ 19m
+[00:32] 進捗表示: 0 / 5　→ 17m
+[00:33] 進捗表示: 0 / 5　→ 16m
+[00:35] 進捗表示: 0 / 5　→ 18m
+[00:36] 進捗表示: 0 / 5　→ 17m
+[00:37] 進捗表示: 0 / 5　→ 15m
+[00:38] 進捗表示: 0 / 5　→ 13m
+[00:39] 進捗表示: 0 / 5　→ 11m
+[00:40] 進捗表示: 0 / 5　→ 8m
+[00:40] 進捗表示: 0 / 5　→ 6m
+[00:41] 進捗表示: 0 / 5　→ 3m
+[00:42] 進捗表示: 0 / 5
+RESULT {"result":"error: Protocol error (Runtime.evaluate): Target closed","totalSec":45,"errors":0,"flags":{"title":true,"firstTalk":true,"accepted":true,"gathered":false,"reported":false,"second":false,"materials":false,"crafted":false,"placed":false,"placeConfirmed":false}}
+UX {"uxVerdict":"FAIL","semanticMismatchCount":0,"refishDuringReportCount":0,"shopOpens":0,"stallCount":0}
+EXIT=1

@@ -23,9 +23,11 @@ export const RECIPE_DISCOVERY: Partial<Record<ItemId, string[]>> = {
   // (1素材で複数ひらめく形はv8のこえだで用意ずみ)
   glassfloat: ['r_seamobile', 'r_aquarium'],
   // v9 道具→素材の階段の「ごほうび」。
-  // むしかごは どの虫を初めてつかまえても ひらめく(6種すべてに同じレシピを載せる)。
+  // むしかごは どの虫を初めてつかまえても ひらめく(v17で12種すべてに同じレシピを載せる)。
   b_shiro: ['r_bugcage'], b_ageha: ['r_bugcage'], b_tento: ['r_bugcage'],
   b_kabuto: ['r_bugcage'], b_hotaru: ['r_bugcage'], b_suzu: ['r_bugcage'],
+  b_batta: ['r_bugcage'], b_kuwa: ['r_bugcage'], b_kama: ['r_bugcage'],
+  b_semi: ['r_bugcage'], b_tonbo: ['r_bugcage'], b_ookuwa: ['r_bugcage'],
   shard_pot: ['r_ancient_pot'],
   straw: ['r_scarecrow'],
 };

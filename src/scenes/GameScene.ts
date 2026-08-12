@@ -50,6 +50,10 @@ import { resetNpcDaily, validateGiftData } from '../systems/GiftSystem';
 import { validateBulletinData } from '../systems/BulletinSystem';
 import { markTodayCardShown, shouldShowTodayCard, todayCard } from '../systems/TodayCard';
 import {
+  FESTIVAL_PLAZA, FESTIVAL_TAKE_TOAST, festivalAttendees, flyLantern, isFestivalDay,
+  isFestivalTime, takeLantern, validateFestivalData,
+} from '../systems/FestivalSystem';
+import {
   COVE_LIGHTHOUSE_POI, COVE_RETURN_POI, ISLAND_BOAT_POI, currentObjective, withAreaTravel, type Objective,
 } from '../systems/ObjectiveSystem';
 import { completeQuest, questFor, syncQuestUnlocks } from '../systems/QuestSystem';
@@ -265,6 +269,13 @@ export class GameScene {
     // v15: 組み立ては NPCSystem.visitProbeOf 1本にした。朝の「きょうの島」カードも
     // 同じ関数を通るので、「カードは来ると言ったのに 来ない」がずれようがない
     this.npcs.setVisitProbe(() => visitProbeOf(this.state));
+    // v16 ほしまつりの集合(7日ごとの18〜21時)。
+    // NPCSystem がするのは「立ち位置の差しかえ」だけなので、まつり中も
+    // 会話・受注・報告は ふだんどおり動く(集合そのものは 状態機械に一切さわらない)
+    this.npcs.setFestivalProbe(() => {
+      const active = isFestivalTime(this.island.time.day, this.island.time.hour);
+      return { active, ids: active ? festivalAttendees(this.state) : [] };
+    });
     await this.npcs.init();
     this.seq = new SequenceDirector(this);
     this.npcAvail = new NpcAvailabilityService(this.npcs, this.state, this.island.time);
@@ -427,6 +438,7 @@ export class GameScene {
     for (const p of validateBulletinData()) console.warn('[data]', p);
     for (const p of validateAchievementRewards()) console.warn('[data]', p);
     for (const p of validateBadges()) console.warn('[data]', p);
+    for (const p of validateFestivalData()) console.warn('[data]', p);
     this.inputRouter.attach();
     this.touch.attach();
     if (this.opts.debug) installLumiDebugApi(this); // 決定的テスト用のAPI(実プレイ検証はデバッグなしで行う)
@@ -518,6 +530,48 @@ export class GameScene {
     if (this.placement.active || this.fishing.state !== 'idle' || this.inter.busy) return;
     markTodayCardShown(this.state, day);
     this.todayCardUI.show(todayCard(this.state, day));
+    save(this.state);
+  }
+
+  // ---------- v16 ほしまつり ----------
+  /**
+   * ほしランタンを もらう(ランタンの台でEを押したとき)。
+   * 「1回の まつりにつき1こ」の判定は FestivalSystem が持つので、ここは 見た目と音だけ。
+   */
+  takeFestivalLantern(): void {
+    if (!takeLantern(this.state, this.island.time.day, this.island.time.hour)) return;
+    const y = this.island.groundY(FESTIVAL_PLAZA.x, FESTIVAL_PLAZA.z);
+    this.player.face(FESTIVAL_PLAZA.x, FESTIVAL_PLAZA.z);
+    burst(FESTIVAL_PLAZA.x, y + 0.8, FESTIVAL_PLAZA.z, 'craft', 10);
+    flyItem(FESTIVAL_PLAZA.x, y + 0.75, FESTIVAL_PLAZA.z);
+    toast(FESTIVAL_TAKE_TOAST, 'festival');
+    sfx('pickup');
+    this.playerView.play('pickup', {
+      onEnd: () => {
+        if (!this.player.moving) this.playerView.play('idle');
+      },
+    });
+    save(this.state);
+  }
+
+  /**
+   * ほしランタンを とばす(桟橋の先でEを押したとき)。
+   * 状態(とばした記録・集まっていた全員の なかよし度+1・累計)を **ここで確定させてから**
+   * 見せ場を始める——とうだいの点灯(attachLighthouseLens)と まったく同じ流儀。
+   */
+  flyFestivalLantern(): void {
+    if (this.seq.active) return;
+    const r = flyLantern(this.state, this.island.time.day, this.island.time.hour);
+    if (!r) return;
+    save(this.state);
+    // 島に 実体のいる人だけ 桟橋へ ならべる(まだ出会っていない人・入り江の人は 出さない)
+    this.seq.flyLanterns(r.npcs.filter((id) => this.npcs.positionOf(id) !== null));
+  }
+
+  /** ランタンとばしの見せ場のあと: お祝いのことば(じっせき・バッジは毎秒の判定が拾う) */
+  onFestivalLanternFlown(): void {
+    sfx('quest');
+    toast('ほしランタンが そらへ のぼっていった。みんなと きょうの ことを おぼえていよう', 'festival');
     save(this.state);
   }
 
@@ -772,6 +826,10 @@ export class GameScene {
    * v14: 同じ1秒の刻みで バッジも判定する(判定はどちらも 純関数で軽い)。
    */
   private updateAchievements(dt: number): void {
+    // v16 見せ場のあいだは お祝いを ためておく(演出の上に トーストを 積み上げない)。
+    // 判定そのものは 1秒後に そのまま走るので、取りこぼしは 起きない
+    // ——「一番いい画」に 通知をかぶせない、は 教訓1の見せ場の約束
+    if (this.seq.active) return;
     this.achAcc += dt;
     if (this.achAcc < 1) return;
     this.achAcc = 0;
@@ -1175,6 +1233,9 @@ export class GameScene {
           this.island.applyGarden(this.state.garden, this.island.time.day); // 花だんが1段そだつ
         }
         this.tryShowTodayCard(); // v15 朝の「きょうの島」カード(1日1回)
+        // v16 ほしまつりの かざり(まつりの日は 朝から 桟橋のたもとに 出ている)。
+        // 中で 値が変わったときだけ 動くので、毎フレーム呼んでよい
+        this.island.setFestivalDecor(isFestivalDay(this.island.time.day));
         // 家の拡張こうじ(たのんだ翌朝6時に完成。就寝で朝へ飛んだ場合もここで拾う)
         this.tryFinishConstruction();
         if (Object.keys(this.state.inventory).length > 0) {
@@ -1190,8 +1251,13 @@ export class GameScene {
           save(this.state);
         }
         setAmbient(this.island.time.isNight ? 'night' : 'day');
-        // 夜のオルゴールBGM(19:00〜翌4:30)。演出中は少し下げて効果音とぶつけない
-        setMusic(this.island.time.day, this.island.time.hour, this.indoor || this.npcHome !== null, this.seq.active);
+        // 夜のオルゴールBGM(19:00〜翌4:30)。演出中は少し下げて効果音とぶつけない。
+        // v16 まつりの時間だけ「まつりの夜のフレーズ」に差しかわる(音楽で 特別な夜だと伝える)
+        setMusic(
+          this.island.time.day, this.island.time.hour,
+          this.indoor || this.npcHome !== null, this.seq.active,
+          isFestivalTime(this.island.time.day, this.island.time.hour) && !this.indoor && this.npcHome === null
+        );
         this.hud.setClock(this.island.time.label(), this.island.time.day);
         this.hud.setLumina(this.state.lumina);
         this.state.time = { day: this.island.time.day, hour: this.island.time.hour };

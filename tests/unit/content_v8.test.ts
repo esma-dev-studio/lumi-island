@@ -403,7 +403,8 @@ describe('海の魚(あおうお・にじうお)', () => {
     const N = 20000;
     for (let i = 0; i < N; i++) {
       const f = pickFishFor('sea', 12, true, rand);
-      expect(['seafish', 'fish']).toContain(f); // 昼ににじうお・ヨザカナは出ない
+      // 昼ににじうお・ヨザカナは出ない(v17で「タイ」が足されたが、あおうおの5割は変わらない)
+      expect(['seabream', 'seafish', 'fish']).toContain(f);
       if (f === 'seafish') sea++;
     }
     expect(Math.abs(sea / N - SEA_DAY_RATE)).toBeLessThan(0.02);
@@ -424,11 +425,12 @@ describe('海の魚(あおうお・にじうお)', () => {
     expect(night).toBeGreaterThan(day); // 夜はヨザカナのほうが多い(従来どおり)
   });
 
-  it('池は解禁後も従来どおり(あおうお・にじうおは出ない)', () => {
+  it('池には海の魚(あおうお・にじうお・タイ・タツノオトシゴ)は出ない', () => {
     const rand = mulberry32(5);
     for (let i = 0; i < 3000; i++) {
-      expect(pickFishFor('pond', 12, true, rand)).toBe('fish');
-      expect(['nightfish', 'fish']).toContain(pickFishFor('pond', 22, true, rand));
+      // v17で 昼の池に「コイ」を足した(夜の池は従来どおり)
+      expect(['koi', 'fish']).toContain(pickFishFor('pond', 12, true, rand, true));
+      expect(['nightfish', 'fish']).toContain(pickFishFor('pond', 22, true, rand, true));
     }
   });
 

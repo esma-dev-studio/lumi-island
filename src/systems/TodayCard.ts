@@ -22,6 +22,9 @@ import { willVisitToday } from './NPCSystem';
 import { plotsBloomingOn } from './GardenSystem';
 import { willRainbowOn } from './WeatherSystem';
 import { isBottleDay } from './BottleSystem';
+import {
+  FESTIVAL_DAY_TEXT, FESTIVAL_EVE_TEXT, isFestivalDay, isFestivalEve,
+} from './FestivalSystem';
 import { discoveredCount, hasKitchen } from './ComboSystem';
 import { GIFT_TOTAL_KEY } from './GiftSystem';
 import { STYLE_CHANGE_KEY } from './BadgeSystem';
@@ -99,10 +102,15 @@ function eventsOf(s: GameState, day: number): TodayEvent[] {
   }
 
   // ---------------------------------------------------------------------------
-  // 拡張点: 「ほしまつり」(7日ごとの お祭り。別ウェーブで実装)の予告枠は ここに入れる。
-  //   if (isStarFestivalEve(day)) out.unshift({ id:'festival', text:'あしたは ほしまつり', icon:'star' });
-  // 予告は いちばん強い出来事なので unshift(先頭)にする。いまは 出さない。
+  // v16 ほしまつり(7日ごとの お祭り)の予告。
+  // 週の山場なので、ほかの出来事より かならず強い = unshift(先頭)にする。
+  // 日づけの計算は 1つも写経せず、FestivalSystem に聞く(上の約束2のとおり)。
   // ---------------------------------------------------------------------------
+  if (isFestivalDay(day)) {
+    out.unshift({ id: 'festival', text: FESTIVAL_DAY_TEXT, icon: 'festival' });
+  } else if (isFestivalEve(day)) {
+    out.unshift({ id: 'festival_eve', text: FESTIVAL_EVE_TEXT, icon: 'festival' });
+  }
 
   return out.slice(0, CARD_EVENT_MAX);
 }

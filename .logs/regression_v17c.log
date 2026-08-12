@@ -1,0 +1,205 @@
+
+> lumi-island@0.1.0 test:regression
+> node tools/playtest_bot.mjs
+
+[00:24] タイトル表示
+[00:27] ゲーム開始(新規)
+[00:27] 目標: tut_move
+[00:29] 目標: q_wood_offer
+[00:31] 目標: q_wood_gather
+nav 35s 迂回はじめ: (-20.0,-6.0)へ 15.2m で足ぶみ → 45度 左まわり(24秒まで)
+nav 36s 迂回: 45度でも進めない → 90度に広げる
+nav 40s 迂回おわり: 15.2m→11.5m まで近づけた
+[00:45] はじめての採取
+hb 49s pos=(-23.3,-4.0) obj=q_wood_gather hour=19.3
+hb 75s pos=(-28.9,-4.0) obj=q_wood_gather hour=19.5
+hb 88s pos=(-27.3,-3.3) obj=q_wood_gather hour=19.6
+hb 109s pos=(-26.1,6.4) obj=q_wood_gather hour=19.9
+hb 133s pos=(-26.1,13.0) obj=q_wood_gather hour=20.2
+[02:14] はじめての夜(発光を確認)
+hb 150s pos=(-17.5,5.3) obj=q_wood_gather hour=20.4
+hb 172s pos=(-16.9,0.3) obj=q_wood_gather hour=20.6
+hb 213s pos=(-15.4,-0.3) obj=q_wood_gather hour=20.7
+hb 213s pos=(-15.4,-0.3) obj=q_wood_gather hour=20.7
+hb 233s pos=(-16.1,-19.5) obj=q_wood_gather hour=21.2
+hb 248s pos=(-16.1,-22.2) obj=q_wood_gather hour=21.4
+hb 270s pos=(-16.1,-24.0) obj=q_wood_gather hour=21.5
+hb 291s pos=(-9.2,-25.7) obj=q_wood_report hour=21.8
+[04:52] 目標: q_wood_report
+hb 308s pos=(-3.3,-19.7) obj=q_wood_report hour=22.0
+hb 339s pos=(-3.3,-9.5) obj=q_wood_report hour=22.3
+hb 349s pos=(-3.3,-4.4) obj=q_wood_report hour=22.5
+nav 355s 迂回はじめ: (-3.6,1.0)へ 3.7m で足ぶみ → 45度 左まわり(13秒まで)
+hb 368s pos=(-4.0,2.2) obj=q_wood_report hour=22.8
+hb 394s pos=(-2.1,1.0) obj=q_fish_offer hour=22.8
+[06:36] 目標: q_fish_offer
+hb 409s pos=(1.0,3.2) obj=q_fish_offer hour=22.9
+hb 429s pos=(7.9,9.5) obj=q_fish_offer hour=23.2
+hb 448s pos=(16.3,13.0) obj=q_fish_offer hour=23.5
+hb 473s pos=(20.3,12.4) obj=q_fish_offer hour=23.6
+hb 490s pos=(22.1,12.4) obj=q_fish_offer hour=23.7
+[08:25] 目標: q_fish_mats_wood
+hb 510s pos=(20.6,13.1) obj=q_fish_mats_wood hour=23.8
+hb 528s pos=(20.3,20.6) obj=q_fish_mats_wood hour=0.1
+nav 546s 迂回はじめ: (20.0,26.0)へ 2.0m で足ぶみ → 45度 左まわり(20秒まで)
+hb 549s pos=(18.7,25.4) obj=q_fish_mats_wood hour=0.3
+[09:19] 目標: q_fish_mats_stone
+hb 568s pos=(18.7,25.4) obj=q_fish_mats_stone hour=0.4
+hb 588s pos=(13.6,30.6) obj=q_fish_mats_stone hour=0.5
+[09:57] 目標: q_fish_craft_r_sickle
+[09:59] はじめてのクラフト
+[10:00] 目標: q_fish_mats_wood
+hb 610s pos=(8.6,27.2) obj=q_fish_mats_wood hour=0.8
+hb 628s pos=(4.2,22.2) obj=q_fish_mats_wood hour=1.0
+hb 650s pos=(-3.1,15.8) obj=q_fish_mats_wood hour=1.2
+hb 674s pos=(-7.3,14.3) obj=q_fish_mats_wood hour=1.4
+hb 694s pos=(-11.8,14.3) obj=q_fish_mats_wood hour=1.5
+hb 717s pos=(-12.7,14.3) obj=q_fish_mats_wood hour=1.6
+hb 730s pos=(-17.2,14.3) obj=q_fish_mats_wood hour=1.8
+hb 749s pos=(-23.3,14.3) obj=q_fish_mats_wood hour=2.0
+hb 772s pos=(-24.9,14.3) obj=q_fish_mats_wood hour=2.1
+hb 789s pos=(-31.3,9.5) obj=q_fish_mats_wood hour=2.3
+nav 793s 迂回はじめ: (-30.0,-4.0)へ 13.3m で足ぶみ → 45度 左まわり(22秒まで)
+nav 801s 迂回おわり: 13.3m→10.7m まで近づけた
+hb 812s pos=(-28.6,2.4) obj=q_fish_mats_wood hour=2.6
+hb 831s pos=(-30.3,-2.9) obj=q_fish_mats_wood hour=2.8
+[14:00] 目標: q_fish_mats_fiber
+hb 853s pos=(-27.3,-0.7) obj=q_fish_mats_fiber hour=3.0
+hb 869s pos=(-24.2,1.4) obj=q_fish_mats_fiber hour=3.2
+hb 888s pos=(-16.0,6.7) obj=q_fish_mats_fiber hour=3.4
+nav 901s 迂回はじめ: (-16.0,10.0)へ 2.2m で足ぶみ → 45度 左まわり(23秒まで)
+hb 909s pos=(-17.3,8.7) obj=q_fish_mats_fiber hour=3.6
+nav 911s 迂回: 45度でも進めない → 90度に広げる
+hb 959s pos=(-17.6,13.0) obj=q_fish_mats_fiber hour=3.7
+hb 960s pos=(-17.6,13.0) obj=q_fish_mats_fiber hour=3.8
+nav 960s 迂回おわり: 時間切れ(1.6m)。直進を試す
+hb 969s pos=(-15.8,12.3) obj=q_fish_mats_fiber hour=3.9
+[16:13] 目標: q_fish_craft_r_rod
+[16:17] 目標: q_fish_fish
+hb 989s pos=(-5.0,19.8) obj=q_fish_fish hour=4.3
+hb 1022s pos=(1.9,25.0) obj=q_fish_fish hour=4.6
+hb 1029s pos=(4.0,30.8) obj=q_fish_fish hour=4.7
+hb 1048s pos=(4.0,44.5) obj=q_fish_fish hour=5.2
+hb 1069s pos=(4.0,46.7) obj=q_fish_fish hour=5.5
+hb 1089s pos=(4.0,46.7) obj=q_fish_fish hour=5.6
+nav 1101s 迂回はじめ: (4.0,33.5)へ 7.9m で足ぶみ → 45度 左まわり(24秒まで)
+nav 1103s 迂回おわり: 7.9m→4.8m まで近づけた
+hb 1110s pos=(3.7,35.4) obj=q_fish_fish hour=6.0
+hb 1129s pos=(3.7,45.6) obj=q_fish_fish hour=6.4
+[19:05] 目標: q_fish_report
+hb 1150s pos=(5.2,44.3) obj=q_fish_report hour=6.8
+nav 1154s 迂回はじめ: (23.3,12.6)へ 34.2m で足ぶみ → 45度 左まわり(15秒まで)
+nav 1157s 迂回: 45度でも進めない → 90度に広げる
+nav 1166s 迂回: 45度でも進めない → 90度に広げる
+hb 1169s pos=(5.3,49.3) obj=q_fish_report hour=7.4
+nav 1169s 迂回おわり: 時間切れ(34.2m)。直進を試す
+nav 1174s 迂回はじめ: (23.3,12.6)へ 34.2m で足ぶみ → 45度 右まわり(8秒まで)
+nav 1178s 迂回: 45度でも進めない → 90度に広げる
+nav 1182s 迂回おわり: 時間切れ(32.6m)。直進を試す
+hb 1188s pos=(8.2,35.9) obj=q_fish_report hour=7.7
+hb 1208s pos=(21.5,25.0) obj=q_fish_report hour=8.2
+nav 1215s 迂回はじめ: (23.3,12.6)へ 12.3m で足ぶみ → 45度 左まわり(9秒まで)
+nav 1228s 迂回おわり: 時間切れ(12.3m)。直進を試す
+hb 1230s pos=(21.5,24.9) obj=q_fish_report hour=8.4
+nav 1231s 迂回はじめ: (23.3,12.6)へ 12.3m で足ぶみ → 45度 右まわり(8秒まで)
+nav 1237s 迂回おわり: 12.3m→8.6m まで近づけた
+hb 1249s pos=(22.8,15.5) obj=q_fish_report hour=8.8
+[21:00] 目標: q_ore_offer
+hb 1269s pos=(26.9,7.1) obj=q_ore_offer hour=9.2
+hb 1289s pos=(26.9,-5.1) obj=q_ore_offer hour=9.5
+nav 1306s 迂回はじめ: (26.8,-25.3)へ 12.8m で足ぶみ → 45度 左まわり(8秒まで)
+hb 1309s pos=(28.9,-13.8) obj=q_ore_offer hour=9.9
+nav 1313s 迂回はじめ: (27.4,-24.6)へ 10.8m で足ぶみ → 45度 左まわり(17秒まで)
+nav 1314s 迂回おわり: 10.8m→8.3m まで近づけた
+hb 1329s pos=(27.2,-23.6) obj=q_ore_offer hour=10.2
+[22:19] 目標: q_ore_gather
+hb 1349s pos=(29.7,-22.2) obj=q_ore_gather hour=10.4
+hb 1372s pos=(33.0,-25.6) obj=q_ore_gather hour=10.7
+nav 1382s 迂回はじめ: (35.0,-30.0)へ 3.3m で足ぶみ → 45度 左まわり(24秒まで)
+hb 1389s pos=(34.1,-32.8) obj=q_ore_gather hour=11.0
+nav 1391s 迂回: 45度でも進めない → 90度に広げる
+hb 1408s pos=(36.3,-24.7) obj=q_ore_gather hour=11.3
+nav 1409s 迂回おわり: 時間切れ(2.0m)。直進を試す
+nav 1413s 迂回はじめ: (35.0,-30.0)へ 2.0m で足ぶみ → 45度 左まわり(17秒まで)
+nav 1417s 迂回: 45度でも進めない → 90度に広げる
+nav 1428s 迂回: 45度でも進めない → 90度に広げる
+hb 1429s pos=(34.8,-27.3) obj=q_ore_gather hour=11.7
+nav 1431s 迂回おわり: 時間切れ(1.8m)。直進を試す
+[23:57] 目標: q_ore_report
+hb 1449s pos=(28.8,-25.3) obj=q_ore_report hour=12.1
+[24:24] 目標: q_lantern_offer
+hb 1470s pos=(25.8,-21.8) obj=q_lantern_offer hour=12.3
+hb 1492s pos=(16.3,-12.3) obj=q_lantern_offer hour=12.6
+hb 1517s pos=(2.4,-2.6) obj=q_lantern_offer hour=13.0
+[25:24] 目標: q_lantern_mats_moss
+hb 1531s pos=(-1.9,-4.6) obj=q_lantern_mats_moss hour=13.2
+nav 1539s 迂回はじめ: (-2.0,-24.0)へ 16.4m で足ぶみ → 45度 左まわり(24秒まで)
+nav 1544s 迂回おわり: 16.4m→13.5m まで近づけた
+hb 1549s pos=(0.3,-16.8) obj=q_lantern_mats_moss hour=13.6
+nav 1559s 迂回はじめ: (-2.0,-24.0)へ 3.6m で足ぶみ → 45度 左まわり(22秒まで)
+hb 1568s pos=(-0.6,-23.5) obj=q_lantern_mats_moss hour=13.9
+[26:18] 目標: q_lantern_craft_r_lantern
+[26:22] 目標: q_lantern_place
+hb 1590s pos=(4.6,-23.7) obj=q_lantern_place hour=14.4
+nav 1595s 迂回はじめ: (2.5,6.5)へ 27.0m で足ぶみ → 45度 左まわり(24秒まで)
+nav 1597s 迂回おわり: 27.0m→23.5m まで近づけた
+nav 1602s 迂回はじめ: (2.5,6.5)へ 22.0m で足ぶみ → 45度 左まわり(24秒まで)
+nav 1605s 迂回おわり: 22.0m→17.5m まで近づけた
+hb 1610s pos=(-1.6,-8.7) obj=q_lantern_place hour=14.8
+hb 1629s pos=(2.2,2.9) obj=q_lantern_place hour=15.2
+[27:17] はじめての家具配置
+[27:17] 目標: q_lantern_report
+hb 1649s pos=(-1.9,1.0) obj=q_lumi_offer hour=15.5
+[27:31] 目標: q_lumi_offer
+[27:44] 目標: q_lumi_mats_wood
+hb 1668s pos=(-4.3,-2.5) obj=q_lumi_mats_wood hour=15.8
+hb 1689s pos=(-16.5,-5.8) obj=q_lumi_mats_wood hour=16.2
+hb 1712s pos=(-29.2,1.6) obj=q_lumi_mats_moss hour=16.6
+hb 1729s pos=(58.0,-58.5) obj=q_lumi_mats_moss hour=16.9
+[29:05] マイホーム 入室→就寝→退出: OK
+[29:05] === 第2章 開始 ===
+[29:05] 目標: q_lumi_mats_moss
+hb 1752s pos=(-25.3,3.2) obj=q_lumi_mats_moss hour=6.3
+hb 1769s pos=(-21.1,-9.1) obj=q_lumi_mats_moss hour=6.7
+nav 1772s 迂回はじめ: (-20.0,-22.0)へ 12.8m で足ぶみ → 45度 左まわり(24秒まで)
+nav 1775s 迂回おわり: 12.8m→10.2m まで近づけた
+hb 1789s pos=(-19.8,-17.0) obj=q_lumi_mats_moss hour=7.1
+hb 1811s pos=(-15.9,-23.4) obj=q_lumi_mats_moss hour=7.5
+[30:21] 目標: q_lumi_craft_r_lantern
+[30:25] 目標: q_lumi_place
+hb 1828s pos=(-13.7,-28.1) obj=q_lumi_place hour=7.8
+hb 1849s pos=(-13.7,-28.1) obj=q_lumi_place hour=8.2
+hb 1869s pos=(-13.7,-28.1) obj=q_lumi_place hour=8.6
+hb 1890s pos=(-13.7,-28.1) obj=q_lumi_place hour=9.0
+hb 1909s pos=(-13.7,-28.1) obj=q_lumi_place hour=9.3
+hb 1929s pos=(-13.7,-28.1) obj=q_lumi_place hour=9.8
+hb 1952s pos=(-13.7,-28.1) obj=q_lumi_place hour=10.1
+hb 1969s pos=(-13.7,-28.1) obj=q_lumi_place hour=10.6
+hb 1989s pos=(-13.7,-28.1) obj=q_lumi_place hour=10.9
+hb 2009s pos=(-13.7,-28.1) obj=q_lumi_place hour=11.4
+hb 2029s pos=(-13.7,-28.1) obj=q_lumi_place hour=11.9
+hb 2049s pos=(-13.7,-28.1) obj=q_lumi_place hour=12.3
+hb 2070s pos=(-13.7,-28.1) obj=q_lumi_place hour=12.6
+hb 2098s pos=(-13.7,-28.1) obj=q_lumi_place hour=13.1
+hb 2109s pos=(-13.7,-28.1) obj=q_lumi_place hour=13.3
+hb 2129s pos=(-13.7,-28.1) obj=q_lumi_place hour=13.9
+hb 2149s pos=(-13.7,-28.1) obj=q_lumi_place hour=14.3
+hb 2170s pos=(-13.7,-28.1) obj=q_lumi_place hour=14.8
+hb 2190s pos=(-13.7,-28.1) obj=q_lumi_place hour=15.2
+hb 2209s pos=(-13.7,-28.1) obj=q_lumi_place hour=15.7
+hb 2229s pos=(-13.7,-28.1) obj=q_lumi_place hour=16.1
+hb 2249s pos=(-13.7,-28.1) obj=q_lumi_place hour=16.4
+hb 2270s pos=(-13.7,-28.1) obj=q_lumi_place hour=16.9
+hb 2289s pos=(-13.7,-28.1) obj=q_lumi_place hour=17.3
+hb 2311s pos=(-13.7,-28.1) obj=q_lumi_place hour=17.8
+hb 2329s pos=(-13.7,-28.1) obj=q_lumi_place hour=18.2
+hb 2349s pos=(-13.7,-28.1) obj=q_lumi_place hour=18.6
+hb 2372s pos=(-13.7,-28.1) obj=q_lumi_place hour=19.0
+hb 2389s pos=(-13.7,-28.1) obj=q_lumi_place hour=19.3
+hb 2410s pos=(-13.7,-28.1) obj=q_lumi_place hour=19.8
+hb 2429s pos=(-13.7,-28.1) obj=q_lumi_place hour=20.1
+hb 2451s pos=(-13.7,-28.1) obj=q_lumi_place hour=20.5
+hb 2469s pos=(-13.7,-30.2) obj=q_lumi_place hour=21.1
+hb 2489s pos=(-13.7,-30.2) obj=q_lumi_place hour=21.9
+hb 2509s pos=(-13.7,-30.2) obj=q_lumi_place hour=22.7
+EXIT=127

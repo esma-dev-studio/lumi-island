@@ -1,0 +1,36 @@
+カメラのズーム: 0.7(最小0.7=約4.6m)
+bugs.ts の実URL: http://localhost:5203/src/entities/bugs.ts
+虫: クワガタ(b_kuwa) hour=13
+  10_bug_1_b_kuwa.png (420x340 を3倍解像度で切り出し)
+虫: カマキリ(b_kama) hour=13
+  10_bug_2_b_kama.png (420x340 を3倍解像度で切り出し)
+虫: セミ(b_semi) hour=13
+  10_bug_3_b_semi.png (420x340 を3倍解像度で切り出し)
+虫: バッタ(b_batta) hour=13
+  10_bug_4_b_batta.png (420x340 を3倍解像度で切り出し)
+虫: トンボ(b_tonbo) hour=17
+  10_bug_5_b_tonbo.png (420x340 を3倍解像度で切り出し)
+虫: オオクワガタ(b_ookuwa) hour=21.5
+  10_bug_6_b_ookuwa.png (420x340 を3倍解像度で切り出し)
+木にとまった姿勢: b_kuwa
+  13_tree_1_b_kuwa.png (420x340 を3倍解像度で切り出し)
+木にとまった姿勢: b_semi
+  13_tree_2_b_semi.png (420x340 を3倍解像度で切り出し)
+木にとまった姿勢: b_ookuwa
+  13_tree_3_b_ookuwa.png (420x340 を3倍解像度で切り出し)
+  16_caged_new_bugs_all.png (620x280 を3倍解像度で切り出し)
+つり: コイ(koi) 場所=(22.4,26.6) zone=pond hour=13
+  もちもの コイ = 1
+  20_catch_1_koi.png(つり上げた瞬間+トースト)
+つり: タイ(seabream) 場所=(4,46.5) zone=sea hour=13
+  もちもの タイ = 1
+  20_catch_2_seabream.png(つり上げた瞬間+トースト)
+つり: タツノオトシゴ(seahorse) 場所=(4,46.5) zone=sea hour=21.5
+  もちもの タツノオトシゴ = 1
+  20_catch_3_seahorse.png(つり上げた瞬間+トースト)
+おおきい むしかごに入れた: true,true,true
+  30_bugcage_big_new.png (520x380 を3倍解像度で切り出し)
+おおきい すいそうに入れた: true,true,true
+  31_aquarium_big_new.png (560x380 を3倍解像度で切り出し)
+40_codex.png(ずかん。オオクワガタだけ「?」のまま)
+consoleエラー: 0件

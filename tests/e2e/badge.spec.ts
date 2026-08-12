@@ -1,7 +1,7 @@
-// v14「バッジ(103個)」の実ブラウザ通し。
+// v14「バッジ(v16で106個)」の実ブラウザ通し。
 //
 // 断言する中身:
-//   1. ずかん(Z)に「バッジ」タブが あり、103マスが シルエット+進捗で ならぶこと
+//   1. ずかん(Z)に「バッジ」タブが あり、106マスが シルエット+進捗で ならぶこと
 //   2. あそんで 条件を みたすと、その場で バッジが つき、小さなトーストが出ること
 //   3. とったバッジが ずかんで 色つき+取った日に かわること
 //   4. すでに あそんであるセーブを 読むと、さかのぼって 一括で つき、
@@ -13,7 +13,7 @@ const GAME = '/?scene=game&debug=1';
 const GAME_LOAD = '/?scene=game&debug=1&load=1';
 
 /** src/data/badges.ts の BADGES.length。データ側を増やしたら ここも合わせる */
-const BADGE_TOTAL = 103;
+const BADGE_TOTAL = 106; // v16 ほしまつり3つを足した
 
 const errors: string[] = [];
 function watchErrors(page: Page): void {
@@ -82,7 +82,7 @@ async function openBadgeTab(page: Page): Promise<void> {
 const cell = (page: Page, name: string) =>
   page.locator('.codex-panel .badge-cell').filter({ hasText: name }).first();
 
-test('バッジタブ: 103マスが シルエット+進捗で ならぶ → 初つりで色つきに かわる', async ({ page }) => {
+test('バッジタブ: 106マスが シルエット+進捗で ならぶ → 初つりで色つきに かわる', async ({ page }) => {
   watchErrors(page);
   await page.goto(GAME);
   await waitReady(page);

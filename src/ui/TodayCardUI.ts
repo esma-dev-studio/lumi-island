@@ -30,7 +30,11 @@ export class TodayCardUI {
     const rows = card.quiet
       ? `<div class="tc-row tc-quiet"><span class="tc-ico">${icon('f_bench')}</span><span>${QUIET_TEXT}</span></div>`
       : card.events
-          .map((e) => `<div class="tc-row"><span class="tc-ico">${icon(e.icon)}</span><span>${e.text}</span></div>`)
+          .map((e) => {
+            // v16 ほしまつりの予告だけ めだつ行にする(週の山場なので かならず1枠め)
+            const cls = e.id.startsWith('festival') ? 'tc-row tc-festival' : 'tc-row';
+            return `<div class="${cls}"><span class="tc-ico">${icon(e.icon)}</span><span>${e.text}</span></div>`;
+          })
           .join('');
     // 「きょうの おすすめ」のラベルは 1行めに置き、絵と文は そのつぎの行にまとめる。
     // 横1列に ならべると、文が おりかえしたときに 絵だけが ラベルのとなりに 取りのこされる

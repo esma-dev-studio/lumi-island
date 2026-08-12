@@ -64,6 +64,8 @@ export const ACHIEVEMENT_REWARDS: Record<string, AchievementReward> = {
   a_home_visit3: { kind: 'lumina', amount: 80 },
   a_lighthouse: { kind: 'lumina', amount: 120 },
   a_night_train: { kind: 'item', item: 'f_lighthouse_lantern_night', count: 1 },
+  // v16 ほしまつり。7日めまで あそびつづけた子への ごほうび(星のかけらの実績と同じ格)
+  a_festival: { kind: 'lumina', amount: 100 },
   a_all_quests: { kind: 'lumina', amount: 200 },
 };
 

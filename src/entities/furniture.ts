@@ -364,6 +364,10 @@ const FISH_COLORS: Record<string, [string, string, string]> = {
   nightfish: ['#9fe8c8', '#4f9a78', '#eafff6'],
   seafish: ['#6f9ecf', '#3f6a95', '#e8f0f8'],
   rarefish: ['#c9a8e0', '#7a5f95', '#f6ecff'],
+  // v17 あたらしい3種。ずかんのアイコンと同じ色にそろえる
+  koi: ['#d9884f', '#a05a2c', '#f6ece0'],
+  seabream: ['#dd8e9c', '#a8566a', '#fbeef0'],
+  seahorse: ['#d9b45c', '#94722c', '#f6eed6'],
 };
 
 /**

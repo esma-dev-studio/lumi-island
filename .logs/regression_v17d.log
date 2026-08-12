@@ -1,0 +1,6 @@
+
+> lumi-island@0.1.0 test:regression
+> node tools/playtest_bot.mjs
+
+BOT FAILED: net::ERR_CONNECTION_REFUSED at http://localhost:5203/
+EXIT=2

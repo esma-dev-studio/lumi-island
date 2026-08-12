@@ -24,6 +24,7 @@ import { willVisitToday, VISIT_FRIENDSHIP } from '../../src/systems/NPCSystem';
 import { plotsBloomingOn, BLOOM_DAYS } from '../../src/systems/GardenSystem';
 import { willRainbowOn, weatherOfDay } from '../../src/systems/WeatherSystem';
 import { isBottleDay } from '../../src/systems/BottleSystem';
+import { isFestivalDay, isFestivalEve } from '../../src/systems/FestivalSystem';
 import { HOME_GIFT_CYCLE, HOME_GIFT_FRIENDSHIP, NPC_BY_ID, isHomeGiftDay } from '../../src/data/npcs';
 import { ITEMS } from '../../src/data/items';
 import { QUEST_BY_ID } from '../../src/data/quests';
@@ -124,7 +125,9 @@ describe('きょうの島カード: 出来事', () => {
   it('来訪の日は「◯◯が あそびに くるかも」が いちばん上に出る(NPCSystem に聞いている)', () => {
     const s = clearedState();
     for (const id of ['minamo', 'nokto', 'tsumugi']) s.npcs[id].friendship = VISIT_FRIENDSHIP;
-    const day = findDay((d) => willVisitToday(s, d) !== null);
+    // v16 ほしまつりの予告(前日・当日)だけは 来訪より上に出る=週の山場が いちばん強い。
+    // ここで見たいのは「ほかの出来事の中で 来訪がいちばん上」なので、まつりの日は よける
+    const day = findDay((d) => willVisitToday(s, d) !== null && !isFestivalDay(d) && !isFestivalEve(d));
     const visitor = willVisitToday(s, day)!;
     const card = todayCard(s, day);
     expect(card.events[0].id).toBe('visit');

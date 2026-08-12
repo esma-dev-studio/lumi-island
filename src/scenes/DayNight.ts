@@ -10,7 +10,9 @@ import '@babylonjs/core/Layers/effectLayerSceneComponent';
 import type { Scene } from '@babylonjs/core/scene';
 import { Scene as BScene } from '@babylonjs/core/scene';
 import { getGlowMats } from '../entities/flora';
-import { setPoolLevels, nearestGlowSource, setWeatherSky, weatherGlowExcludes } from '../entities/effects';
+import {
+  setPoolLevels, nearestGlowSource, setWeatherSky, weatherGlowExcludes, festivalGlowExcludes,
+} from '../entities/effects';
 import type { WaterRefs } from '../entities/water';
 
 interface RawStop {
@@ -94,6 +96,9 @@ export class DayNight {
     this.glow.intensity = 0.4;
     // 天気の演出のうち、発光レイヤーに焼かれると にじむものを外す(虹)
     for (const m of weatherGlowExcludes()) this.glow.addExcludedMesh(m);
+    // v16 ほしまつりの ランタンの かさ・うつりこみ(すでに加算合成の にじみ)も 外す。
+    // 二重に にじませると 白い まるに つぶれて、紙のちょうちんの形が 消える
+    for (const m of festivalGlowExcludes()) this.glow.addExcludedMesh(m);
     scene.fogMode = BScene.FOGMODE_EXP2;
     // 夜: いちばん近い発光物からプレイヤーへ光を回す(動的ライトはこの1灯のみ)
     this.poolLight = new PointLight('poolLight', new Vector3(0, -50, 0), scene);

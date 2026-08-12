@@ -33,7 +33,11 @@ const TAG = `${NIGHT ? 'night' : 'day'}${QUEST ? '_quest' : ''}`;
 const LIMIT_MS = 120 * 1000; // 合格判定の持ち時間(2分)
 const NEED = 3; // 合格に必要な捕獲数
 const CATCH_R = 2.6; // src/systems/BugSystem.ts の BUG_CATCH_R
-const BUG_IDS = ['b_shiro', 'b_ageha', 'b_tento', 'b_kabuto', 'b_hotaru', 'b_suzu'];
+// src/systems/BugSystem.ts の BUG_IDS(v17で12種)。ここが古いと「つかまえたのに数えない」になる
+const BUG_IDS = [
+  'b_shiro', 'b_ageha', 'b_tento', 'b_kabuto', 'b_hotaru', 'b_suzu',
+  'b_batta', 'b_kuwa', 'b_kama', 'b_semi', 'b_tonbo', 'b_ookuwa',
+];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const START = Date.now();

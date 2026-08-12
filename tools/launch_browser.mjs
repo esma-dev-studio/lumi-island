@@ -106,12 +106,22 @@ export async function launchEdge(puppeteer, opts = {}) {
       await page.bringToFront().catch(() => undefined);
       // 実キー入力を受け取れるよう、フォーカスを持っていることにする
       // (裏タブ扱いになると rAF が止まり、ゲームが1フレームも進まない=教訓5)
+      let cdp = null;
       try {
-        const cdp = await page.createCDPSession();
+        cdp = await page.createCDPSession();
         await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true });
       } catch {
         /* 未対応でも bringToFront だけで足りることが多い */
       }
+      // 起動時の1回では長い走行(10分超)で保たない: 途中で「隠れている」判定が復活して
+      // rAFが絞られ、回帰ボットが fps3・51分 になる実害が出た(画面ロック中は特に)。
+      // 15秒ごとに前面化とフォーカス偽装をかけ直す(実測: UXボット906秒タイムアウト→325秒PASS)
+      const keepAlive = setInterval(() => {
+        page.bringToFront().catch(() => undefined);
+        if (cdp) cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true }).catch(() => undefined);
+      }, 15000);
+      if (typeof keepAlive.unref === 'function') keepAlive.unref();
+      page.once('close', () => clearInterval(keepAlive));
       return page;
     };
     // connect したブラウザは close() でプロセスまで落ちないことがあるので、後始末を足す

@@ -92,13 +92,15 @@ describe('データ: すいそう(f_aquarium)と展示の表', () => {
     expect(validateDiscoveryData()).toEqual([]);
   });
 
-  it('展示家具は すいそう(魚4種)と むしかご(虫6種)、それぞれ小・大の4つ', () => {
+  it('展示家具は すいそう(魚7種)と むしかご(虫12種)、それぞれ小・大の4つ', () => {
     // v13で「おおきい版」を足した。小さい版のふるまい(1ぴきだけ入る)は変えていない
+    // v17で 魚を3種・虫を6種たした(表に足すだけで 大小の両方に つく)
     expect(Object.keys(DISPLAY_FURNITURE).sort())
       .toEqual(['f_aquarium', 'f_aquarium_big', 'f_bugcage', 'f_bugcage_big']);
     expect(DISPLAY_FURNITURE.f_aquarium.capacity).toBe(1);
     expect(DISPLAY_FURNITURE.f_bugcage.capacity).toBe(1);
-    expect([...DISPLAY_FURNITURE.f_aquarium.accepts]).toEqual(['fish', 'nightfish', 'seafish', 'rarefish']);
+    expect([...DISPLAY_FURNITURE.f_aquarium.accepts])
+      .toEqual(['fish', 'nightfish', 'seafish', 'rarefish', 'koi', 'seabream', 'seahorse']);
     expect([...DISPLAY_FURNITURE.f_bugcage.accepts].sort()).toEqual([...BUG_IDS].sort());
     expect(isDisplayFurniture('f_aquarium')).toBe(true);
     expect(isDisplayFurniture('f_bugcage')).toBe(true);

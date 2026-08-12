@@ -289,8 +289,11 @@ describe('v9 虫あみ→虫6種(データ)', () => {
       expect(ITEMS[id].kind).toBe('material');
       expect(ITEMS[id].desc.length).toBeGreaterThan(3);
     }
-    expect(BUG_IDS.length).toBe(6);
-    expect(new Set(BUG_IDS).size).toBe(6);
+    // v9の6種は そのまま残っていること(v17で6種たして12種になった。
+    // あたらしい6種は tests/unit/creatures_v17.test.ts が受けもつ)
+    expect(BUG_IDS.length).toBe(12);
+    expect(new Set(BUG_IDS).size).toBe(12);
+    for (const [id] of rows) expect(BUG_IDS, id).toContain(id);
   });
 
   it('ずかん(codex)に載る', () => {
@@ -438,7 +441,8 @@ describe('v9 虫のふるまい(BugSystem)', () => {
   });
 
   // v11: 島は広いので、4〜5匹だと「そもそも見つからない」。昼6〜7・夜4〜5にふやした
-  it('昼は6〜7匹・チョウ/テントウ/カブトだけ', () => {
+  // v17: 顔ぶれは日がわり(todaysBugs)になったが、「昼の虫だけが出る」は変わらない
+  it('昼は6〜7匹・昼の虫だけ', () => {
     const s = fresh(3, DAY);
     expect(s.activeCount).toBeGreaterThanOrEqual(6);
     expect(s.activeCount).toBeLessThanOrEqual(7);
@@ -446,7 +450,7 @@ describe('v9 虫のふるまい(BugSystem)', () => {
     for (const b of s.active) expect(BUG_BY_ID[b.bug].night, b.bug).toBe(false);
   });
 
-  it('夜は4〜5匹・ホタル/スズムシだけ', () => {
+  it('夜は4〜5匹・夜の虫だけ', () => {
     const s = fresh(3, NIGHT);
     expect(s.activeCount).toBeGreaterThanOrEqual(4);
     expect(s.activeCount).toBeLessThanOrEqual(5);

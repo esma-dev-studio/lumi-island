@@ -1,0 +1,18 @@
+
+> lumi-island@0.1.0 test:regression
+> node tools/playtest_bot.mjs
+
+file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/node_modules/puppeteer-core/lib/esm/puppeteer/util/assert.js:15
+        throw new Error(message);
+              ^
+
+Error: Requesting main frame too early!
+    at assert (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/node_modules/puppeteer-core/lib/esm/puppeteer/util/assert.js:15:15)
+    at FrameManager.mainFrame (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/node_modules/puppeteer-core/lib/esm/puppeteer/cdp/FrameManager.js:201:9)
+    at CdpPage.mainFrame (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/node_modules/puppeteer-core/lib/esm/puppeteer/cdp/Page.js:395:35)
+    at CdpPage.url (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/node_modules/puppeteer-core/lib/esm/puppeteer/api/Page.js:549:25)
+    at browser.newPage (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/tools/launch_browser.mjs:103:31)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/tools/playtest_bot.mjs:32:14
+
+Node.js v24.12.0

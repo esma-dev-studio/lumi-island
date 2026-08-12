@@ -197,6 +197,12 @@ body { font-family: var(--font); color: var(--ink); }
   font-size: 0.86rem; line-height: 1.85; color: var(--ink);
 }
 .tc-pick-text .tc-ico { padding-top: 0.45em; }
+/* v16 ほしまつりの予告だけは 1枠めで めだたせる(週の山場は カードの主役)。
+   帯・囲みは 足さず、うすい あたたかい地色と 左の細い線だけ = ほかの行と 格をそろえる */
+.tc-row.tc-festival {
+  background: #fcf3e2; border-left: 3px solid #d9a05c; color: #8a5f2f;
+  margin: 2px 10px; padding: 4px 8px; border-radius: 5px;
+}
 
 /* ---- v15 でんごんばんのパネル ---- */
 .bl-row { display: flex; align-items: center; gap: 10px; }
@@ -487,6 +493,18 @@ body { font-family: var(--font); color: var(--ink); }
 .codex-name { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .codex-cell.unknown .codex-name { font-weight: 900; letter-spacing: 0.06em; }
 .codex-n { font-weight: 900; color: var(--amber); }
+/* v16 しまの ぎょうじ(ほしまつり)の ひとことメモ。
+   じっせきの1行(.ach-row)と同じ格。まだ 見ていないうちは 地色をおさえ、
+   見たあとだけ あたたかい色になる = ずかんの中でも「思い出」として のこる */
+.codex-note {
+  display: flex; align-items: flex-start; gap: 8px; background: #fff;
+  border: 1px solid var(--line); border-radius: 5px; padding: 8px 10px; font-size: 0.84rem;
+}
+.codex-note.seen { background: #fcf3e2; border-color: #e0c489; }
+.codex-note .inv-ico { font-size: 1.25rem; line-height: 0; display: flex; flex: 0 0 auto; padding-top: 0.3em; }
+.codex-note-text { flex: 1; font-weight: 700; line-height: 1.85; }
+.codex-note-text small { display: block; font-weight: 500; font-size: 0.76rem; color: var(--ink-soft); }
+.codex-note.seen .codex-note-text { color: #8a5f2f; }
 .ach-list { display: flex; flex-direction: column; gap: 6px; }
 .ach-row {
   display: flex; align-items: center; gap: 8px; background: #fff;

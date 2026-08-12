@@ -2,7 +2,9 @@
 //
 // 仕様:
 //   - 昼(5時〜19時)は6〜7匹、夜(19時〜翌5時)は4〜5匹が同時に出る。
-//     種類は時間帯で入れかわる(昼=チョウ・テントウ・カブト / 夜=ホタル・スズムシ)。
+//     種類は時間帯で入れかわる(昼=チョウ・テントウ・バッタ・カブト・クワガタ・カマキリ・セミ /
+//     夕方16〜18時の池だけ=トンボ / 夜=ホタル・スズムシ・オオクワガタ)。
+//   - v17: 毎日ぜんぶの種類は出ない。「きょうの顔ぶれ」を日付ハッシュで えらぶ(todaysBugs)。
 //   - 虫はスポット(花・草むら・木・池)のまわりを ただよう / とまる。
 //   - プレイヤーが近づくと警戒し(BUG_WARY_R)、近すぎる状態が BUG_SPOOK_SEC つづくと にげる。
 //       走って近づかれた → その虫の runFlee でそわそわしはじめる(チョウはとくに敏感)
@@ -27,7 +29,10 @@
 // (ほしのかけら StarShardSystem・うきだま DriftSystem と同じ考え方)。
 import type { BugSpotKind } from '../data/island';
 
-export type BugId = 'b_shiro' | 'b_ageha' | 'b_tento' | 'b_kabuto' | 'b_hotaru' | 'b_suzu';
+export type BugId =
+  | 'b_shiro' | 'b_ageha' | 'b_tento' | 'b_kabuto' | 'b_hotaru' | 'b_suzu'
+  // v17 「有名な虫」を6種たす(クワガタ・オオクワガタ・カマキリ・トンボ・セミ・バッタ)
+  | 'b_kuwa' | 'b_ookuwa' | 'b_kama' | 'b_tonbo' | 'b_semi' | 'b_batta';
 
 /** 捕獲できる距離(m)。むしあみを ふる範囲。すべての虫の runFlee より大きい */
 export const BUG_CATCH_R = 2.6;
@@ -81,10 +86,20 @@ export function isBugNight(hour: number): boolean {
   return hour >= 19 || hour < 5;
 }
 
+/**
+ * v17 夕方(トンボが 池のそばに出る時間)。16時〜18時。
+ * ここを bugPhaseKey の区切りにしてあるので、16時になった ときに顔ぶれが入れかわり、
+ * 「夕方だけの虫」が かならず出そろう(出ている虫が満員のままだと 新顔が出られないため)。
+ */
+export const BUG_EVENING: [number, number] = [16, 18];
+export function isBugEvening(hour: number): boolean {
+  return !isBugNight(hour) && hour >= BUG_EVENING[0] && hour < BUG_EVENING[1];
+}
+
 /** その時間帯の識別子。ここが変わったら全部いれかえる */
 export function bugPhaseKey(day: number, hour: number): string {
-  if (!isBugNight(hour)) return `d${day}`;
-  return `n${hour >= 19 ? day : day - 1}`;
+  if (isBugNight(hour)) return `n${hour >= 19 ? day : day - 1}`;
+  return `${isBugEvening(hour) ? 'e' : 'd'}${day}`;
 }
 
 export interface BugDef {
@@ -93,6 +108,17 @@ export interface BugDef {
   spots: BugSpotKind[];
   /** 夜だけ出るか(falseは昼だけ) */
   night: boolean;
+  /**
+   * v17 毎日かならず 顔ぶれに入るか。
+   * false の種は「きょうのローテ」に入り、日付で えらばれた日だけ出る
+   * (毎日ぜんぶは出ない=あしたも のぞきに行く理由になる)。
+   */
+  daily: boolean;
+  /**
+   * v17 出る時こくの はんい [から, まで)。省略すると その時間帯(昼/夜)のあいだ ずっと。
+   * トンボだけ 夕方(16〜18時)にしている。
+   */
+  hours?: [number, number];
   /** 抽選の重み(大きいほど よく出る) */
   weight: number;
   /** 走って近づかれたら そわそわしはじめる距離(m)。BUG_CATCH_Rより必ず小さい */
@@ -110,36 +136,70 @@ export interface BugDef {
 }
 
 /**
- * 虫6種。runFlee はどれも BUG_CATCH_R(2.6m)より小さいので、
+ * 虫12種(v9の6種 + v17の6種)。runFlee はどれも BUG_CATCH_R(2.6m)より小さいので、
  * 「走って近づいても、にげる前に必ず捕獲圏へ入れる」ことが構造で保証される(テストで固定)。
  * 種類ごとの差は「どこまで近づくと そわそわしはじめるか」だけになり、
  * チョウ=敏感 / カブトムシ=どんかん という手ざわりは残る。
- * カブトムシは みきに とまっているので いちばん にぶい(木のそばまで寄れる)。
+ * 木に とまる虫(カブト・クワガタ・オオクワガタ・セミ)は いちばん にぶい(みきのそばまで寄れる)。
+ *
+ * hoverR は 0.6 をこえないこと: 「虫の真上に立つと 採取ノードのEに 横取りされる」かどうかを
+ * BUG_SPOTS からの距離で機械検査している(tests/unit/content_v9_tools.test.ts)。
  */
 export const BUG_DEFS: BugDef[] = [
   {
-    id: 'b_shiro', spots: ['flower'], night: false, weight: 4,
+    id: 'b_shiro', spots: ['flower'], night: false, daily: true, weight: 4,
     runFlee: 1.5, walkFlee: 0.55, hoverY: 0.78, hoverR: 0.42, speed: 0.85, glow: false,
   },
   {
-    id: 'b_ageha', spots: ['flower'], night: false, weight: 1.6,
+    id: 'b_ageha', spots: ['flower'], night: false, daily: false, weight: 1.6,
     runFlee: 1.6, walkFlee: 0.6, hoverY: 0.95, hoverR: 0.52, speed: 0.62, glow: false,
   },
   {
-    id: 'b_tento', spots: ['grass'], night: false, weight: 3,
+    id: 'b_tento', spots: ['grass'], night: false, daily: true, weight: 3,
     runFlee: 1.1, walkFlee: 0.4, hoverY: 0.12, hoverR: 0.24, speed: 0.4, glow: false,
   },
   {
-    id: 'b_kabuto', spots: ['tree'], night: false, weight: 0.8,
+    id: 'b_kabuto', spots: ['tree'], night: false, daily: false, weight: 0.8,
     runFlee: 0.8, walkFlee: 0.25, hoverY: 0.55, hoverR: 0, speed: 0.2, glow: false,
   },
   {
-    id: 'b_hotaru', spots: ['pond'], night: true, weight: 3,
+    id: 'b_hotaru', spots: ['pond'], night: true, daily: true, weight: 3,
     runFlee: 1.3, walkFlee: 0.5, hoverY: 0.72, hoverR: 0.6, speed: 0.5, glow: true,
   },
   {
-    id: 'b_suzu', spots: ['grass'], night: true, weight: 2.5,
+    id: 'b_suzu', spots: ['grass'], night: true, daily: false, weight: 2.5,
     runFlee: 1.2, walkFlee: 0.4, hoverY: 0.11, hoverR: 0.2, speed: 0.28, glow: false,
+  },
+  // ---- v17 ここから6種 ----
+  // バッタ: いちばん よく見かける草の虫。毎日出る「入門の虫」にしてある
+  {
+    id: 'b_batta', spots: ['grass'], night: false, daily: true, weight: 2.6,
+    runFlee: 1.2, walkFlee: 0.45, hoverY: 0.14, hoverR: 0.22, speed: 0.32, glow: false,
+  },
+  // クワガタ: 昼の 木のみき。カブトムシと同じく とまったまま動かない
+  {
+    id: 'b_kuwa', spots: ['tree'], night: false, daily: false, weight: 1.0,
+    runFlee: 0.85, walkFlee: 0.28, hoverY: 0.52, hoverR: 0, speed: 0.2, glow: false,
+  },
+  // カマキリ: 草むらで じっと待ちぶせ。ほとんど動かない
+  {
+    id: 'b_kama', spots: ['grass'], night: false, daily: false, weight: 1.3,
+    runFlee: 1.0, walkFlee: 0.35, hoverY: 0.17, hoverR: 0.16, speed: 0.2, glow: false,
+  },
+  // セミ: 昼の 木のみき。数が多いので いちばん つかまえやすい木の虫
+  {
+    id: 'b_semi', spots: ['tree'], night: false, daily: false, weight: 1.6,
+    runFlee: 0.95, walkFlee: 0.3, hoverY: 0.95, hoverR: 0, speed: 0.2, glow: false,
+  },
+  // トンボ: 夕方(16〜18時)の池のそばだけ。すいすい 速く とびまわる
+  {
+    id: 'b_tonbo', spots: ['pond'], night: false, daily: true, hours: BUG_EVENING, weight: 2.2,
+    runFlee: 1.45, walkFlee: 0.55, hoverY: 0.85, hoverR: 0.58, speed: 0.9, glow: false,
+  },
+  // オオクワガタ: よるの 木のみき。いちばん めずらしい(出る夜が かぎられ、重みも小さい)
+  {
+    id: 'b_ookuwa', spots: ['tree'], night: true, daily: false, weight: 0.6,
+    runFlee: 0.8, walkFlee: 0.24, hoverY: 0.55, hoverR: 0, speed: 0.18, glow: false,
   },
 ];
 
@@ -221,6 +281,53 @@ function hash3(a: number, b: number, c: number): number {
   h = (h ^ (h >>> 13)) | 0;
   h = Math.imul(h, 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+// ---------------------------------------------------------------------------
+// v17 「きょう出やすい虫」の日がわりローテ。
+//
+// ねらい: 毎日ぜんぶの種類が出ると、1日で ずかんが うまって「あしたも のぞく理由」が消える。
+// そこで、種類を2つに分ける:
+//   daily=true  … 毎日かならず出る(モンシロチョウ・テントウムシ・バッタ・トンボ・ホタル)
+//   daily=false … 日付ハッシュで えらばれた日だけ出る(アゲハ・カブト・クワガタ・カマキリ・
+//                 セミ / よるは スズムシ・オオクワガタ)
+// えらび方は日付だけで決まるので、Math.random は使わない(走行ごとに同じ=自動テストできる)。
+//
+// 「捕獲不能の種」を作らないための約束:
+//   - どの種も、10日のあいだに かならず1回は えらばれる(下のテストで機械検査する)
+//   - えらばれた顔ぶれの スポット数の合計は、その時間帯の目標数(昼7・夜5)より必ず多い
+// ---------------------------------------------------------------------------
+/** 昼に「きょうだけ出る」種を いくつ えらぶか(daily=false の5種から) */
+export const BUG_ROTATE_DAY = 3;
+/** 夜に「きょうだけ出る」種を いくつ えらぶか(daily=false の2種から) */
+export const BUG_ROTATE_NIGHT = 1;
+
+/** その時こくに出る種か(hours を持たない種は いつでもtrue) */
+export function bugHourOk(def: BugDef, hour: number): boolean {
+  if (!def.hours) return true;
+  return hour >= def.hours[0] && hour < def.hours[1];
+}
+
+/**
+ * その日・その時間帯に出る種類(決定論)。
+ * hour を わたすと、時こくで しぼる種(トンボ)も あわせて はじく。
+ */
+export function todaysBugs(day: number, night: boolean, hour?: number): BugDef[] {
+  const phase = night ? 1 : 0;
+  const all = BUG_DEFS.filter((b) => b.night === night);
+  const rot = all.filter((b) => !b.daily);
+  const pick = night ? BUG_ROTATE_NIGHT : BUG_ROTATE_DAY;
+  // 日付ハッシュの小さい順に pick 種だけ。同点は id 順にして、ならびを完全に決めきる
+  const chosen = new Set(
+    rot
+      .map((b, i) => ({ b, s: hash3(day, phase * 101 + i * 7 + 3, 8291) }))
+      .sort((p, q) => p.s - q.s || (p.b.id < q.b.id ? -1 : 1))
+      .slice(0, Math.min(pick, rot.length))
+      .map((x) => x.b.id)
+  );
+  return all.filter(
+    (b) => (b.daily || chosen.has(b.id)) && (hour === undefined || bugHourOk(b, hour))
+  );
 }
 
 export interface BugPlayer {
@@ -342,7 +449,7 @@ export class BugScheduler {
       this.timer -= dt;
       if (this.timer <= 0) {
         this.timer = BUG_RESPAWN_SEC;
-        const b = this.spawn(day, isBugNight(hour));
+        const b = this.spawn(day, hour);
         if (b) {
           this.bugs.push(b);
           spawned.push(b);
@@ -416,14 +523,20 @@ export class BugScheduler {
   }
 
   /** 1匹ぶんの種類とスポットを決める(空きが無ければnull) */
-  private spawn(day: number, night: boolean): ActiveBug | null {
-    const pool = BUG_DEFS.filter((b) => b.night === night);
+  private spawn(day: number, hour: number): ActiveBug | null {
+    const night = isBugNight(hour);
+    // v17 「きょうの顔ぶれ」+「その時こくに出る種」だけを候補にする
+    const pool = todaysBugs(day, night, hour);
     if (pool.length === 0 || this.spots.length === 0) return null;
     const n = this.seq++;
     const used = new Set(this.bugs.map((b) => b.spot));
-    // 重みつきで種類を選ぶ。その種類のスポットが全部ふさがっていたら次の候補へ
+    // 重みつきで種類を選ぶ。その種類のスポットが全部ふさがっていたら次の候補へ。
+    // v17: 顔ぶれが 2種だけの夜(ホタル+オオクワガタ)でも出そこなわないよう、
+    // 試す回数は「種類の数」ではなく すくなくとも6回にしてある
+    // (1回目で当たったときの結果は これまでと同じなので、日付ごとの顔ぶれは変わらない)
     const total = pool.reduce((s, b) => s + b.weight, 0);
-    for (let attempt = 0; attempt < pool.length; attempt++) {
+    const tries = Math.max(pool.length, 6);
+    for (let attempt = 0; attempt < tries; attempt++) {
       let pick = hash3(day, n * 7 + attempt, night ? 31 : 17) * total;
       let def = pool[pool.length - 1];
       for (const b of pool) {

@@ -17,6 +17,7 @@ import {
 import { BUG_IDS } from './BugSystem';
 import { BOTTLE_TOTAL_KEY, readLetterCount } from './BottleSystem';
 import { COMBO_FOUND_KEY } from './ComboSystem';
+import { festivalFlyCount } from './FestivalSystem';
 import { GIFT_TOTAL_KEY } from './GiftSystem';
 import { insideGardenZone } from './GardenSystem';
 import { homeExpandStage } from './HomeExpansion';
@@ -55,8 +56,8 @@ export const SLEEP_TOTAL_KEY = 'sleep_total';
 export const WALK_M_KEY = 'walk_m';
 export const RAINBOW_SEEN_KEY = 'rainbow_seen';
 
-/** つれる魚4種(バッジ「さかな 4しゅるい」が数える) */
-const FISH_IDS: ItemId[] = ['fish', 'nightfish', 'seafish', 'rarefish'];
+/** つれる魚ぜんしゅ(v17で7種。バッジ「さかな 4しゅるい」は このうち4種で達成) */
+const FISH_IDS: ItemId[] = ['fish', 'nightfish', 'seafish', 'rarefish', 'koi', 'seabream', 'seahorse'];
 /** シャベルの ほりだしもの3種 */
 const DIG_IDS: ItemId[] = ['shard_pot', 'shiny_stone', 'gold_piece'];
 /** よるの入り江でとれる2種 */
@@ -165,6 +166,8 @@ export const BADGE_SOURCES: Record<string, BadgeSource> = {
   rainbow_seen: { label: 'にじを見た回数', read: (s) => statCount(s, RAINBOW_SEEN_KEY) },
   // ---- まいにち ----
   day: { label: '島ですごした日数', read: (s) => Math.max(0, Math.floor(s.time?.day ?? 0)) },
+  // v16 ほしまつり。数え方は FestivalSystem ひとつ(ここに 日づけの計算を写経しない)
+  festival_fly: { label: 'ほしランタンを とばした回数', read: festivalFlyCount },
   sleep_total: { label: 'ねた回数', read: (s) => statCount(s, SLEEP_TOTAL_KEY) },
   walk_m: { label: 'あるいたながさ', read: (s) => statCount(s, WALK_M_KEY) },
   lumina: {

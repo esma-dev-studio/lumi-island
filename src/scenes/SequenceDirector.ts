@@ -8,7 +8,11 @@ import {
 } from './CoveArea';
 import { wrapAngle } from './CameraController';
 import { terrainHeight } from '../entities/terrain';
-import { burst } from '../entities/effects';
+import {
+  burst, clearLanternFlight, lanternFlightState, startLanternFlight, updateLanternFlight,
+  type LanternSeed,
+} from '../entities/effects';
+import { FESTIVAL_FLY_POINT } from '../systems/FestivalSystem';
 import { toast } from '../ui/Toast';
 import { sfx } from '../audio/AudioSystem';
 import { save } from '../save/SaveSystem';
@@ -16,7 +20,8 @@ import { statAdd } from '../game/GameState';
 import { SLEEP_TOTAL_KEY } from '../systems/BadgeSystem';
 import type { GameScene } from './GameScene';
 
-export type SequenceState = 'idle' | 'sleeping' | 'intro' | 'bloom' | 'travel' | 'voyage' | 'lighthouse';
+export type SequenceState =
+  | 'idle' | 'sleeping' | 'intro' | 'bloom' | 'travel' | 'voyage' | 'lighthouse' | 'festival';
 
 const SLEEP_FADE_IN = 0.45; // 暗転までの秒
 const SLEEP_TOTAL = 1.05; // 起床までの秒
@@ -56,6 +61,41 @@ const LIGHT_TOTAL = 9.2;
 /** ともるあいだ、光の粒を出す間かく(秒) */
 const LIGHT_SPARK_EVERY = 0.18;
 
+// ---- v16 ほしまつり ランタンとばし(全体で約10.4秒) ----
+// 2カット構成。過去の見せ場(灯台の点灯)と同じ流儀で、カメラは +Z 側(沖)に立ち、
+// 島を背にした プレイヤーごしに 光の列を見る。
+//   カット1「見上げ」 0→5.4s : プレイヤーを画の下に残したまま、注視点を のぼるランタンへ
+//                              ゆっくり上げる(空だけの画にしない=手をはなした人が写る)
+//   カット2「引き」  5.4→10.4s: 沖へ 引きながら 高さも上げ、光の列・海のうつりこみ・
+//                              島のシルエットを1枚に収める
+// カメラの高さは **世界の高さで持つ**(目標からの相対にしない):
+// ランタンが上がるほど相対では海面より下へ潜ってしまい、地形の底が抜ける(教訓1)。
+const FES_CUT1 = 5.4;
+const FES_TOTAL = 10.4;
+/** カメラの高さ(海面より上を保つ)と 追う距離 */
+const FES_CAM_Y0 = 2.2;
+const FES_CAM_Y1 = 3.2;
+const FES_CAM_Y2 = 8.5;
+const FES_CAM_D0 = 4.8;
+const FES_CAM_D1 = 7.0;
+const FES_CAM_D2 = 22.0;
+/**
+ * カット1で 注視点を のぼりぐあいの何割まで 上げるか(+ 下ゲタ FES_CUT1_BASE)。
+ * 1.0(先頭のランタンをそのまま追う)にすると 画が 空だけになり、
+ * 手をはなした人も 桟橋も 海のうつりこみも 写らなくなる(実機のスクショで確認)。
+ */
+const FES_CUT1_FOLLOW = 0.34;
+const FES_CUT1_BASE = 0.9;
+/** カット2の注視点(基準の高さから これだけ上)。光の列の まん中あたり */
+const FES_CUT2_TGT = 5.5;
+/** ランタンが 手をはなれる高さ(桟橋の板から) */
+const FES_LIFT = 1.15;
+/** NPCのランタンが 1つずつ 上がる間かく(秒)と 最初のため */
+const FES_STAGGER = 0.45;
+const FES_FIRST_DELAY = 0.7;
+/** 光の粒を出す間かく(秒) */
+const FES_SPARK_EVERY = 0.5;
+
 export class SequenceDirector {
   private state: SequenceState = 'idle';
   private t = 0; // 現在の状態の経過秒
@@ -77,6 +117,12 @@ export class SequenceDirector {
   // ---- v11第2章 とうだいの点灯 ----
   private lightSparkT = 0;
   private lightDone = false;
+  // ---- v16 ほしまつり ランタンとばし ----
+  private fesSparkT = 0;
+  private fesCheered = false;
+  private fesX = 0;
+  private fesZ = 0;
+  private fesBaseY = 0;
 
   constructor(private gs: GameScene) {}
 
@@ -348,6 +394,95 @@ export class SequenceDirector {
     }
   }
 
+  // ---------- v16 ほしまつり ランタンとばし ----------
+  /**
+   * 桟橋の先で ほしランタンを とばす見せ場。
+   * 呼ぶ前に GameScene が 状態(とばした記録・なかよし度)を確定させている
+   * ——見せ場は「見せるだけ」にする(とうだいの点灯と まったく同じ流儀)。
+   * 連打しても1回ぶん(ほかの演出中は動かさない)。
+   *
+   * @param attendees まつりに来ている人のid(この人たちの ランタンも 次々と 上がる)
+   */
+  flyLanterns(attendees: string[]): void {
+    if (this.state !== 'idle') return;
+    this.state = 'festival';
+    this.t = 0;
+    this.fesSparkT = 0;
+    this.fesCheered = false;
+    const gs = this.gs;
+    gs.restoreAllOcclusionImmediately();
+    gs.player.locked = true;
+    this.fesX = gs.player.x;
+    this.fesZ = gs.player.z;
+    this.fesBaseY = gs.player.y + FES_LIFT;
+    gs.player.face(this.fesX, this.fesZ + 6); // 沖(+Z)を向いて 手をはなす
+    gs.playerView.play('happy', { onEnd: () => gs.playerView.play('idle') });
+    // まつりの人たちを 桟橋の上へ ならべる(見せ場のあいだ となりで いっしょに 見上げる)。
+    // 演出がおわると スケジュールの立ち位置(まつりの輪)へ 自分で 歩いてもどる
+    const seeds: LanternSeed[] = [{ x: this.fesX, z: this.fesZ, delay: 0 }];
+    for (let i = 0; i < attendees.length; i++) {
+      const x = FESTIVAL_FLY_POINT.x + (i % 2 === 0 ? -0.72 : 0.72);
+      const z = FESTIVAL_FLY_POINT.z - 1.1 - Math.floor(i / 2) * 1.3;
+      gs.npcs.placeAt(attendees[i], x, z, Math.PI); // 沖(+Z)を向く(描画は+π回転)
+      seeds.push({ x, z, delay: FES_FIRST_DELAY + i * FES_STAGGER });
+    }
+    // 「人数ぶん+2個」。桟橋の むこうから 2つ おくれて 上がってきて 光の列を のばす
+    const extra = FES_FIRST_DELAY + attendees.length * FES_STAGGER;
+    seeds.push({ x: FESTIVAL_FLY_POINT.x - 0.5, z: FESTIVAL_FLY_POINT.z - 3.6, delay: extra });
+    seeds.push({ x: FESTIVAL_FLY_POINT.x + 0.5, z: FESTIVAL_FLY_POINT.z - 4.9, delay: extra + FES_STAGGER });
+    startLanternFlight(seeds, this.fesBaseY);
+    sfx('bloom');
+    burst(this.fesX, this.fesBaseY, this.fesZ, 'craft', 12);
+  }
+
+  /** いま ランタンとばしの見せ場の最中か(検証・ボット用) */
+  get flyingLanterns(): boolean {
+    return this.state === 'festival';
+  }
+
+  /** ランタンとばしの1フレーム: ランタン・カメラ・光の粒 */
+  private updateFestival(dt: number): void {
+    const gs = this.gs;
+    const t = this.t;
+    // 世界が凍っているあいだも ランタンだけは のぼりつづける(演出の主役なので)
+    updateLanternFlight(dt);
+    const top = this.fesBaseY + lanternFlightState().topY;
+    let camY: number, dist: number, tgtY: number;
+    if (t < FES_CUT1) {
+      // カット1「見上げ」: 注視点を のぼりぐあいの4割だけ 上げる。
+      // カメラは海面の上に とどまるので、下半分に 桟橋・人・海のうつりこみが のこる
+      const e = smooth(Math.min(1, t / FES_CUT1));
+      camY = FES_CAM_Y0 + (FES_CAM_Y1 - FES_CAM_Y0) * e;
+      dist = FES_CAM_D0 + (FES_CAM_D1 - FES_CAM_D0) * e;
+      tgtY = this.fesBaseY + FES_CUT1_BASE + (top - this.fesBaseY) * FES_CUT1_FOLLOW;
+    } else {
+      // カット2「引き」: 沖へ 引きながら 高さも上げ、光の列と海のうつりこみをまとめて見せる
+      const e = smooth(Math.min(1, (t - FES_CUT1) / (FES_TOTAL - FES_CUT1)));
+      const from = this.fesBaseY + FES_CUT1_BASE + (top - this.fesBaseY) * FES_CUT1_FOLLOW;
+      camY = FES_CAM_Y1 + (FES_CAM_Y2 - FES_CAM_Y1) * e;
+      dist = FES_CAM_D1 + (FES_CAM_D2 - FES_CAM_D1) * e;
+      tgtY = from * (1 - e) + (this.fesBaseY + FES_CUT2_TGT) * e;
+    }
+    // CameraController.beginEvent は「注視点の 2.2m 上」を見る(人の顔の高さに合わせた既定)。
+    // ここでは tgtY を そのまま 見たいので、その ぶんだけ 引いてから わたす
+    gs.camCtl.beginEvent(this.fesX, tgtY - 2.2, this.fesZ, dist, camY - (tgtY - 2.2));
+    if (t < dt * 2) gs.camCtl.snapEvent(); // 1フレームめだけ 補間しない(足もとからの寄りを出さない)
+    // みんなで 見上げる(1回だけ)
+    if (!this.fesCheered && t >= 1.0) {
+      this.fesCheered = true;
+      gs.npcs.lookTogether(this.fesX, this.fesZ + 24, true);
+    }
+    // 光の粒(手をはなれた あたり)。乱数は使わず 経過時間から位置を決める
+    if (t < FES_CUT1) {
+      this.fesSparkT += dt;
+      if (this.fesSparkT >= FES_SPARK_EVERY) {
+        this.fesSparkT = 0;
+        const a = t * 2.3;
+        burst(this.fesX + Math.cos(a) * 0.7, this.fesBaseY + 0.5 + t * 0.6, this.fesZ + Math.sin(a) * 0.7, 'craft', 5);
+      }
+    }
+  }
+
   /** 自宅ベッドで寝る。連打しても1回ぶんしか実行されない */
   sleep(): void {
     if (this.state !== 'idle') return; // 排他: sleeping中の再実行を防ぐ
@@ -419,6 +554,18 @@ export class SequenceDirector {
         gs.camCtl.endEvent();
         gs.camCtl.snapTo(gs.player.x, gs.player.y, gs.player.z);
         gs.onLighthouseLit(); // 依頼の達成・ロカのよろこびの会話・じっせき
+      }
+      return;
+    }
+
+    if (this.state === 'festival') {
+      this.updateFestival(dt);
+      if (this.t >= FES_TOTAL) {
+        this.state = 'idle';
+        clearLanternFlight(); // 演出で出したものは かならず 片づける
+        gs.camCtl.endEvent();
+        gs.camCtl.snapTo(gs.player.x, gs.player.y, gs.player.z);
+        gs.onFestivalLanternFlown(); // お祝いのことば・じっせき・セーブ
       }
       return;
     }

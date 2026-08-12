@@ -87,7 +87,8 @@ describe('バッジのデータ検査(validateBadges)', () => {
   it('カテゴリごとの数が おおむね約束どおり(どれかに かたよっていない)', () => {
     for (const cat of BADGE_CATEGORY_ORDER) {
       expect(badgesOf(cat).length, cat).toBeGreaterThanOrEqual(9);
-      expect(badgesOf(cat).length, cat).toBeLessThanOrEqual(12);
+      // v16「まいにち」に ほしまつり3つが入って13になった(9〜13なら まだ かたよっていない)
+      expect(badgesOf(cat).length, cat).toBeLessThanOrEqual(13);
     }
     expect(badgesOf('first').length).toBe(12);
   });

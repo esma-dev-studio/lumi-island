@@ -8,6 +8,9 @@ import {
 } from '../data/npcs';
 import type { VisitPraiseFacts } from '../data/npcs';
 import { GATHER_NODES } from '../data/island';
+import {
+  FESTIVAL_FAR, FESTIVAL_FROM, FESTIVAL_LANDING, FESTIVAL_TO, festivalStand,
+} from './FestivalSystem';
 import type { GameState } from '../game/GameState';
 import { displayContents } from '../game/GameState';
 import { questFor } from './QuestSystem';
@@ -33,6 +36,36 @@ export const VISIT_CHANCE = 30; // %
 /** 来訪中のスケジュール枠が使うスポットのキー(NPC_SPOTSには無い。NPCSystemが実測点に差し替える) */
 export const VISIT_SPOT_KEY = 'visit';
 const VISIT_ENTRY: ScheduleEntry = { from: VISIT_FROM, to: VISIT_TO, spot: VISIT_SPOT_KEY, activity: 'idle' };
+
+// ---------------------------------------------------------------------------
+// v16 ほしまつり(7日ごとの ゆうがた)の 集合。
+//
+// **やっていることは「立ち位置の差しかえ」だけ**。スケジュールの状態機械にも
+// 会話・依頼・店の道すじにも 手を入れていないので、まつりのあいだも
+// 話しかけ・受注・報告は ふだんどおり動く(そのままの talk 候補が出る)。
+//
+// 差しかえの強さ(上から順に強い):
+//   1. ツムギの工房前ロック(最初の依頼を受けるまで動かない。迷子防止がいちばん強い)
+//   2. 朝の来訪(7〜9時。まつり18〜21時とは 時間が重ならないので実際には競合しない)
+//   3. **ほしまつり(18〜21時)** ← ここ。在宅も 依頼中の立ち位置も 上書きする
+//   4. 依頼の受注・報告相手の questEntry(家に入らず外で待つ)
+//   5. ふだんのスケジュール
+// 3を4より強くしてよい理由: まつりの会場は 桟橋のたもとの ひらけた場所で、
+// 誘導の矢印は「NPCの実際の位置」を指す(GameScene.targetPosOf)から、
+// 依頼の相手が まつりにいても 子どもは かならず たどりつける。
+// ---------------------------------------------------------------------------
+export const FESTIVAL_SPOT_KEY = 'festival';
+const FESTIVAL_ENTRY: ScheduleEntry = {
+  from: FESTIVAL_FROM, to: FESTIVAL_TO, spot: FESTIVAL_SPOT_KEY, activity: 'watch',
+};
+
+/** まつりの集合の入力(GameSceneが GameState と時計から作る) */
+export interface FestivalProbe {
+  /** いま まつりの時間か */
+  active: boolean;
+  /** 集まる人(この並びが そのまま 輪の立ち位置の順番になる) */
+  ids: string[];
+}
 
 /** 日付ハッシュ(同じ日・同じsaltなら必ず同じ値。乱数は使わない) */
 function dayHash(day: number, salt: number): number {
@@ -155,6 +188,8 @@ export class NPCSystem {
   private visitorId: string | null = null;
   /** なかよし度・依頼状況の読み取り口(GameSceneが差しこむ)。無いときは来訪なし */
   private visitProbe: (() => { id: string; friendship: number; questCritical: boolean }[]) | null = null;
+  /** v16 まつりの集合の読み取り口(GameSceneが差しこむ)。無いときは まつりなし */
+  private festivalProbe: (() => FestivalProbe) | null = null;
 
   constructor(
     private scene: Scene,
@@ -169,8 +204,42 @@ export class NPCSystem {
     this.visitProbe = probe;
   }
 
-  /** そのNPCが住んでいる場所(省略=島) */
+  /** v16 まつりの集合に使う「いま まつりか・だれが集まるか」を渡す(GameSceneが作る) */
+  setFestivalProbe(probe: () => FestivalProbe): void {
+    this.festivalProbe = probe;
+  }
+
+  /**
+   * v16 その人が いま まつりの輪に出ているか(輪の何番めか。出ていなければ -1)。
+   *
+   * 家の中で会っているあいだ(hostId)は 差しかえない: 部屋の中の立ち位置が
+   * 島の座標で上書きされると、ドールハウスの構図から人が消える。
+   * よるの入り江の住人(ロカ)は「ふねで 来る」ので、**島がわにいるときだけ** 輪に出す。
+   * 入り江へ わたった子が「ロカがいない」に ならないよう、入り江にいるあいだは
+   * いつもの場所(灯台のふもと・波うちぎわ)に置いたままにする。
+   */
+  private festivalSlot(rt: NpcRuntime): number {
+    if (!this.festivalProbe || this.hostId !== null) return -1;
+    const p = this.festivalProbe();
+    if (!p.active) return -1;
+    const i = p.ids.indexOf(rt.def.id);
+    if (i < 0) return -1;
+    if ((rt.def.area ?? 'island') !== 'island' && this.area !== 'island') return -1;
+    return i;
+  }
+
+  /** いま まつりの輪に出ている人の数(輪の立ち位置を決めるのに使う) */
+  private festivalTotal(): number {
+    return this.festivalProbe ? this.festivalProbe().ids.length : 0;
+  }
+
+  /**
+   * そのNPCが「いま どこの人として ふるまうか」(省略=島)。
+   * まつりに出ているあいだの ロカだけは 島の人としてあつかう
+   * (見た目を出す・話しかけの候補に入れるのは、この1か所で決まる)。
+   */
   private areaOf(rt: NpcRuntime): NpcArea {
+    if (this.festivalSlot(rt) >= 0) return 'island';
     return rt.def.area ?? 'island';
   }
 
@@ -376,15 +445,26 @@ export class NPCSystem {
     // v10 来訪: なかよしのNPCは 朝7〜9時だけ 自宅の庭先にいる。
     // 依頼が動いている日は visitorToday が null を返すので、依頼の枠を横取りすることはない
     if (this.isVisiting(rt.def.id, this.island.time.day, hour)) return VISIT_ENTRY;
+    // v16 ほしまつり(18〜21時)。在宅も 依頼中の立ち位置も 上書きして 桟橋のたもとへ集まる
+    if (this.festivalSlot(rt) >= 0) return FESTIVAL_ENTRY;
     if (entry.activity === 'home' && this.questCritical(rt.def.id)) {
       entry = rt.def.questEntry;
     }
     return entry;
   }
 
-  /** スケジュール枠の立ち位置。来訪の枠だけは実測した庭先を使う(NPC_SPOTSには置かない) */
+  /**
+   * スケジュール枠の立ち位置。
+   *   来訪の枠   … init で実測した庭先(NPC_SPOTSには置かない)
+   *   まつりの枠 … 桟橋ひろばの輪(FestivalSystem が人数から計算する。wanderR:0=その場から動かない)
+   */
   private spotFor(rt: NpcRuntime, entry: ScheduleEntry): { x: number; z: number; rotY?: number; wanderR?: number } {
-    return entry.spot === VISIT_SPOT_KEY ? this.visitSpot : npcSpot(rt.def.id, entry.spot);
+    if (entry.spot === VISIT_SPOT_KEY) return this.visitSpot;
+    if (entry.spot === FESTIVAL_SPOT_KEY) {
+      const stand = festivalStand(this.festivalSlot(rt), this.festivalTotal());
+      return { x: stand.x, z: stand.z, rotY: stand.rotY, wanderR: 0 };
+    }
+    return npcSpot(rt.def.id, entry.spot);
   }
 
   /** 会話開始/終了(GameSceneから) */
@@ -444,6 +524,19 @@ export class NPCSystem {
           rt.x = spot.x;
           rt.z = spot.z;
         }
+        // v16 島 ⇄ よるの入り江 をまたぐ人(ロカ)は、あいだが海なので 歩いて行き来できない。
+        // 枠が変わった瞬間に 行き先がわへ 置きかえる。行き先が まつりなら
+        // ふねを もやってある 桟橋(FESTIVAL_LANDING)に置いて、輪までの数mだけ歩いてもらう
+        // =「ふねで来た」に見える。歩かせると 海の上を すべっていく絵になる。
+        if (
+          (rt.def.area ?? 'island') !== 'island' &&
+          Math.hypot(spot.x - rt.x, spot.z - rt.z) > FESTIVAL_FAR
+        ) {
+          const land = entry.spot === FESTIVAL_SPOT_KEY ? FESTIVAL_LANDING : spot;
+          rt.x = land.x;
+          rt.z = land.z;
+          rt.y = this.island.groundY(land.x, land.z);
+        }
       }
       const targetX = rt.subTarget?.x ?? spot.x;
       const targetZ = rt.subTarget?.z ?? spot.z;
@@ -457,20 +550,24 @@ export class NPCSystem {
         const dirZ = (targetZ - rt.z) / dist;
         const nx = rt.x + dirX * sp * dt;
         const nz = rt.z + dirZ * sp * dt;
+        const fromX = rt.x;
+        const fromZ = rt.z;
         if (this.island.walkable(nx, nz)) {
           rt.x = nx;
           rt.z = nz;
-          rt.stuck = 0;
         } else if (this.island.walkable(nx, rt.z)) {
           rt.x = nx;
-          rt.stuck += dt;
         } else if (this.island.walkable(rt.x, nz)) {
           rt.z = nz;
-          rt.stuck += dt;
-        } else {
-          rt.stuck += dt;
         }
         [rt.x, rt.z] = this.island.resolveCollision(rt.x, rt.z, 0.3);
+        // 詰まりの判定は「じっさいに 進めたか」で見る。
+        // walkable が見るのは 地面(海・池)だけなので、建物・岩のコライダーに
+        // 押し返されているあいだは stuck が0のままだった = 家の角で えいえんに 足ぶみできた。
+        // v16 まつりの集合で 島を横切る長い道すじができて 実際に起きた
+        // (ノクトが 自分の家の角に 引っかかって 一歩も動かなかった)。
+        if (Math.hypot(rt.x - fromX, rt.z - fromZ) < sp * dt * 0.3) rt.stuck += dt;
+        else rt.stuck = 0;
         if (rt.stuck > 2.5) {
           // 完全に詰まったら目的地へワープ(見えない所で)
           rt.x = targetX;
@@ -534,14 +631,23 @@ export class NPCSystem {
     this.apply(rt);
   }
 
-  /** 開花の見せ場: 外にいるNPC全員が木のほうを向く/よろこぶ */
-  reactToBloom(treeX: number, treeZ: number, happy: boolean): void {
+  /**
+   * 見せ場の共通どうさ: 外にいるNPC全員が その1点のほうを向く(happy ならよろこぶ)。
+   * ルミの木の開花(v6)と ほしまつりの ランタンとばし(v16)が 同じ道すじを通る。
+   */
+  lookTogether(x: number, z: number, happy: boolean): void {
     for (const rt of this.npcs.values()) {
       if (rt.hidden) continue;
-      rt.rotY = Math.atan2(treeX - rt.x, treeZ - rt.z) + Math.PI; // 顔を木へ
+      if (this.areaOf(rt) !== this.area) continue; // 別の場所にいる人は動かさない
+      rt.rotY = Math.atan2(x - rt.x, z - rt.z) + Math.PI; // 顔をそちらへ
       if (happy) rt.view.play('happy', { onEnd: () => rt.view.play('idle') });
       this.apply(rt);
     }
+  }
+
+  /** 開花の見せ場: 外にいるNPC全員が木のほうを向く/よろこぶ */
+  reactToBloom(treeX: number, treeZ: number, happy: boolean): void {
+    this.lookTogether(treeX, treeZ, happy);
   }
 
   /** マーカー用: 表示中NPCの位置 */

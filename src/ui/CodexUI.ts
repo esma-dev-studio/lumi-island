@@ -14,6 +14,7 @@ import { isDiscovered } from '../systems/ComboSystem';
 import { ACHIEVEMENTS, achievedCount, achievementRows } from '../systems/AchievementSystem';
 import { isRewardGranted, rewardIcon, rewardLabel, rewardOf } from '../systems/AchievementRewards';
 import { hasReadLetter, readLetterCount } from '../systems/BottleSystem';
+import { festivalMemo } from '../systems/FestivalSystem';
 import { badgeCountByCategory, badgeRows, earnedBadgeCount } from '../systems/BadgeSystem';
 import {
   BADGES, BADGE_CATEGORIES, BADGE_CATEGORY_ORDER, BADGE_TIERS, type BadgeDef,
@@ -217,6 +218,14 @@ export class CodexUI {
       </div>`;
     }).join('');
 
+    // v16 しまの ぎょうじ(ほしまつり)の ひとことメモ。
+    // まだ 見ていない子には「いつ・どこ」だけ。見たあとは やりかたと 回数が出る
+    const fes = festivalMemo(s);
+    const memo = `<div class="codex-note${fes.seen ? ' seen' : ''}">
+      <span class="inv-ico">${icon('festival')}</span>
+      <span class="codex-note-text"><b>${fes.title}</b><small>${fes.text}</small></span>
+    </div>`;
+
     this.el.innerHTML = `
       <div class="panel-title">ずかん <span class="panel-close" data-close>${byInput('とじる(Z)', 'とじる')}</span></div>
       ${this.tabsHtml(s)}
@@ -226,6 +235,8 @@ export class CodexUI {
       <div class="codex-grid">${comboCells}</div>
       <div class="panel-sub">てがみ <small>${readLetterCount(s)} / ${LETTERS.length}</small></div>
       <div class="codex-grid">${letterCells}</div>
+      <div class="panel-sub">しまの ぎょうじ</div>
+      ${memo}
       <div class="panel-sub">じっせき <small>${achievedCount(s)} / ${ACHIEVEMENTS.length}</small></div>
       <div class="ach-list">${achRows}</div>
     `;

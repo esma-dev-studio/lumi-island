@@ -1,0 +1,9 @@
+
+Running 4 tests using 1 worker
+
+  ok 1 tests\e2e\festival.spec.ts:94:1 › 7日めの朝: かざりが出て、カードが まつりを知らせる (8.1s)
+  ok 2 tests\e2e\festival.spec.ts:107:1 › 6日めの朝: 前日の予告が出る (4.5s)
+  ok 3 tests\e2e\festival.spec.ts:115:1 › ゆうがた: みんなが集まり、ランタンをもらって とばすと 記録がのこる (40.5s)
+  ok 4 tests\e2e\festival.spec.ts:171:1 › 翌朝: かざりも E候補も 片づいている (5.0s)
+
+  4 passed (1.2m)

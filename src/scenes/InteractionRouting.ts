@@ -11,6 +11,10 @@ import { PRIORITY, type InteractionCandidate } from '../systems/InteractionResol
 import { COVE_LIGHTHOUSE_POI, objectiveActionContext } from '../systems/ObjectiveSystem';
 import { selectInteraction } from '../systems/ObjectiveInteractionPolicy';
 import { canPlant, nearestPlot, stageOf } from '../systems/GardenSystem';
+import {
+  FESTIVAL_FLY_HINT, FESTIVAL_FLY_POINT, FESTIVAL_FLY_REACH, FESTIVAL_PLAZA,
+  FESTIVAL_STAND_REACH, FESTIVAL_TAKE_HINT, canFlyLantern, canTakeLantern, hasLantern, isFestivalTime,
+} from '../systems/FestivalSystem';
 import type { PlacedRuntime } from '../systems/PlacementSystem';
 import { HOME_DOOR, HOME_BED, HOME_ACT_R } from './HomeInterior';
 import {
@@ -163,6 +167,65 @@ function pushNpcCandidate(gs: GameScene, cands: InteractionCandidate[], px: numb
     enabled: true,
     hint: `<kbd>E</kbd>${rt.def.name}と はなす`,
     run: () => (visiting ? gs.startVisitTalk(rt.def.id) : gs.questDlg.talkTo(rt.def.id)),
+  });
+}
+
+/**
+ * v16 ほしまつりのE候補2つ(まつりの時間だけ 出る)。
+ *
+ *   ランタンの台   … <kbd>E</kbd>ほしランタンを もらう(無料・1回の まつりにつき1こ)
+ *   桟橋の先       … <kbd>E</kbd>ランタンを とばす(見せ場がはじまる)
+ *
+ * どちらも kind='place' にしてある。ObjectiveSystem の preferredKinds に 'place' は
+ * ふつう入らないので、**依頼の誘導中は 自動的に かくれる**——まつりは 依頼の じゃまを
+ * 1ミリも しない、という設計を 構造で保証する(でんごんばん・庭の花だん・るすの家と同じ流儀)。
+ *
+ * 優先度:
+ *   台     = 自宅のドアと同じ35。会話(35)とは 距離で決まるので、輪(半径1.7m)の上に立てば
+ *            会話が、台のそば(1.2m)まで入れば 台が出る = 「話しかけられない」は起きない。
+ *   とばす = 34(ドアより1つだけ強い)。桟橋の先は 釣り場(50)でもあるので、
+ *            ランタンを持っているあいだだけ こちらを勝たせる。ふだんの よるの桟橋の釣りは
+ *            候補そのものが 出ないので 1ミリも 変わらない。
+ */
+function pushFestivalCandidates(
+  gs: GameScene, cands: InteractionCandidate[], px: number, pz: number
+): void {
+  const day = gs.island.time.day;
+  const hour = gs.island.time.hour;
+  if (!isFestivalTime(day, hour)) return;
+  const standD = Math.hypot(px - FESTIVAL_PLAZA.x, pz - FESTIVAL_PLAZA.z);
+  if (standD < FESTIVAL_STAND_REACH) {
+    const canTake = canTakeLantern(gs.state, day, hour);
+    const holding = hasLantern(gs.state, day);
+    cands.push({
+      id: canTake ? 'festival_take' : 'festival_stand',
+      kind: 'place',
+      targetId: 'festival_stand',
+      priority: PRIORITY.door,
+      distance: standD,
+      enabled: true,
+      hint: canTake
+        ? FESTIVAL_TAKE_HINT
+        : holding
+          ? 'さんばしの先で とばしてみよう'
+          : 'また つぎの ほしまつりでね',
+      run: () => {
+        if (canTake) gs.takeFestivalLantern();
+      },
+    });
+  }
+  if (!canFlyLantern(gs.state, day, hour)) return;
+  const flyD = Math.hypot(px - FESTIVAL_FLY_POINT.x, pz - FESTIVAL_FLY_POINT.z);
+  if (flyD >= FESTIVAL_FLY_REACH) return;
+  cands.push({
+    id: 'festival_fly',
+    kind: 'place',
+    targetId: 'festival_fly',
+    priority: PRIORITY.door - 1,
+    distance: flyD,
+    enabled: true,
+    hint: FESTIVAL_FLY_HINT,
+    run: () => gs.flyFestivalLantern(),
   });
 }
 
@@ -494,6 +557,8 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
           }
     );
   }
+  // v16 ほしまつり(まつりの時間だけ)。ランタンの台と 桟橋の先
+  pushFestivalCandidates(gs, cands, px, pz);
   // v15 広場の でんごんばん(きょうの おてつだいを 読む)。
   //
   // kind='place' にしてある。ObjectiveSystem の preferredKinds に 'place' は

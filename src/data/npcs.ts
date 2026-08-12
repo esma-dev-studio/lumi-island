@@ -298,7 +298,8 @@ export const NPCS: NpcDef[] = [
     charId: 'nokto',
     name: 'ノクト',
     // 夜と星の研究者。空から来たかけらが大好物、光る石をよろこぶ
-    giftLoves: ['starshard', 'gold_piece'],
+    // v17: よるの木にしか いない オオクワガタも 大好物にした(夜のひと らしい1種)
+    giftLoves: ['starshard', 'gold_piece', 'b_ookuwa'],
     giftLikes: ['ore', 'shiny_stone', 'moss'],
     giftLines: {
       love: ['ほう…{item}か! これは たからものじゃ。', 'ワシの けんきゅうが すすむのう。ありがとう。'],
@@ -414,7 +415,8 @@ export const NPCS: NpcDef[] = [
     area: 'cove',
     debutFlag: 'roka_arrived',
     // うみの子。ひかりの貝と さかなは 大好物。あまい木の実をよろこぶ。
-    giftLoves: ['lightshell', 'fish', 'nightfish', 'seafish', 'rarefish'],
+    // v17: とうだいが ともってから 見られる タツノオトシゴも 大好物にした
+    giftLoves: ['lightshell', 'fish', 'nightfish', 'seafish', 'rarefish', 'seahorse'],
     giftLikes: ['berry'],
     giftLines: {
       love: [
