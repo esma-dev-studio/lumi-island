@@ -639,11 +639,21 @@ export function makeRubble(scene: Scene, seed: number, scale = 1): Mesh {
 export function makeCovePier(scene: Scene): Mesh {
   const A = A0();
   const wood = Color3.FromHexString('#63482f');
+  // 板の中心の x(ローカル)。
+  //
+  // v18.1 まで ここが 0 のままで、**見えている桟橋が 歩ける桟橋から 4.8m ずれていた**
+  // (実測: メッシュの世界x = -57.24〜-54.75、COVE_PIER の判定は -52.3〜-50.1)。
+  // 結果、プレイヤーは 何も描かれていない空中(接地高さ1.06m)を歩き、
+  // 目に見える桟橋の先(接地0.08m=水面より下)には乗れない、という食いちがいになっていた。
+  // z は最初から COVE_PIER.z0 - COVE.z で世界→ローカルに直していたので、x だけ抜けていた。
+  // 立ち位置・小舟・ランタン(CoveArea)は どれも COVE_PIER.x を基準に置いてあるので、
+  // 直すのは見た目のほう(判定はそのまま)。
+  const cx = COVE_PIER.x - COVE.x;
   const nPlanks = Math.floor((COVE_PIER.z1 - COVE_PIER.z0) / 0.6);
   for (let i = 0; i < nPlanks; i++) {
     const lz = COVE_PIER.z0 - COVE.z + 0.3 + i * 0.6;
     appendBox(
-      A, (((i * 37) % 10) - 5) * 0.006, COVE_PIER.y - 0.045, lz,
+      A, cx + (((i * 37) % 10) - 5) * 0.006, COVE_PIER.y - 0.045, lz,
       COVE_PIER.w, 0.08, 0.54, jitterColor(wood, i, 0.12), (((i * 53) % 10) - 5) * 0.007, i
     );
   }
@@ -651,7 +661,7 @@ export function makeCovePier(scene: Scene): Mesh {
   for (let i = 0; i < 4; i++) {
     const lz = COVE_PIER.z0 - COVE.z + 0.9 + i * 1.85;
     for (const sx of [-1, 1]) {
-      const px = (sx * COVE_PIER.w) / 2;
+      const px = cx + (sx * COVE_PIER.w) / 2;
       const ground = coveHeightLocal(px, lz);
       appendTrunk(A, [[px, ground - 0.35, lz], [px, COVE_PIER.y - 0.06, lz]], 0.14, 0.1,
         jitterColor(Color3.FromHexString('#5a4230'), i * 7 + (sx > 0 ? 1 : 0), 0.14), i * 3 + 1);

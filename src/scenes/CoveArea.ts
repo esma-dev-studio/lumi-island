@@ -15,7 +15,7 @@ import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import type { Scene } from '@babylonjs/core/scene';
 import {
-  COVE, COVE_PIER, COVE_SEA_Y, coveGroundY, coveHeightLocal, coveWalkable,
+  COVE, COVE_PIER, COVE_SEA_Y, coveGroundY, coveHeightLocal, coveWalkable, onCovePier,
 } from '../entities/terrain';
 import {
   makeBoat, makeCoveGround, makeCovePier, makeCoveSea, makeLighthouse, makeLighthouseLight, makeLightShell,
@@ -39,7 +39,10 @@ const BEAM_SPEED = (Math.PI * 2) / 12;
 /** ローカル座標(入り江の中心が原点)を世界座標へ */
 export const coveWorld = (lx: number, lz: number): { x: number; z: number } => ({ x: COVE.x + lx, z: COVE.z + lz });
 
-/** 船で着いたときの立ち位置(帰りの桟橋の上)。帰りのEの輪(1.7m)には入らない */
+/**
+ * 船で着いたときの立ち位置(帰りの桟橋の上)。
+ * v18.1 から ここは「ふねに のれる場所」の内がわ(canBoardReturn を参照)。
+ */
 export const COVE_SPAWN = coveWorld(4.8, 6.3);
 /** 帰りの桟橋の先。ここでEを押すと島へ帰る */
 export const COVE_RETURN = coveWorld(4.8, 9.8);
@@ -60,10 +63,36 @@ export const COVE_ACT_R = 1.7;
  * 2.6mなら桟橋のデッキの外がわ半分(lz 7.4〜10.8)をまるごと覆い、
  * いちばん近い採取ノード(ひかりの貝 local(0.6,7.0) まで5.0m)とも
  * 採取のとどく距離1.9mを足して なお余裕がある(tests/unit/cove.test.ts が機械検査)。
- * 着いたときの立ち位置 COVE_SPAWN(4.8, 6.3)は3.5mはなれたままなので、
- * 上陸した瞬間に「かえる?」と急かすことも起きない。
+ *
+ * v18.1: この輪だけでは足りなかった(下の canBoardReturn を参照)。輪は
+ * 「デッキの外がわ・水ぎわの砂」まで拾うための のりしろとして のこしてある。
  */
 export const COVE_RETURN_R = 2.6;
+
+/**
+ * ふねに のれる場所か(帰りの桟橋)。
+ *
+ * **なぜ輪だけでは だめだったか(v18.1 の進行不能バグ)**
+ *   ふねは 桟橋のデッキの上、local(4.8, 6.3)=COVE_SPAWN に プレイヤーを降ろす。
+ *   ところが 帰りの点 local(4.8, 9.8) までは 3.5m あり、2.6mの輪の外だった。
+ *   = **「ふねを降りた その場所」だけが、ふねに のれない場所** になっていた。
+ *   実機で 0.2mきざみに走査した実測: デッキの立てる456点のうち **240点(52%)が無言**で、
+ *   無言の帯は デッキの内がわ半分(lz 4.2〜7.2)——降りた場所を まるごと含む。
+ *   入り江から出たい子は まず「降りた場所」へ もどるので、そこで Eを押して 何も起きない。
+ *   ユーザー報告「ほしくさを摘んでいたら 船で島にもどるが押せない」の正体がこれ。
+ *   (島がわは逆で、GameScene.applyCove が ISLAND_BOAT_POINT ちょうどに降ろすので、
+ *    降りた瞬間から「E ふねに のる」が出る。左右で ふるまいが ちがっていた)
+ *
+ * **直しかた**: 「帰りの桟橋のデッキの上に立っていれば いつでも のれる」にする。
+ *   デッキは海へ突き出た 2.2m×6.6m の板で、通りぬけ道ではないので
+ *   ほかの遊びを 横取りしない(いちばん近い採取ノードまで3.0m以上、
+ *   ロカの立ち位置は デッキの外。tests/unit/cove_return.test.ts が機械検査)。
+ *   2.6mの輪も「または」でのこして、デッキの外の水ぎわも これまでどおり拾う。
+ */
+export function canBoardReturn(x: number, z: number): boolean {
+  if (onCovePier(x, z)) return true;
+  return Math.hypot(x - COVE_RETURN.x, z - COVE_RETURN.z) < COVE_RETURN_R;
+}
 
 /** 小舟の置きかた(世界座標)。yは船体の上ぶちの高さ(そこは-0.46なので0.62で水に0.16m沈む) */
 export interface BoatPose {

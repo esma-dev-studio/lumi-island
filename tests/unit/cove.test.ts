@@ -424,8 +424,16 @@ describe('入り江の中のE候補', () => {
     expect(sailed).toEqual([]);
   });
 
-  it('着いたばかりの立ち位置では 案内が出ない(いきなりヒントで急かさない)', () => {
-    expect(hintAt({ x: COVE_SPAWN.x, z: COVE_SPAWN.z, inCove: true })).toBe('');
+  // v18.1 ここは以前「案内が出ない(急かさない)」を固定していたが、それが
+  // 「ふねを降りた その場所だけ ふねに のれない」= 入り江から出られない原因だった。
+  // 島がわは降りた瞬間から「E ふねに のる」が出る(GameScene.applyCove は
+  // ISLAND_BOAT_POINT ちょうどに降ろす)ので、左右のふるまいをそろえる。
+  it('ふねを降りた その場所で、すぐ ふねに のれる(島がわと同じ)', () => {
+    sailed.length = 0;
+    const at = { x: COVE_SPAWN.x, z: COVE_SPAWN.z, inCove: true };
+    expect(hintAt(at)).toBe('<kbd>E</kbd>ふねで しまへ かえる');
+    expect(pressAt(at)).toBe('<kbd>E</kbd>ふねで しまへ かえる');
+    expect(sailed).toEqual(['island']);
   });
 
   it('入り江の中では 島の候補(店・自宅)は出ない', () => {

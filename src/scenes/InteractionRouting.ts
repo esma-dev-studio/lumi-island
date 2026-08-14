@@ -24,8 +24,8 @@ import {
   NPC_HOMES, NPC_HOME_ACT_R, NPC_HOME_BY_ID, NPC_HOME_DOOR_R, npcHomeDoorWorld,
 } from './NpcInteriors';
 import {
-  BOAT_ACT_R, COVE_ACT_R, COVE_DOOR, COVE_RETURN, COVE_RETURN_R, ISLAND_BOAT_POINT,
-  boatPrompt, lighthousePrompt,
+  BOAT_ACT_R, COVE_ACT_R, COVE_DOOR, COVE_RETURN, ISLAND_BOAT_POINT,
+  boatPrompt, canBoardReturn, lighthousePrompt,
 } from './CoveArea';
 import type { GameScene } from './GameScene';
 
@@ -422,13 +422,16 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     // ——ここを忘れると「目の前に立っているのに話しかけられない」になる(実機で発生した)。
     // NPCSystem.nearest は場所ちがいのNPCを返さないので、島の3人がここに出てくることはない
     pushNpcCandidate(gs, cands, px, pz);
-    // 帰りの桟橋の先: ふねで島へ帰る。
-    // 輪だけ大きい(COVE_RETURN_R)のは、見えている小舟のよこに立って押せなかったため
-    // (理由は CoveArea.ts の COVE_RETURN_R のコメント)。
+    // 帰りの桟橋: ふねで島へ帰る。
+    // のれる場所は canBoardReturn(CoveArea.ts)が1か所で決める——
+    // 「桟橋のデッキの上なら どこでも」+「デッキの外の水ぎわ(2.6mの輪)」。
+    // v18.1 まで輪だけだったせいで、**ふねを降りたその場所**(COVE_SPAWN)が
+    // 輪の外=無言になり、入り江から出られない進行不能バグになっていた
+    // (理由と実測は CoveArea.ts の canBoardReturn のコメント)。
     // kind='exit' は ObjectiveSystem の ALWAYS_ALLOWED なので、どの誘導中でも隠れない
     // ——島へ帰る唯一の手段なので、ここを絞ると第2章のとちゅうで詰む。
     const backD = Math.hypot(px - COVE_RETURN.x, pz - COVE_RETURN.z);
-    if (backD < COVE_RETURN_R) {
+    if (canBoardReturn(px, pz)) {
       cands.push({
         id: 'cove_return', kind: 'exit', targetId: 'cove',
         priority: PRIORITY.door, distance: backD, enabled: true,

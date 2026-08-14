@@ -1,0 +1,41 @@
+【着地の実測】{"inCove":true,"x":-51.2,"z":63.3,"hint":"","obj":"q2_meet_offer"}  ※これが「ふねを降りた その場所」
+目的: {"id":"q2_starweed_gather","label":"ほしくさを あつめよう"}
+--- 桟橋デッキ走査(before): 立てる点 456 / ふねの案内 216 / 無言 240 ---
+     lx:  3.4 3.6 3.8 4.0 4.2 4.4 4.6 4.8 5.0 5.2 5.4 5.6 5.8 6.0 6.2
+lz   4.2:    x   x   x   x   x   x   x   x   x   x   x   x   x   x   x
+lz   4.4:    x   x   x   x   x   x   x   x   x   x   x   x   x   x   x
+lz   4.6:    x   x   x   x   x   x   x   x   x   x   x   x   x   x   x
+lz   4.8:    x   x   x   x   x   x   x   x   x   x   x   x   x   x   x
+lz   5.0:    x   x   x   x   x   x   x   x   x   x   x   x   x   x   x
+lz   5.2:    x   x   x   x   x   x   x   x   x   x   x   x   x   x   x
+lz   5.4:    x   x   x   x   x   x   x   x   x   x   x   x   x   x   x
+lz   5.6:    x   x   x   x   x   x   x   x   x   x   x   x   x   x   x
+lz   5.8:    x   x   x   x   x   x   x   x   x   x   x   x   x   x   x
+lz   6.0:    x   x   x   x   x   x   x   x   x   x   x   x   x   x   x
+lz   6.2:    x   x   x   x   x   x   x   x   x   x   x   x   x   x   x
+lz   6.4:    x   x   x   x   x   x   x   x   x   x   x   x   x   x   x
+lz   6.6:    x   x   x   x   x   x   x   x   x   x   x   x   x   x   x
+lz   6.8:    x   x   x   x   x   x   x   x   x   x   x   x   x   x   x
+lz   7.0:    x   x   x   x   x   x   x   x   x   x   x   x   x   x   x
+lz   7.2:    x   x   x   x   x   x   x   O   x   x   x   x   x   .   .
+lz   7.4:    x   x   O   O   O   O   O   O   O   O   O   O   O   .   .
+lz   7.6:    x   O   O   O   O   O   O   O   O   O   O   O   O   .   .
+lz   7.8:    .   O   O   O   O   O   O   O   O   O   O   O   O   .   .
+lz   8.0:    .   O   O   O   O   O   O   O   O   O   O   O   O   .   .
+lz   8.2:    .   O   O   O   O   O   O   O   O   O   O   O   O   .   .
+lz   8.4:    .   O   O   O   O   O   O   O   O   O   O   O   O   .   .
+lz   8.6:    .   O   O   O   O   O   O   O   O   O   O   O   O   .   .
+lz   8.8:    .   O   O   O   O   O   O   O   O   O   O   O   O   .   .
+lz   9.0:    .   O   O   O   O   O   O   O   O   O   O   O   O   .   .
+lz   9.2:    .   O   O   O   O   O   O   O   O   O   O   O   O   .   .
+lz   9.4:    .   O   O   O   O   O   O   O   O   O   O   O   O   .   .
+lz   9.6:    .   O   O   O   O   O   O   O   O   O   O   O   O   .   .
+lz   9.8:    .   O   O   O   O   O   O   O   O   O   O   O   O   .   .
+lz  10.0:    .   O   O   O   O   O   O   O   O   O   O   O   O   .   .
+lz  10.2:    .   O   O   O   O   O   O   O   O   O   O   O   O   .   .
+lz  10.4:    .   O   O   O   O   O   O   O   O   O   O   O   O   .   .
+lz  10.6:    .   O   O   O   O   O   O   O   O   O   O   O   O   .   .
+lz  10.8:    .   O   O   O   O   O   O   O   O   O   O   O   O   .   .
+   O=ふねに のれる / x=なにも出ない / .=立てない
+   着地点(4.8,6.3)付近: {"lx":4.8,"lz":6.2,"hint":""}
+JSエラー: 0

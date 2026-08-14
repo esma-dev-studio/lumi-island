@@ -1,0 +1,270 @@
+起動OK
+桟橋: {"x":4,"z":41.6,"inCove":false,"hour":20.5,"day":1,"obj":"ch2_first_sail","objLabel":"ふねで よるの入り江へ わたろう","objHead":"いまやること","hint":"Eふねに のる","starweed":0,"lightshell":0,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"locked\",\"q2_shell\":\"locked\",\"q2_starweed\":\"locked\",\"q2_lens\":\"locked\",\"q2_light\":\"locked\"}","seq":"idle","busy":false,"sitting":false,"rokaHidden":"nil"}
+入り江到着: {"x":-51.2,"z":63.3,"inCove":true,"hour":20.6,"day":1,"obj":"q2_meet_offer","objLabel":"ロカと はなそう","objHead":"いまやること","hint":"","starweed":0,"lightshell":0,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"open\",\"q2_shell\":\"locked\",\"q2_starweed\":\"locked\",\"q2_lens\":\"locked\",\"q2_light\":\"locked\"}","seq":"idle","busy":false,"sitting":false,"rokaHidden":false}
+出会い後: {"x":-51.2,"z":63.3,"inCove":true,"hour":20.7,"day":1,"obj":"q2_meet_offer","objLabel":"ロカと はなそう","objHead":"いまやること","hint":"","starweed":0,"lightshell":0,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"open\",\"q2_shell\":\"locked\",\"q2_starweed\":\"locked\",\"q2_lens\":\"locked\",\"q2_light\":\"locked\"}","seq":"idle","busy":false,"sitting":false,"rokaHidden":false}
+ラウンド0 前: {"q_wood":"done","q_fish":"done","q_ore":"done","q_lantern":"done","q_lumi":"done","q2_boat":"done","q2_meet":"open","q2_shell":"locked","q2_starweed":"locked","q2_lens":"locked","q2_light":"locked"} obj=q2_meet_offer
+ラウンド1 前: {"q_wood":"done","q_fish":"done","q_ore":"done","q_lantern":"done","q_lumi":"done","q2_boat":"done","q2_meet":"done","q2_shell":"open","q2_starweed":"locked","q2_lens":"locked","q2_light":"locked"} obj=q2_shell_offer
+ラウンド2 前: {"q_wood":"done","q_fish":"done","q_ore":"done","q_lantern":"done","q_lumi":"done","q2_boat":"done","q2_meet":"done","q2_shell":"open","q2_starweed":"locked","q2_lens":"locked","q2_light":"locked"} obj=q2_shell_offer
+ラウンド3 前: {"q_wood":"done","q_fish":"done","q_ore":"done","q_lantern":"done","q_lumi":"done","q2_boat":"done","q2_meet":"done","q2_shell":"open","q2_starweed":"locked","q2_lens":"locked","q2_light":"locked"} obj=q2_shell_report
+ラウンド4 前: {"q_wood":"done","q_fish":"done","q_ore":"done","q_lantern":"done","q_lumi":"done","q2_boat":"done","q2_meet":"done","q2_shell":"done","q2_starweed":"open","q2_lens":"locked","q2_light":"locked"} obj=q2_starweed_offer
+ラウンド5 前: {"q_wood":"done","q_fish":"done","q_ore":"done","q_lantern":"done","q_lumi":"done","q2_boat":"done","q2_meet":"done","q2_shell":"done","q2_starweed":"open","q2_lens":"locked","q2_light":"locked"} obj=q2_starweed_offer
+ほしくさ受注: {"x":-63.49,"z":59.23,"inCove":true,"hour":21,"day":1,"obj":"q2_starweed_gather","objLabel":"ほしくさを あつめよう","objHead":"いまやること","hint":"","starweed":0,"lightshell":9,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"done\",\"q2_shell\":\"done\",\"q2_starweed\":\"open\",\"q2_lens\":\"locked\",\"q2_light\":\"locked\"}","seq":"idle","busy":false,"sitting":false,"rokaHidden":false}
+--- A ほしくさ0個: 帰りの桟橋 格子スキャン(61点) ---
+   (-0.6,-2.4) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,-2.4) d=2.4 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,-2.4) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.8,-1.8) d=2.55 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.2,-1.8) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-0.6,-1.8) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,-1.8) d=1.8 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,-1.8) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.2,-1.8) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.8,-1.8) d=2.55 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.8,-1.2) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.2,-1.2) d=1.7 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-0.6,-1.2) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,-1.2) d=1.2 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,-1.2) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.2,-1.2) d=1.7 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.8,-1.2) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-2.4,-0.6) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.8,-0.6) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.2,-0.6) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-0.6,-0.6) d=0.85 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,-0.6) d=0.6 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,-0.6) d=0.85 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.2,-0.6) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.8,-0.6) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (2.4,-0.6) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-2.4,0) d=2.4 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.8,0) d=1.8 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.2,0) d=1.2 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-0.6,0) d=0.6 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,0) d=0 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,0) d=0.6 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.2,0) d=1.2 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.8,0) d=1.8 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (2.4,0) d=2.4 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-2.4,0.6) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.8,0.6) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.2,0.6) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-0.6,0.6) d=0.85 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,0.6) d=0.6 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,0.6) d=0.85 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.2,0.6) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.8,0.6) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (2.4,0.6) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.8,1.2) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.2,1.2) d=1.7 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-0.6,1.2) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,1.2) d=1.2 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,1.2) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.2,1.2) d=1.7 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.8,1.2) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.8,1.8) d=2.55 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.2,1.8) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-0.6,1.8) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,1.8) d=1.8 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,1.8) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.2,1.8) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.8,1.8) d=2.55 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-0.6,2.4) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,2.4) d=2.4 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,2.4) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   >>> 立てた点でexitが出なかった数: 0
+ノードのそば: {"x":-56,"z":55,"inCove":true,"hour":21.8,"day":1,"obj":"q2_starweed_gather","objLabel":"ほしくさを あつめよう","objHead":"いまやること","hint":"Eほしくさをつむ","starweed":0,"lightshell":9,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"done\",\"q2_shell\":\"done\",\"q2_starweed\":\"open\",\"q2_lens\":\"locked\",\"q2_light\":\"locked\"}","seq":"idle","busy":false,"sitting":false,"rokaHidden":false}
+1個摘んだ直後: {"x":-56,"z":55,"inCove":true,"hour":21.9,"day":1,"obj":"q2_starweed_gather","objLabel":"ほしくさを あつめよう","objHead":"いまやること","hint":"","starweed":2,"lightshell":9,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"done\",\"q2_shell\":\"done\",\"q2_starweed\":\"open\",\"q2_lens\":\"locked\",\"q2_light\":\"locked\"}","seq":"idle","busy":false,"sitting":false,"rokaHidden":false}
+--- B ほしくさ2個: 帰りの桟橋 格子スキャン(61点) ---
+   (-0.6,-2.4) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,-2.4) d=2.4 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,-2.4) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.8,-1.8) d=2.55 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.2,-1.8) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-0.6,-1.8) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,-1.8) d=1.8 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,-1.8) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.2,-1.8) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.8,-1.8) d=2.55 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.8,-1.2) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.2,-1.2) d=1.7 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-0.6,-1.2) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,-1.2) d=1.2 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,-1.2) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.2,-1.2) d=1.7 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.8,-1.2) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-2.4,-0.6) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.8,-0.6) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.2,-0.6) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-0.6,-0.6) d=0.85 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,-0.6) d=0.6 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,-0.6) d=0.85 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.2,-0.6) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.8,-0.6) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (2.4,-0.6) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-2.4,0) d=2.4 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.8,0) d=1.8 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.2,0) d=1.2 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-0.6,0) d=0.6 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,0) d=0 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,0) d=0.6 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.2,0) d=1.2 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.8,0) d=1.8 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (2.4,0) d=2.4 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-2.4,0.6) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.8,0.6) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.2,0.6) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-0.6,0.6) d=0.85 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,0.6) d=0.6 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,0.6) d=0.85 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.2,0.6) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.8,0.6) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (2.4,0.6) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.8,1.2) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.2,1.2) d=1.7 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-0.6,1.2) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,1.2) d=1.2 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,1.2) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.2,1.2) d=1.7 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.8,1.2) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.8,1.8) d=2.55 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-1.2,1.8) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-0.6,1.8) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,1.8) d=1.8 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,1.8) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.2,1.8) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (1.8,1.8) d=2.55 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (-0.6,2.4) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0,2.4) d=2.4 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   (0.6,2.4) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_gather
+   >>> 立てた点でexitが出なかった数: 0
+4つそろった: {"x":-50.6,"z":69.2,"inCove":true,"hour":22.8,"day":1,"obj":"q2_starweed_report","objLabel":"ロカに ほうこくしよう","objHead":"できた!","hint":"Eふねで しまへ かえる","starweed":4,"lightshell":9,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"done\",\"q2_shell\":\"done\",\"q2_starweed\":\"open\",\"q2_lens\":\"locked\",\"q2_light\":\"locked\"}","seq":"idle","busy":false,"sitting":false,"rokaHidden":false}
+--- C ほしくさ4個(報告段階): 帰りの桟橋 格子スキャン(61点) ---
+   (-0.6,-2.4) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0,-2.4) d=2.4 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0.6,-2.4) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-1.8,-1.8) d=2.55 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-1.2,-1.8) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-0.6,-1.8) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0,-1.8) d=1.8 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0.6,-1.8) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (1.2,-1.8) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (1.8,-1.8) d=2.55 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-1.8,-1.2) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-1.2,-1.2) d=1.7 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-0.6,-1.2) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0,-1.2) d=1.2 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0.6,-1.2) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (1.2,-1.2) d=1.7 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (1.8,-1.2) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-2.4,-0.6) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-1.8,-0.6) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-1.2,-0.6) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-0.6,-0.6) d=0.85 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0,-0.6) d=0.6 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0.6,-0.6) d=0.85 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (1.2,-0.6) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (1.8,-0.6) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (2.4,-0.6) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-2.4,0) d=2.4 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-1.8,0) d=1.8 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-1.2,0) d=1.2 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-0.6,0) d=0.6 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0,0) d=0 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0.6,0) d=0.6 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (1.2,0) d=1.2 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (1.8,0) d=1.8 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (2.4,0) d=2.4 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-2.4,0.6) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-1.8,0.6) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-1.2,0.6) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-0.6,0.6) d=0.85 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0,0.6) d=0.6 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0.6,0.6) d=0.85 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (1.2,0.6) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (1.8,0.6) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (2.4,0.6) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-1.8,1.2) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-1.2,1.2) d=1.7 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-0.6,1.2) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0,1.2) d=1.2 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0.6,1.2) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (1.2,1.2) d=1.7 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (1.8,1.2) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-1.8,1.8) d=2.55 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-1.2,1.8) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-0.6,1.8) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0,1.8) d=1.8 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0.6,1.8) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (1.2,1.8) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (1.8,1.8) d=2.55 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (-0.6,2.4) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0,2.4) d=2.4 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   (0.6,2.4) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_starweed_report
+   >>> 立てた点でexitが出なかった数: 0
+報告後: {"x":-63.49,"z":59.23,"inCove":true,"hour":23.7,"day":1,"obj":"q2_lens_offer","objLabel":"ロカの はなしを聞こう","objHead":"いまやること","hint":"Eロカと はなす","starweed":4,"lightshell":9,"quests":"{\"q_wood\":\"done\",\"q_fish\":\"done\",\"q_ore\":\"done\",\"q_lantern\":\"done\",\"q_lumi\":\"done\",\"q2_boat\":\"done\",\"q2_meet\":\"done\",\"q2_shell\":\"done\",\"q2_starweed\":\"done\",\"q2_lens\":\"open\",\"q2_light\":\"locked\"}","seq":"idle","busy":false,"sitting":false,"rokaHidden":false}
+--- D 報告後: 帰りの桟橋 格子スキャン(61点) ---
+   (-0.6,-2.4) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0,-2.4) d=2.4 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0.6,-2.4) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-1.8,-1.8) d=2.55 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-1.2,-1.8) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-0.6,-1.8) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0,-1.8) d=1.8 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0.6,-1.8) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (1.2,-1.8) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (1.8,-1.8) d=2.55 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-1.8,-1.2) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-1.2,-1.2) d=1.7 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-0.6,-1.2) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0,-1.2) d=1.2 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0.6,-1.2) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (1.2,-1.2) d=1.7 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (1.8,-1.2) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-2.4,-0.6) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-1.8,-0.6) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-1.2,-0.6) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-0.6,-0.6) d=0.85 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0,-0.6) d=0.6 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0.6,-0.6) d=0.85 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (1.2,-0.6) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (1.8,-0.6) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (2.4,-0.6) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-2.4,0) d=2.4 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-1.8,0) d=1.8 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-1.2,0) d=1.2 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-0.6,0) d=0.6 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0,0) d=0 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0.6,0) d=0.6 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (1.2,0) d=1.2 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (1.8,0) d=1.8 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (2.4,0) d=2.4 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-2.4,0.6) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-1.8,0.6) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-1.2,0.6) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-0.6,0.6) d=0.85 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0,0.6) d=0.6 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0.6,0.6) d=0.85 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (1.2,0.6) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (1.8,0.6) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (2.4,0.6) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-1.8,1.2) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-1.2,1.2) d=1.7 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-0.6,1.2) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0,1.2) d=1.2 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0.6,1.2) d=1.34 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (1.2,1.2) d=1.7 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (1.8,1.2) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-1.8,1.8) d=2.55 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-1.2,1.8) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-0.6,1.8) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0,1.8) d=1.8 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0.6,1.8) d=1.9 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (1.2,1.8) d=2.16 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (1.8,1.8) d=2.55 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (-0.6,2.4) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0,2.4) d=2.4 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   (0.6,2.4) d=2.47 着地ずれ=0 hint="Eふねで しまへ かえる" obj=q2_lens_offer
+   >>> 立てた点でexitが出なかった数: 0
+
+結果: A.bad=0 B.bad=0 C.bad=0 D.bad=0
+JSエラー: 0 

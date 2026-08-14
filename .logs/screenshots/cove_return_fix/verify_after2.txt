@@ -1,0 +1,12 @@
+1) ふねを降りた場所(実測): {"x":-51.2,"z":63.3,"inCove":true,"seq":"idle","obj":"q2_meet_offer","objLabel":"ロカと はなそう","hint":"Eふねで しまへ かえる","starweed":0}
+2) ほしくさ受注: {"x":-63.5,"z":59.23,"inCove":true,"seq":"idle","obj":"q2_starweed_gather","objLabel":"ほしくさを あつめよう","hint":"","starweed":0}
+  撮影 after2_01_starweed_node.png
+3) ほしくさを1回つんだ: {"x":-56,"z":55,"inCove":true,"seq":"idle","obj":"q2_starweed_gather","objLabel":"ほしくさを あつめよう","hint":"","starweed":2}
+4) ふねを降りた場所へ もどった: {"x":-51.2,"z":63.3,"inCove":true,"seq":"idle","obj":"q2_starweed_gather","objLabel":"ほしくさを あつめよう","hint":"Eふねで しまへ かえる","starweed":2}
+  撮影 after2_02_at_landing_spot.png
+5) Eを押した直後: {"x":-51.2,"z":63.3,"inCove":true,"seq":"voyage","obj":"q2_starweed_gather","objLabel":"ほしくさを あつめよう","hint":"","starweed":2}
+  撮影 after2_03_after_press_E.png
+6) 島へ もどれた: {"x":4,"z":41.6,"inCove":false,"seq":"idle","obj":"q2_starweed_gather_sail_cove","objLabel":"ふねで よるの入り江へ わたろう","hint":"Eふねに のる","starweed":2}
+  撮影 after2_04_back_on_island.png
+   ==> 島へ帰れた(進行不能でない)
+JSエラー: 0 
