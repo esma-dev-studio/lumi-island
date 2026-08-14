@@ -28,6 +28,10 @@
 // 日付・時間帯・出した順番からハッシュで選ぶので、日ごとに顔ぶれは変わる
 // (ほしのかけら StarShardSystem・うきだま DriftSystem と同じ考え方)。
 import type { BugSpotKind } from '../data/island';
+// 音だけは鳴らす(AudioSystem は Babylon にも DOM にも依存しない葉モジュールで、
+// AudioContext を作れない環境=単体テストでは 何もしないで返る)。
+// InteractionSystem・FishingSystem・PlacementSystem と同じ流儀。
+import { sfx } from '../audio/AudioSystem';
 
 export type BugId =
   | 'b_shiro' | 'b_ageha' | 'b_tento' | 'b_kabuto' | 'b_hotaru' | 'b_suzu'
@@ -394,6 +398,8 @@ export class BugScheduler {
       else this.cooldown.set(spot, v);
     }
     const removed: number[] = [];
+    /** このフレームで にげた虫の音を もう鳴らしたか(何匹 いっせいに にげても音は1回) */
+    let fledThisFrame = false;
     for (let i = this.bugs.length - 1; i >= 0; i--) {
       const b = this.bugs[i];
       b.t += dt;
@@ -437,6 +443,13 @@ export class BugScheduler {
           b.fleeT = 1e-4; // 逃げ始め(0のままだと「逃げていない」と区別できない)
           b.spook = 0;
           this.cooldown.set(b.spot, BUG_SPOT_COOLDOWN_SEC);
+          // v18 にげられた合図(羽音が遠ざかる)。ここまで完全に無音で、
+          // 「いつのまにか いなくなっていた」としか分からなかった(棚卸しで発見)。
+          // 同じフレームに何匹も にげても 音は1回だけにする
+          if (!fledThisFrame) {
+            fledThisFrame = true;
+            sfx('bugflee');
+          }
         }
       } else {
         b.spook = Math.max(0, b.spook - dt * BUG_CALM_RATE);

@@ -275,6 +275,11 @@ export class InteractionSystem {
     player.locked = true;
     player.face(a.x, a.z);
     view.play(anim);
+    // v18 ふりかぶりの音。ここまで「当たる瞬間」しか鳴っておらず、
+    // むしあみは 振っても つかまえるまで 完全に無音だった(棚卸しで発見)。
+    // 採取は当たる音(chop/mine/sickle)が すぐ来るので、二重に聞こえないよう
+    // 空を切る音を足すのは むしあみだけにする。
+    if (a.kind === 'catch') sfx('net');
   }
 
   /** 採取を中断する(シーン破棄・タイトルへ戻るとき)。ヒット前なら素材は入らない */
@@ -309,7 +314,10 @@ export class InteractionSystem {
     toast(`${prefix}+${n} ${ITEMS[item].name}`, item);
     const learned = discoverRecipes(this.state, item);
     if (learned.length > 0) {
-      sfx('quest');
+      // v18 「ひらめいた」は お祝い(quest)ではなく 発見の音にする。
+      // quest は依頼の完了・じっせき・こうじ完成など 11か所で鳴っていて、
+      // ファンファーレの安売りになっていた(棚卸しで発見)
+      sfx('combo');
       for (const r of learned) toast(`レシピを ひらめいた! ${r.name}`, r.out);
     }
   }
@@ -327,7 +335,7 @@ export class InteractionSystem {
 
   /** 穴ほり: 重みつきで1つ出土する。きんのかけらだけ お祝いを少し足す */
   private applyDigHit(a: ActiveAction): void {
-    sfx('mine');
+    sfx('dig'); // v18 石をわる音(mine)の使い回しをやめ、土をほる専用の音にした
     burst(a.x, a.y, a.z, 'tree', 12); // 土の色
     flyItem(a.x, a.y, a.z);
     this.onHit?.();

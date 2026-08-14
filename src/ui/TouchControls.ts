@@ -3,7 +3,7 @@
 // ax/az を書き込み、離したら undefined に戻す(未定義ならPlayerControllerは従来どおり)。
 // 出現判定にUA(ユーザーエージェント)は使わず、pointerType==='touch' の観測で切り替える。
 import './touch.css';
-import { sfx } from '../audio/AudioSystem';
+import { sfx, type SfxName } from '../audio/AudioSystem';
 import type { InputState } from '../systems/PlayerController';
 import type { KeyGates } from '../systems/TutorialSystem';
 
@@ -85,6 +85,8 @@ export interface TouchControlsOptions {
   onQuest: () => void;
   onMenu: () => void;
   onRotate: () => void;
+  /** v18 エモート(てをふる)。渡されないときはボタン自体を出さない */
+  onEmote?: () => void;
   /** ずかん。渡されないときはボタン自体を出さない(機能のないボタンは置かない) */
   onCodex?: () => void;
 }
@@ -101,16 +103,32 @@ const GLYPH = {
   menu: SVG('<path d="M4 7h16M4 12h16M4 17h16"/>'),
   rotate: SVG('<path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/>'),
   cancel: SVG('<path d="M6 6l12 12M18 6L6 18"/>'),
+  // v18 てをふる: 4本の指と親指をひらいた手のひら + 動きを表す2本の弧
+  // (絵文字は使わない=フォントに左右されず、線の太さも ほかのアイコンとそろう)
+  wave: SVG(
+    '<path d="M9.4 13.6V5.4a1.15 1.15 0 0 1 2.3 0v6"/>' +
+      '<path d="M11.7 11.4V4.6a1.15 1.15 0 0 1 2.3 0v6.8"/>' +
+      '<path d="M14 11.4V6a1.15 1.15 0 0 1 2.3 0v6.4"/>' +
+      '<path d="M16.3 12.4v-3a1.1 1.1 0 0 1 2.2 0v6.1c0 3-2.2 5.1-5.1 5.1-2.6 0-4.1-1.2-5.3-3L5.4 13a1.15 1.15 0 0 1 1.9-1.3l2.1 2.4"/>' +
+      '<path d="M3.9 6.1 2.5 4.7M6.4 4.2 5.7 2.4"/>'
+  ),
 };
 
-/** ボタンの押し込み表示(タップ中だけ) */
-function pressable(el: HTMLElement, run: () => void): Array<() => void> {
+/**
+ * ボタンの押し込み表示(タップ中だけ)。
+ *
+ * v18 `sound` を null にすると 音を鳴らさない。
+ * もちもの・クラフト・おねがい・ずかん・メニューは InputRouter 側で
+ * ひらく/とじるの音を鳴らすので、ここで鳴らすと 1回の操作で2つ重なる
+ * ——「音を出す場所は1か所」をキーボードとタッチで共有するための引数。
+ */
+function pressable(el: HTMLElement, run: () => void, sound: SfxName | null = 'ui'): Array<() => void> {
   const down = (e: PointerEvent): void => {
     e.preventDefault();
     e.stopPropagation();
     el.classList.add('press');
     if (!el.classList.contains('dim')) {
-      sfx('ui');
+      if (sound) sfx(sound);
       run();
     }
   };
@@ -137,6 +155,7 @@ export class TouchControls {
   private btnCraft: HTMLElement;
   private btnQuest: HTMLElement;
   private btnCodex: HTMLElement;
+  private btnEmote: HTMLElement;
   private placeBar: HTMLElement;
   private detachFns: Array<() => void> = [];
   private stickId: number | null = null;
@@ -164,6 +183,7 @@ export class TouchControls {
         <button class="touch-btn" data-el="rotate" type="button">${GLYPH.rotate}<span>まわす</span></button>
         <button class="touch-btn" data-el="cancel" type="button">${GLYPH.cancel}<span>やめる</span></button>
       </div>
+      <button class="touch-emote hidden" data-el="emote" type="button">${GLYPH.wave}<span>てをふる</span></button>
       <button class="touch-action dim" data-el="action" type="button">しらべる</button>
     `;
     const pick = (name: string): HTMLElement => el.querySelector(`[data-el="${name}"]`) as HTMLElement;
@@ -176,6 +196,7 @@ export class TouchControls {
     this.btnCraft = pick('craft');
     this.btnQuest = pick('quest');
     this.btnCodex = pick('codex');
+    this.btnEmote = pick('emote');
     this.placeBar = pick('place');
     opts.root.appendChild(el);
   }
@@ -183,13 +204,16 @@ export class TouchControls {
   attach(): void {
     const o = this.opts;
     this.detachFns.push(...pressable(this.action, () => o.onInteract()));
-    this.detachFns.push(...pressable(this.btnInv, () => o.onInventory()));
-    this.detachFns.push(...pressable(this.btnCraft, () => o.onCraft()));
-    this.detachFns.push(...pressable(this.btnQuest, () => o.onQuest()));
-    if (o.onCodex) this.detachFns.push(...pressable(this.btnCodex, () => o.onCodex!()));
-    this.detachFns.push(...pressable(this.el.querySelector('[data-el="menu"]') as HTMLElement, () => o.onMenu()));
-    this.detachFns.push(...pressable(this.el.querySelector('[data-el="rotate"]') as HTMLElement, () => o.onRotate()));
-    this.detachFns.push(...pressable(this.el.querySelector('[data-el="cancel"]') as HTMLElement, () => o.onMenu()));
+    // 下の5つ+やめるは InputRouter が ひらく/とじるの音を鳴らす(音の二重を避ける)
+    this.detachFns.push(...pressable(this.btnInv, () => o.onInventory(), null));
+    this.detachFns.push(...pressable(this.btnCraft, () => o.onCraft(), null));
+    this.detachFns.push(...pressable(this.btnQuest, () => o.onQuest(), null));
+    if (o.onCodex) this.detachFns.push(...pressable(this.btnCodex, () => o.onCodex!(), null));
+    // エモートは押した音を エモート側(GameScene)が鳴らすので ここでは鳴らさない
+    if (o.onEmote) this.detachFns.push(...pressable(this.btnEmote, () => o.onEmote!(), null));
+    this.detachFns.push(...pressable(this.el.querySelector('[data-el="menu"]') as HTMLElement, () => o.onMenu(), null));
+    this.detachFns.push(...pressable(this.el.querySelector('[data-el="rotate"]') as HTMLElement, () => o.onRotate(), null));
+    this.detachFns.push(...pressable(this.el.querySelector('[data-el="cancel"]') as HTMLElement, () => o.onMenu(), null));
 
     const down = (e: PointerEvent): void => this.onStickDown(e);
     const move = (e: PointerEvent): void => this.onStickMove(e);
@@ -322,6 +346,11 @@ export class TouchControls {
     // ずかんは「もちもの」と同じ解放ゲート
     this.btnCodex.classList.toggle('hidden', !f.gates.inventory || !this.opts.onCodex);
     this.placeBar.classList.toggle('hidden', !f.placementActive || hideWorld);
+    // v18 エモートは「世界を動かせるとき」だけ出す(会話・パネル・配置中は しまう)
+    this.btnEmote.classList.toggle(
+      'hidden',
+      !this.opts.onEmote || hideWorld || f.dialogueOpen || f.questCompleteOpen || f.sequenceActive || f.placementActive
+    );
   }
 
   dispose(): void {

@@ -5,6 +5,7 @@ import { ITEMS, TOOLS, isCookedFood, isDecor, isPlaceable, type ItemId } from '.
 import { DISH_EFFECT, EFFECTS } from '../systems/CookingEffects';
 import { icon } from './icons';
 import { byInput } from './inputMode';
+import { sfx } from '../audio/AudioSystem';
 
 export class InventoryUI {
   private el: HTMLElement;
@@ -34,6 +35,7 @@ export class InventoryUI {
       ) as HTMLElement | null;
       if (!t) return;
       if (t.hasAttribute('data-close')) {
+        sfx('close'); // v18 とじる操作の音
         this.close();
       } else if (t.dataset.place) {
         this.close();

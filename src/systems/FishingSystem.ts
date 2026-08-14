@@ -234,6 +234,9 @@ export class FishingSystem {
       this.rod.setEnabled(true);
     }
     this.bobTime = 0;
+    // v18 竿をふる音。ここまで「投げてから着水(splash)まで」がまるごと無音で、
+    // 一番きもちいいはずの動作に手ごたえが無かった(棚卸しで発見)
+    sfx('cast');
     const cast = this.castTime(view);
     const s = ++this.seq;
     if (cast > 0) {

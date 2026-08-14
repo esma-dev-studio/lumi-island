@@ -547,7 +547,7 @@ export class PlacementSystem {
         : `${ITEMS[p.data.item].name}を ${PAINT_COLORS[paint as PaintId].label}に ぬった`,
       paint ?? p.data.item
     );
-    sfx('place');
+    sfx('paint'); // v18 はけが すべる音(「置く」の使い回しをやめた)
     save(this.state);
     return true;
   }

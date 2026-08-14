@@ -9,6 +9,7 @@ import { QUESTS } from '../data/quests';
 import { FRIEND_BEST, HEART_MAX, friendshipHearts, friendshipText, metNpcs } from '../systems/GiftSystem';
 import { icon } from './icons';
 import { byInput } from './inputMode';
+import { sfx } from '../audio/AudioSystem';
 
 export class QuestLogUI {
   private el: HTMLElement;
@@ -117,6 +118,9 @@ export class QuestLogUI {
       <div class="panel-sub">なかよし度</div>
       <div class="craft-list">${this.friendRows(s)}</div>
     `;
-    this.el.querySelector('[data-close]')?.addEventListener('click', () => this.close());
+    this.el.querySelector('[data-close]')?.addEventListener('click', () => {
+      sfx('close'); // v18 ここは開くのも閉じるのも完全に無音だった
+      this.close();
+    });
   }
 }

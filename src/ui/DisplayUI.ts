@@ -13,7 +13,7 @@
 // パネルにも入口が無いと、水そう・むしかごだけ 置きなおせなくなってしまう。
 //
 // v13: 中身が複数になったので、押しても パネルを閉じない(入れた・出したの結果が
-// その場で見える)。1匹ずつ3回押して 3びき入れる、が いちばん多い遊びかたなので、
+// その場で見える)。1匹ずつ 何回も押して 6ぴき入れる、が いちばん多い遊びかたなので、
 // そのたびに閉じると 3回 開きなおすことになる。
 import type { GameState } from '../game/GameState';
 import { DISPLAY_FURNITURE, ITEMS, type DisplayFurnitureId, type ItemId } from '../data/items';
@@ -121,7 +121,7 @@ export class DisplayUI {
         </div>`;
       })
       .join('');
-    // 「あと何びき入るか」を数で見せる(3びき入る家具で いま何びきか いつでも分かる)
+    // 「あと何びき入るか」を数で見せる(たくさん入る家具で いま何びきか いつでも分かる)
     const count = cap > 1 ? ` <span class="panel-count">${contents.length} / ${cap}ひき</span>` : '';
     const insideBlock =
       contents.length > 0

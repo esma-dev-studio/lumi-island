@@ -94,6 +94,18 @@ export class StuckWatch {
   }
 }
 
+/**
+ * v18 動かそうとしているか(キーボードでもタッチのスティックでも同じ判定)。
+ * すわっているときに「動かしたら立つ」を決めるのに使う。update の中の式とは
+ * 別に置いてあるので、既存の移動計算には一切さわらない。
+ */
+export function hasMoveInput(input: InputState): boolean {
+  const analog = input.ax !== undefined || input.az !== undefined;
+  const ix = analog ? (input.ax ?? 0) : (input.left ? 1 : 0) - (input.right ? 1 : 0);
+  const iz = analog ? (input.az ?? 0) : (input.down ? 1 : 0) - (input.up ? 1 : 0);
+  return Math.hypot(ix, iz) > 1e-3;
+}
+
 // 変換結果の置き場。毎フレームのnewを避けるため使い回す(呼んだ直後にその場で読むこと)
 const worldDir = { x: 0, z: 0 };
 
@@ -136,6 +148,14 @@ export class PlayerController {
    * 効果を使っていないプレイヤーの歩き・走りは これまでと1ミリも変わらない。
    */
   speedMul = 1;
+  /**
+   * v18 いま すわっているか(すわっていなければ null)。
+   *
+   * すわっているあいだ update は **いちばん上で早く返す**ので、
+   * 移動・壁ずり・地形追従・足音の式には1行も手を入れていない
+   * =キーボードで歩く感じは これまでと完全に同じまま。
+   */
+  sitting: { y: number } | null = null;
   private vx = 0;
   private vz = 0;
   private stepAcc = 0;
@@ -180,7 +200,45 @@ export class PlayerController {
     return true;
   }
 
+  /**
+   * v18 すわる。位置・向き・高さを その場で確定させ、以後 update は何もしなくなる。
+   * 立たせるのは standUp()(呼ぶのは GameScene)。
+   */
+  sitDown(pose: { x: number; z: number; y: number; faceX: number; faceZ: number }): void {
+    this.x = pose.x;
+    this.z = pose.z;
+    this.speed = 0;
+    this.vx = 0;
+    this.vz = 0;
+    this.moving = false;
+    this.stepAcc = 0;
+    this.stuck.reset();
+    this.sitting = { y: pose.y };
+    this.y = pose.y;
+    this.face(pose.faceX, pose.faceZ);
+    this.view.play('sit');
+  }
+
+  /** v18 立つ。足もとの高さを地面へ戻して、ふつうの操作にもどす */
+  standUp(): void {
+    if (!this.sitting) return;
+    this.sitting = null;
+    this.y = this.island.groundY(this.x, this.z);
+    this.apply();
+    this.view.play('idle');
+  }
+
   update(dt: number, input: InputState): void {
+    // ---- v18 すわっているあいだ ----
+    // 立つ判断(Eか移動)は GameScene が受けもつ。ここは「動かない」だけにして、
+    // 既存の移動・衝突・足音のコードには一歩も入らない。
+    if (this.sitting) {
+      this.speed = 0;
+      this.moving = false;
+      this.y += (this.sitting.y - this.y) * Math.min(1, dt * 10); // すわる面へ ゆっくり沈む
+      this.apply();
+      return;
+    }
     const def = this.view.def;
     // 入力は「画面基準」。既定のカメラ(ヨー0)では+x(東)が画面左に映るため、
     // D(右キー)=画面右=西(-x)。ここを逆にすると左右反転操作になる(実バグだった)

@@ -23,7 +23,10 @@ export class LetterUI {
     this.el.className = 'panel letter-panel hidden';
     document.getElementById('ui-root')!.appendChild(this.el);
     this.el.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).closest('[data-close]')) this.close();
+      if ((e.target as HTMLElement).closest('[data-close]')) {
+        sfx('close');
+        this.close();
+      }
     });
   }
 
@@ -51,7 +54,7 @@ export class LetterUI {
       <div class="panel-sub">よんだ てがみは ずかん(Z)の「てがみ」で もういちど よめるよ。</div>
     `;
     this.el.classList.remove('hidden');
-    sfx('ui');
+    sfx('letter'); // v18 びんの手紙は 数日に1本の出来事。汎用のUI音では もったいない
   }
 
   close(): void {

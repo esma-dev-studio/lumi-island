@@ -60,21 +60,24 @@ export class CraftUI {
       ) as HTMLElement | null;
       if (!t) return;
       if (t.hasAttribute('data-close')) {
+        sfx('close'); // v18 とじる操作は どのパネルでも無音だった
         this.close();
         return;
       }
       if (t.dataset.tab) {
         this.tab = t.dataset.tab as CraftTab;
         this.message = '';
-        sfx('ui');
+        sfx('page'); // v18 タブ切替は 紙をめくる音(ボタンの ui と区別する)
         this.render();
         return;
       }
       if (t.dataset.add) {
+        sfx('ui'); // v18 材料を えらぶ手ごたえ
         this.pick(t.dataset.add as ItemId);
         return;
       }
       if (t.dataset.del !== undefined) {
+        sfx('close'); // v18 材料を もどす(えらぶ音の逆向き)
         this.picked.splice(Number(t.dataset.del), 1);
         this.message = '';
         this.render();
@@ -158,7 +161,7 @@ export class CraftUI {
     this.messageOk = r.outcome === 'discover';
     if (r.outcome === 'discover' && r.item) {
       this.picked = [];
-      sfx('quest');
+      sfx('combo'); // v18 くみあわせの発見は「ひらめき」の音(お祝いの quest とは分ける)
       this.showFound(ITEMS[r.item].name, r.item);
       this.onDiscovered?.();
     } else {

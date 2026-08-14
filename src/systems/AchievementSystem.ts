@@ -207,17 +207,28 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     id: 'a_cage3', name: 'むしはくぶつかん', desc: '虫の入った むしかごを 3つ ならべよう',
     target: 3, icon: 'f_bugcage', progress: filledBugCageCount,
   },
-  // ---- v13 おおきい版(3びき入る すいそう・むしかご)を いっぱいにする ----
+  // ---- v13 おおきい版(6ぴき入る すいそう・むしかご)を いっぱいにする ----
   // 数えるのは「いま その家具1つに入っている数」なので、とりだすと進捗も もどる。
   // 作りかたは 小さい版に1ぴき入れると ひらめく(DISPLAY_FURNITURE.upgrade)ので、
-  // この2つは「すいそう・むしかごで遊んだ子」への次の目標になる
+  // この2つは「すいそう・むしかごで遊んだ子」への次の目標になる。
+  //
+  // 入る数を3→6にしたとき target も6に上げた。理由は3つ:
+  //   1) 名前が「まんいん」なので、入る数と合っていないと 名前が うそになる
+  //      (バッジ sp_bigaqua / sp_bigcage の説明文が この名前を そのまま引用している)。
+  //   2) 達成の記録(stats の ach_◯◯)は一方通行で、下がることが無い。
+  //      すでに3びきで達成した子は 達成のまま・ごほうびも バッジも そのまま残る
+  //      (ずかんの行も 達成ずみなら「たっせい」だけを出すので「3/6」にも見えない)。
+  //   3) 判定は1秒に1回まわっている(GameScene.updateAchievements)ので、
+  //      「3びき入れたのに まだ記録されていない」状態のセーブは 生まれない。
+  // target の数と DISPLAY_FURNITURE.capacity が そろっていることは
+  // tests/unit/display_big_v13.test.ts が機械で確かめる。
   {
-    id: 'a_bigaqua3', name: 'おおきな すいそうが まんいん', desc: 'おおきな すいそうに 魚を 3びき いれよう',
-    target: 3, icon: 'f_aquarium_big', progress: (s) => maxDisplayFilled(s, 'f_aquarium_big'),
+    id: 'a_bigaqua3', name: 'おおきな すいそうが まんいん', desc: 'おおきな すいそうに 魚を 6ぴき いれよう',
+    target: 6, icon: 'f_aquarium_big', progress: (s) => maxDisplayFilled(s, 'f_aquarium_big'),
   },
   {
-    id: 'a_bigcage3', name: 'おおきな むしかごが まんいん', desc: 'おおきな むしかごに 虫を 3びき いれよう',
-    target: 3, icon: 'f_bugcage_big', progress: (s) => maxDisplayFilled(s, 'f_bugcage_big'),
+    id: 'a_bigcage3', name: 'おおきな むしかごが まんいん', desc: 'おおきな むしかごに 虫を 6ぴき いれよう',
+    target: 6, icon: 'f_bugcage_big', progress: (s) => maxDisplayFilled(s, 'f_bugcage_big'),
   },
   {
     id: 'a_garden_bloom', name: 'まんかいのにわ', desc: 'にわの はなだんを まんかいに しよう',

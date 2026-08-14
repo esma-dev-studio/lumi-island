@@ -30,6 +30,7 @@ export class PaintUI {
       ) as HTMLElement | null;
       if (!t) return;
       if (t.hasAttribute('data-close')) {
+        sfx('close');
         this.close();
         return;
       }
@@ -57,7 +58,7 @@ export class PaintUI {
     this.open = true;
     this.render();
     this.el.classList.remove('hidden');
-    sfx('ui');
+    sfx('open');
   }
 
   close(): void {

@@ -11,6 +11,7 @@ import { ITEMS, RECIPES, type ItemId } from '../data/items';
 import { COMBOS, COMBO_GROUPS } from '../data/combos';
 import { LETTERS } from '../data/letters';
 import { isDiscovered } from '../systems/ComboSystem';
+import { sfx } from '../audio/AudioSystem';
 import { ACHIEVEMENTS, achievedCount, achievementRows } from '../systems/AchievementSystem';
 import { isRewardGranted, rewardIcon, rewardLabel, rewardOf } from '../systems/AchievementRewards';
 import { hasReadLetter, readLetterCount } from '../systems/BottleSystem';
@@ -62,10 +63,12 @@ export class CodexUI {
       const t = (e.target as HTMLElement).closest('[data-close], [data-letter], [data-tab]') as HTMLElement | null;
       if (!t) return;
       if (t.hasAttribute('data-close')) {
+        sfx('close'); // v18 とじる操作の音
         this.close();
         return;
       }
       const tab = t.dataset.tab as CodexTab | undefined;
+      if (tab) sfx('page'); // v18 タブ切替(クラフト画面とそろえる。ここは完全に無音だった)
       if (tab) {
         this.tab = tab;
         this.render();

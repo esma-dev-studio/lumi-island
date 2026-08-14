@@ -24,7 +24,7 @@ import { ITEMS, isCookedFood, validateItemData } from '../data/items';
 import {
   applyHomeStyle, invAddRecorded, invRemove, newGameState, statAdd, type GameState,
 } from '../game/GameState';
-import { PlayerController, type InputState } from '../systems/PlayerController';
+import { PlayerController, hasMoveInput, type InputState } from '../systems/PlayerController';
 import { InteractionSystem } from '../systems/InteractionSystem';
 import { FishingSystem } from '../systems/FishingSystem';
 import { PlacementSystem, type PlacedRuntime } from '../systems/PlacementSystem';
@@ -80,7 +80,10 @@ import { PauseMenu } from '../ui/PauseMenu';
 import { TouchControls } from '../ui/TouchControls';
 import { save } from '../save/SaveSystem';
 import { toast } from '../ui/Toast';
-import { sfx, setAmbient, setMusic, setRain } from '../audio/AudioSystem';
+import { sfx, setAmbient, setMusic } from '../audio/AudioSystem';
+import { ZoneTracker } from '../audio/ambienceZones';
+import { EmoteState, replyingNpc } from '../systems/EmoteSystem';
+import { sitPose, type Seat } from '../systems/SitSystem';
 import { updateEffects, updateWeatherFx, snailWorldPos, burst, flyItem, setCookGlow } from '../entities/effects';
 import { sharedCooking, validateCookingData } from '../systems/CookingEffects';
 import { setBugFleeScale } from '../systems/BugSystem';
@@ -99,6 +102,14 @@ const FORCE_WEATHER: Record<string, Weather> = {
  */
 const WALK_JUMP_MAX = 1.5;
 
+/**
+ * ほしまつりの ざわめきが 聞こえる きょり(m)。
+ * 広場(FESTIVAL_PLAZA)から これだけ はなれると、人の声は 環境音から 消える。
+ * 桟橋の先(ランタンを とばす所)までは 20mほどなので、とばす場面でも
+ * かすかに 会場の気配が のこる = 「みんなが 見ている」が 音で つたわる。
+ */
+const FESTIVAL_MURMUR_R = 24;
+
 export class GameScene {
   island: IslandScene;
   player!: PlayerController;
@@ -113,6 +124,10 @@ export class GameScene {
   npcAvail!: NpcAvailabilityService;
   /** 天気(日付から決まる純ロジック。セーブしない) */
   weather = sharedWeather();
+  /** v18 環境音の「いまどんな場所か」(浜=なみ / 草地=風 / 林=葉ずれ の重み) */
+  private zones = new ZoneTracker();
+  /** v18 エモート(X:てをふる → もう一度で よろこぶ)の順番 */
+  private emotes = new EmoteState();
   hud!: Hud;
   objHud!: ObjectiveHud;
   state: GameState = newGameState();
@@ -292,6 +307,7 @@ export class GameScene {
       onCodex: () => this.inputRouter.toggleCodex(),
       onMenu: () => this.inputRouter.escape(),
       onRotate: () => this.inputRouter.rotatePlacement(),
+      onEmote: () => this.inputRouter.emote(),
     });
     this.questDlg = new QuestDialogueController({
       state: this.state, npcs: this.npcs, dialogue: this.dialogue,
@@ -327,7 +343,7 @@ export class GameScene {
       if (!invRemove(this.state, item, 1)) return;
       const eff = this.cooking.eat(item);
       if (eff) toast(`${ITEMS[item].name}を たべた! ${eff.name}(${eff.desc})`, eff.icon);
-      sfx('pickup');
+      sfx('eat'); // v18 ぱくっ+おいしい2音(拾いものと同じ音だった)
       save(this.state); // へった もちものは のこす(効果そのものは保存しない)
     };
     this.craftUI.onCrafted = () => {
@@ -545,7 +561,7 @@ export class GameScene {
     burst(FESTIVAL_PLAZA.x, y + 0.8, FESTIVAL_PLAZA.z, 'craft', 10);
     flyItem(FESTIVAL_PLAZA.x, y + 0.75, FESTIVAL_PLAZA.z);
     toast(FESTIVAL_TAKE_TOAST, 'festival');
-    sfx('pickup');
+    sfx('lantern_take'); // v18 紙のかさっ+あかりが ともる音(ふつうの拾いものと区別する)
     this.playerView.play('pickup', {
       onEnd: () => {
         if (!this.player.moving) this.playerView.play('idle');
@@ -839,7 +855,9 @@ export class GameScene {
     for (const a of unlocked) toast(`じっせき たっせい! ${a.name}`, a.icon);
     this.announceRewards(grantAchievementRewards(this.state));
     this.announceBadges(badges);
-    sfx('quest');
+    // v18 じっせき=お祝いのファンファーレ / バッジだけ=小さな「ちりん」。
+    // どちらも quest ひとつだったので、何が起きたのか 音では区別がつかなかった
+    sfx(unlocked.length > 0 ? 'quest' : 'badge');
     save(this.state); // 達成の記録を取りこぼさない
   }
 
@@ -1038,7 +1056,7 @@ export class GameScene {
         invAddRecorded(this.state, gift.item, 1);
         burst(rt.x, rt.y + 1.25, rt.z, 'berry', 12);
         toast(`+1 ${ITEMS[gift.item].name}`, gift.item);
-        sfx('pickup');
+        sfx('gift'); // v18 もらいものの音(拾いものと区別する)
       }
       save(this.state);
     });
@@ -1165,6 +1183,59 @@ export class GameScene {
     });
   }
 
+  // ---------- v18 すわる / エモート ----------
+  /**
+   * ベンチ・いすに すわる。位置・向き・高さは SitSystem の純関数が決める。
+   * カメラは「引き・低め」へ ゆっくり移り(CameraController.setSitting)、
+   * 時間も 天気も そのまま流れつづける——すわっているだけで 島の1日が見られる。
+   */
+  sitDown(seat: Seat): void {
+    if (this.player.sitting || this.seq.active) return;
+    this.player.sitDown(sitPose(seat, this.island.groundY(seat.x, seat.z)));
+    this.camCtl.setSitting(true);
+    this.emotes.reset(); // すわり直したら エモートは また「てをふる」から
+    sfx('sit');
+  }
+
+  /** 立つ(Eでも 動かしても 同じ道すじを通る) */
+  standUp(): void {
+    if (!this.player.sitting) return;
+    this.player.standUp();
+    this.camCtl.setSitting(false);
+    sfx('stand');
+  }
+
+  /**
+   * エモート(X / 右下のボタン)。1回目=てをふる、つづけて もう一度=よろこぶ。
+   *
+   * 近く(3m)のNPCは こちらを向いて よろこび、頭の上に ピンクの粒が ひとつ ふわっと出る。
+   * **なかよし度は 1ミリも動かさない**(EmoteSystem の説明を参照)。
+   * すわったままでも できる——立ちあがらずに 手をふれる。
+   */
+  playEmote(): void {
+    if (this.seq.active || this.modalOpen || this.pauseMenu.open) return;
+    if (this.inter.busy || this.fishing.locksPlayer || this.placement.active) return;
+    const name = this.emotes.trigger(performance.now() / 1000);
+    if (!name) return;
+    const sitting = this.player.sitting !== null;
+    this.playerView.play(name, {
+      onEnd: () => {
+        // すわったままなら すわりポーズへ、立っているなら idle へ戻す
+        if (this.player.sitting) this.playerView.play('sit');
+        else if (!this.player.moving) this.playerView.play('idle');
+      },
+    });
+    if (!sitting) this.player.moving = false;
+    sfx(name === 'wave' ? 'talk' : 'heart');
+    // 近くの人が こたえてくれる(いちばん近い1人だけ。決定的)
+    const target = replyingNpc(this.player.x, this.player.z, this.npcs.emoteTargets());
+    if (!target) return;
+    const p = this.npcs.replyToEmote(target.id, this.player.x, this.player.z);
+    if (!p) return;
+    burst(p.x, p.y + 1.35, p.z, 'heart', 1); // ハートの色の粒をひとつ
+    sfx('heart');
+  }
+
   // ---------- カメラ遮蔽 ----------
   /** 透明化中・回復途中のメッシュを即座に全復元する(会話・イベントカメラ開始前に呼ぶ) */
   restoreAllOcclusionImmediately(): void {
@@ -1197,6 +1268,8 @@ export class GameScene {
         setBugFleeScale(this.cooking.bugFleeMul);
         setCookGlow(this.cooking.has('glow'));
         this.hud.setEffects(this.cooking.active());
+        // v18 すわっているときに 動かそうとしたら 立つ(Eでも立てる=InteractionRouting)
+        if (this.player.sitting && !frozen && hasMoveInput(this.input)) this.standUp();
         this.player.update(dt, this.input);
         this.accumWalk(); // v14 バッジ用(あるいた ながさ)。動いたぶんの たし算だけ
         this.placement.update(this.player);
@@ -1213,7 +1286,6 @@ export class GameScene {
         // v12 NPCの家の中も「島の天気の見た目を出さない場所」(部屋は島の外にある)
         const sheltered = this.indoor || this.inCove || this.npcHome !== null;
         updateWeatherFx(wx, this.player.x, this.player.y, this.player.z, !sheltered);
-        setRain(sheltered ? wx.rain * 0.4 : wx.rain);
         // 虹は見おろしカメラだと画面に入らないので、出た瞬間に1回だけ「見上げるあそび」へ誘う
         if (wx.rainbow > 0.05 && !this.rainbowToldToday && !sheltered) {
           this.rainbowToldToday = true;
@@ -1250,7 +1322,20 @@ export class GameScene {
           this.saveTimer = 0;
           save(this.state);
         }
-        setAmbient(this.island.time.isNight ? 'night' : 'day');
+        // 環境音: 立っている場所(浜=なみ / 草地=風 / 林=葉ずれ)と 空模様で
+        // 中身が入れかわる。合計の音量は どこでも同じなので「歩くと音が大きくなる」は起きない。
+        // 雨音もここ1本にまとまっている(屋根の下では 0.4倍にして こもらせる)。
+        setAmbient({
+          weights: this.zones.update(this.player.x, this.player.z, this.inCove, performance.now() / 1000),
+          night: this.island.time.isNight,
+          sheltered,
+          // まつりの ざわめきは「まつりの時間に 広場のちかく(24m)で 外にいる」ときだけ
+          festival:
+            !sheltered &&
+            isFestivalTime(this.island.time.day, this.island.time.hour) &&
+            Math.hypot(this.player.x - FESTIVAL_PLAZA.x, this.player.z - FESTIVAL_PLAZA.z) < FESTIVAL_MURMUR_R,
+          rain: sheltered ? wx.rain * 0.4 : wx.rain,
+        });
         // 夜のオルゴールBGM(19:00〜翌4:30)。演出中は少し下げて効果音とぶつけない。
         // v16 まつりの時間だけ「まつりの夜のフレーズ」に差しかわる(音楽で 特別な夜だと伝える)
         setMusic(

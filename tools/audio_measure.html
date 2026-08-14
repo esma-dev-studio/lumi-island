@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <!-- favicon を取りに行かせない(404 が console エラーとして計測結果に混ざるため) -->
+    <link rel="icon" href="data:," />
+    <title>LumiIsland おとの計測(開発用)</title>
+  </head>
+  <body>
+    <p>tools/audio_measure.mjs から使う計測用のページ。ゲーム本体は起動しない。</p>
+    <script type="module">
+      // ゲームで実際に鳴らしているのと **同じモジュール** を読みこむ。
+      // ここで別の実装を書くと「測った音」と「耳に届く音」がずれるので、絶対にコピーしない。
+      import * as synth from '/src/audio/synth.ts';
+      import * as mix from '/src/audio/mix.ts';
+      import * as ambience from '/src/audio/ambience.ts';
+      import * as zones from '/src/audio/ambienceZones.ts';
+      import { MusicBox } from '/src/audio/MusicBox.ts';
+      import * as musicPhrase from '/src/audio/musicPhrase.ts';
+
+      window.__audio = { synth, mix, ambience, zones, MusicBox, musicPhrase };
+      window.__audioReady = true;
+    </script>
+  </body>
+</html>

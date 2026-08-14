@@ -34,6 +34,16 @@ export const MOUSE_DRAG_MIN_PX = 4;
 const ZOOM_PER_WHEEL_PX = 0.0016; // ホイール1ノッチ(deltaY=100)でおよそ16%
 const WHEEL_MAX_PX = 240; // 1回のホイールで動かせる上限(端末差・慣性を吸収する)
 
+// ---- v18 すわっているときの構図(追従カメラのまま「引き」と「低さ」だけ足す) ----
+// 専用モードを増やさないのは、すわっているあいだも 指・マウスで見回せるようにするため
+// (子どもが すわって そのまま そらを さがせる)。ズームと見下ろし角に **上乗せ** するだけ。
+/** すわると寄っていくズーム(1=ふだん。ZOOM_MAXは1.6) */
+export const SIT_ZOOM = 1.5;
+/** すわると寄っていく見下ろし係数(1=ふだん。小さいほど低い視点=水平線が見える) */
+export const SIT_PITCH = 0.74;
+/** 引ききるまでの秒数。「ゆっくり引いて島をながめる」ための時間 */
+export const SIT_BLEND_SEC = 2.6;
+
 type Mode = 'follow' | 'dialogue' | 'event' | 'room';
 
 /** 室内(ドールハウス)の構図。開いた南側から部屋を見おろす */
@@ -126,6 +136,9 @@ export class CameraController {
   private orbitYaw = 0;
   private orbitPitch = 1;
   private orbitZoom = 1;
+  /** v18 すわりの構図へ寄せたいか / いまの寄りぐあい(0=ふだん 1=すわり) */
+  private sitWant = false;
+  private sitT = 0;
   private touches = new Map<number, { x: number; y: number }>();
   private dragId: number | null = null;
   private pinchStartDist = 0;
@@ -176,6 +189,8 @@ export class CameraController {
     this.setYaw(0);
     this.orbitPitch = 1;
     this.orbitZoom = 1;
+    this.sitWant = false;
+    this.sitT = 0;
   }
 
   // ---------- タッチ(iPad) ----------
@@ -359,10 +374,28 @@ export class CameraController {
     };
   }
 
+  /**
+   * v18 すわっているかを伝える。true のあいだ SIT_BLEND_SEC かけて
+   * ズームと見下ろし角が「引き・低め」へ移り、立つと同じ時間で もどる。
+   */
+  setSitting(on: boolean): void {
+    this.sitWant = on;
+  }
+  /** すわりカメラの寄りぐあい 0〜1(検証・テスト用) */
+  get sitBlend(): number {
+    return this.sitT;
+  }
+
   /** 追従カメラの理想位置・注視点を desiredPos / desiredTgt に入れる */
   private followPose(px: number, py: number, pz: number): void {
-    const d = CAM_DIST * this.orbitZoom;
-    const up = (CAM_HEIGHT - CAM_LOOK_UP) * this.orbitZoom * this.orbitPitch;
+    // すわりの構図は「かけ算の上乗せ」。sitT=0 のときは 1.0 倍=恒等なので、
+    // すわっていないかぎり これまでと1ピクセルも変わらない。
+    // 置きかえ(lerp)にすると すわっているあいだ 指のピンチ・ホイールが効かなくなり、
+    // 「すわったまま そらを さがす」ができなくなる(実機スクショで発覚)。
+    const zoom = clampRange(this.orbitZoom * (1 + (SIT_ZOOM - 1) * this.sitT), ZOOM_MIN, ZOOM_MAX);
+    const pitch = clampRange(this.orbitPitch * (1 + (SIT_PITCH - 1) * this.sitT), PITCH_MIN, PITCH_MAX);
+    const d = CAM_DIST * zoom;
+    const up = (CAM_HEIGHT - CAM_LOOK_UP) * zoom * pitch;
     this.desiredPos.set(px + Math.sin(this.orbitYaw) * d, py + CAM_LOOK_UP + up, pz + Math.cos(this.orbitYaw) * d);
     this.desiredTgt.set(px, py + CAM_LOOK_UP, pz);
   }
@@ -452,6 +485,11 @@ export class CameraController {
   }
 
   update(dt: number, px: number, py: number, pz: number): void {
+    // v18 すわりの構図へ ゆっくり寄せる/もどす(時間で進むので フレームレートに依らない)
+    const sitStep = dt / SIT_BLEND_SEC;
+    this.sitT = this.sitWant
+      ? Math.min(1, this.sitT + sitStep)
+      : Math.max(0, this.sitT - sitStep);
     // 歩いても見回しは戻さない(移動がカメラ相対なのでズレが生まれない)
     let k = Math.min(1, dt * 6.5);
     if (this.mode === 'dialogue') {

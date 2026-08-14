@@ -46,6 +46,8 @@ const BURST_COLORS: Record<string, [Color4, Color4]> = {
   craft: [new Color4(1.0, 0.88, 0.6, 1), new Color4(1.0, 0.75, 0.45, 0.9)],
   bloom: [new Color4(0.65, 0.95, 0.82, 1), new Color4(0.95, 1.0, 0.95, 0.9)],
   splash: [new Color4(0.6, 0.8, 0.9, 1), new Color4(0.8, 0.95, 1.0, 0.8)],
+  // v18 エモートに こたえてもらったときの粒(ハートの色。原色の赤にはしない)
+  heart: [new Color4(0.98, 0.55, 0.62, 1), new Color4(1.0, 0.78, 0.82, 0.9)],
 };
 
 export function initEffects(s: Scene): void {

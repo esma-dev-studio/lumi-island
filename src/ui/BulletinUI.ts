@@ -27,7 +27,10 @@ export class BulletinUI {
     this.el.className = 'panel bulletin-panel hidden';
     document.getElementById('ui-root')!.appendChild(this.el);
     this.el.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).closest('[data-close]')) this.close();
+      if ((e.target as HTMLElement).closest('[data-close]')) {
+        sfx('close');
+        this.close();
+      }
     });
   }
 
@@ -35,7 +38,7 @@ export class BulletinUI {
     this.render();
     this.open = true;
     this.el.classList.remove('hidden');
-    sfx('ui');
+    sfx('open'); // v18 ひらく/とじるで 音の向きをそろえる
   }
 
   close(): void {

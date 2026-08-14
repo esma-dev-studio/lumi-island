@@ -1,0 +1,56 @@
+src静穏まち(5/100秒)
+src静穏まち(20/100秒)
+src静穏まち(35/100秒)
+src静穏まち(50/100秒)
+src静穏まち(1/100秒)
+src静穏まち(16/100秒)
+src静穏まち(31/100秒)
+src静穏まち(46/100秒)
+src静穏まち(4/100秒)
+src静穏まち(2/100秒)
+src静穏まち(3/100秒)
+src静穏まち(7/100秒)
+src静穏まち(2/100秒)
+src静穏まち(18/100秒)
+src静穏まち(11/100秒)
+src静穏まち(26/100秒)
+src静穏まち(41/100秒)
+src静穏まち(56/100秒)
+src静穏まち(71/100秒)
+src静穏まち(86/100秒)
+src静穏 101秒 → 開始
+起動: http://localhost:5205 / MODE=before / 撮影先=C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\.logs\screenshots\display6\before
+置いた家具: ["f_aquarium_big","f_bugcage_big"]
+  中身=fish,nightfish,seafish
+cmp1 fish/nightfish/seafish: [{"n":"fish","x":0.18,"y":0.59,"z":-0.15},{"n":"nightfish","x":0.07,"y":0.71,"z":0.13},{"n":"seafish","x":-0.4,"y":0.66,"z":0}]
+  [shot] 01_cmp1_day_fish-nightfish-seafish.png (接写)
+  [shot] 02_cmp1_day_fish-nightfish-seafish_b.png (接写)
+  中身=rarefish,koi,seabream
+cmp2 rarefish/koi/seabream: [{"n":"rarefish","x":0.33,"y":0.57,"z":-0.15},{"n":"koi","x":-0.29,"y":0.73,"z":0.13},{"n":"seabream","x":-0.18,"y":0.64,"z":0}]
+  [shot] 03_cmp2_day_rarefish-koi-seabream.png (接写)
+  [shot] 04_cmp2_day_rarefish-koi-seabream_b.png (接写)
+  中身=seahorse,koi,fish
+cmp3 seahorse/koi/fish: [{"n":"seahorse","x":-0.1,"y":0.58,"z":-0.15},{"n":"koi","x":0.15,"y":0.71,"z":0.13},{"n":"fish","x":0.23,"y":0.65,"z":0}]
+  [shot] 05_cmp3_day_seahorse-koi-fish.png (接写)
+  [shot] 06_cmp3_day_seahorse-koi-fish_b.png (接写)
+  [shot] 07_cmp_night_rarefish-koi-seabream.png (接写)
+  !! ゲーム内時計が進まない(描画ループが止まっている)
+  中身=fish,nightfish,seafish
+すいそう満員: [{"n":"fish","x":0,"y":0.58,"z":-0.15},{"n":"nightfish","x":0,"y":0.72,"z":0.13},{"n":"seafish","x":0,"y":0.65,"z":0}]
+  [shot] 08_tank_full_day_1.png (接写)
+  [shot] 09_tank_full_day_2.png (接写)
+  [shot] 10_tank_full_day_3.png (接写)
+  [shot] 11_tank_full_day_4.png (接写)
+!! 失敗: Cannot read properties of undefined (reading 'game')
+consoleエラー: 1件
+  - TypeError: Cannot read properties of undefined (reading 'game')
+    at evaluate (evaluate at ev (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/tools/shots_display6.mjs:128:25), <anonymous>:0:173)
+    at #evaluate (C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\node_modules\puppeteer-core\lib\cjs\puppeteer\cdp\ExecutionContext.js:351:60)
+    at async ExecutionContext.evaluate (C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\node_modules\puppeteer-core\lib\cjs\puppeteer\cdp\ExecutionContext.js:278:16)
+    at async IsolatedWorld.evaluate (C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\node_modules\puppeteer-core\lib\cjs\puppeteer\cdp\IsolatedWorld.js:100:16)
+    at async CdpFrame.evaluate (C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\node_modules\puppeteer-core\lib\cjs\puppeteer\api\Frame.js:348:20)
+    at async CdpPage.evaluate (C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\node_modules\puppeteer-core\lib\cjs\puppeteer\api\Page.js:812:20)
+    at async json (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/tools/shots_display6.mjs:129:39)
+    at async settleCamera (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/tools/shots_display6.mjs:178:15)
+    at async setZoom (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/tools/shots_display6.mjs:154:3)
+    at async file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/tools/shots_display6.mjs:330:5

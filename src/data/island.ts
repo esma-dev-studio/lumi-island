@@ -249,6 +249,18 @@ export const BOTTLE_SPOTS: { x: number; z: number }[] = [
  *   - 広場から高台へ向かう道のわき(道から1.8m)。通りかかれば かならず目に入る
  * おもて(はりがみの面)は広場の中心(0,0)を向く: rotation.y = atan2(x, z)。
  */
+/**
+ * v18 ひろばのベンチ([x, z, 形に焼きこむ回転])。
+ *
+ * IslandScene(見た目)と SitSystem(すわる場所)の **両方がここを読む**。
+ * 片方だけ書きかえて「見えているベンチにすわれない」が起きないようにするため、
+ * 座標を2か所に写さない(tests/unit/sit_emote.test.ts が一致を機械検査する)。
+ */
+export const PLAZA_BENCHES: [number, number, number][] = [
+  [2.5, -2.5, -1.2],
+  [-3, 2.2, 0.6],
+];
+
 export const BULLETIN_BOARD = { x: 5, z: -4.5 };
 
 /**

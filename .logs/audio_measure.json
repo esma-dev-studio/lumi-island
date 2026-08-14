@@ -1,0 +1,824 @@
+{
+  "sfx": {
+    "chop": {
+      "peak": 0.082757,
+      "peakDb": -21.64,
+      "rms": 0.013326,
+      "rmsDb": -37.51,
+      "clipped": 0,
+      "soundingSec": 0.119,
+      "windowSec": 3,
+      "totalRmsDb": -51.51,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "mine": {
+      "peak": 0.05441,
+      "peakDb": -25.29,
+      "rms": 0.012641,
+      "rmsDb": -37.96,
+      "clipped": 0,
+      "soundingSec": 0.11,
+      "windowSec": 3,
+      "totalRmsDb": -52.32,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "sickle": {
+      "peak": 0.063459,
+      "peakDb": -23.95,
+      "rms": 0.007263,
+      "rmsDb": -42.78,
+      "clipped": 0,
+      "soundingSec": 0.148,
+      "windowSec": 3,
+      "totalRmsDb": -55.83,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "dig": {
+      "peak": 0.058271,
+      "peakDb": -24.69,
+      "rms": 0.006592,
+      "rmsDb": -43.62,
+      "clipped": 0,
+      "soundingSec": 0.306,
+      "windowSec": 3,
+      "totalRmsDb": -53.53,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "pickup": {
+      "peak": 0.076163,
+      "peakDb": -22.37,
+      "rms": 0.017646,
+      "rmsDb": -35.07,
+      "clipped": 0,
+      "soundingSec": 0.17,
+      "windowSec": 3,
+      "totalRmsDb": -47.53,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "place": {
+      "peak": 0.079621,
+      "peakDb": -21.98,
+      "rms": 0.015155,
+      "rmsDb": -36.39,
+      "clipped": 0,
+      "soundingSec": 0.11,
+      "windowSec": 3,
+      "totalRmsDb": -50.75,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "cast": {
+      "peak": 0.04349,
+      "peakDb": -27.23,
+      "rms": 0.006283,
+      "rmsDb": -44.04,
+      "clipped": 0,
+      "soundingSec": 0.34,
+      "windowSec": 3,
+      "totalRmsDb": -53.49,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "splash": {
+      "peak": 0.053034,
+      "peakDb": -25.51,
+      "rms": 0.007536,
+      "rmsDb": -42.46,
+      "clipped": 0,
+      "soundingSec": 0.286,
+      "windowSec": 3,
+      "totalRmsDb": -52.67,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "bite": {
+      "peak": 0.062904,
+      "peakDb": -24.03,
+      "rms": 0.015385,
+      "rmsDb": -36.26,
+      "clipped": 0,
+      "soundingSec": 0.18,
+      "windowSec": 3,
+      "totalRmsDb": -48.48,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "catch": {
+      "peak": 0.076207,
+      "peakDb": -22.36,
+      "rms": 0.017519,
+      "rmsDb": -35.13,
+      "clipped": 0,
+      "soundingSec": 0.36,
+      "windowSec": 3,
+      "totalRmsDb": -44.34,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "miss": {
+      "peak": 0.060425,
+      "peakDb": -24.38,
+      "rms": 0.011166,
+      "rmsDb": -39.04,
+      "clipped": 0,
+      "soundingSec": 0.18,
+      "windowSec": 3,
+      "totalRmsDb": -51.26,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "net": {
+      "peak": 0.041949,
+      "peakDb": -27.55,
+      "rms": 0.00704,
+      "rmsDb": -43.05,
+      "clipped": 0,
+      "soundingSec": 0.166,
+      "windowSec": 3,
+      "totalRmsDb": -55.61,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "bugflee": {
+      "peak": 0.031194,
+      "peakDb": -30.12,
+      "rms": 0.005745,
+      "rmsDb": -44.81,
+      "clipped": 0,
+      "soundingSec": 0.28,
+      "windowSec": 3,
+      "totalRmsDb": -55.11,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "craft": {
+      "peak": 0.077456,
+      "peakDb": -22.22,
+      "rms": 0.013211,
+      "rmsDb": -37.58,
+      "clipped": 0,
+      "soundingSec": 0.32,
+      "windowSec": 3,
+      "totalRmsDb": -47.3,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "cook": {
+      "peak": 0.040428,
+      "peakDb": -27.87,
+      "rms": 0.007897,
+      "rmsDb": -42.05,
+      "clipped": 0,
+      "soundingSec": 0.582,
+      "windowSec": 3,
+      "totalRmsDb": -49.17,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "eat": {
+      "peak": 0.049569,
+      "peakDb": -26.1,
+      "rms": 0.010047,
+      "rmsDb": -39.96,
+      "clipped": 0,
+      "soundingSec": 0.31,
+      "windowSec": 3,
+      "totalRmsDb": -49.82,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "paint": {
+      "peak": 0.047648,
+      "peakDb": -26.44,
+      "rms": 0.008157,
+      "rmsDb": -41.77,
+      "clipped": 0,
+      "soundingSec": 0.3,
+      "windowSec": 3,
+      "totalRmsDb": -51.77,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "combo": {
+      "peak": 0.044878,
+      "peakDb": -26.96,
+      "rms": 0.010218,
+      "rmsDb": -39.81,
+      "clipped": 0,
+      "soundingSec": 0.4,
+      "windowSec": 3,
+      "totalRmsDb": -48.56,
+      "bus": "notify",
+      "chainGain": 0.2048
+    },
+    "talk": {
+      "peak": 0.019488,
+      "peakDb": -34.2,
+      "rms": 0.003664,
+      "rmsDb": -48.72,
+      "clipped": 0,
+      "soundingSec": 0.07,
+      "windowSec": 3,
+      "totalRmsDb": -65.05,
+      "bus": "ui",
+      "chainGain": 0.144
+    },
+    "quest": {
+      "peak": 0.061258,
+      "peakDb": -24.26,
+      "rms": 0.013875,
+      "rmsDb": -37.16,
+      "clipped": 0,
+      "soundingSec": 0.61,
+      "windowSec": 3,
+      "totalRmsDb": -44.07,
+      "bus": "notify",
+      "chainGain": 0.2048
+    },
+    "badge": {
+      "peak": 0.045331,
+      "peakDb": -26.87,
+      "rms": 0.007496,
+      "rmsDb": -42.5,
+      "clipped": 0,
+      "soundingSec": 0.41,
+      "windowSec": 3,
+      "totalRmsDb": -51.15,
+      "bus": "notify",
+      "chainGain": 0.2048
+    },
+    "bloom": {
+      "peak": 0.042821,
+      "peakDb": -27.37,
+      "rms": 0.010227,
+      "rmsDb": -39.8,
+      "clipped": 0,
+      "soundingSec": 1.164,
+      "windowSec": 3,
+      "totalRmsDb": -43.92,
+      "bus": "notify",
+      "chainGain": 0.2048
+    },
+    "heart": {
+      "peak": 0.026423,
+      "peakDb": -31.56,
+      "rms": 0.006089,
+      "rmsDb": -44.31,
+      "clipped": 0,
+      "soundingSec": 0.32,
+      "windowSec": 3,
+      "totalRmsDb": -54.03,
+      "bus": "notify",
+      "chainGain": 0.2048
+    },
+    "gift": {
+      "peak": 0.040743,
+      "peakDb": -27.8,
+      "rms": 0.008295,
+      "rmsDb": -41.62,
+      "clipped": 0,
+      "soundingSec": 0.272,
+      "windowSec": 3,
+      "totalRmsDb": -52.05,
+      "bus": "notify",
+      "chainGain": 0.2048
+    },
+    "coin": {
+      "peak": 0.055524,
+      "peakDb": -25.11,
+      "rms": 0.013201,
+      "rmsDb": -37.59,
+      "clipped": 0,
+      "soundingSec": 0.17,
+      "windowSec": 3,
+      "totalRmsDb": -50.05,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "ui": {
+      "peak": 0.021952,
+      "peakDb": -33.17,
+      "rms": 0.004147,
+      "rmsDb": -47.64,
+      "clipped": 0,
+      "soundingSec": 0.065,
+      "windowSec": 3,
+      "totalRmsDb": -64.29,
+      "bus": "ui",
+      "chainGain": 0.144
+    },
+    "open": {
+      "peak": 0.017455,
+      "peakDb": -35.16,
+      "rms": 0.003431,
+      "rmsDb": -49.29,
+      "clipped": 0,
+      "soundingSec": 0.135,
+      "windowSec": 3,
+      "totalRmsDb": -62.76,
+      "bus": "ui",
+      "chainGain": 0.144
+    },
+    "close": {
+      "peak": 0.0163,
+      "peakDb": -35.76,
+      "rms": 0.003142,
+      "rmsDb": -50.06,
+      "clipped": 0,
+      "soundingSec": 0.145,
+      "windowSec": 3,
+      "totalRmsDb": -63.23,
+      "bus": "ui",
+      "chainGain": 0.144
+    },
+    "page": {
+      "peak": 0.016495,
+      "peakDb": -35.65,
+      "rms": 0.002252,
+      "rmsDb": -52.95,
+      "clipped": 0,
+      "soundingSec": 0.057,
+      "windowSec": 3,
+      "totalRmsDb": -70.17,
+      "bus": "ui",
+      "chainGain": 0.144
+    },
+    "letter": {
+      "peak": 0.015716,
+      "peakDb": -36.07,
+      "rms": 0.003189,
+      "rmsDb": -49.93,
+      "clipped": 0,
+      "soundingSec": 0.28,
+      "windowSec": 3,
+      "totalRmsDb": -60.23,
+      "bus": "ui",
+      "chainGain": 0.144
+    },
+    "door_open": {
+      "peak": 0.039886,
+      "peakDb": -27.98,
+      "rms": 0.006341,
+      "rmsDb": -43.96,
+      "clipped": 0,
+      "soundingSec": 0.207,
+      "windowSec": 3,
+      "totalRmsDb": -55.56,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "door_close": {
+      "peak": 0.050956,
+      "peakDb": -25.86,
+      "rms": 0.007836,
+      "rmsDb": -42.12,
+      "clipped": 0,
+      "soundingSec": 0.26,
+      "windowSec": 3,
+      "totalRmsDb": -52.75,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "sit": {
+      "peak": 0.039673,
+      "peakDb": -28.03,
+      "rms": 0.006767,
+      "rmsDb": -43.39,
+      "clipped": 0,
+      "soundingSec": 0.228,
+      "windowSec": 3,
+      "totalRmsDb": -54.58,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "stand": {
+      "peak": 0.034689,
+      "peakDb": -29.2,
+      "rms": 0.006768,
+      "rmsDb": -43.39,
+      "clipped": 0,
+      "soundingSec": 0.14,
+      "windowSec": 3,
+      "totalRmsDb": -56.7,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "boat": {
+      "peak": 0.030862,
+      "peakDb": -30.21,
+      "rms": 0.007235,
+      "rmsDb": -42.81,
+      "clipped": 0,
+      "soundingSec": 0.576,
+      "windowSec": 3,
+      "totalRmsDb": -49.98,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "lantern_take": {
+      "peak": 0.035563,
+      "peakDb": -28.98,
+      "rms": 0.007431,
+      "rmsDb": -42.58,
+      "clipped": 0,
+      "soundingSec": 0.27,
+      "windowSec": 3,
+      "totalRmsDb": -53.04,
+      "bus": "sfx",
+      "chainGain": 0.256
+    },
+    "lantern_up": {
+      "peak": 0.02727,
+      "peakDb": -31.29,
+      "rms": 0.008451,
+      "rmsDb": -41.46,
+      "clipped": 0,
+      "soundingSec": 1.82,
+      "windowSec": 3,
+      "totalRmsDb": -43.63,
+      "bus": "notify",
+      "chainGain": 0.2048
+    },
+    "step_grass": {
+      "peak": 0.00551,
+      "peakDb": -45.18,
+      "rms": 0.001375,
+      "rmsDb": -57.24,
+      "clipped": 0,
+      "soundingSec": 0.037,
+      "windowSec": 3,
+      "totalRmsDb": -76.34,
+      "bus": "foot",
+      "chainGain": 0.1152
+    },
+    "step_wood": {
+      "peak": 0.006364,
+      "peakDb": -43.93,
+      "rms": 0.001358,
+      "rmsDb": -57.34,
+      "clipped": 0,
+      "soundingSec": 0.068,
+      "windowSec": 3,
+      "totalRmsDb": -73.81,
+      "bus": "foot",
+      "chainGain": 0.1152
+    },
+    "step_sand": {
+      "peak": 0.005284,
+      "peakDb": -45.54,
+      "rms": 0.001388,
+      "rmsDb": -57.15,
+      "clipped": 0,
+      "soundingSec": 0.043,
+      "windowSec": 3,
+      "totalRmsDb": -75.61,
+      "bus": "foot",
+      "chainGain": 0.1152
+    },
+    "step_indoor": {
+      "peak": 0.005826,
+      "peakDb": -44.69,
+      "rms": 0.00135,
+      "rmsDb": -57.4,
+      "clipped": 0,
+      "soundingSec": 0.075,
+      "windowSec": 3,
+      "totalRmsDb": -73.44,
+      "bus": "foot",
+      "chainGain": 0.1152
+    }
+  },
+  "loops": {
+    "chirp": {
+      "peak": 0.014379,
+      "peakDb": -36.85,
+      "rms": 0.003315,
+      "rmsDb": -49.59,
+      "clipped": 0,
+      "soundingSec": 0.2,
+      "windowSec": 3,
+      "totalRmsDb": -61.35,
+      "kind": "oneshot"
+    },
+    "cricket": {
+      "peak": 0.008616,
+      "peakDb": -41.29,
+      "rms": 0.00183,
+      "rmsDb": -54.75,
+      "clipped": 0,
+      "soundingSec": 0.33,
+      "windowSec": 3,
+      "totalRmsDb": -64.34,
+      "kind": "oneshot"
+    },
+    "murmur": {
+      "peak": 0.010103,
+      "peakDb": -39.91,
+      "rms": 0.002509,
+      "rmsDb": -52.01,
+      "clipped": 0,
+      "soundingSec": 0.386,
+      "windowSec": 3,
+      "totalRmsDb": -60.91,
+      "kind": "oneshot"
+    },
+    "rain_0.35": {
+      "peak": 0.013395,
+      "peakDb": -37.46,
+      "rms": 0.002999,
+      "rmsDb": -50.46,
+      "clipped": 0,
+      "soundingSec": 5,
+      "windowSec": 5,
+      "totalRmsDb": -50.46,
+      "kind": "rain",
+      "level": 0.35
+    },
+    "rain_1": {
+      "peak": 0.045916,
+      "peakDb": -26.76,
+      "rms": 0.009959,
+      "rmsDb": -40.04,
+      "clipped": 0,
+      "soundingSec": 5,
+      "windowSec": 5,
+      "totalRmsDb": -40.04,
+      "kind": "rain",
+      "level": 1
+    },
+    "rain_sheltered": {
+      "peak": 0.009084,
+      "peakDb": -40.83,
+      "rms": 0.002324,
+      "rmsDb": -52.67,
+      "clipped": 0,
+      "soundingSec": 5,
+      "windowSec": 5,
+      "totalRmsDb": -52.67,
+      "kind": "rain",
+      "level": 0.4
+    },
+    "bed_beach": {
+      "peak": 0.034531,
+      "peakDb": -29.24,
+      "rms": 0.006393,
+      "rmsDb": -43.89,
+      "clipped": 0,
+      "soundingSec": 5,
+      "windowSec": 5,
+      "totalRmsDb": -43.89,
+      "kind": "bed",
+      "weights": {
+        "wave": 1,
+        "forest": 0,
+        "grass": 0
+      },
+      "level": 0.13
+    },
+    "bed_grass": {
+      "peak": 0.026294,
+      "peakDb": -31.6,
+      "rms": 0.004851,
+      "rmsDb": -46.28,
+      "clipped": 0,
+      "soundingSec": 5,
+      "windowSec": 5,
+      "totalRmsDb": -46.28,
+      "kind": "bed",
+      "weights": {
+        "wave": 0,
+        "forest": 0,
+        "grass": 1
+      },
+      "level": 0.13
+    },
+    "bed_forest": {
+      "peak": 0.026485,
+      "peakDb": -31.54,
+      "rms": 0.005654,
+      "rmsDb": -44.95,
+      "clipped": 0,
+      "soundingSec": 5,
+      "windowSec": 5,
+      "totalRmsDb": -44.95,
+      "kind": "bed",
+      "weights": {
+        "wave": 0,
+        "forest": 1,
+        "grass": 0
+      },
+      "level": 0.13
+    },
+    "bed_mixed": {
+      "peak": 0.016008,
+      "peakDb": -35.91,
+      "rms": 0.00328,
+      "rmsDb": -49.68,
+      "clipped": 0,
+      "soundingSec": 5,
+      "windowSec": 5,
+      "totalRmsDb": -49.68,
+      "kind": "bed",
+      "weights": {
+        "wave": 0.34,
+        "forest": 0.33,
+        "grass": 0.33
+      },
+      "level": 0.13
+    },
+    "bed_night": {
+      "peak": 0.011082,
+      "peakDb": -39.11,
+      "rms": 0.002271,
+      "rmsDb": -52.88,
+      "clipped": 0,
+      "soundingSec": 5,
+      "windowSec": 5,
+      "totalRmsDb": -52.88,
+      "kind": "bed",
+      "weights": {
+        "wave": 0.34,
+        "forest": 0.33,
+        "grass": 0.33
+      },
+      "level": 0.09
+    },
+    "bed_indoor": {
+      "peak": 0.007415,
+      "peakDb": -42.6,
+      "rms": 0.001314,
+      "rmsDb": -57.63,
+      "clipped": 0,
+      "soundingSec": 5,
+      "windowSec": 5,
+      "totalRmsDb": -57.63,
+      "kind": "bed",
+      "weights": {
+        "wave": 0.34,
+        "forest": 0.33,
+        "grass": 0.33
+      },
+      "level": 0.06
+    },
+    "music_night": {
+      "peak": 0.018813,
+      "peakDb": -34.51,
+      "rms": 0.001788,
+      "rmsDb": -54.95,
+      "clipped": 0,
+      "soundingSec": 19,
+      "windowSec": 19,
+      "totalRmsDb": -54.95,
+      "kind": "music"
+    },
+    "music_festival": {
+      "peak": 0.017937,
+      "peakDb": -34.92,
+      "rms": 0.002254,
+      "rmsDb": -52.94,
+      "clipped": 0,
+      "soundingSec": 19,
+      "windowSec": 19,
+      "totalRmsDb": -52.94,
+      "kind": "music"
+    }
+  },
+  "mixCase": {
+    "worst": {
+      "peak": 0.164727,
+      "peakDb": -15.66,
+      "rms": 0.011711,
+      "rmsDb": -38.63,
+      "clipped": 0,
+      "soundingSec": 14,
+      "windowSec": 14,
+      "totalRmsDb": -38.63
+    }
+  },
+  "design": {
+    "MIX": {
+      "master": 0.32,
+      "bus": {
+        "music": 1,
+        "ambient": 0.9,
+        "sfx": 0.8,
+        "ui": 0.45
+      },
+      "sub": {
+        "sfx": 1,
+        "notify": 0.8,
+        "foot": 0.45
+      },
+      "rainPeak": 0.075,
+      "rainRampSec": 1.2,
+      "bed": {
+        "day": 0.13,
+        "night": 0.09,
+        "sheltered": 0.06,
+        "rainDuck": 0.45,
+        "rampSec": 1.6
+      },
+      "oneShot": {
+        "chirp": 0.05,
+        "cricket": 0.03,
+        "murmur": 0.04,
+        "intervalMs": 2600
+      }
+    }
+  },
+  "zones": [
+    {
+      "name": "はまべ(南の砂浜)",
+      "x": 0,
+      "z": 40,
+      "seaDist": 3.8,
+      "trees": 0,
+      "wave": 0.892,
+      "forest": 0,
+      "grass": 0.108
+    },
+    {
+      "name": "さんばしの先",
+      "x": 4,
+      "z": 49,
+      "seaDist": 0,
+      "trees": 0,
+      "wave": 0.893,
+      "forest": 0,
+      "grass": 0.107
+    },
+    {
+      "name": "ひろば",
+      "x": 0,
+      "z": -1,
+      "seaDist": 43.4,
+      "trees": 0,
+      "wave": 0,
+      "forest": 0,
+      "grass": 1
+    },
+    {
+      "name": "林(北西)",
+      "x": -10.5,
+      "z": -30.5,
+      "seaDist": 13.9,
+      "trees": 0.952,
+      "wave": 0.335,
+      "forest": 0.59,
+      "grass": 0.074
+    },
+    {
+      "name": "林(北)",
+      "x": -1.5,
+      "z": -27.5,
+      "seaDist": 22.4,
+      "trees": 0.632,
+      "wave": 0.064,
+      "forest": 0.606,
+      "grass": 0.329
+    },
+    {
+      "name": "いけのほとり",
+      "x": 30,
+      "z": 12,
+      "seaDist": 19.2,
+      "trees": 0.003,
+      "wave": 0.208,
+      "forest": 0.003,
+      "grass": 0.789
+    },
+    {
+      "name": "高台のデッキ",
+      "x": 28,
+      "z": -25.5,
+      "seaDist": 22,
+      "trees": 0.059,
+      "wave": 0.08,
+      "forest": 0.059,
+      "grass": 0.862
+    },
+    {
+      "name": "マイホームの庭",
+      "x": -29.9,
+      "z": 6.7,
+      "seaDist": 19.1,
+      "trees": 0.163,
+      "wave": 0.211,
+      "forest": 0.157,
+      "grass": 0.632
+    }
+  ],
+  "runAt": "2026-08-14T04:08:51.912Z",
+  "consoleErrors": [],
+  "balance": {
+    "uiMedianDb": -35.16,
+    "footMedianDb": -44.69,
+    "playMedianDb": -26.44
+  },
+  "problems": []
+}

@@ -1,10 +1,10 @@
-// v13「おおきな すいそう・むしかご(3びき入る)」と「お庭に家具を置く」の実ブラウザ通し。
+// v13「おおきな すいそう・むしかご(6ぴき入る)」と「お庭に家具を置く」の実ブラウザ通し。
 //
 // 断言する中身:
 //   1. おおきな すいそうを **お庭に** 置ける(配置モードのゴースト→E→セーブに残る)
 //   2. 花だんに重ねようとすると 拒否され、家具もアイテムも消えない
-//   3. 魚を3びき入れられて、4匹めは いっぱいで入らない
-//   4. セーブ→ロードで 3びきとも のこり、3つとも およいでいる(メッシュが3つある)
+//   3. 魚を6ぴき入れられて、7匹めは いっぱいで入らない
+//   4. セーブ→ロードで 6ぴきとも のこり、6つとも およいでいる(メッシュが6つある)
 //   5. v12までのセーブ(content=1匹)を読むと contents=[content] に移り、中身が消えない
 import { test, expect, type Page } from '@playwright/test';
 
@@ -86,15 +86,15 @@ async function waitGhostAt(page: Page, x: number, z: number): Promise<void> {
   );
 }
 
-test('おおきな すいそうを お庭に置く → 魚3びき → セーブ/ロードで3びきとも およいでいる', async ({ page }) => {
+test('おおきな すいそうを お庭に置く → 魚6ぴき → セーブ/ロードで6ぴきとも およいでいる', async ({ page }) => {
   watchErrors(page);
   await page.goto(GAME);
   await waitReady(page);
 
-  // おおきな すいそう1つと、入れる魚を持たせる(4匹めの「いっぱい」も見たいので4種)
+  // おおきな すいそう1つと、入れる魚を持たせる(7匹めの「いっぱい」も見たいので 7ひきぶん)
   await seedAndReload(
     page,
-    `s.inventory = { f_aquarium_big: 1, fish: 2, nightfish: 1, rarefish: 1 };
+    `s.inventory = { f_aquarium_big: 1, fish: 2, nightfish: 1, rarefish: 1, seafish: 1, koi: 1, seabream: 1 };
      s.player = { x: ${GARDEN_STAND.x}, z: ${GARDEN_STAND.z}, rotY: 0 };`
   );
 
@@ -130,36 +130,45 @@ test('おおきな すいそうを お庭に置く → 魚3びき → セーブ/
   await page.waitForTimeout(300);
   await expect(page.locator('.display-panel')).toBeVisible();
 
-  // ---- 3びき入れる(パネルは開いたまま。数が 1/3 → 3/3 になる) ----
-  for (const [item, expected] of [['fish', 1], ['nightfish', 2], ['rarefish', 3]] as [string, number][]) {
-    await page.locator(`.display-panel [data-put="${item}"]`).click();
+  // ---- 6ぴき入れる(パネルは開いたまま。数が 1/6 → 6/6 になる) ----
+  const six = ['fish', 'nightfish', 'rarefish', 'seafish', 'koi', 'seabream'];
+  for (let i = 0; i < six.length; i++) {
+    await page.locator(`.display-panel [data-put="${six[i]}"]`).click();
     await page.waitForTimeout(220);
-    expect(await ev(page, '__lumiDebug.state().furniture[0].contents.length'), item).toBe(expected);
-    await expect(page.locator('.display-panel .panel-count')).toContainText(`${expected} / 3`);
+    expect(await ev(page, '__lumiDebug.state().furniture[0].contents.length'), six[i]).toBe(i + 1);
+    await expect(page.locator('.display-panel .panel-count')).toContainText(`${i + 1} / 6`);
   }
-  expect(await ev(page, '__lumiDebug.state().furniture[0].contents')).toEqual(['fish', 'nightfish', 'rarefish']);
-  // 4匹めは いっぱいで入れられない(ボタンが出ない・もちものも減らない)
+  expect(await ev(page, '__lumiDebug.state().furniture[0].contents')).toEqual(six);
+  // 7匹めは いっぱいで入れられない(ボタンが出ない・もちものも減らない)
   await expect(page.locator('.display-panel [data-put]')).toHaveCount(0);
   await expect(page.locator('.display-panel .inv-empty')).toContainText('いっぱい');
   expect(await ev(page, '__lumiDebug.state().inventory.fish'), 'のこりの魚は そのまま').toBe(1);
   // 中身は 1匹ずつ とりだせる形で ならんでいる
-  await expect(page.locator('.display-panel [data-take]')).toHaveCount(3);
+  await expect(page.locator('.display-panel [data-take]')).toHaveCount(6);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(200);
 
-  // ---- 見た目: 3びきが べつべつに およいでいる ----
+  // ---- 見た目: 6ぴきが べつべつに およいでいる(上下2だん) ----
   const swimming = `(() => {
     const p = [...window.__lumi.game.placement.placed.values()][0];
     return p.mesh.getChildMeshes().filter((m) => m.name.indexOf('aquaFish_') === 0).length;
   })()`;
-  expect(await ev(page, swimming)).toBe(3);
+  const tiers = `(() => {
+    const p = [...window.__lumi.game.placement.placed.values()][0];
+    return [...new Set(p.mesh.getChildMeshes()
+      .filter((m) => m.name.indexOf('aquaFish_') === 0)
+      .map((m) => m.position.y > 0.67 ? 'up' : 'low'))].sort().join(',');
+  })()`;
+  expect(await ev(page, swimming)).toBe(6);
+  expect(await ev(page, tiers), '上と下の 2だんに 分かれている').toBe('low,up');
 
-  // ---- セーブ→ロードで 3びきとも のこる ----
+  // ---- セーブ→ロードで 6ぴきとも のこる ----
   await page.goto(GAME_LOAD);
   await waitReady(page);
-  expect(await ev(page, '__lumiDebug.state().furniture[0].contents')).toEqual(['fish', 'nightfish', 'rarefish']);
+  expect(await ev(page, '__lumiDebug.state().furniture[0].contents')).toEqual(six);
   expect(await ev(page, 'window.__lumi.game.placement.placed.size')).toBe(1);
-  expect(await ev(page, swimming), 'ロードしても3びきが およいでいる').toBe(3);
+  expect(await ev(page, swimming), 'ロードしても6ぴきが およいでいる').toBe(6);
+  expect(await ev(page, tiers), 'ロードしても 上下2だん').toBe('low,up');
   // 魚が ほんとうに動いている(往復のアニメが止まっていない)
   const posOf = `(() => {
     const p = [...window.__lumi.game.placement.placed.values()][0];

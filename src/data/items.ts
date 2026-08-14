@@ -36,7 +36,7 @@ export type ItemId =
   | 'f_bugcage' | 'f_ancient_pot' | 'f_strawmat' | 'f_scarecrow'
   // v10 とった魚をかざる すいそう(むしかごと同じ「展示家具」)
   | 'f_aquarium'
-  // v13 3びき入る おおきい版(小さい版に1ぴき入れると 作りかたを ひらめく)
+  // v13 たくさん入る おおきい版(小さい版に1ぴき入れると 作りかたを ひらめく)
   | 'f_aquarium_big' | 'f_bugcage_big'
   // v9 おくりもの: なかよし度5でおしえてもらう とくべつな家具3種(NPC1人につき1つ)
   | 'f_finetable' | 'f_fishtrophy' | 'f_starmap'
@@ -184,14 +184,14 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   },
   // ---- v10 展示家具: つった魚を 入れて かざる ----
   f_aquarium: { id: 'f_aquarium', name: 'すいそう', sell: 48, kind: 'furniture', desc: 'つった魚を えらんで 入れられる ガラスの水そう。中を 魚が およぐ' },
-  // ---- v13 おおきい版(3びき入る)。家にも にわにも おける ----
+  // ---- v13 おおきい版(6ぴき入る)。家にも にわにも おける ----
   f_aquarium_big: {
     id: 'f_aquarium_big', name: 'おおきな すいそう', sell: 96, kind: 'furniture',
-    desc: '魚が 3びきまで 入る、よこに ながい 水そう。3びきが べつべつに およぐ',
+    desc: '魚が 6ぴきまで 入る、よこに ながい 水そう。上と下の 2だんに わかれて およぐ',
   },
   f_bugcage_big: {
     id: 'f_bugcage_big', name: 'おおきな むしかご', sell: 62, kind: 'furniture',
-    desc: '虫が 3びきまで 入る、だいの ついた 大きな かご。ホタルを 入れると 夜に ちかちか 光る',
+    desc: '虫が 6ぴきまで 入る、とまり木の ついた 大きな かご。ホタルを 入れると 夜に ちかちか 光る',
   },
   // ---- v12 りょうりの入口。家の中に おくと、くみあわせの りょうりが つくれるようになる ----
   f_kitchen: { id: 'f_kitchen', name: 'キッチンだい', sell: 50, kind: 'furniture', desc: '木のてんばんと なべの ある だいどころの台。家の中に おくと りょうりが できる' },
@@ -238,7 +238,12 @@ export const ITEMS: Record<ItemId, ItemDef> = {
 // v10/v13 展示家具(すいそう・むしかご と、その おおきい版)。
 // 「置いた家具に いきものを 入れて かざる」しくみを、この1つの表だけで決める。
 //   - accepts  : 入れられるItemId(もちものから1つ減って PlacedFurniture.contents に入る)
-//   - capacity : 何びきまで 入るか(小さい版=1 / おおきい版=3)
+//   - capacity : 何びきまで 入るか(小さい版=1 / おおきい版=6)
+//                ここを増やすだけで UI(スロット・のこり数)・セーブの切りつめ・実績まで ついてくる。
+//                見た目(およぐ みち・とまる場所)は src/entities/furniture.ts の
+//                AQUA_SPECS.lanes / CAGE_SPECS.spots が capacity ぶん用意する約束
+//                (足りないと slot % lanes.length で かさなって「団子」になる。
+//                 tests/unit/display_big_v13.test.ts が 両方の数を つき合わせる)。
 //   - statKey  : 入れた回数の累計カウンタ(じっせきが読む。GameState.stats のキー)
 //   - upgrade  : はじめて中身を入れたときに ひらめく「おおきい版」のレシピID(おおきい版には無い)
 // UI(DisplayUI)・Eのルーティング・メッシュ・じっせきは、すべてこの表を唯一の情報源にする。
@@ -274,10 +279,10 @@ export const DISPLAY_FURNITURE = {
   f_aquarium_big: {
     label: 'おおきな すいそう',
     accepts: DISPLAY_FISH,
-    capacity: 3,
+    capacity: 6,
     statKey: 'display_fish',
     empty: 'いま いれられる魚が ない。海や池で つってこよう!',
-    full: 'おおきな すいそうは 3びきで いっぱい。とりだすと また いれられるよ',
+    full: 'おおきな すいそうは 6ぴきで いっぱい。とりだすと また いれられるよ',
   },
   f_bugcage: {
     label: 'むしかご',
@@ -291,10 +296,10 @@ export const DISPLAY_FURNITURE = {
   f_bugcage_big: {
     label: 'おおきな むしかご',
     accepts: DISPLAY_BUGS,
-    capacity: 3,
+    capacity: 6,
     statKey: 'display_bug',
     empty: 'いま いれられる虫が ない。むしあみで つかまえてこよう!',
-    full: 'おおきな むしかごは 3びきで いっぱい。とりだすと また いれられるよ',
+    full: 'おおきな むしかごは 6ぴきで いっぱい。とりだすと また いれられるよ',
   },
 } as const satisfies Record<string, {
   label: string; accepts: readonly ItemId[]; capacity: number;
@@ -490,7 +495,7 @@ export const RECIPES: RecipeDef[] = [
   // ---- v13 おおきい版2種。小さい版に はじめて いきものを入れたときに ひらめく ----
   // (INITIAL_RECIPES にも RECIPE_DISCOVERY にも入れない。入手経路は
   //  DISPLAY_FURNITURE の upgrade → PlacementSystem.putIn だけ)。
-  // 材料は小さい版の ちょうど2倍+だいのぶんの もくざい。3びき入るぶん しっかり高い
+  // 材料は小さい版の ちょうど2倍+だいのぶんの もくざい。たくさん入るぶん しっかり高い
   { id: 'r_aquarium_big', name: 'おおきな すいそう', out: 'f_aquarium_big', outKind: 'item', cost: { glassfloat: 2, wood: 4, stone: 2 } },
   { id: 'r_bugcage_big', name: 'おおきな むしかご', out: 'f_bugcage_big', outKind: 'item', cost: { twig: 5, fiber: 3, wood: 2 } },
   // ---- v9 おくりもの: なかよし度5の お礼でおぼえる3種 ----

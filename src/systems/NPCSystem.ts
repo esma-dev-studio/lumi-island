@@ -145,6 +145,12 @@ interface NpcRuntime {
   rotY: number;
   hidden: boolean;
   talking: boolean;
+  /**
+   * v18 エモートに こたえている のこり時間(秒)。
+   * 0より大きいあいだは 歩かず、アニメも 上書きしない
+   * ——これが無いと、うろうろ中のNPCは よろこぶ姿を 次のフレームで walk に つぶされる。
+   */
+  reactT: number;
   entry: ScheduleEntry | null;
   // その場の小移動(うろうろ)
   subTarget: { x: number; z: number } | null;
@@ -160,6 +166,9 @@ const HOME_DOOR_OUT = { x: -30.9, z: 6.7 };
 /** 庭先までの距離(m)。ドアの前をふさがず、ドアのEヒント(2.0m)にも入らない位置 */
 const VISIT_DIST = 2.5;
 const NPC_BODY_R = 0.3; // NPCSystem.update の resolveCollision と同じ
+
+/** v18 エモートに こたえて よろこんでいる時間(秒)。happy クリップ(1.2秒)ぶん */
+export const EMOTE_REACT_SEC = 1.25;
 
 export class NPCSystem {
   npcs = new Map<string, NpcRuntime>();
@@ -265,7 +274,7 @@ export class NPCSystem {
       def, view,
       x: home.x, z: home.z, y: this.island.groundY(home.x, home.z),
       rotY: home.rotY ?? 0,
-      hidden: false, talking: false, entry: null,
+      hidden: false, talking: false, reactT: 0, entry: null,
       subTarget: null, subTimer: 2, workTimer: 1, stuck: 0,
     };
     view.play('idle');
@@ -426,7 +435,7 @@ export class NPCSystem {
         def, view,
         x: home.x, z: home.z, y: this.island.groundY(home.x, home.z),
         rotY: home.rotY ?? 0,
-        hidden: false, talking: false, entry: null,
+        hidden: false, talking: false, reactT: 0, entry: null,
         subTarget: null, subTimer: 2, workTimer: 1, stuck: 0,
       };
       view.play('idle');
@@ -512,6 +521,11 @@ export class NPCSystem {
     for (const rt of this.npcs.values()) {
       if (rt.def.id === this.hostId) continue; // 家の中で会っている人は そこから動かさない
       if (rt.talking) continue; // 会話中はその場でtalk
+      // v18 エモートに こたえているあいだは その場で よろこぶ(歩き出さない・アニメを上書きしない)
+      if (rt.reactT > 0) {
+        rt.reactT -= dt;
+        continue;
+      }
       const entry = this.resolveEntry(rt, hour);
       const spot = this.spotFor(rt, entry);
       const newEntry = entry !== rt.entry;
@@ -643,6 +657,37 @@ export class NPCSystem {
       if (happy) rt.view.play('happy', { onEnd: () => rt.view.play('idle') });
       this.apply(rt);
     }
+  }
+
+  /**
+   * v18 エモートに こたえられる人の一覧(いま見えていて、同じ場所にいる人だけ)。
+   * 並びは Map の登録順=決定的なので、同じ距離のときの選ばれかたも いつも同じ。
+   */
+  emoteTargets(): { id: string; x: number; z: number }[] {
+    const out: { id: string; x: number; z: number }[] = [];
+    for (const rt of this.npcs.values()) {
+      if (rt.hidden) continue;
+      if (this.areaOf(rt) !== this.area) continue;
+      out.push({ id: rt.def.id, x: rt.x, z: rt.z });
+    }
+    return out;
+  }
+
+  /**
+   * v18 エモートに こたえる: こちらを向いて よろこぶ。
+   * **なかよし度は動かさない**(EmoteSystem の説明のとおり、演出だけのごほうび)。
+   * 話しかけている最中の人は そのまま(会話の姿勢をこわさない)。
+   * @returns 実際に こたえたら 立っている位置(頭の高さの目安つき)
+   */
+  replyToEmote(id: string, px: number, pz: number): { x: number; y: number; z: number } | null {
+    const rt = this.npcs.get(id);
+    if (!rt || rt.hidden || rt.talking) return null;
+    rt.rotY = Math.atan2(px - rt.x, pz - rt.z) + Math.PI;
+    rt.subTarget = null; // うろうろの行き先を捨てて その場で こたえる
+    rt.reactT = EMOTE_REACT_SEC;
+    rt.view.play('happy', { onEnd: () => rt.view.play('idle') });
+    this.apply(rt);
+    return { x: rt.x, y: rt.y, z: rt.z };
   }
 
   /** 開花の見せ場: 外にいるNPC全員が木のほうを向く/よろこぶ */

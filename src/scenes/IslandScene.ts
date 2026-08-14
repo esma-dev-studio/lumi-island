@@ -31,7 +31,7 @@ import {
 } from '../systems/FestivalSystem';
 import {
   GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, STAR_SPOTS, DRIFT_SPOTS, SEABIRD_CIRCLES,
-  BUG_SPOTS, DIG_SPOTS, BOTTLE_SPOTS, BULLETIN_BOARD,
+  BUG_SPOTS, DIG_SPOTS, BOTTLE_SPOTS, BULLETIN_BOARD, PLAZA_BENCHES,
   type GatherNodeDef,
 } from '../data/island';
 import { DayNight } from './DayNight';
@@ -339,8 +339,7 @@ export class IslandScene {
     }
 
     // ---- 広場・ルミの木 ----
-    const benchDefs: [number, number, number][] = [[2.5, -2.5, -1.2], [-3, 2.2, 0.6]];
-    for (const [bx, bz, rot] of benchDefs) {
+    for (const [bx, bz, rot] of PLAZA_BENCHES) {
       const bench = makeBench(s, rot);
       bench.position.set(bx, terrainHeight(bx, bz) - 0.02, bz);
       caster(bench);

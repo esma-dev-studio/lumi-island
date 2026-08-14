@@ -13,6 +13,8 @@ export interface CharacterDef {
 
 export const ANIMS = [
   'idle', 'walk', 'run', 'talk', 'interact', 'pickup', 'happy', 'surprised', 'blink', 'fish_idle',
+  // v18 エモートとすわる(chargen へ追加だけした2本。既存クリップの式は変えていない)
+  'wave', 'sit',
 ] as const;
 export type AnimName = (typeof ANIMS)[number];
 

@@ -116,6 +116,55 @@
   display: none;
 }
 
+/* ---- v18 エモートボタン(行動ボタンの左どなり・ひとまわり小さい丸) ---- */
+/* 行動ボタン(116px・右22px)と 12px あけて置く: 右 22+116+12 = 150px。
+   高さは 行動ボタンの中心にそろえる(26 + (116-76)/2 = 46px)。
+   親指の届く所で、いちばん大事な「しらべる」より 小さく・静かにする。 */
+.touch-emote {
+  position: absolute;
+  right: calc(150px + env(safe-area-inset-right, 0px));
+  bottom: calc(46px + env(safe-area-inset-bottom, 0px));
+  width: 76px;
+  height: 76px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 4px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: 0.6rem;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  box-shadow: 0 2px 10px rgba(20, 16, 8, 0.26);
+  transition: transform 0.08s;
+}
+.touch-emote svg {
+  width: 26px;
+  height: 26px;
+  color: var(--amber);
+}
+.touch-emote.press {
+  transform: scale(0.93);
+  background: var(--amber);
+  color: #fff;
+}
+.touch-emote.press svg {
+  color: #fff;
+}
+.touch-emote.hidden {
+  display: none;
+}
+
 /* ---- メニューボタン(右上・時計チップ(下端51px)の下に置いて重ねない) ---- */
 .touch-menu {
   position: absolute;

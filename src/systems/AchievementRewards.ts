@@ -55,7 +55,7 @@ export const ACHIEVEMENT_REWARDS: Record<string, AchievementReward> = {
   a_friend10: { kind: 'lumina', amount: 100 },
   a_aquarium1: { kind: 'lumina', amount: 40 },
   a_cage3: { kind: 'lumina', amount: 50 },
-  // v13 おおきい版(3びき入る すいそう・むしかご)。小さい版より1段 上の目標なので少し多め
+  // v13 おおきい版(6ぴき入る すいそう・むしかご)。小さい版より1段 上の目標なので少し多め
   a_bigaqua3: { kind: 'lumina', amount: 70 },
   a_bigcage3: { kind: 'lumina', amount: 70 },
   a_garden_bloom: { kind: 'lumina', amount: 50 },

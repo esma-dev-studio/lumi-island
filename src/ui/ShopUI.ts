@@ -5,6 +5,7 @@ import { ITEMS, SHOP_STOCK, type ItemId } from '../data/items';
 import { icon } from './icons';
 import { byInput } from './inputMode';
 import { toast } from './Toast';
+import { sfx } from '../audio/AudioSystem';
 
 export class ShopUI {
   private el: HTMLElement;
@@ -24,10 +25,12 @@ export class ShopUI {
       if (!t) return;
       const s = this.getState();
       if (t.hasAttribute('data-close')) {
+        sfx('close'); // v18 とじる操作の音(ここまで全パネルで無音だった)
         this.close();
         return;
       }
       if (t.classList.contains('shop-tab')) {
+        sfx('page'); // v18 タブ切替は 紙をめくる音
         this.tab = t.dataset.tab as 'sell' | 'buy';
         this.render();
         return;

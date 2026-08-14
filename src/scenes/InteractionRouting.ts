@@ -1,6 +1,9 @@
 // E入力のルーティング: その場で実行できる候補を集め、
 // いまの目的との突き合わせ(ObjectiveInteractionPolicy)→優先度・距離(InteractionResolver)で1つに決める。
-import { BULLETIN_BOARD, POIS } from '../data/island';
+import { BULLETIN_BOARD, PLAZA_BENCHES, POIS } from '../data/island';
+import {
+  SIT_REACH, nearestSeat, seatOfFurniture, seatOfPlazaBench, type Seat,
+} from '../systems/SitSystem';
 import { ITEMS, displayCapacity } from '../data/items';
 import { BULLETIN_REACH } from '../systems/BulletinSystem';
 import { BUG_CATCH_R, BUG_HINT_R } from '../systems/BugSystem';
@@ -57,7 +60,7 @@ function displayCandidate(gs: GameScene, near: PlacedRuntime, px: number, pz: nu
   const contents = gs.placement.contentsOf(near);
   const cap = displayCapacity(kind);
   // 1匹だけ入る すいそう・むしかご(v10からのふるまい): 入っていれば Eで そのまま とりだす。
-  // 3びき入る おおきい版: Eは いつでもパネルを開く(1匹ずつ 入れる/とりだす をその場でくり返せる)。
+  // たくさん入る おおきい版: Eは いつでもパネルを開く(1匹ずつ 入れる/とりだす をその場でくり返せる)。
   const takeNow = cap === 1 && contents.length > 0;
   const hint = takeNow
     ? `<kbd>E</kbd>${ITEMS[contents[0]].name}を とりだす`
@@ -108,6 +111,50 @@ function paintCandidate(gs: GameScene, near: PlacedRuntime, px: number, pz: numb
     hint: '<kbd>E</kbd>いろを ぬる',
     run: () => gs.openPaint(near),
   };
+}
+
+/**
+ * v18 「すわる」のE候補。
+ *
+ * すわれるのは ひろばのベンチ2つ(島にある)と、自分で置いた ウッドベンチ・チェア。
+ * 判定は SIT_REACH(1.0m)と せまくしてある——家具の「もちかえる」の輪(1.6m)の
+ * 内がわだけを取るので、1歩さがれば これまでどおり もちかえれる。
+ *
+ * kind は 'place'。ObjectiveSystem の preferredKinds に 'place' は入らないので、
+ * **依頼の誘導中は 自動的に かくれる**(でんごんばん・庭の花だん・るすの家と同じ流儀)。
+ * = すわる候補が 会話や採取の E を 奪うことは 構造的に起きない。
+ */
+function pushSitCandidates(
+  gs: GameScene, cands: InteractionCandidate[], px: number, pz: number
+): void {
+  const seats: Seat[] = [];
+  // ひろばのベンチは島の上だけ(室内・よその家・入り江には無い)
+  if (!gs.indoor && !gs.inCove && gs.npcHome === null) {
+    for (let i = 0; i < PLAZA_BENCHES.length; i++) {
+      const [bx, bz, rot] = PLAZA_BENCHES[i];
+      if (Math.hypot(px - bx, pz - bz) < SIT_REACH) seats.push(seatOfPlazaBench(i, bx, bz, rot));
+    }
+  }
+  // 自分で置いた家具(よその家の中では配置そのものができないので、ここには出ない)
+  if (gs.npcHome === null) {
+    const near = gs.placement.nearest(px, pz);
+    if (near) {
+      const s = seatOfFurniture(near.data.id, near.data.item, near.data.x, near.data.z, near.data.rotY);
+      if (s) seats.push(s);
+    }
+  }
+  const best = nearestSeat(px, pz, seats);
+  if (!best) return;
+  cands.push({
+    id: best.seat.id,
+    kind: 'place',
+    targetId: best.seat.id,
+    priority: PRIORITY.sit,
+    distance: best.distance,
+    enabled: true,
+    hint: `<kbd>E</kbd>${best.seat.label}に すわる`,
+    run: () => gs.sitDown(best.seat),
+  });
 }
 
 /**
@@ -251,6 +298,12 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     return '';
   }
   if (uiOpen) return '';
+  // v18 すわっているあいだは「たつ」しか出さない。
+  // ほかの候補を出さないので「表示=Eで動くもの」が1つに保たれる(隠れ候補が動かない)。
+  if (gs.player.sitting) {
+    if (want) gs.standUp();
+    return '<kbd>E</kbd>たつ';
+  }
   if (gs.placement.active) {
     if (want) gs.placement.place();
     return gs.placement.hint;
@@ -291,6 +344,7 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     // 判定圏に重ねて置けないルール(HomeInterior.checkHomePlacement)と合わせて、
     // 「そとへ でる」「ねる」が家具に横取りされることはない。
     // 誘導中(ベッドで待つ等)は preferredKinds に pickup が入っていないので、そもそも出ない
+    pushSitCandidates(gs, cands, px, pz); // v18 室内に置いた ベンチ・いすにも すわれる
     const inNear = gs.placement.nearest(px, pz);
     if (inNear) {
       const disp = displayCandidate(gs, inNear, px, pz);
@@ -623,6 +677,8 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
       });
     }
   }
+  // v18 すわる(ひろばのベンチ・置いた ベンチ/いす)
+  pushSitCandidates(gs, cands, px, pz);
   // 設置家具の持ち帰り(展示家具なら「いれる/とりだす」を先に出す)
   const near = gs.placement.nearest(px, pz);
   if (near) {

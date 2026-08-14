@@ -40,6 +40,30 @@ function fbox(A: Arrays, cx: number, cy: number, cz: number, w: number, h: numbe
 }
 
 /**
+ * よこ4面だけの box(上ぶた・そこ板を作らない)。
+ * すいそうのガラスに使う: 上が あいているので、上から のぞいたときに
+ * ガラスと水面の2まいが かさならない。巻き順・法線は fbox の よこ面と まったく同じ('keep')。
+ */
+function glassPanes(
+  A: Arrays, cx: number, cy: number, cz: number, w: number, h: number, d: number, c: Color3
+): void {
+  const x0 = cx - w / 2, x1 = cx + w / 2, y0 = cy - h / 2, y1 = cy + h / 2, z0 = cz - d / 2, z1 = cz + d / 2;
+  const q = (p: number[][]): void => {
+    const base = A.pos.length / 3;
+    for (const pt of p) {
+      A.pos.push(pt[0], pt[1], pt[2]);
+      const f = 1 + (vnoise(pt[0] * 5 + 3, pt[1] * 5 + pt[2]) - 0.5) * 0.08;
+      A.col.push(c.r * f, c.g * f, c.b * f, 1);
+    }
+    A.idx.push(base, base + 2, base + 1, base, base + 3, base + 2);
+  };
+  q([[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]]);
+  q([[x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0]]);
+  q([[x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1]]);
+  q([[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]]);
+}
+
+/**
  * 傾け・回転つきの box(fboxのローカル回転つき版)。
  * 屋根の勾配・かざぐるまの羽根のように、Y回転だけでは作れない部品に使う。
  * 8頂点を剛体回転させるだけなので巻き順は fbox と同じ(toMeshは'keep')。
@@ -215,32 +239,66 @@ export function makeRoomDesk(scene: Scene): { root: Mesh; glowPart: Mesh } {
 //   ひとつのメッシュに混ぜない(ガラス・水面・水草・魚はすべて別メッシュ)。
 // ---------------------------------------------------------------------------
 
-/** すいそうのガラスと水面(半透明)。島じゅうで共有するので dispose しない */
+/** すいそうのガラス・水面(半透明)と、中の魚。島じゅうで共有するので dispose しない */
 interface AquaMats {
   glass: StandardMaterial;
   water: StandardMaterial;
+  fish: StandardMaterial;
 }
 let aquaMats: AquaMats | null = null;
 function getAquaMats(scene: Scene): AquaMats {
   if (!aquaMats || aquaMats.glass.getScene() !== scene) {
     const glass = new StandardMaterial('aquaGlass', scene);
-    // 中が「水」に見えるよう、ガラス自体を青みどりに寄せる(実機の接写で白っぽく見えたので濃くした)
-    glass.diffuseColor = Color3.FromHexString('#a8dcea');
+    // 中が「水」に見えるよう、ガラス自体を青みどりに寄せる。
+    //
+    // ここの alpha は「中の魚がどれだけ かすむか」を そのまま決める。
+    // 半透明は 足し算(out = a×ガラス色 + (1-a)×中の色)なので、
+    // a=0.36 では コイの だいだい・タイの ももが 白っぽい ベージュに つぶれて
+    // 種類を 見分けられなかった(実機の接写で確認)。
+    //   a=0.36: 0.36×(0.64,0.86,0.92) を 足す → 彩度が半分以下になる
+    //   a=0.20: 足す量が ほぼ半分 → 水の色みは のこったまま 魚の色が もどる
+    // 「水らしさ」は ガラスの色みだけでなく、水面の板・砂利・水草・上わくが 受けもつので、
+    // alpha を下げても 水そうに見える(before/after の接写で見くらべた)。
+    glass.diffuseColor = Color3.FromHexString('#9ad6e8');
     glass.specularColor = Color3.FromHexString('#20262a');
-    glass.emissiveColor = Color3.FromHexString('#0d1418');
-    glass.alpha = 0.36;
+    glass.emissiveColor = Color3.FromHexString('#070c0f');
+    glass.alpha = 0.2;
     // 裏面は描かない: 半透明メッシュの前後関係はメッシュ単位でしか並べ替えられないので、
     // 裏の面まで描くと「向こう側のガラスが手前に出る」ちらつきが起きる(手前の面だけで十分ガラスに見える)
     glass.backFaceCulling = true;
     const water = new StandardMaterial('aquaWater', scene);
+    // 水面の板は「上から見たとき」に画面の広い面積をしめる。
+    // 濃いと 中が まるごと かすむので、色みが分かるぎりぎりまで うすくする
     water.diffuseColor = Color3.FromHexString('#57b6da');
     water.specularColor = Color3.Black();
-    water.emissiveColor = Color3.FromHexString('#16323d');
-    water.alpha = 0.5;
+    water.emissiveColor = Color3.FromHexString('#0e222a');
+    water.alpha = 0.32;
     water.backFaceCulling = true;
-    aquaMats = { glass, water };
+    // 魚だけの材質(共有の floraMat と分ける)。
+    // emissive は Babylon の標準シェーダーでは 頂点色に かけ算されるので、
+    // 「色みは そのままで 明るさだけ 底上げ」になる(白く とばない)。
+    // 水そうの中は 木のわくの かげに 入りがちなので、ここで 明るさを 確保して
+    // ガラスごしでも 種類の色が 残るようにする。
+    const fish = new StandardMaterial('aquaFishMat', scene);
+    fish.diffuseColor = Color3.White();
+    fish.specularColor = Color3.Black();
+    fish.emissiveColor = Color3.FromHexString('#4c4c4c');
+    fish.backFaceCulling = true;
+    aquaMats = { glass, water, fish };
   }
   return aquaMats;
+}
+
+/**
+ * 彩度を すこし上げた色。
+ * ガラスの ごしに見ると 足し算の かすみで 彩度が落ちるので、その ぶんを 先に足しておく
+ * (明るさ=見た目の明暗は そのままに、色みだけ はっきりさせる)。
+ */
+function vivid(hex: string, k: number): Color3 {
+  const c = Color3.FromHexString(hex);
+  const lum = c.r * 0.299 + c.g * 0.587 + c.b * 0.114;
+  const ch = (v: number): number => Math.min(1, Math.max(0, lum + (v - lum) * k));
+  return new Color3(ch(c.r), ch(c.g), ch(c.b));
 }
 
 /** すいそう(小)の水の高さ(魚の中心)。メッシュの寸法と魚の遊泳をここ1か所でそろえる */
@@ -255,12 +313,22 @@ const AQUA_FISH_Y = 0.55;
  * ここは「入った魚を どこで およがせるか」だけを持つ)。
  */
 interface FishLane {
-  /** 往復の中心(x)・おくゆき(z)・たかさ(y) */
+  /** みちの中心(おくゆき z)と たかさ(y) */
   z: number;
   y: number;
-  /** 往復のはば(片道) */
+  /** よこ(x)の ふりはば(片道) */
   amp: number;
-  /** はやさ(rad/秒)と、そろって動かないための ずらし */
+  /**
+   * おくゆき(z)の ふりはば。0(省略)なら v10からの「まっすぐ 往復」。
+   * 0より大きいと 楕円(だ円)を えがいて まわる=はしで くるりと 向きを変えるので、
+   * 「はしで パッと 反転する」不自然さが 消える。
+   */
+  ampZ?: number;
+  /**
+   * はやさ(rad/秒)。マイナスにすると 逆まわり。
+   * 同じ みちを 何びきかで 共有するときは、はやさを そろえて phase だけ ずらすこと
+   * (はやさが ちがうと だんだん 追いついて かさなり、いつか「団子」になる)。
+   */
   speed: number;
   phase: number;
 }
@@ -290,13 +358,24 @@ interface AquaSpec {
   pebbles: number; // 砂利つぶの数
   weeds: [number, number][]; // 水草の根もと(x, z)
   weedY: number;
+  /**
+   * 水草の たけ(1=v10の たかさ)。おおきい版は 上のだんの魚が 草の上を こえるので、
+   * 草を すこし低くして「魚が 草を つきぬける」のを 起こさない。
+   */
+  weedH: number;
   colliderR: number;
   /**
-   * 魚の大きさ(1.3で体長0.26m)。水そうを大きくしたぶん 魚も大きくしないと
+   * 魚の大きさ(1.3で体長0.26m・たかさ0.17m)。水そうを大きくしたぶん 魚も大きくしないと
    * 「青い つぶ」に見える(実機の接写で確認して 1.3→1.6 に上げた)。
    * 体長 + 往復のはば amp×2 が ガラスの内がわ(hw×2−柱)に収まること。
+   * おおきい版は 6ぴきを 上下2だんで およがせるため、たかさが 決め手になる:
+   * 魚のたかさ×2だん が 砂利の上〜水面(0.35m)に おさまる大きさまで 下げてある。
    */
   fishScale: number;
+  /**
+   * およぐ みち。DISPLAY_FURNITURE の capacity ぶん 用意する
+   * (足りないと slot % lanes.length で かさなって「団子」になる)。
+   */
   lanes: FishLane[];
 }
 
@@ -309,11 +388,11 @@ const AQUA_SPECS: Record<'f_aquarium' | 'f_aquarium_big', AquaSpec> = {
     hw: 0.325, hd: 0.19, postT: 0.035,
     frameY: 0.382, postY: 0.55, postH: 0.37, topRailY: 0.722,
     gravelY: 0.4, waterY: 0.66, glassY: 0.552, glassH: 0.35,
-    pebbles: 9, weeds: [[-0.2, -0.04]], weedY: 0.44,
+    pebbles: 9, weeds: [[-0.2, -0.04]], weedY: 0.44, weedH: 1,
     colliderR: 0.42, fishScale: 1.3,
     lanes: [{ z: 0, y: AQUA_FISH_Y, amp: 0.13, speed: 0.55, phase: 0 }],
   },
-  // 大(3びき)。よこ幅は約2倍・高さは水そうだけ のばす
+  // 大(6ぴき)。よこ幅は約2倍・高さは水そうだけ のばす
   // (だいを高くすると 子どもの目線から 中が見えなくなる)
   f_aquarium_big: {
     legX: [-0.6, 0, 0.6], legZ: 0.2, legW: 0.085, legH: 0.34,
@@ -322,13 +401,32 @@ const AQUA_SPECS: Record<'f_aquarium' | 'f_aquarium_big', AquaSpec> = {
     hw: 0.7, hd: 0.25, postT: 0.04,
     frameY: 0.428, postY: 0.66, postH: 0.47, topRailY: 0.885,
     gravelY: 0.45, waterY: 0.84, glassY: 0.655, glassH: 0.45,
-    pebbles: 16, weeds: [[-0.46, -0.06], [0.42, 0.05]], weedY: 0.49,
-    colliderR: 0.75, fishScale: 1.6,
-    // 体長0.32m + 往復0.72m = 1.04m < ガラスの内がわ1.33m
+    // 水草は 下のだんの魚が およぐ はば(x=±0.414)の そとへ よけてある
+    pebbles: 16, weeds: [[-0.55, -0.06], [0.53, 0.05]], weedY: 0.49, weedH: 0.62,
+    colliderR: 0.75, fishScale: 1.2,
+    /**
+     * 6ぴきぶんの みち。**上下2だん**に分け、だんごとに 大きさも まわる向きも変える。
+     *   下のだん(y=0.583・逆時計まわり): 水草の 内がわを まわる 小さめの だ円
+     *   上のだん(y=0.755・時計まわり)  : 水草の 上を こえて 端から端まで 大きく まわる だ円
+     * だんごとに 3びきを 同じはやさ・ちがう phase で ならべるので、
+     * 3びきの あいだが ずっと 開いたまま(追いついて かさなることが 無い)。
+     * lanes のならびは 下・上・下・上… にしてある: 1〜2ひきだけ入れたときにも
+     * 上下に ちらばって見える(slot の順に みちを 使うため)。
+     *
+     * 寸法の たしかめ(魚は 体長0.24m・たかさ0.155m・はば0.076m):
+     *   よこ … 上のだん 0.603 / 下のだん 0.414 < ガラスの内がわ 0.68
+     *   おくゆき … はしで 体が z 方向をむく: 0.189 < 内がわ 0.23
+     *   たかさ … 砂利の上 0.485 〜 水面の下 0.834 に 2だんが おさまる
+     *            (下のだん 0.484〜0.662 / 上のだん 0.656〜0.834)
+     * (数は tests/unit/display_big_v13.test.ts が 実メッシュから 測りなおす)
+     */
     lanes: [
-      { z: -0.15, y: 0.58, amp: 0.36, speed: 0.44, phase: 0 },
-      { z: 0.13, y: 0.72, amp: 0.29, speed: 0.56, phase: 2.2 },
-      { z: 0.0, y: 0.65, amp: 0.4, speed: 0.35, phase: 4.3 },
+      { z: 0, y: 0.583, amp: 0.29, ampZ: 0.115, speed: 0.42, phase: 0 },
+      { z: 0, y: 0.755, amp: 0.46, ampZ: 0.085, speed: -0.53, phase: 1.05 },
+      { z: 0, y: 0.583, amp: 0.29, ampZ: 0.115, speed: 0.42, phase: 2.1 },
+      { z: 0, y: 0.755, amp: 0.46, ampZ: 0.085, speed: -0.53, phase: 3.2 },
+      { z: 0, y: 0.583, amp: 0.29, ampZ: 0.115, speed: 0.42, phase: 4.25 },
+      { z: 0, y: 0.755, amp: 0.46, ampZ: 0.085, speed: -0.53, phase: 5.3 },
     ],
   },
 };
@@ -338,23 +436,52 @@ const AQUA_SPECS: Record<'f_aquarium' | 'f_aquarium_big', AquaSpec> = {
  * 大は「だいの上にのった かご」にして、小との差が ひと目で分かるようにする。
  */
 interface CageSpec {
-  /** 虫のとまる場所(かごのローカル座標)と向き */
+  /**
+   * 虫のとまる場所(かごのローカル座標)と向き。
+   * DISPLAY_FURNITURE の capacity ぶん 用意する(足りないと かさなる)。
+   * 虫は 足もとが y=0 の姿で作ってあるので、y は「立つ面の高さ」を入れる。
+   */
   spots: { x: number; y: number; z: number; rotY: number }[];
   /** 虫の大きさ。かごが大きいぶん 少し大きくしないと「点」に見える */
   bugScale: number;
 }
+/**
+ * おおきい かごの中の「とまり木」。みきを1本立てて、上下2だんの えだを かける。
+ * これで 6ぴきが ゆか・下のえだ・上のえだ の3だんに 分かれてとまる
+ * (ゆかに6ぴき ならべると、かごの底が 虫で うまって「団子」に見えた)。
+ * えだは まっすぐでなく ななめに かけるので、同じだんの2ひきも おくゆきが ずれる。
+ */
+const CAGE_PERCH = {
+  trunkX: -0.02, trunkZ: -0.01, trunkT: 0.026, trunkTop: 0.79,
+  /** 下のえだ: (-0.22,-0.09) → (0.22,0.09) を つなぐ 1本(長さ0.475・かたむき0.389rad) */
+  low: { y: 0.56, len: 0.475, rotY: -0.389, t: 0.022 },
+  /** 上のえだ: (-0.17,0.07) → (0.17,-0.07) を つなぐ 1本(下のえだと ぎゃく向きに ななめ) */
+  high: { y: 0.77, len: 0.368, rotY: 0.39, t: 0.02 },
+} as const;
 const CAGE_SPECS: Record<'f_bugcage' | 'f_bugcage_big', CageSpec> = {
   f_bugcage: {
     spots: [{ x: 0, y: 0.13, z: 0, rotY: 0.6 }],
     bugScale: 1,
   },
   f_bugcage_big: {
+    // ならびは ゆか→下のえだ→上のえだ→ゆか→… ではなく、
+    // 「ゆか2・下のえだ2・上のえだ2」の順(1〜2ひきのときは ゆかにとまる=自然な見え方)。
+    // 同じだんの2ひきは たがいに そとを向く(向かい合わせだと 頭どうしが ぶつかる)。
+    // 数は「いちばん大きい虫(オオクワガタ・体長0.24m)でも かごの内がわ
+    // x±0.275 / z±0.18 に おさまる」ように取ってある
+    // (tests/unit/display_big_v13.test.ts が 実メッシュを回して 測りなおす)。
     spots: [
-      { x: -0.19, y: 0.4, z: -0.09, rotY: 0.5 },
-      { x: 0.03, y: 0.4, z: 0.09, rotY: 2.4 },
-      { x: 0.2, y: 0.4, z: -0.05, rotY: 4.2 },
+      // ゆか(わらの床の上 y=0.35)。まん中の みきを よけて 左手前・右おくに置く
+      { x: -0.19, y: 0.35, z: 0.075, rotY: 1.55 },
+      { x: 0.185, y: 0.35, z: -0.07, rotY: 4.62 },
+      // 下のえだ(y=0.56 の えだの上 0.572)。えだの むきに そって そとを向く
+      { x: -0.082, y: 0.572, z: -0.034, rotY: 4.325 },
+      { x: 0.082, y: 0.572, z: 0.034, rotY: 1.183 },
+      // 上のえだ(y=0.77 の えだの上 0.782)。下のえだと ぎゃく向きに ならぶ
+      { x: -0.082, y: 0.782, z: 0.034, rotY: 5.102 },
+      { x: 0.082, y: 0.782, z: -0.034, rotY: 1.96 },
     ],
-    bugScale: 1.35,
+    bugScale: 1.1,
   },
 };
 
@@ -377,9 +504,12 @@ const FISH_COLORS: Record<string, [string, string, string]> = {
  */
 function appendMiniFish(A: Arrays, cx: number, cy: number, cz: number, s: number, item: string, seed: number): void {
   const [bodyHex, darkHex, bellyHex] = FISH_COLORS[item] ?? FISH_COLORS.fish;
-  const BODY = Color3.FromHexString(bodyHex);
-  const DARK = Color3.FromHexString(darkHex);
-  const BELLY = Color3.FromHexString(bellyHex);
+  // ガラスごしの かすみで 落ちるぶんの彩度を 先に足しておく(vivid のコメントを見ること)。
+  // 1.25 は「コイの だいだいと タイの ももを ガラスごしでも 見分けられる」いちばん小さい値
+  // (before/after の接写で 7種ぜんぶを 見くらべて決めた)。
+  const BODY = vivid(bodyHex, 1.25);
+  const DARK = vivid(darkHex, 1.25);
+  const BELLY = vivid(bellyHex, 1.25);
   const body: [number, number, number, number, number][] = [
     // [x, y, rx, ry, rz](トロフィーの魚の 0.42倍)
     [-0.063, -0.02, 0.036, 0.022, 0.015],
@@ -424,9 +554,16 @@ function appendMiniFish(A: Arrays, cx: number, cy: number, cz: number, s: number
 }
 
 /**
- * すいそうの中で およぐ魚1匹(左右にゆっくり往復し、向きも進む方へ変わる)。
- * lane が「どのみちを およぐか」を決めるので、大きい水そうでは3匹が
- * ちがう おくゆき・たかさ・はやさで すれちがう。
+ * すいそうの中で およぐ魚1匹。
+ *
+ * みち(lane)は だ円: x = sin(ph)×amp / z = 中心 + cos(ph)×ampZ。
+ * ampZ が 0 なら v10からの「まっすぐ 往復」と まったく同じ動き
+ * (小さい すいそうは そのまま)。ampZ を持たせると はしで くるりと まわるので、
+ * 6ぴきが すれちがっても 向きの反転が パッと 目につかない。
+ *
+ * 体の向きは「進んでいる方」へ。頭は +X なので、
+ * Y まわりに θ 回すと 頭は (cosθ, -sinθ) を向く → θ = atan2(-vz, vx)。
+ * speed が マイナス(逆まわり)のときは 速度の向きも 逆になるので、符号を かける。
  */
 function makeSwimmingFish(scene: Scene, item: string, seed: number, lane: FishLane, scale: number): Mesh {
   const F = A0();
@@ -435,15 +572,19 @@ function makeSwimmingFish(scene: Scene, item: string, seed: number, lane: FishLa
   // ガラスの内がわからはみ出さない値を lane に入れてある
   appendMiniFish(F, 0, 0, 0, scale, item, seed);
   const fish = faceOutward(toMesh(scene, `aquaFish_${item}`, F, 'flip'));
+  fish.material = getAquaMats(scene).fish; // 共有マテリアルなので dispose しない
   fish.isPickable = false;
-  const speed = lane.speed + (seed % 5) * 0.02;
+  // はやさは lane のまま(魚ごとに ずらさない)。
+  // 同じみちを 3びきで 分けあうので、はやさが ちがうと だんだん 追いついて かさなる
+  const { speed, amp, phase } = lane;
+  const ampZ = lane.ampZ ?? 0;
+  const sgn = speed < 0 ? -1 : 1;
   registerAnimator(scene, fish, (m, t) => {
-    const ph = t * speed + lane.phase;
-    m.position.x = Math.sin(ph) * lane.amp;
-    m.position.y = lane.y + Math.sin(ph * 1.7 + 0.6) * 0.014;
-    // 進む向きへ体を向ける(頭は+X)。折り返しの手前でなめらかに回す
-    const dir = Math.cos(ph);
-    m.rotation.y = dir >= 0 ? 0 : Math.PI;
+    const ph = t * speed + phase;
+    m.position.x = Math.sin(ph) * amp;
+    m.position.z = lane.z + Math.cos(ph) * ampZ;
+    m.position.y = lane.y + Math.sin(ph * 1.7 + 0.6) * 0.012;
+    m.rotation.y = Math.atan2(Math.sin(ph) * ampZ * sgn, Math.cos(ph) * amp * sgn);
   });
   return fish;
 }
@@ -453,7 +594,7 @@ function makeSwimmingFish(scene: Scene, item: string, seed: number, lane: FishLa
  * すいそう=およぐ魚 / むしかご=とまっている虫(ホタルは夜だけ明滅する)。
  *
  * slot は「何番目に入っているか」。すいそうは およぐみち、むしかごは とまる場所が変わる
- * (大きい家具に3匹入れても、かさならずに べつべつの場所にいる)。
+ * (大きい家具に6匹入れても、かさならずに べつべつの場所にいる)。
  */
 export function makeDisplayContentMesh(
   scene: Scene, furniture: ItemId, content: ItemId | undefined, slot = 0
@@ -464,7 +605,13 @@ export function makeDisplayContentMesh(
     const spec = AQUA_SPECS[furniture];
     const lane = spec.lanes[slot % spec.lanes.length];
     const fish = makeSwimmingFish(scene, content, 41 + slot * 7, lane, spec.fishScale);
-    fish.position.set(0, lane.y, lane.z);
+    // 1フレーム目が来るまでの見た目。lane の phase の位置に置いておく
+    // (まん中にそろえると、置いた しゅんかんだけ 全部かさなって見える)
+    fish.position.set(
+      Math.sin(lane.phase) * lane.amp,
+      lane.y,
+      lane.z + Math.cos(lane.phase) * (lane.ampZ ?? 0)
+    );
     return fish;
   }
   // むしかご: 虫は かごの床にとまっている(かごの中で ぱたぱたさせない)
@@ -482,7 +629,7 @@ export function makeDisplayContentMesh(
       registerAnimator(scene, glow as Mesh, (m, t) => {
         // 夜だけ明滅させる。夜かどうかは共有マテリアルの emissive(DayNightが動かす)から読む
         // ——時刻を配線で持ちこまなくても「光っている時間帯」が分かる。
-        // ずらし(slot)を足して、3匹のホタルが そろって光らないようにする
+        // ずらし(slot)を足して、何匹ものホタルが そろって光らないようにする
         const lit = mint.emissiveColor.g;
         const k = lit > 0.02 ? 0.5 + 0.85 * (0.5 + 0.5 * Math.sin(t * 3.1 + slot * 1.9)) : 1;
         m.scaling.setAll(k);
@@ -490,6 +637,17 @@ export function makeDisplayContentMesh(
     }
   }
   return bug;
+}
+
+/**
+ * その展示家具に「かさならずに置ける 場所」の数
+ * (すいそう=およぐみち / むしかご=とまる場所)。
+ * DISPLAY_FURNITURE の capacity 以上あることを テストが つき合わせる。
+ */
+export function displayLayoutSlots(furniture: string): number {
+  if (furniture === 'f_aquarium' || furniture === 'f_aquarium_big') return AQUA_SPECS[furniture].lanes.length;
+  if (furniture === 'f_bugcage' || furniture === 'f_bugcage_big') return CAGE_SPECS[furniture].spots.length;
+  return 0;
 }
 
 /** 展示家具の中身ぜんぶ(入っている順に slot が決まる)。空なら空配列 */
@@ -541,7 +699,7 @@ function buildAquarium(scene: Scene, item: 'f_aquarium' | 'f_aquarium_big', cont
     appendBlob(P, px, s.gravelY + 0.024, pz, 0.032, 0.011, 0.026,
       jitterColor(Color3.FromHexString('#bda882'), 60 + i, 0.12), { segs: 5, noise: 0.18, seed: 60 + i, bottomDark: 0 });
   }
-  // 水草(根もとから 葉が3枚 立ちあがる)
+  // 水草(根もとから 葉が3枚 立ちあがる)。たけは 水そうごと(weedH)
   const leaves: [number, number, number][] = [[0.0, 0.2, 0.02], [0.045, 0.15, -0.03], [-0.04, 0.11, 0.03]];
   for (let w = 0; w < s.weeds.length; w++) {
     const [wx, wz] = s.weeds[w];
@@ -549,7 +707,8 @@ function buildAquarium(scene: Scene, item: 'f_aquarium' | 'f_aquarium_big', cont
       segs: 6, noise: 0.14, seed: 71 + w * 13, bottomDark: 0.1,
     });
     for (let i = 0; i < leaves.length; i++) {
-      const [lx, lh, lz] = leaves[i];
+      const [lx, lh0, lz] = leaves[i];
+      const lh = lh0 * s.weedH;
       appendBlob(P, wx + lx, s.weedY + lh / 2, wz + lz, 0.017, lh / 2, 0.013,
         jitterColor(Color3.FromHexString('#6f9a58'), 80 + i + w * 3, 0.1), { segs: 5, noise: 0.1, seed: 80 + i + w * 3, bottomDark: 0.18 });
       appendBlob(P, wx + lx * 1.4, s.weedY + lh * 0.92, wz + lz * 1.3, 0.024, 0.022, 0.016,
@@ -570,9 +729,13 @@ function buildAquarium(scene: Scene, item: 'f_aquarium' | 'f_aquarium_big', cont
   // 半透明どうしの前後関係はメッシュ単位でしか決まらないので、描く順を数で固定する
   // (水面 → ガラスの順。距離まかせにすると角度によって水面がガラスの手前に出る)
   water.alphaIndex = 10;
-  // ガラス(手前の面だけが見える半透明の箱)。中の魚は不透明なので先に描かれ、透けて見える
+  // ガラス(手前の面だけが見える半透明の板)。中の魚は不透明なので先に描かれ、透けて見える。
+  //
+  // よこの4まいだけにして、**上のふたは 作らない**(ほんものの すいそうも 上は あいている)。
+  // 上の面があると、ななめ上から のぞいたとき「ガラス+水面」の2まいごしになり、
+  // 中の魚が 2回 かすんで ほとんど 見えなくなっていた(実機の接写で確認)。
   const G = A0();
-  fbox(G, 0, s.glassY, 0, s.hw * 2, s.glassH, s.hd * 2 + 0.01, Color3.White());
+  glassPanes(G, 0, s.glassY, 0, s.hw * 2, s.glassH, s.hd * 2 + 0.01, Color3.White());
   const glass = toMesh(scene, `${item}_glass`, G, 'keep');
   glass.material = mats.glass;
   glass.parent = root;
@@ -1059,7 +1222,7 @@ export function makeFurnitureMesh(
       return { root, colliderR: 0.26 };
     }
     case 'f_bugcage_big': {
-      // v13 3びき入る おおきな かご。小さい かごと同じ「枠で組む」言語のまま、
+      // v13 6ぴき入る おおきな かご。小さい かごと同じ「枠で組む」言語のまま、
       // だいの上にのせて 背を高くし、遠目でも「大きいほう」と分かるようにする
       const A = A0();
       // だい(4本脚+ぬき+天板)
@@ -1082,6 +1245,15 @@ export function makeFurnitureMesh(
       for (const sx of [-0.145, 0, 0.145]) {
         for (const sz of [-0.19, 0.19]) fbox(A, sx, 0.62, sz, 0.015, 0.54, 0.015, C_TWIG_PROP);
       }
+      // とまり木(こえだのみき1本+ななめの えだ2本)。
+      // 虫6ぴきを ゆか・下のえだ・上のえだ の3だんに 分けてとまらせるための ほね
+      // (とまる場所そのものは CAGE_SPECS.spots が持つ。数はここと そろえること)。
+      {
+        const p = CAGE_PERCH;
+        fbox(A, p.trunkX, (0.35 + p.trunkTop) / 2, p.trunkZ, p.trunkT, p.trunkTop - 0.35, p.trunkT, C_TWIG_PROP);
+        fboxR(A, 0, p.low.y, 0, p.low.len, p.low.t, p.low.t, C_TWIG_PROP, { y: p.low.rotY });
+        fboxR(A, 0, p.high.y, 0, p.high.len, p.high.t, p.high.t, C_TWIG_PROP, { y: p.high.rotY });
+      }
       fbox(A, 0, 0.935, 0, 0.7, 0.035, 0.5, WOOD_D); // ふた
       fbox(A, 0, 0.98, 0, 0.16, 0.055, 0.055, Color3.FromHexString('#7aa85f')); // 持ち手(クサツル)
       const root = toMesh(scene, 'f_bugcage_big', A, 'keep');
@@ -1089,7 +1261,7 @@ export function makeFurnitureMesh(
       return { root, colliderR: 0.42 };
     }
     // ---- v10/v13 すいそう(小・大)。寸法と魚のみちは AQUA_SPECS が唯一の情報源 ----
-    // 小: うきだま1+もくざい2+いし1 / 大: うきだま2+もくざい4+いし2(3びき入る)
+    // 小: うきだま1+もくざい2+いし1 / 大: うきだま2+もくざい4+いし2(6ぴき入る)
     case 'f_aquarium':
     case 'f_aquarium_big':
       return buildAquarium(scene, item, contents);

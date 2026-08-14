@@ -1,0 +1,2 @@
+RESULT {"result":"error: net::ERR_CONNECTION_REFUSED at http://localhost:5183/","totalSec":5,"errors":0,"flags":{"title":false,"firstTalk":false,"accepted":false,"gathered":false,"reported":false,"second":false,"materials":false,"crafted":false,"placed":false,"placeConfirmed":false}}
+UX {"uxVerdict":"FAIL","semanticMismatchCount":0,"refishDuringReportCount":0,"shopOpens":0,"stallCount":0}

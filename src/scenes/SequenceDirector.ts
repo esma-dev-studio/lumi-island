@@ -213,6 +213,9 @@ export class SequenceDirector {
     this.travelTo = to;
     this.travelNpc = npcId;
     this.travelApplied = false;
+    // v18 ドアの音。ここまで 家の出入りは 暗転だけで完全に無音だった(棚卸しで発見)。
+    // 入る=あける / 出る=しめて外へ、と 音の向きを そろえる
+    sfx(to === 'in' ? 'door_open' : 'door_close');
     if (!this.travelFade) {
       const el = document.createElement('div');
       // CSS(src/ui/style.css)は触らずに、この演出ぶんだけ要素へ直接書く
@@ -241,7 +244,7 @@ export class SequenceDirector {
     const gs = this.gs;
     gs.restoreAllOcclusionImmediately();
     gs.player.locked = true;
-    sfx('place'); // ともづなを ほどく音がわりの小さな木の音
+    sfx('boat'); // v18 ともづなを ほどいて 水を押す音(place の使い回しをやめた)
     if (!this.voyageFade) {
       const el = document.createElement('div');
       // CSS(src/ui/style.css)は触らずに、この演出ぶんだけ要素へ直接書く
@@ -431,7 +434,9 @@ export class SequenceDirector {
     seeds.push({ x: FESTIVAL_FLY_POINT.x - 0.5, z: FESTIVAL_FLY_POINT.z - 3.6, delay: extra });
     seeds.push({ x: FESTIVAL_FLY_POINT.x + 0.5, z: FESTIVAL_FLY_POINT.z - 4.9, delay: extra + FES_STAGGER });
     startLanternFlight(seeds, this.fesBaseY);
-    sfx('bloom');
+    // v18 ランタンが のぼる音(下から上へ ゆっくり ひらく)。
+    // 開花・とうだいと同じ bloom を使いまわしていたので、まつり専用の音にした
+    sfx('lantern_up');
     burst(this.fesX, this.fesBaseY, this.fesZ, 'craft', 12);
   }
 
@@ -495,6 +500,7 @@ export class SequenceDirector {
       document.getElementById('ui-root')!.appendChild(this.sleepFade);
     }
     this.sleepFade.classList.add('show');
+    sfx('sit'); // v18 ベッドに 体をあずける音(就寝はここまで完全に無音だった)
   }
 
   update(dt: number): void {
@@ -581,6 +587,7 @@ export class SequenceDirector {
         gs.npcs.snapToSchedule(gs.island.time.hour);
         save(gs.state);
         toast('よくねむれた! あさになった', 'lumina');
+        sfx('stand'); // v18 起きあがる音。朝が来たことが 目をつぶっていても分かる
       }
       if (this.t >= SLEEP_TOTAL) {
         this.sleepFade?.classList.remove('show');

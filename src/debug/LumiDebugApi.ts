@@ -9,6 +9,7 @@ import {
   festivalAttendees, festivalFlyCount, isFestivalDay, isFestivalTime,
 } from '../systems/FestivalSystem';
 import { lanternFlightState } from '../entities/effects';
+import { ambienceState, musicState, rainState } from '../audio/AudioSystem';
 
 /** debugフラグのときだけ window.__lumiDebug を生やす */
 export function installLumiDebugApi(gs: GameScene): void {
@@ -69,6 +70,12 @@ export function installLumiDebugApi(gs: GameScene): void {
       if (!gs.state.stats) gs.state.stats = {};
       for (const a of ACHIEVEMENTS) gs.state.stats[rewardKey(a.id)] = 1;
     },
+    /**
+     * v18 いま鳴っている音の状態(読み取りだけ・副作用なし)。
+     * 雨音・環境音3層・BGMが「本当に鳴っているか」を 検証ツールから確かめるための口。
+     * 音は画面に写らないので、スクショでは 絶対に確かめられない。
+     */
+    audio: () => ({ rain: rainState(), ambience: ambienceState(), music: musicState() }),
     unlockAll: () => {
       gs.state.flags.unlock_inv = true;
       gs.state.flags.unlock_craft = true;

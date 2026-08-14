@@ -46,7 +46,7 @@ export class CharacterView {
   play(name: string, opts: { loop?: boolean; speed?: number; onEnd?: () => void } = {}): void {
     const g = this.groups.get(name);
     if (!g || g === this.current) return;
-    const loop = opts.loop ?? ['idle', 'walk', 'run', 'talk', 'fish_idle'].includes(name);
+    const loop = opts.loop ?? ['idle', 'walk', 'run', 'talk', 'fish_idle', 'sit'].includes(name);
     const prev = this.current;
     g.start(loop, opts.speed ?? 1);
     g.setWeightForAllAnimatables(0);

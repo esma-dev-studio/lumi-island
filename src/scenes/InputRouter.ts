@@ -1,6 +1,7 @@
 // 入力のルーティング: 移動キー・E/Tab/C/Q/Z/R のショートカットと、
 // Escの優先順位(演出中は無効 → 開いているUIを閉じる → ポーズ)をここに集約する。
 // 各操作は public メソッドに切り出してあり、タッチUI(TouchControls)も同じものを呼ぶ。
+import { sfx } from '../audio/AudioSystem';
 import type { InputState } from '../systems/PlayerController';
 import type { GameScene } from './GameScene';
 
@@ -17,6 +18,19 @@ export class InputRouter {
   private detachFns: Array<() => void> = [];
 
   constructor(private gs: GameScene) {}
+
+  /**
+   * v18 パネルの ひらく/とじる の音。
+   *
+   * ここまで、同じ「もちものを開く」でも タッチのボタンだけ音が鳴り、
+   * キーボード(Tab)は完全に無音だった——入力の手段で 手ごたえが変わっていた
+   * (棚卸しで見つかった構造的な非対称)。音の発生を **この1か所** にまとめ、
+   * タッチのボタン側は音を鳴らさずに ここを呼ぶだけにしてある。
+   * @param willOpen これから開くのか(false=閉じる)
+   */
+  private panelSfx(willOpen: boolean): void {
+    sfx(willOpen ? 'open' : 'close');
+  }
 
   // ---- 操作の実体(キーボードもタッチも必ずここを通る) ----
 
@@ -35,6 +49,7 @@ export class InputRouter {
     gs.codexUI.close();
     gs.displayUI.close();
     gs.paintUI.close();
+    this.panelSfx(!gs.invUI.open);
     gs.invUI.toggle();
   }
 
@@ -49,6 +64,7 @@ export class InputRouter {
     gs.codexUI.close();
     gs.displayUI.close();
     gs.paintUI.close();
+    this.panelSfx(!gs.craftUI.open);
     gs.craftUI.toggle();
   }
 
@@ -63,6 +79,7 @@ export class InputRouter {
     gs.codexUI.close();
     gs.displayUI.close();
     gs.paintUI.close();
+    this.panelSfx(!gs.questLog.open);
     gs.questLog.toggle();
   }
 
@@ -77,13 +94,21 @@ export class InputRouter {
     gs.questLog.close();
     gs.displayUI.close();
     gs.paintUI.close();
+    this.panelSfx(!gs.codexUI.open);
     gs.codexUI.toggle();
+  }
+
+  /** X・てをふるボタン: エモート(1回目=てをふる / つづけて もう一度=よろこぶ) */
+  emote(): void {
+    this.gs.playEmote();
   }
 
   /** R・まわすボタン(配置中のみ) */
   rotatePlacement(): void {
     const gs = this.gs;
-    if (gs.placement.active) gs.placement.rotate();
+    if (!gs.placement.active) return;
+    sfx('ui'); // v18 まわした手ごたえ(ここも無音だった)
+    gs.placement.rotate();
   }
 
   /** Esc・メニュー/やめるボタン: 演出中は無効 → 開いているUIを閉じる → ポーズ */
@@ -93,12 +118,14 @@ export class InputRouter {
     // おくりものの選択パネルは会話の上に乗る小さなUI。開いていたらそれだけ閉じて会話に戻す
     // (Escで会話ごと終わってしまうと、話しかけ直しが必要になって子どもが迷う)
     if (gs.questDlg?.giftUI.open) {
+      this.panelSfx(false);
       gs.questDlg.giftUI.cancel();
       return;
     }
     // v13 手紙は ずかんの上にも 乗る小さなUI。開いていたら それだけ閉じる
     // (ずかんから読み返しているときに、Escで ずかんごと 閉じてしまわない)
     if (gs.letterUI?.open) {
+      this.panelSfx(false);
       gs.letterUI.close();
       return;
     }
@@ -121,6 +148,7 @@ export class InputRouter {
     gs.pauseMenu.close();
     gs.placement.cancel();
     gs.fishing.cancel(gs.player, gs.playerView);
+    this.panelSfx(!wasOpen);
     if (!wasOpen) gs.pauseMenu.show();
   }
 
@@ -152,6 +180,10 @@ export class InputRouter {
       }
       if (e.code === 'KeyR') {
         this.rotatePlacement();
+        return;
+      }
+      if (e.code === 'KeyX') {
+        this.emote();
         return;
       }
       if (e.code === 'Escape') {

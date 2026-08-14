@@ -28,6 +28,7 @@ export class GiftUI {
       const t = (e.target as HTMLElement).closest('[data-close], [data-give]') as HTMLElement | null;
       if (!t) return;
       if (t.hasAttribute('data-close')) {
+        sfx('close');
         this.cancel();
         return;
       }
@@ -44,7 +45,7 @@ export class GiftUI {
     this.open = true;
     this.render();
     this.el.classList.remove('hidden');
-    sfx('ui');
+    sfx('open');
   }
 
   close(): void {

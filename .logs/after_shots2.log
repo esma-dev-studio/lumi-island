@@ -1,0 +1,36 @@
+src静穏 129秒 → 開始
+起動: http://localhost:5205 / MODE=after / 撮影先=C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\.logs\screenshots\display6\after
+置いた家具: ["f_aquarium_big","f_bugcage_big"]
+  中身=fish,nightfish,seafish,rarefish,koi,seabream
+すいそう満員: [{"n":"fish","x":0.28,"y":0.59,"z":0.03},{"n":"nightfish","x":-0.25,"y":0.75,"z":0.07},{"n":"seafish","x":-0.07,"y":0.58,"z":-0.11},{"n":"rarefish","x":0.46,"y":0.75,"z":0},{"n":"koi","x":-0.2,"y":0.58,"z":0.08},{"n":"seabream","x":-0.23,"y":0.76,"z":-0.07}]
+  [shot] 01_tank_full_day_1.png (接写)
+  [shot] 02_tank_full_day_2.png (接写)
+  [shot] 03_tank_full_day_3.png (接写)
+  [shot] 04_tank_full_day_4.png (接写)
+  [shot] 05_tank_full_day_wide.png
+  [shot] 06_tank_full_night_1.png (接写)
+  [shot] 07_tank_full_night_2.png (接写)
+  !! ゲーム内時計が進まない(描画ループが止まっている)
+  中身=b_hotaru,b_kabuto,b_shiro,b_suzu,b_tento,b_hotaru
+むしかご: [{"n":"b_hotaru","x":-0.19,"y":0.35,"z":0.07},{"n":"b_kabuto","x":0.18,"y":0.35,"z":-0.07},{"n":"b_shiro","x":-0.08,"y":0.57,"z":-0.03},{"n":"b_suzu","x":0.08,"y":0.57,"z":0.03},{"n":"b_tento","x":-0.08,"y":0.78,"z":0.03},{"n":"b_hotaru","x":0.08,"y":0.78,"z":-0.03}]
+  [shot] 08_cage_full_day.png (接写)
+  [shot] 09_cage_full_day_2.png (接写)
+  [shot] 10_cage_full_day_wide.png
+  [shot] 11_cage_full_night_1.png (接写)
+  [shot] 12_cage_full_night_2.png (接写)
+  [shot] 13_cage_full_night_3.png (接写)
+ホタルの光る部分: [1.18,0.65]
+  [shot] 14_cage_full_night_wide.png
+  (HMRの読みこみ直しを待つ)
+!! 失敗: Waiting failed: 60000ms exceeded
+consoleエラー: 1件
+  - TimeoutError: Waiting failed: 60000ms exceeded
+    at new WaitTask (C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\node_modules\puppeteer-core\lib\cjs\puppeteer\common\WaitTask.js:48:34)
+    at IsolatedWorld.waitForFunction (C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\node_modules\puppeteer-core\lib\cjs\puppeteer\api\Realm.js:25:26)
+    at CdpFrame.waitForFunction (C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\node_modules\puppeteer-core\lib\cjs\puppeteer\api\Frame.js:571:43)
+    at CdpFrame.<anonymous> (C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\node_modules\puppeteer-core\lib\cjs\puppeteer\util\decorators.js:109:27)
+    at CdpPage.waitForFunction (C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\node_modules\puppeteer-core\lib\cjs\puppeteer\api\Page.js:1434:37)
+    at ev (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/tools/shots_display6.mjs:142:16)
+    at async waitAlive (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/tools/shots_display6.mjs:220:10)
+    at async stand (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/tools/shots_display6.mjs:228:3)
+    at async file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/tools/shots_display6.mjs:398:5

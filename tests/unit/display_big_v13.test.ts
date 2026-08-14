@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
-// v13「おおきな すいそう・むしかご(3びき入る)」と「お庭に家具を置く」。
+// v13「おおきな すいそう・むしかご(6ぴき入る)」と「お庭に家具を置く」。
 //
 // 見ているのは
 //   1) データ(おおきい版の表・レシピ・ひらめきの引き金)
 //   2) 中身の持ちかた: contents(配列)への一般化と、v12までの content からの移行(セーブ互換)
 //   3) 複数の出し入れ(1匹ずつ・いっぱいで止まる・もちかえりで全部もどる)
 //   4) お庭の配置判定(花だん・門・柵との排他)
-//   5) 見た目(3匹ぶんの中身が べつべつの場所にいる・法線が外向き)
+//   5) 見た目(6ぴきぶんの中身が べつべつの場所にいる・法線が外向き)
 //   6) 実績2種(おおきい版が まんいん)
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { NullEngine } from '@babylonjs/core/Engines/nullEngine';
@@ -25,7 +25,7 @@ import {
   GARDEN_AREA, GARDEN_GATE, GARDEN_PLOTS, PLOT_W, PLOT_D, PLOT_PLACE_MARGIN,
   gardenPlacementProblem, insideGardenZone, blocksGardenGate, overlapsGardenPlot,
 } from '../../src/systems/GardenSystem';
-import { makeDisplayContentMeshes, makeFurnitureMesh } from '../../src/entities/furniture';
+import { displayLayoutSlots, makeDisplayContentMeshes, makeFurnitureMesh } from '../../src/entities/furniture';
 import { DisplayUI, displayableItems } from '../../src/ui/DisplayUI';
 import { ACHIEVEMENTS, evaluate, isAchieved, maxDisplayFilled } from '../../src/systems/AchievementSystem';
 import { visitPraiseFacts } from '../../src/systems/NPCSystem';
@@ -81,14 +81,14 @@ describe('データ: おおきい版2種', () => {
       expect(ICONS[id], `${id} の絵`).toBeDefined();
       expect(ITEMS[id].sell, id).toBeGreaterThan(0);
     }
-    // 小さい版より高い(3びき入るぶん たかい=経済の順番がひっくり返らない)
+    // 小さい版より高い(たくさん入るぶん たかい=経済の順番がひっくり返らない)
     expect(ITEMS.f_aquarium_big.sell).toBeGreaterThan(ITEMS.f_aquarium.sell);
     expect(ITEMS.f_bugcage_big.sell).toBeGreaterThan(ITEMS.f_bugcage.sell);
   });
 
-  it('3びき入って、入れられるものは小さい版と同じ', () => {
-    expect(displayCapacity('f_aquarium_big')).toBe(3);
-    expect(displayCapacity('f_bugcage_big')).toBe(3);
+  it('6ぴき入って、入れられるものは小さい版と同じ', () => {
+    expect(displayCapacity('f_aquarium_big')).toBe(6);
+    expect(displayCapacity('f_bugcage_big')).toBe(6);
     expect(displayCapacity('f_aquarium')).toBe(1);
     expect(displayCapacity('f_table')).toBe(0); // 展示家具でないものは0
     expect([...DISPLAY_FURNITURE.f_aquarium_big.accepts])
@@ -123,6 +123,24 @@ describe('データ: おおきい版2種', () => {
   it('データ整合性チェックは問題なし(おおきい版の対応も見る)', () => {
     expect(validateItemData()).toEqual([]);
   });
+
+  it('入る数のぶんだけ「かさならない場所」が用意されている', () => {
+    // capacity を増やしたのに みち/とまる場所を足しわすれると
+    // slot % lanes.length で 2匹が まったく同じ所に かさなる(=団子)。
+    // 表(items.ts)と 見た目(furniture.ts)の 数を つき合わせる
+    for (const id of ['f_aquarium', 'f_aquarium_big', 'f_bugcage', 'f_bugcage_big'] as const) {
+      expect(displayLayoutSlots(id), id).toBeGreaterThanOrEqual(displayCapacity(id));
+    }
+    expect(displayLayoutSlots('f_table'), '展示家具でなければ0').toBe(0);
+  });
+
+  it('じっせき「まんいん」の数は 入る数と そろっている', () => {
+    // 名前が「まんいん」なので、入る数と ちがうと 名前が うそになる
+    // (バッジ sp_bigaqua / sp_bigcage の説明文が この名前を引用している)
+    const target = (id: string): number => ACHIEVEMENTS.find((a) => a.id === id)!.target;
+    expect(target('a_bigaqua3')).toBe(displayCapacity('f_aquarium_big'));
+    expect(target('a_bigcage3')).toBe(displayCapacity('f_bugcage_big'));
+  });
 });
 
 describe('中身の持ちかた(contents)と、旧セーブ(content)からの移行', () => {
@@ -155,12 +173,26 @@ describe('中身の持ちかた(contents)と、旧セーブ(content)からの移
     expect(s.furniture[2].contents, '展示家具でなければ中身は無い').toBeUndefined();
   });
 
-  it('v13のセーブ(contents=3匹)は そのまま読める', () => {
+  it('6ぴき入りのセーブは そのまま読める', () => {
+    const six: ItemId[] = ['fish', 'nightfish', 'rarefish', 'koi', 'seabream', 'seahorse'];
     const s0 = newGameState();
-    s0.furniture = [{ id: 1, item: 'f_aquarium_big', x: 0, z: 15, rotY: 0, contents: ['fish', 'nightfish', 'rarefish'] }];
+    s0.furniture = [{ id: 1, item: 'f_aquarium_big', x: 0, z: 15, rotY: 0, contents: [...six] }];
     s0.furnitureSeq = 2;
     expect(save(s0)).toBe(true);
-    expect(load()!.furniture[0].contents).toEqual(['fish', 'nightfish', 'rarefish']);
+    expect(load()!.furniture[0].contents).toEqual(six);
+  });
+
+  it('3びき時代のセーブは そのまま読める(入る数を増やしても 旧セーブは こわれない)', () => {
+    const s0 = newGameState();
+    s0.furniture = [
+      { id: 1, item: 'f_aquarium_big', x: 0, z: 15, rotY: 0, contents: ['fish', 'nightfish', 'rarefish'] },
+      { id: 2, item: 'f_bugcage_big', x: 2, z: 15, rotY: 0, contents: ['b_shiro', 'b_suzu', 'b_tento'] },
+    ];
+    s0.furnitureSeq = 3;
+    expect(save(s0)).toBe(true);
+    const s = load()!;
+    expect(s.furniture[0].contents).toEqual(['fish', 'nightfish', 'rarefish']);
+    expect(s.furniture[1].contents).toEqual(['b_shiro', 'b_suzu', 'b_tento']);
   });
 
   it('入る数をこえた・入れられない中身は 読みこみで落とす', () => {
@@ -174,14 +206,22 @@ describe('中身の持ちかた(contents)と、旧セーブ(content)からの移
       { id: 3, item: 'f_bench', x: 4, z: 15, rotY: 0, contents: ['fish'] },
       // 壊れた形(配列でない)は「中身なし」
       { id: 4, item: 'f_bugcage', x: 6, z: 15, rotY: 0, contents: 'b_shiro' },
+      // 6ぴきを こえた ぶんは 先頭から6ぴきで 切りつめる
+      {
+        id: 5, item: 'f_bugcage_big', x: 8, z: 15, rotY: 0,
+        contents: ['b_shiro', 'b_ageha', 'b_tento', 'b_kabuto', 'b_hotaru', 'b_suzu', 'b_batta', 'b_kuwa'],
+      },
     ];
-    bad.furnitureSeq = 5;
+    bad.furnitureSeq = 6;
     localStorage.setItem('lumi_save', JSON.stringify(bad));
     const s = load()!;
     expect(s.furniture[0].contents).toEqual(['fish']);
     expect(s.furniture[1].contents).toEqual(['fish']);
     expect(s.furniture[2].contents).toBeUndefined();
     expect(s.furniture[3].contents).toBeUndefined();
+    expect(s.furniture[4].contents)
+      .toEqual(['b_shiro', 'b_ageha', 'b_tento', 'b_kabuto', 'b_hotaru', 'b_suzu']);
+    expect(s.furniture[4].contents!.length).toBe(displayCapacity('f_bugcage_big'));
   });
 
   it('来訪NPCの「かざってある」判定も contents で成り立つ(旧contentも読める)', () => {
@@ -197,20 +237,31 @@ describe('中身の持ちかた(contents)と、旧セーブ(content)からの移
 });
 
 describe('複数の出し入れ(PlacementSystem)', () => {
-  it('3びきまで 1匹ずつ入り、4匹めは 入らない', () => {
+  it('6ぴきまで 1匹ずつ入り、7匹めは 入らない', () => {
     const { s, ps, at } = withPlaced('f_aquarium_big');
-    invAdd(s, 'fish', 2);
-    invAdd(s, 'nightfish', 1);
-    invAdd(s, 'rarefish', 1);
+    const six: ItemId[] = ['fish', 'nightfish', 'seafish', 'rarefish', 'koi', 'seabream'];
+    for (const id of six) invAdd(s, id, 1);
+    invAdd(s, 'seahorse', 1);
     const p = (): ReturnType<PlacementSystem['nearest']> => ps.nearest(...at);
-    expect(ps.putIn(p()!, 'fish')).toBe(true);
-    expect(ps.putIn(p()!, 'nightfish')).toBe(true);
-    expect(ps.putIn(p()!, 'fish')).toBe(true);
-    expect(ps.contentsOf(p()!)).toEqual(['fish', 'nightfish', 'fish']);
-    expect(ps.isDisplayFull(p()!)).toBe(true);
-    expect(ps.putIn(p()!, 'rarefish'), '4匹めは いっぱいで入らない').toBe(false);
-    expect(invCount(s, 'rarefish'), 'もちものは減らない').toBe(1);
-    expect(s.stats.display_fish, '入れた回数の累計は3').toBe(3);
+    for (let i = 0; i < six.length; i++) {
+      expect(ps.putIn(p()!, six[i]), six[i]).toBe(true);
+      expect(ps.isDisplayFull(p()!), `${i + 1}ひきめ`).toBe(i === six.length - 1);
+    }
+    expect(ps.contentsOf(p()!)).toEqual(six);
+    expect(ps.putIn(p()!, 'seahorse'), '7匹めは いっぱいで入らない').toBe(false);
+    expect(invCount(s, 'seahorse'), 'もちものは減らない').toBe(1);
+    expect(s.stats.display_fish, '入れた回数の累計は6').toBe(6);
+  });
+
+  it('むしかごにも 6ぴき入り、7匹めは 入らない', () => {
+    const { s, ps, at } = withPlaced('f_bugcage_big');
+    const six: ItemId[] = ['b_shiro', 'b_ageha', 'b_tento', 'b_kabuto', 'b_hotaru', 'b_suzu'];
+    for (const id of [...six, 'b_batta' as ItemId]) invAdd(s, id, 1);
+    const p = (): ReturnType<PlacementSystem['nearest']> => ps.nearest(...at);
+    for (const id of six) expect(ps.putIn(p()!, id), id).toBe(true);
+    expect(ps.putIn(p()!, 'b_batta')).toBe(false);
+    expect(ps.contentsOf(p()!)).toEqual(six);
+    expect(s.stats.display_bug).toBe(6);
   });
 
   it('とりだすのは番号ごと(のこりの ならびは くずれない)', () => {
@@ -227,13 +278,16 @@ describe('複数の出し入れ(PlacementSystem)', () => {
     expect(ps.takeOut(p()!)).toBeNull();
   });
 
-  it('もちかえると 中身3匹ぜんぶ もちものへ戻る', () => {
-    const { s, ps, at } = withPlaced('f_aquarium_big', { contents: ['fish', 'fish', 'rarefish'] });
+  it('もちかえると 中身6ぴきぜんぶ もちものへ戻る', () => {
+    const { s, ps, at } = withPlaced('f_aquarium_big', {
+      contents: ['fish', 'fish', 'rarefish', 'koi', 'koi', 'koi'],
+    });
     ps.pickUp(ps.nearest(...at)!);
     expect(s.furniture).toEqual([]);
     expect(invCount(s, 'f_aquarium_big')).toBe(1);
     expect(invCount(s, 'fish')).toBe(2);
     expect(invCount(s, 'rarefish')).toBe(1);
+    expect(invCount(s, 'koi')).toBe(3);
   });
 
   it('旧セーブの content が入ったままの家具でも 出し入れできる(移行のとりこぼしなし)', () => {
@@ -305,14 +359,22 @@ describe('パネル(DisplayUI)の 複数スロット', () => {
     const take = [...el.querySelectorAll('[data-take]')].map((b) => (b as HTMLElement).dataset.take);
     expect(take).toEqual(['0', '1']);
     expect(el.textContent).toContain('いま いる いきもの');
-    expect(el.querySelector('.panel-count')!.textContent).toContain('2 / 3');
+    expect(el.querySelector('.panel-count')!.textContent).toContain('2 / 6');
   });
 
-  it('いっぱいのときは いれるボタンを出さず、理由を出す', () => {
-    const { el } = openPanel('f_aquarium_big', ['fish', 'fish', 'rarefish']);
+  it('5ひきめまでは まだ いれるボタンが出る(あと1ぴき)', () => {
+    const { el } = openPanel('f_aquarium_big', ['fish', 'fish', 'rarefish', 'fish', 'rarefish']);
+    expect(el.querySelectorAll('[data-take]')).toHaveLength(5);
+    expect(el.querySelectorAll('[data-put]').length).toBeGreaterThan(0);
+    expect(el.querySelector('.panel-count')!.textContent).toContain('5 / 6');
+  });
+
+  it('いっぱい(6ぴき)のときは いれるボタンを出さず、理由を出す', () => {
+    const { el } = openPanel('f_aquarium_big', ['fish', 'fish', 'rarefish', 'fish', 'rarefish', 'fish']);
     expect(el.querySelectorAll('[data-put]')).toHaveLength(0);
     expect(el.querySelector('.inv-empty')!.textContent).toContain('いっぱい');
-    expect(el.querySelectorAll('[data-take]')).toHaveLength(3);
+    expect(el.querySelector('.inv-empty')!.textContent).toContain('6ぴき');
+    expect(el.querySelectorAll('[data-take]')).toHaveLength(6);
   });
 
   it('1ぴきだけ入る家具では 数を出さない(v10の見た目のまま)', () => {
@@ -499,25 +561,75 @@ describe('見た目: おおきい版のメッシュと中身3匹', () => {
     expect(big.colliderR).toBeGreaterThan(small.colliderR);
   });
 
-  it('中身3匹は べつべつの場所にいる(かさならない)', () => {
-    const fish = makeFurnitureMesh(scene, 'f_aquarium_big', ['fish', 'nightfish', 'rarefish']);
+  it('中身6ぴきは べつべつの みちを およぐ(上下2だん・かさならない)', () => {
+    const six: ItemId[] = ['fish', 'nightfish', 'seafish', 'rarefish', 'koi', 'seabream'];
+    const fish = makeFurnitureMesh(scene, 'f_aquarium_big', six);
     const swim = fish.root.getChildMeshes().filter((m) => m.name.startsWith('aquaFish_'));
-    expect(swim.map((m) => m.name)).toEqual(['aquaFish_fish', 'aquaFish_nightfish', 'aquaFish_rarefish']);
-    // 水の中(砂利の上・水面の下)で、おくゆき か たかさが ちがう
+    expect(swim.map((m) => m.name)).toEqual(six.map((id) => `aquaFish_${id}`));
+    // 水の中(砂利の上・水面の下)におさまり、たかさは 上下2だんに 分かれる
     for (const m of swim) {
-      expect(m.position.y).toBeGreaterThan(0.47);
-      expect(m.position.y).toBeLessThan(0.83);
+      expect(m.position.y).toBeGreaterThan(0.5);
+      expect(m.position.y).toBeLessThan(0.8);
     }
-    const keys = new Set(swim.map((m) => `${m.position.y.toFixed(2)}/${m.position.z.toFixed(2)}`));
-    expect(keys.size).toBe(3);
+    const tiers = [...new Set(swim.map((m) => m.position.y.toFixed(3)))];
+    expect(tiers, '上下2だん').toHaveLength(2);
+    // 出発の場所(phase)は6ぴきとも ちがう=置いた しゅんかんに かさならない
+    const starts = new Set(swim.map((m) => `${m.position.x.toFixed(3)}/${m.position.y.toFixed(3)}`));
+    expect(starts.size).toBe(6);
+    // 1匹だけのときは 下のだん、2ひきめは 上のだん(みちの ならびが 上下 交ごである証)
+    const one = makeFurnitureMesh(scene, 'f_aquarium_big', ['fish']).root.getChildMeshes()
+      .find((m) => m.name.startsWith('aquaFish_'))!;
+    const two = makeFurnitureMesh(scene, 'f_aquarium_big', ['fish', 'koi']).root.getChildMeshes()
+      .filter((m) => m.name.startsWith('aquaFish_'));
+    expect(two[0].position.y).toBeCloseTo(one.position.y, 5);
+    expect(two[1].position.y).not.toBeCloseTo(one.position.y, 3);
 
-    const cage = makeFurnitureMesh(scene, 'f_bugcage_big', ['b_shiro', 'b_hotaru', 'b_suzu']);
+    const cage = makeFurnitureMesh(scene, 'f_bugcage_big',
+      ['b_shiro', 'b_hotaru', 'b_suzu', 'b_kabuto', 'b_tento', 'b_hotaru']);
     const bugs = cage.root.getChildMeshes().filter((m) => m.name.startsWith('cagedBug_'));
-    expect(bugs).toHaveLength(3);
+    expect(bugs).toHaveLength(6);
     const spots = new Set(bugs.map((m) => `${m.position.x.toFixed(2)}/${m.position.z.toFixed(2)}`));
-    expect(spots.size).toBe(3);
+    expect(spots.size).toBe(6);
+    // ゆか・下のえだ・上のえだ の3だんに 2ひきずつ
+    const levels = new Map<string, number>();
+    for (const b of bugs) levels.set(b.position.y.toFixed(3), (levels.get(b.position.y.toFixed(3)) ?? 0) + 1);
+    expect([...levels.values()].sort()).toEqual([2, 2, 2]);
     // ホタルの光る おしりは 夜に明滅させるため 別メッシュのまま
     expect(bugs.some((b) => b.getChildMeshes(true).some((g) => g.name.startsWith('cagedBugGlow')))).toBe(true);
+  });
+
+  it('魚も虫も 入れものの内がわに おさまる(はみ出さない)', () => {
+    // すいそう: だ円のみちを1周させて、いちばん外へ出る点が ガラスの内がわに入るか。
+    // 「6ぴき入るようにしたら 魚が わくを つきぬけた」を 数で止める
+    const tank = makeFurnitureMesh(scene, 'f_aquarium_big', ['koi', 'koi', 'koi', 'koi', 'koi', 'koi']);
+    const swim = tank.root.getChildMeshes().filter((m) => m.name.startsWith('aquaFish_'));
+    const bb = swim[0].getBoundingInfo().boundingBox;
+    for (const m of swim) {
+      // みちの半径は 出発点(phase)から 逆算できないので、1周ぶんを 円で包んで見る
+      const r = Math.hypot(m.position.x, m.position.z);
+      const reach = r + Math.max(Math.abs(bb.minimum.x), bb.maximum.x, bb.maximum.z);
+      expect(reach, m.name).toBeLessThan(0.68); // ガラスの内がわ(hw−柱)
+      expect(m.position.y + bb.maximum.y, m.name).toBeLessThan(0.84); // 水面
+      expect(m.position.y + bb.minimum.y, m.name).toBeGreaterThan(0.47); // 砂利
+    }
+    // むしかご: いちばん大きい虫(オオクワガタ)6ぴきでも 内がわ x±0.275 / z±0.18 に入る
+    const cage = makeFurnitureMesh(scene, 'f_bugcage_big', Array(6).fill('b_ookuwa') as ItemId[]);
+    for (const b of cage.root.getChildMeshes().filter((m) => m.name.startsWith('cagedBug_'))) {
+      const box = b.getBoundingInfo().boundingBox;
+      const s = b.scaling.x;
+      const th = b.rotation.y;
+      for (const [lx, lz] of [
+        [box.minimum.x, box.minimum.z], [box.minimum.x, box.maximum.z],
+        [box.maximum.x, box.minimum.z], [box.maximum.x, box.maximum.z],
+      ] as [number, number][]) {
+        const wx = b.position.x + (lx * Math.cos(th) + lz * Math.sin(th)) * s;
+        const wz = b.position.z + (-lx * Math.sin(th) + lz * Math.cos(th)) * s;
+        expect(Math.abs(wx), `${b.name} x`).toBeLessThan(0.278);
+        expect(Math.abs(wz), `${b.name} z`).toBeLessThan(0.183);
+      }
+      expect(b.position.y + box.maximum.y * s, `${b.name} たかさ`).toBeLessThan(0.9175); // ふたの下
+      expect(b.position.y, `${b.name} ゆかより上`).toBeGreaterThanOrEqual(0.35);
+    }
   });
 
   it('中身が1匹だけ・空でも こわれない(数がへっても つめて置く)', () => {
@@ -552,9 +664,9 @@ describe('見た目: おおきい版のメッシュと中身3匹', () => {
     };
     const cases: [ItemId, ItemId[]][] = [
       ['f_aquarium_big', []],
-      ['f_aquarium_big', ['fish', 'nightfish', 'rarefish']],
+      ['f_aquarium_big', ['fish', 'nightfish', 'seafish', 'rarefish', 'koi', 'seabream']],
       ['f_bugcage_big', []],
-      ['f_bugcage_big', ['b_shiro', 'b_hotaru', 'b_kabuto']],
+      ['f_bugcage_big', ['b_shiro', 'b_hotaru', 'b_kabuto', 'b_suzu', 'b_tento', 'b_ageha']],
     ];
     for (const [item, contents] of cases) {
       const fm = makeFurnitureMesh(scene, item, contents);
@@ -576,32 +688,56 @@ describe('実績: おおきい版が まんいん', () => {
     expect(new Set(ACHIEVEMENTS.map((a) => a.name)).size).toBe(ACHIEVEMENTS.length);
     for (const a of ACHIEVEMENTS) expect(ICONS[a.icon], `${a.id} の絵 ${a.icon}`).toBeDefined();
     for (const id of ['a_bigaqua3', 'a_bigcage3']) {
-      expect(ACHIEVEMENTS.find((a) => a.id === id)!.target, id).toBe(3);
+      expect(ACHIEVEMENTS.find((a) => a.id === id)!.target, id).toBe(6);
     }
+    // 名前は変えない(バッジ badges.ts の説明文が この名前を そのまま引用している)
+    expect(ACHIEVEMENTS.find((a) => a.id === 'a_bigaqua3')!.name).toBe('おおきな すいそうが まんいん');
+    expect(ACHIEVEMENTS.find((a) => a.id === 'a_bigcage3')!.name).toBe('おおきな むしかごが まんいん');
   });
 
-  it('おおきな すいそうに3びき入れたら達成(2ひきでは まだ)', () => {
+  it('おおきな すいそうに6ぴき入れたら達成(5ひきでは まだ)', () => {
     const s = newGameState();
-    s.furniture = [{ id: 1, item: 'f_aquarium_big', x: 0, z: 15, rotY: 0, contents: ['fish', 'seafish'] }];
-    expect(maxDisplayFilled(s, 'f_aquarium_big')).toBe(2);
+    s.furniture = [{
+      id: 1, item: 'f_aquarium_big', x: 0, z: 15, rotY: 0,
+      contents: ['fish', 'seafish', 'rarefish', 'koi', 'seabream'],
+    }];
+    expect(maxDisplayFilled(s, 'f_aquarium_big')).toBe(5);
     evaluate(s);
     expect(isAchieved(s, 'a_bigaqua3')).toBe(false);
-    s.furniture[0].contents!.push('rarefish');
-    expect(maxDisplayFilled(s, 'f_aquarium_big')).toBe(3);
+    s.furniture[0].contents!.push('seahorse');
+    expect(maxDisplayFilled(s, 'f_aquarium_big')).toBe(6);
     evaluate(s);
     expect(isAchieved(s, 'a_bigaqua3')).toBe(true);
   });
 
-  it('おおきな むしかごに3びき入れたら達成。小さい かごは数えない', () => {
+  it('おおきな むしかごに6ぴき入れたら達成。小さい かごは数えない', () => {
     const s = newGameState();
     s.furniture = [
       { id: 1, item: 'f_bugcage', x: 0, z: 15, rotY: 0, contents: ['b_shiro'] },
-      { id: 2, item: 'f_bugcage_big', x: 2, z: 15, rotY: 0, contents: ['b_shiro', 'b_suzu', 'b_tento'] },
+      {
+        id: 2, item: 'f_bugcage_big', x: 2, z: 15, rotY: 0,
+        contents: ['b_shiro', 'b_suzu', 'b_tento', 'b_kabuto', 'b_hotaru', 'b_ageha'],
+      },
     ];
     expect(maxDisplayFilled(s, 'f_bugcage')).toBe(1);
     evaluate(s);
     expect(isAchieved(s, 'a_bigcage3')).toBe(true);
     expect(isAchieved(s, 'a_bigaqua3'), 'すいそうのほうは まだ').toBe(false);
+  });
+
+  it('3びきで 達成ずみの子は 達成のまま(記録は 一方通行)', () => {
+    // 入る数を3→6に増やしても、すでに たっせいした子の 記録・ごほうびは こわさない。
+    // 達成の記録は stats の ach_◯◯ で、evaluate は「まだの ものだけ」を見る
+    const s = newGameState();
+    s.stats.ach_a_bigaqua3 = 1;
+    s.furniture = [{ id: 1, item: 'f_aquarium_big', x: 0, z: 15, rotY: 0, contents: ['fish', 'seafish', 'koi'] }];
+    expect(isAchieved(s, 'a_bigaqua3')).toBe(true);
+    expect(evaluate(s).map((a) => a.id), '二重にお祝いしない').not.toContain('a_bigaqua3');
+    expect(isAchieved(s, 'a_bigaqua3'), 'とりけされない').toBe(true);
+    // 中身を ぜんぶ とりだしても 達成のまま
+    delete s.furniture[0].contents;
+    evaluate(s);
+    expect(isAchieved(s, 'a_bigaqua3')).toBe(true);
   });
 
   it('中身が無い・置いていないときは 0(壊れた状態でも落ちない)', () => {

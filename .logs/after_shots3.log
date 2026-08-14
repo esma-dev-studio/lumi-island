@@ -1,0 +1,25 @@
+src静穏 138秒 → 開始
+起動: http://localhost:5205 / MODE=after / 撮影先=C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\.logs\screenshots\display6\after
+置いた家具: ["f_aquarium_big","f_bugcage_big"]
+  中身=fish,nightfish,seafish,rarefish,koi,seabream
+パネル前のヒント: Eいきものを とりだす
+  [shot] 01_panel_tank_full.png
+パネルの数: 6 / 6ひき
+  中身=fish,nightfish,seafish
+  [shot] 02_panel_tank_half.png
+  !! ゲーム内時計が進まない(描画ループが止まっている)
+  中身=b_hotaru,b_kabuto,b_shiro,b_suzu,b_tento,b_hotaru
+  [shot] 03_panel_cage_full.png
+  !! ゲーム内時計が進まない(描画ループが止まっている)
+  中身=b_hotaru,b_kabuto,b_shiro,b_suzu,b_tento,b_hotaru
+  [shot] 04_cage_near_day.png (接写)
+  [shot] 05_cage_near_day_2.png (接写)
+  [shot] 06_cage_near_night_1.png (接写)
+  [shot] 07_cage_near_night_2.png (接写)
+  [shot] 08_cage_near_night_3.png (接写)
+  中身=fish,nightfish,seafish,rarefish,koi,seabream
+  中身=b_hotaru,b_kabuto,b_shiro,b_suzu,b_tento,b_hotaru
+  !! ゲーム内時計が進まない(描画ループが止まっている)
+  [shot] 09_garden_wide_day.png
+  [shot] 10_garden_wide_night.png
+consoleエラー: 0件
