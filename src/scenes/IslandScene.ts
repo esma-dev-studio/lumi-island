@@ -37,7 +37,7 @@ import {
 import { DayNight } from './DayNight';
 import { HomeInterior, homeFloorY, insideHomeFloor, HOME_RECTS, HOME_CIRCLES } from './HomeInterior';
 import {
-  NpcInteriors, NPC_HOMES, NPC_HOME_BODY_R, insideNpcHomeFloor, measureDoorStand,
+  NpcInteriors, NPC_HOMES, NPC_HOME_BODY_R, NPC_HOME_BY_ID, insideNpcHomeFloor, measureDoorStand,
   npcHomeCircles, npcHomeFloorY, npcHomeRects,
 } from './NpcInteriors';
 import { CoveArea, COVE_CIRCLES, COVE_NODES, ISLAND_BOAT, coveNightLevel } from './CoveArea';
@@ -63,6 +63,9 @@ export interface RectCollider { x: number; z: number; w: number; d: number; rot:
 // entities/terrain.ts の walkableGround が唯一の情報源。釣りの水面判定も同じ関数群を見る。
 /** 建物コライダーの余白(片側)。壁の見た目+これだけ内側に近づける(軒・屋根は入れない) */
 const HOUSE_PAD = 0.125;
+
+/** 太陽の影がとどく奥ゆき(m)。木・岩・建物の影がそろって見える広さ */
+const SHADOW_Z_ISLAND = 120;
 
 // ---- v13 よるの 海上でんしゃの 走る道(島の南の水平線) ----
 /** 島の中心からの きょり(m)。水平線のきらめき(100m)と そろえて「遠くのもの」に見せる */
@@ -134,6 +137,14 @@ export class IslandScene {
   lumiFruits!: Mesh; // 開花後の花びらロゼット
   lumiBuds!: Mesh; // 開花前の閉じた蕾(花と差し替えで切り替える)
   private waterT = 0;
+  /** 虫のとまり場(BUG_SPOTS)の足もとの高さ。座標が動かないので1回だけ求めて使いまわす */
+  private bugSpotY: number[] = [];
+  /** 島の見た目ぜんぶ(入り江へ渡るとき・部屋に入るときに丸ごと消す対象。CoveAreaと同じ配列) */
+  private islandMeshes: Mesh[] = [];
+  private islandHiddenForRoom = false;
+  private islandWasEnabled: boolean[] = [];
+  private homeRoomOn = false;
+  private npcRoomOn: string | null = null;
   occludables: Mesh[] = []; // カメラとプレイヤーの間に入ったら半透明にする対象
   // ---- 夜のほしのかけら(出現の判断は純ロジック、見た目だけここが持つ) ----
   private stars = new StarShardScheduler(STAR_SPOTS.length);
@@ -196,7 +207,7 @@ export class IslandScene {
     this.shadows = new CascadedShadowGenerator(1024, this.dayNight.sun);
     this.shadows.numCascades = 2;
     this.shadows.lambda = 0.92;
-    this.shadows.shadowMaxZ = 120;
+    this.shadows.shadowMaxZ = SHADOW_Z_ISLAND;
     this.shadows.darkness = 0.42;
     this.shadows.bias = 0.008;
     this.shadows.normalBias = 0.05;
@@ -464,7 +475,8 @@ export class IslandScene {
     for (const c of buildPondShore(s)) this.circles.push(c);
 
     // ---- 散布デコ ----
-    scatterDeco(s);
+    // 風のゆれは「島が画面に出ているあいだ」だけ動かす(別空間では草が見えない)
+    scatterDeco(s, () => this.islandVisible);
     getGlowMats(s); // 初期化
 
     // ---- うみどり(海の上を旋回するだけ) ----
@@ -535,6 +547,14 @@ export class IslandScene {
     // ここまでに作ったメッシュ=島の見た目ぜんぶ。入り江にいるあいだはこれを丸ごと消す
     // (逆に、島にいるあいだは入り江のrootを消す)。この1行より下で作るものは入り江のもの。
     const islandMeshes = s.meshes.filter((m): m is Mesh => m instanceof Mesh);
+    // 部屋に入るときに消す対象からは、部屋そのもの(マイホーム・NPCの家の中身)を外す。
+    // 部屋は この行より前に建ててあるので islandMeshes に混ざっており、
+    // そのまま消すと 入った先の部屋が空っぽになる(実測: 出ているメッシュが13→3枚になった)。
+    // 入り江(CoveArea)は「部屋も含めて全部消す」で正しいので、あちらは islandMeshes のまま。
+    const roomRoots: Mesh[] = [this.home.root, ...this.npcHomes.roots.values()];
+    this.islandMeshes = islandMeshes.filter(
+      (m) => !roomRoots.some((r) => m === r || m.isDescendantOf(r))
+    );
     this.cove = new CoveArea(s, this.water.seaMat, islandMeshes);
     // ビームは34mの大きな半透明面。発光レイヤーに焼くと画面ぜんたいがにじみ、負荷も上がるので外す
     // (水面を発光レイヤーから外しているのと同じ理由)
@@ -809,6 +829,87 @@ export class IslandScene {
     return [x, z];
   }
 
+  /**
+   * 島の見た目が画面に出ているか(=別空間にいない)。
+   *
+   * 判断の元は地形メッシュ1つだけ。マイホームの部屋(HomeInterior)・NPCの家(NpcInteriors)・
+   * よるの入り江(CoveArea)は、どれも入るときに地形メッシュを setEnabled(false) にする
+   * ——3つの別々のフラグを覚えなおすより、消えているものを1つ見るほうが食い違いが起きない。
+   */
+  private get islandVisible(): boolean {
+    return this.terrain.mesh.isEnabled();
+  }
+
+  /**
+   * 部屋(マイホーム・NPCの家)にいるあいだ、島の見た目を丸ごと消す/戻す。
+   * よるの入り江(CoveArea.setActive)がやっているのと まったく同じことを、部屋にも広げたもの。
+   *
+   * なぜ必要か: 部屋は島から46m以上はなれた所に建ててあるのでカメラには最初から写らないが、
+   * 太陽の影マップ(カスケード2枚)はカメラのまわり120mを見わたすので、
+   * 部屋の中にいても島の木・岩・建物を106枚ぶん影マップへ描いていた。
+   * 実測(1024x768・CPU4倍しぼり): 家の中の drawCalls 237 のうち影マップが209、
+   * 影を止めるとフレーム時間 p50 は 24.7ms → 6.8ms。入り江では島を消しているので
+   * 影マップに出るのは4枚だけで、もともと この無駄が無かった。
+   *
+   * 消す前の状態を覚えてから戻すのは CoveArea と同じ理由——
+   * もともと消えていたもの(枯れた採取ノード・季節の飾り)を勝手に出さないため。
+   */
+  setIslandHiddenForRoom(hidden: boolean): void {
+    if (hidden === this.islandHiddenForRoom) return;
+    this.islandHiddenForRoom = hidden;
+    if (hidden) {
+      this.islandWasEnabled = this.islandMeshes.map((m) => m.isEnabled(false));
+      for (const m of this.islandMeshes) m.setEnabled(false);
+    } else {
+      for (let i = 0; i < this.islandMeshes.length; i++) {
+        this.islandMeshes[i].setEnabled(this.islandWasEnabled[i] ?? true);
+      }
+      this.islandWasEnabled = [];
+    }
+  }
+
+  /**
+   * マイホームの部屋の出入り。島の見た目の消し・戻しも まとめてここで行う。
+   *
+   * 順番の決まり: 入るときは先に島を消し、出るときは先に部屋を消す。
+   * 逆にすると、地形と海の「消す前の状態」を 部屋がわの操作ごと覚えてしまう。
+   */
+  setHomeRoom(active: boolean): void {
+    this.homeRoomOn = active;
+    if (active) this.syncRoomHiding();
+    this.home.setActive(active);
+    if (!active) this.syncRoomHiding();
+    this.syncIndoorDamp();
+  }
+
+  /** NPCの家の出入り(null=島へもどる)。setHomeRoom と同じ決まり */
+  setNpcRoom(id: string | null): void {
+    this.npcRoomOn = id;
+    if (id) this.syncRoomHiding();
+    this.npcHomes.setActive(id);
+    if (!id) this.syncRoomHiding();
+    this.syncIndoorDamp();
+  }
+
+  /**
+   * 部屋ごとの「環境光の落とし」を反映する(島にもどれば必ず1へ戻る)。
+   * いまはノクトの家だけが 0.45 を持つ(星を見る人の うすぐらい部屋)。
+   * マイホームは 指定なし=1 のまま。
+   */
+  private syncIndoorDamp(): void {
+    const def = this.npcRoomOn ? NPC_HOME_BY_ID[this.npcRoomOn] : null;
+    this.dayNight.setIndoorDamp(def?.light.ambient ?? 1);
+  }
+
+  /**
+   * 島を消しておくのは「どちらかの部屋にいるあいだ」。
+   * 2つの部屋の状態を1か所で足し合わせるので、読みこみ時に
+   * setHomeRoom(true) → setNpcRoom(null) と続けて呼ばれても 消したものが元に戻らない。
+   */
+  private syncRoomHiding(): void {
+    this.setIslandHiddenForRoom(this.homeRoomOn || this.npcRoomOn !== null);
+  }
+
   update(dtSec: number): void {
     this.time.advance(dtSec);
     this.home.update(this.time.hour); // 室内灯(室内にいるときだけ効く)
@@ -821,9 +922,17 @@ export class IslandScene {
     this.updateDrift(dtSec); // 朝のうきだま(同じ理由でポーズ中は進まない)
     this.updateBottle(dtSec); // v13 ひるすぎの メッセージボトル
     this.updateNightTrain(dtSec); // v13 よるの 海上でんしゃ(点いていなければ即return)
+    this.updateDigs(); // ほりあと(日付が変わったら配置しなおす)
+
+    // ---- ここから下は「島が画面に出ているときだけ」意味のある見た目の更新 ----
+    // 別空間(部屋・NPCの家・入り江)にいるあいだ、島の地形も虫も池も消えている。
+    // それでも回していたので、家の中の1フレームのうち池のさざ波(1246頂点)と草の風(260本)で
+    // 実測4.5%を捨てていた(CPUプロファイル: updatePondWave 2.15% / deco 2.32%)。
+    // 生えかわり・出現の判断(ほしのかけら・うきだま・ボトル・でんしゃ・ほりあと)は
+    // 上に残してあるので、外に出た瞬間の見た目は今までと変わらない。
+    if (!this.islandVisible) return;
     this.updateBirds(dtSec);
     this.updateBugs(dtSec); // 虫(昼夜で顔ぶれが変わる・走って近づくと逃げる)
-    this.updateDigs(); // ほりあと(日付が変わったら配置しなおす)
     // 池のごく弱い上下動(±1.2cm)。スイレンは子メッシュなので一緒にゆれる
     this.waterT += dtSec;
     this.water.pond.position.y = POND.waterY + Math.sin(this.waterT * 0.9) * 0.012;
@@ -1052,7 +1161,14 @@ export class IslandScene {
       const def = BUG_BY_ID[b.bug];
       const spot = BUG_SPOTS[b.spot];
       const o = bugOffset(def, b);
-      const gy = this.groundY(spot.x, spot.z);
+      // 虫のとまり場は動かない座標なので、足もとの高さは1回だけ求めて覚えておく。
+      // groundY は入り江→部屋→NPCの家→桟橋→デッキ→地形の6段を毎回たどる関数で、
+      // 虫の数ぶん毎フレーム呼ぶと そこそこ効く(CPUプロファイルで pathDist が上位に出ていた)
+      let gy = this.bugSpotY[b.spot];
+      if (gy === undefined) {
+        gy = this.groundY(spot.x, spot.z);
+        this.bugSpotY[b.spot] = gy;
+      }
       m.root.position.set(spot.x + o.dx, gy + o.dy, spot.z + o.dz);
       if (spot.kind === 'tree') {
         // 木の みきに とまっている姿。スポットは幹から+Z側へ寄せてあるので、

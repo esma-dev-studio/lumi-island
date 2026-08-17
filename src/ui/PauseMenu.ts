@@ -2,31 +2,8 @@
 import { loadOpts, saveOpts } from '../save/SaveSystem';
 import { setSoundEnabled, sfx } from '../audio/AudioSystem';
 import { byInput } from './inputMode';
-
-/** そうさほうほうの一覧(左=なにをするか / 右=どうなるか) */
-const HELP_KEYBOARD = `
-          <span><kbd>W A S D</kbd></span><span>あるく</span>
-          <span><kbd>Shift</kbd></span><span>はしる</span>
-          <span><kbd>マウス</kbd>ドラッグ</span><span>カメラを まわす</span>
-          <span><kbd>ホイール</kbd></span><span>ズーム(よる・ひく)</span>
-          <span><kbd>E</kbd></span><span>しらべる・とる・はなす</span>
-          <span><kbd>Tab</kbd></span><span>もちもの</span>
-          <span><kbd>C</kbd></span><span>クラフト</span>
-          <span><kbd>Q</kbd></span><span>おねがい</span>
-          <span><kbd>Z</kbd></span><span>ずかん</span>
-          <span><kbd>R</kbd></span><span>(はいち中)まわす</span>`;
-
-const HELP_TOUCH = `
-          <span>左下を ゆびで うごかす</span><span>あるく</span>
-          <span>おおきく うごかす</span><span>はしる</span>
-          <span>がめんを ゆびで なぞる</span><span>カメラを まわす</span>
-          <span>ゆび2本で ひろげる・ちぢめる</span><span>ズーム(よる・ひく)</span>
-          <span>右下の 大きいボタン</span><span>しらべる・とる・はなす</span>
-          <span>右上の「もちもの」</span><span>もちもの</span>
-          <span>右上の「クラフト」</span><span>クラフト</span>
-          <span>右上の「おねがい」</span><span>おねがい</span>
-          <span>右上の「ずかん」</span><span>ずかん</span>
-          <span>「まわす」ボタン</span><span>(はいち中)まわす</span>`;
+// そうさほうほうの中身は helpText.ts が唯一の情報源(タイトル画面と同じものを出す)
+import { HELP_KEYBOARD, HELP_TOUCH } from './helpText';
 
 export class PauseMenu {
   private el: HTMLElement;

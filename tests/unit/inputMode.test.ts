@@ -190,17 +190,50 @@ describe('TutorialSystem(移動チュートリアルと解放の案内)', () => 
 });
 
 describe('PauseMenu(そうさほうほう)', () => {
-  it('キーボードのときはキーの一覧を出す(従来どおり)', () => {
+  // v19: そうさほうほうの中身は src/ui/helpText.ts の1本に統合した。
+  // タイトルとポーズで別々のコピーを持っていたころ、ポーズがわだけ
+  // 「Tab のみ(I が無い)」「E のみ(Space が無い)」と古いままになっていたので、
+  // ここは統合後の文言(=タイトルと同じ)を期待する。
+  it('キーボードのときはキーの一覧を出す(タイトルと同じ1本の文言)', () => {
     const p = new PauseMenu();
     p.show();
     const grid = document.querySelector('.help-grid')!;
-    expect(grid.innerHTML).toContain('<kbd>W A S D</kbd></span><span>あるく');
+    expect(grid.innerHTML).toContain('<kbd>W A S D</kbd>/<kbd>矢印</kbd></span><span>あるく');
     expect(grid.innerHTML).toContain('<kbd>Shift</kbd></span><span>はしる');
-    expect(grid.innerHTML).toContain('<kbd>E</kbd></span><span>しらべる・とる・はなす');
-    expect(grid.innerHTML).toContain('<kbd>Tab</kbd></span><span>もちもの');
+    expect(grid.innerHTML).toContain('<kbd>E</kbd>/<kbd>Space</kbd></span><span>しらべる・とる・はなす');
+    expect(grid.innerHTML).toContain('<kbd>Tab</kbd>/<kbd>I</kbd></span><span>もちもの');
     expect(grid.innerHTML).toContain('<kbd>C</kbd></span><span>クラフト');
     expect(grid.innerHTML).toContain('<kbd>Q</kbd></span><span>おねがい');
     expect(grid.innerHTML).toContain('<kbd>R</kbd></span><span>(はいち中)まわす');
+  });
+
+  // v19で足した操作が そうさほうほうから抜けていた(タッチ対応のあと ずっと追いついていなかった)。
+  // 6つとも両方の入力手段で載っていることを固定して、次に機能を足したときに気づけるようにする。
+  it('v19で足した操作が キーボード・タッチの両方に載っている', () => {
+    const p = new PauseMenu();
+    p.show();
+    const kbd = document.querySelector('.help-grid')!.textContent ?? '';
+    for (const w of ['てをふる', 'すわる', 'くみあわせ', 'でんごんばん', 'バッジ', 'いろみず']) {
+      expect(kbd, `キーボード版に「${w}」`).toContain(w);
+    }
+    p.close();
+    enterTouch();
+    const p2 = new PauseMenu();
+    p2.show();
+    const touch = [...document.querySelectorAll('.pause-panel .help-grid')].map((g) => g.textContent ?? '').join('');
+    for (const w of ['てをふる', 'すわる', 'くみあわせ', 'でんごんばん', 'バッジ', 'いろみず']) {
+      expect(touch, `タッチ版に「${w}」`).toContain(w);
+    }
+  });
+
+  it('節見出しは span ではない(左右2列の組がずれない)', () => {
+    const p = new PauseMenu();
+    p.show();
+    const grid = document.querySelector('.help-grid')!;
+    expect(grid.querySelectorAll('.help-sec').length, '節見出しが4つ').toBe(4);
+    expect(grid.querySelectorAll('span.help-sec').length, '見出しは span ではない').toBe(0);
+    // span は必ず偶数個(左と右の組)
+    expect(grid.querySelectorAll(':scope > span').length % 2).toBe(0);
   });
 
   it('タッチのときは画面のボタンの一覧を出す(キー名もkbdも出さない)', () => {

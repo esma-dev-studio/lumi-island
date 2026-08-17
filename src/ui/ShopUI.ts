@@ -116,7 +116,7 @@ export class ShopUI {
       </div>
       <div class="shop-tabs">
         <button class="shop-tab ${this.tab === 'sell' ? 'on' : ''}" data-tab="sell">うる</button>
-        <button class="shop-tab ${this.tab === 'buy' ? 'on' : ''}" data-tab="buy">かう(家具)</button>
+        <button class="shop-tab ${this.tab === 'buy' ? 'on' : ''}" data-tab="buy">かう(かぐ・かべ・ゆか)</button>
       </div>
       <div class="craft-list">${body}</div>
     `;

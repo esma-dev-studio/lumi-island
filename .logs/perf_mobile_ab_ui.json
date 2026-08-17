@@ -1,0 +1,150 @@
+{
+ "tag": "ab_ui",
+ "when": "2026-08-17T08:55:00.324Z",
+ "commit": "536f00e",
+ "device": "1024x768 / dpr2 / hasTouch / isMobile=true",
+ "browser": "Microsoft Edge ヘッドレス(vsyncなし)",
+ "gpu": {
+  "renderer": "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x00009A49) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "vendor": "Google Inc. (Intel)",
+  "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+  "dpr": 2
+ },
+ "cpuThrottlingRate": 4,
+ "sampleSec": 6,
+ "settleSec": 3,
+ "repeat": 1,
+ "budgetP95": 33,
+ "stallMs": 500,
+ "off": [
+  "ui"
+ ],
+ "note": "場面ごとに 1 周まわし、p50/p95 は周回の中央値。500ms を超えたフレームは分布から外して stalls に数える(ホスト側の取られで、描画の重さではないため)。",
+ "warmup": {
+  "sec": 10,
+  "hardwareScalingLevel": 1,
+  "settled": true,
+  "note": "安全弁が底(1.0)に着くまで4倍でしぼって待った区間。計測対象外。ここを過ぎてから --rate の倍率に戻す。"
+ },
+ "scenes": [
+  {
+   "id": "day_run",
+   "label": "昼の島を走る",
+   "passes": 1,
+   "p50": 53,
+   "p95": 107.7,
+   "p99": 146.6,
+   "max": 148.7,
+   "p95All": [
+    107.7
+   ],
+   "p50All": [
+    53
+   ],
+   "stallsAll": [
+    0
+   ],
+   "drawCalls": 291,
+   "activeMeshes": 42,
+   "budgetP95": 33,
+   "ok": false
+  },
+  {
+   "id": "home",
+   "label": "家の中",
+   "passes": 1,
+   "p50": 46.4,
+   "p95": 120.4,
+   "p99": 175.2,
+   "max": 182.7,
+   "p95All": [
+    120.4
+   ],
+   "p50All": [
+    46.4
+   ],
+   "stallsAll": [
+    0
+   ],
+   "drawCalls": 240,
+   "activeMeshes": 13,
+   "budgetP95": 33,
+   "ok": false
+  }
+ ],
+ "runs": [
+  {
+   "id": "day_run",
+   "label": "昼の島を走る",
+   "pass": 1,
+   "frames": 123,
+   "p50": 53,
+   "p95": 107.7,
+   "p99": 146.6,
+   "max": 148.7,
+   "avg": 55.8,
+   "stalls": 0,
+   "stallMax": -1,
+   "movingTicks": "6/6",
+   "stats": {
+    "drawCalls": 291,
+    "activeMeshes": 42,
+    "totalMeshes": 431,
+    "activeVertices": -1,
+    "materials": 40,
+    "textures": 23,
+    "particles": 0,
+    "lights": 3,
+    "heapMB": 79,
+    "hwScale": 1,
+    "renderScale": 1,
+    "dynResStep": 1,
+    "hour": 11.4,
+    "day": 1,
+    "indoor": false,
+    "inCove": false,
+    "px": 6.3,
+    "pz": 2.7,
+    "touchUI": true
+   }
+  },
+  {
+   "id": "home",
+   "label": "家の中",
+   "pass": 1,
+   "frames": 136,
+   "p50": 46.4,
+   "p95": 120.4,
+   "p99": 175.2,
+   "max": 182.7,
+   "avg": 53.22,
+   "stalls": 0,
+   "stallMax": -1,
+   "movingTicks": "0/6",
+   "stats": {
+    "drawCalls": 240,
+    "activeMeshes": 13,
+    "totalMeshes": 435,
+    "activeVertices": -1,
+    "materials": 40,
+    "textures": 23,
+    "particles": 4,
+    "lights": 4,
+    "heapMB": 88,
+    "hwScale": 1,
+    "renderScale": 1,
+    "dynResStep": 2,
+    "hour": 20.5,
+    "day": 1,
+    "indoor": true,
+    "inCove": false,
+    "px": 58.8,
+    "pz": -57.7,
+    "touchUI": true
+   }
+  }
+ ],
+ "consoleErrors": 0,
+ "errorSamples": [],
+ "pass": false
+}

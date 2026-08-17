@@ -7,7 +7,7 @@
 // 見出しやクラスを変えると 自動テストが いっせいに動かなくなる。
 import type { GameState } from '../game/GameState';
 import { knownRecipes, canCraft, craft, craftList } from '../systems/CraftingSystem';
-import { ITEMS, TOOLS, type ItemId, type ToolId } from '../data/items';
+import { ITEMS, TOOLS, type ItemId, type RecipeDef, type ToolId } from '../data/items';
 import { COMBO_MAX, COMBO_MIN } from '../data/combos';
 import {
   COMBO_LOCKED_TEXT, canOffer, discoveredCount, previewCombo, tryCombo,
@@ -18,6 +18,32 @@ import { byInput } from './inputMode';
 import { sfx } from '../audio/AudioSystem';
 
 type CraftTab = 'recipe' | 'combo';
+
+/** レシピ一覧の節。並ぶ順もこの配列のとおり(道具→家具→料理→いろみず→かざり→そのほか) */
+type CraftSection = 'tool' | 'furniture' | 'dish' | 'paint' | 'decor' | 'other';
+const CRAFT_SECTIONS: { id: CraftSection; title: string }[] = [
+  { id: 'tool', title: 'どうぐ' },
+  { id: 'furniture', title: 'かぐ' },
+  { id: 'dish', title: 'りょうり' },
+  { id: 'paint', title: 'いろみず' },
+  { id: 'decor', title: 'かざり(かべ・ゆか)' },
+  { id: 'other', title: 'そのほか' },
+];
+
+/**
+ * レシピが どの節に入るかを、産出するもの1つから決める(節の一覧をデータに二重持ちしない)。
+ * いろみず(paint_*)だけは ITEMS の kind が 'material' なのでIDで見分ける。
+ */
+export function craftSectionOf(r: RecipeDef): CraftSection {
+  if (r.outKind === 'tool') return 'tool';
+  const def = ITEMS[r.out as ItemId];
+  if (!def) return 'other';
+  if (String(r.out).startsWith('paint_')) return 'paint';
+  if (def.kind === 'furniture') return 'furniture';
+  if (def.kind === 'food') return 'dish';
+  if (def.kind === 'decor') return 'decor';
+  return 'other'; // ひかりのレンズのような だいじなもの
+}
 
 /**
  * くみあわせに ならべる もちもの。
@@ -212,32 +238,55 @@ export class CraftUI {
 
   // ---------------- 描画 ----------------
 
-  private renderRecipeTab(s: GameState): string {
-    // 並びは craftList にまかせる(おぼえたばかりのレシピが上に来る)
-    const rows = craftList(s)
-      .map(({ recipe: r, isNew }) => {
-        const check = canCraft(s, r);
-        const outName = r.outKind === 'tool' ? TOOLS[r.out as ToolId].name : ITEMS[r.out as ItemId].name;
-        const cost = (Object.entries(r.cost) as [ItemId, number][])
-          .map(([item, need]) => {
-            const have = s.inventory[item] ?? 0;
-            return `<span class="cost ${have >= need ? 'ok' : 'lack'}">${icon(item)}${have}/${need}</span>`;
-          })
-          .join('');
-        const btn = check.alreadyOwned
-          ? '<span class="crafted-label">もってる</span>'
-          : `<button class="craft-btn" data-id="${r.id}" ${check.ok ? '' : 'disabled'}>つくる</button>`;
-        // 目じるしは丸い塗りつぶしのピル(左の色ボーダー+角丸は「(」に見えるので使わない)
-        const badge = isNew ? '<span class="craft-new">あたらしい!</span>' : '';
-        return `<div class="craft-row${isNew ? ' is-new' : ''}">
+  /** レシピ1行(節に分けても中身とクラス名は v11 から1文字も変えない) */
+  private recipeRow(s: GameState, r: RecipeDef, isNew: boolean): string {
+    const check = canCraft(s, r);
+    const outName = r.outKind === 'tool' ? TOOLS[r.out as ToolId].name : ITEMS[r.out as ItemId].name;
+    const cost = (Object.entries(r.cost) as [ItemId, number][])
+      .map(([item, need]) => {
+        const have = s.inventory[item] ?? 0;
+        return `<span class="cost ${have >= need ? 'ok' : 'lack'}">${icon(item)}${have}/${need}</span>`;
+      })
+      .join('');
+    const btn = check.alreadyOwned
+      ? '<span class="crafted-label">もってる</span>'
+      : `<button class="craft-btn" data-id="${r.id}" ${check.ok ? '' : 'disabled'}>つくる</button>`;
+    // 目じるしは丸い塗りつぶしのピル(左の色ボーダー+角丸は「(」に見えるので使わない)
+    const badge = isNew ? '<span class="craft-new">あたらしい!</span>' : '';
+    return `<div class="craft-row${isNew ? ' is-new' : ''}">
           <span class="inv-ico">${icon(r.out)}</span>
           <span class="craft-name">${outName}</span>
           ${badge}
           <span class="craft-costs">${cost}</span>
           ${btn}
         </div>`;
-      })
-      .join('');
+  }
+
+  private renderRecipeTab(s: GameState): string {
+    // 並びは craftList にまかせる(おぼえたばかりのレシピが上に来る)。
+    // v19: レシピが40を超えて一覧が長くなり、スクロールの現在地が分からなくなったので
+    // 節見出しを付ける。「あたらしい!」は今までどおり いちばん上のまとまりに置く
+    // ——ひらめいた直後に どこに増えたか分かる、という v12 からの約束を そのまま残す
+    // (E2E tests/e2e/combo.spec.ts が「最初の .craft-row = おぼえたばかり」を見ている)。
+    const list = craftList(s);
+    const fresh = list.filter((e) => e.isNew);
+    const groups = CRAFT_SECTIONS.map((sec) => ({
+      title: sec.title,
+      entries: list.filter((e) => !e.isNew && craftSectionOf(e.recipe) === sec.id),
+    })).filter((g) => g.entries.length > 0);
+
+    const section = (title: string, body: string): string =>
+      `<div class="craft-sec">${title}</div>${body}`;
+    let rows = '';
+    if (fresh.length) {
+      rows += section(
+        'あたらしい!',
+        fresh.map((e) => this.recipeRow(s, e.recipe, true)).join('')
+      );
+    }
+    for (const g of groups) {
+      rows += section(g.title, g.entries.map((e) => this.recipeRow(s, e.recipe, false)).join(''));
+    }
     return `<div class="craft-list">${rows || '<div class="inv-empty">まだレシピを知らない。島のみんなに聞いてみよう!</div>'}</div>`;
   }
 

@@ -8,6 +8,7 @@
 // みじかい・詩のような・だれかの こえが きこえる文。ここでは それを3行ぶん 紙の上に置く。
 import type { LetterDef } from '../data/letters';
 import { icon } from './icons';
+import { byInput } from './inputMode';
 import { sfx } from '../audio/AudioSystem';
 
 export class LetterUI {
@@ -51,7 +52,10 @@ export class LetterUI {
         <div class="letter-body">${body}</div>
         <div class="letter-from">${letter.from} より</div>
       </div>
-      <div class="panel-sub">よんだ てがみは ずかん(Z)の「てがみ」で もういちど よめるよ。</div>
+      <div class="panel-sub">${byInput(
+        'よんだ てがみは ずかん(Z)の「てがみ」で もういちど よめるよ。',
+        'よんだ てがみは 右上の「ずかん」の「てがみ」で もういちど よめるよ。'
+      )}</div>
     `;
     this.el.classList.remove('hidden');
     sfx('letter'); // v18 びんの手紙は 数日に1本の出来事。汎用のUI音では もったいない

@@ -7,10 +7,20 @@ import {
 } from '../data/items';
 import { QUESTS } from '../data/quests';
 import { NPCS } from '../data/npcs';
+import { BADGES } from '../data/badges';
 import { ERRAND_MAX } from '../systems/BulletinSystem';
 
 const KEY = 'lumi_save';
 const OPTS_KEY = 'lumi_opts';
+
+/**
+ * v19 じどうバックアップ。新しい順に backup1 → backup2 → backup3。
+ * 1日(じっさいの こよみ)に1世代だけ玉突きするので、3世代 ≒ 直近3日ぶんの朝いちの姿。
+ * 本体(KEY)とは別のキーなので、いままでのセーブの形は なにも変わらない。
+ */
+const BACKUP_KEYS = ['lumi_backup1', 'lumi_backup2', 'lumi_backup3'] as const;
+/** 最後に玉突きした こよみの日(YYYY-MM-DD)。これがある日は もう玉突きしない */
+const BACKUP_DAY_KEY = 'lumi_backup_day';
 
 const VALID_ITEMS = new Set(Object.keys(ITEMS));
 const VALID_TOOLS = new Set(Object.keys(TOOLS));
@@ -36,13 +46,86 @@ export function hasSave(): boolean {
   }
 }
 
+/**
+ * セーブ(いままでどおり localStorage の 1か所へ書く)。
+ *
+ * v19 で足したのは「本体のセーブを書いたあとの おまけ」2つだけで、書く中身も置き場所も変えていない:
+ *   1) 日づけ(じっさいの こよみ)が変わって さいしょのセーブなら、**書く前のセーブ**を
+ *      じどうバックアップ1へ玉突きで入れる(1日1世代・3世代まで)
+ *   2) はじめて書けたときに 1回だけ ブラウザへ永続化をお願いする
+ * どちらも失敗しても本体のセーブには影響しない(順番が「本体 → おまけ」なのが要点)。
+ */
 export function save(state: GameState): boolean {
+  const prev = readSaveText();
+  if (!writeSaveText(JSON.stringify(state))) return false;
+  rotateBackupsIfNewDay(prev);
+  requestPersistOnce();
+  return true;
+}
+
+/** いまのセーブの生テキスト(読めなければnull)。検証はしない */
+function readSaveText(): string | null {
   try {
-    localStorage.setItem(KEY, JSON.stringify(state));
+    return localStorage.getItem(KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 本体のセーブを書く。容量オーバーのときは **バックアップを古い順に捨てて** 場所を作り直す。
+ * 「思い出の本体」を守るのが最優先で、バックアップはそのための消耗品という順位付け。
+ */
+function writeSaveText(text: string): boolean {
+  try {
+    localStorage.setItem(KEY, text);
     return true;
   } catch (e) {
+    // 容量オーバー以外(プライベートブラウズで保存そのものが禁じられている等)で
+    // バックアップを消してしまわないよう、エラーの名前を見てから捨てる。
+    // Chrome/Safari: QuotaExceededError / Firefox: NS_ERROR_DOM_QUOTA_REACHED
+    const name = e instanceof Error ? `${e.name} ${e.message}` : String(e);
+    if (!/quota|exceed/i.test(name)) {
+      console.warn('[save] failed', e);
+      return false;
+    }
+    for (let i = BACKUP_KEYS.length - 1; i >= 0; i--) {
+      try {
+        localStorage.removeItem(BACKUP_KEYS[i]);
+      } catch {
+        /* ignore */
+      }
+      try {
+        localStorage.setItem(KEY, text);
+        console.warn(`[save] 容量が足りないため じどうバックアップを ${BACKUP_KEYS.length - i} 世代 捨てました`);
+        return true;
+      } catch {
+        /* まだ足りない: もう1世代捨てる */
+      }
+    }
     console.warn('[save] failed', e);
     return false;
+  }
+}
+
+/**
+ * 追い出され耐性のお願い(対応ブラウザのみ)。1セッションに1回だけ。
+ * 結果はconsoleに書くだけでUIには出さない(子どもに見せる情報ではない)。
+ */
+let persistAsked = false;
+function requestPersistOnce(): void {
+  if (persistAsked) return;
+  persistAsked = true;
+  try {
+    if (typeof navigator === 'undefined') return;
+    const p = navigator.storage?.persist?.();
+    if (!p || typeof p.then !== 'function') return;
+    p.then(
+      (granted) => console.info(`[save] persistent storage: ${granted ? 'granted' : 'denied'}`),
+      (e) => console.info('[save] persistent storage: エラー', e)
+    );
+  } catch (e) {
+    console.info('[save] persistent storage: 使えない', e);
   }
 }
 
@@ -66,7 +149,23 @@ export function load(): GameState | null {
   try {
     const text = localStorage.getItem(KEY);
     if (!text) return null;
-    const parsed: unknown = JSON.parse(text);
+    return sanitizeState(JSON.parse(text));
+  } catch (e) {
+    console.warn('[save] 壊れたセーブデータのため新規扱いにします', e);
+    return null;
+  }
+}
+
+/**
+ * 生データ(JSON.parse ずみ)を検証して GameState にする。**復元のただ1つの入口**。
+ *
+ * localStorage からの load() も、ファイルからの よみこみ(parseBundle)も、
+ * じどうバックアップからの もどしも、ぜんぶ ここを通す。
+ * 「不正値はここで落ちる」を1か所に集めておくことで、
+ * 外から来たデータでも ゲーム側の前提(実在ID・範囲・型)が崩れない。
+ */
+export function sanitizeState(parsed: unknown): GameState | null {
+  try {
     if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new Error('not object');
     const raw = migrate(parsed as Record<string, unknown>) as Partial<GameState> & Record<string, unknown>;
 
@@ -335,4 +434,319 @@ export function saveOpts(o: Opts): void {
   } catch {
     /* ignore */
   }
+}
+
+/** 外から来た設定を検証する(boolean以外は既定へ)。ファイルからの よみこみ用 */
+function sanitizeOpts(v: unknown): Opts {
+  const o = (typeof v === 'object' && v !== null ? v : {}) as Partial<Opts>;
+  return { sound: typeof o.sound === 'boolean' ? o.sound : true };
+}
+
+// ============================================================================
+// v19 セーブのまもり: ファイルへの 書き出し/読みこみ と じどうバックアップ
+//
+// 設計の芯:
+//   - **セーブ形式そのものは変えない**。書き出しは いまのセーブを「包む」だけで、
+//     中身(data.save)は localStorage にあるものと1バイトも変えずに入れる。
+//   - **復元は必ず sanitizeState を通す**。包みの検証(版数・チェックサム)は
+//     「別のファイル・こわれたファイル」を早めに はじくためのもので、
+//     中身の安全は いままでどおり sanitizeState が引きうける。
+//   - **乱数を使わない**。チェックサムは FNV-1a(決定論)で、同じ中身なら いつでも同じ値。
+// ============================================================================
+
+/** 包み(ファイル)の形式の版。中身のセーブの版(SAVE_VERSION)とは別に数える */
+export const BUNDLE_FORMAT = 1;
+const BUNDLE_APP = 'lumi-island';
+const BUNDLE_KIND = 'save-bundle';
+
+/** バッジの記録は stats の `bdg_◯◯`(数=取った日)。1以上なら取ったバッジ */
+const BADGE_STAT_PREFIX = 'bdg_';
+const BADGE_STAT_KEYS = BADGES.map((b) => BADGE_STAT_PREFIX + b.id);
+
+/** 人に見せる「どんなデータか」の要約。うわがきの前に かならず これを見せる */
+export interface SaveSummary {
+  /** なんにちめ */
+  day: number;
+  lumina: number;
+  /** 取ったバッジの数 */
+  badges: number;
+}
+
+export function summarize(s: GameState): SaveSummary {
+  return {
+    day: s.time.day,
+    lumina: s.lumina,
+    badges: BADGE_STAT_KEYS.filter((k) => (s.stats[k] ?? 0) >= 1).length,
+  };
+}
+
+/** 書き出すファイルの中身。data 以外は「これは何か」を人と機械が見分けるための札 */
+export interface SaveBundle {
+  app: typeof BUNDLE_APP;
+  kind: typeof BUNDLE_KIND;
+  /** 包みの形式の版 */
+  format: number;
+  /** 中に入っているセーブの版(GameState.version) */
+  saveVersion: number;
+  /** 作った日時(ISO8601) */
+  createdAt: string;
+  /** 中身の要約(表示用。ほんとうの値は data から作り直すので、ここが嘘でも復元は狂わない) */
+  summary: SaveSummary;
+  /** data を並べ直した文字列の FNV-1a(8桁hex) */
+  checksum: string;
+  data: { save: unknown; opts: Opts };
+}
+
+/**
+ * キーの順番によらない JSON 文字列(チェックサム用)。
+ * テキストエディタや別のツールを通って キーの並びが変わっても、中身が同じなら同じ値になる。
+ */
+function canonicalJson(v: unknown): string {
+  if (v === null || typeof v !== 'object') return JSON.stringify(v) ?? 'null';
+  if (Array.isArray(v)) return `[${v.map(canonicalJson).join(',')}]`;
+  const o = v as Record<string, unknown>;
+  const keys = Object.keys(o)
+    .filter((k) => o[k] !== undefined)
+    .sort();
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${canonicalJson(o[k])}`).join(',')}}`;
+}
+
+/** FNV-1a 32bit(決定論。Math.randomは使わない) */
+function fnv1a(text: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+
+export function bundleChecksum(data: SaveBundle['data']): string {
+  return fnv1a(canonicalJson(data));
+}
+
+/** その日の こよみ(現地時間)の YYYY-MM-DD。じどうバックアップの「日が変わった」判定に使う */
+function localDateKey(now: number): string {
+  const d = new Date(now);
+  const p = (n: number): string => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** ダウンロードするファイル名(lumi-island-save-YYYYMMDD.json) */
+export function bundleFileName(now: number = Date.now()): string {
+  return `lumi-island-save-${localDateKey(now).replace(/-/g, '')}.json`;
+}
+
+/**
+ * いまのセーブ+設定を1つの包みにする。セーブが無い/読めないときは null。
+ * data.save には localStorage の中身を そのまま入れる(形は変えない)。
+ */
+export function buildBundle(now: number = Date.now()): SaveBundle | null {
+  const text = readSaveText();
+  if (!text) return null;
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    console.warn('[save] 書き出し: いまのセーブが読めない形になっている');
+    return null;
+  }
+  const state = sanitizeState(raw);
+  if (!state) return null;
+  const data: SaveBundle['data'] = { save: raw, opts: loadOpts() };
+  return {
+    app: BUNDLE_APP,
+    kind: BUNDLE_KIND,
+    format: BUNDLE_FORMAT,
+    saveVersion: state.version,
+    createdAt: new Date(now).toISOString(),
+    summary: summarize(state),
+    checksum: bundleChecksum(data),
+    data,
+  };
+}
+
+/** 包みをファイルに書ける文字列にする(見て分かるように2スペース字下げ)。セーブが無ければ null */
+export function exportBundleText(now: number = Date.now()): string | null {
+  const b = buildBundle(now);
+  return b ? JSON.stringify(b, null, 2) : null;
+}
+
+/** よみこみに失敗した理由(UIの言い換えのためだけに使う) */
+export type ImportFail =
+  | 'badJson' // JSONとして読めない
+  | 'notBundle' // ルミ島の包みではない
+  | 'futureFormat' // 新しすぎる版(このゲームでは開けない)
+  | 'checksum' // 中身が書きかわっている・こわれている
+  | 'badSave'; // 包みは正しいが、中のセーブが復元できない
+
+export type ImportResult =
+  | { ok: true; bundle: SaveBundle; state: GameState; opts: Opts; summary: SaveSummary }
+  | { ok: false; reason: ImportFail };
+
+/**
+ * ファイルの文字列を検証して中身を取り出す(**書きこみはしない**)。
+ * 呼び出し側は summary を見せて確認をとってから applyBundle を呼ぶ。
+ */
+export function parseBundle(text: string): ImportResult {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return { ok: false, reason: 'badJson' };
+  }
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return { ok: false, reason: 'notBundle' };
+  const b = raw as Partial<SaveBundle>;
+  if (b.app !== BUNDLE_APP || b.kind !== BUNDLE_KIND) return { ok: false, reason: 'notBundle' };
+  if (typeof b.format !== 'number' || !Number.isFinite(b.format)) return { ok: false, reason: 'notBundle' };
+  if (b.format > BUNDLE_FORMAT) return { ok: false, reason: 'futureFormat' };
+  const data = b.data;
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) return { ok: false, reason: 'notBundle' };
+  const clean: SaveBundle['data'] = { save: (data as SaveBundle['data']).save, opts: sanitizeOpts((data as SaveBundle['data']).opts) };
+  // チェックサムは「書き出したときの data」に対する値。設定の検証で形が変わると
+  // 一致しなくなるので、照合はファイルにあった data そのもので行う
+  if (typeof b.checksum !== 'string' || bundleChecksum(data as SaveBundle['data']) !== b.checksum) {
+    return { ok: false, reason: 'checksum' };
+  }
+  const state = sanitizeState(clean.save); // 復元はいままでどおり検証つきの1本道
+  if (!state) return { ok: false, reason: 'badSave' };
+  const bundle: SaveBundle = {
+    app: BUNDLE_APP,
+    kind: BUNDLE_KIND,
+    format: b.format,
+    saveVersion: typeof b.saveVersion === 'number' ? b.saveVersion : state.version,
+    createdAt: typeof b.createdAt === 'string' ? b.createdAt : '',
+    summary: summarize(state),
+    checksum: b.checksum,
+    data: clean,
+  };
+  return { ok: true, bundle, state, opts: clean.opts, summary: bundle.summary };
+}
+
+/**
+ * 検証ずみの包みで いまのデータを うわがきする。
+ * うわがきの前に **いまのセーブを じどうバックアップへ逃がす**(まちがえても1手で戻せる)。
+ */
+export function applyBundle(r: Extract<ImportResult, { ok: true }>): boolean {
+  const text = JSON.stringify(r.state); // 検証を通ったあとの姿を書く(こわれた値は入らない)
+  pushBackupText(readSaveText());
+  if (!writeSaveText(text)) return false;
+  saveOpts(r.opts);
+  requestPersistOnce();
+  return true;
+}
+
+// ---- じどうバックアップ(3世代) ----
+
+/** 1世代ぶんの中身。text はセーブの生JSON(形は本体とまったく同じ) */
+interface BackupRecord {
+  at: number;
+  text: string;
+}
+
+/** 画面に出す1行 */
+export interface BackupInfo {
+  /** 1=いちばん新しい */
+  slot: number;
+  /** ほぞんした日時(ミリ秒) */
+  at: number;
+  /** 中身の要約。復元できない世代は null */
+  summary: SaveSummary | null;
+  bytes: number;
+}
+
+function readBackup(slot: number): BackupRecord | null {
+  const key = BACKUP_KEYS[slot - 1];
+  if (!key) return null;
+  try {
+    const text = localStorage.getItem(key);
+    if (!text) return null;
+    const r = JSON.parse(text) as Partial<BackupRecord>;
+    if (typeof r?.text !== 'string') return null;
+    return { at: typeof r.at === 'number' && Number.isFinite(r.at) ? r.at : 0, text: r.text };
+  } catch {
+    return null;
+  }
+}
+
+/** 3世代の一覧(新しい順)。何も無ければ空配列 */
+export function listBackups(): BackupInfo[] {
+  const out: BackupInfo[] = [];
+  for (let slot = 1; slot <= BACKUP_KEYS.length; slot++) {
+    const r = readBackup(slot);
+    if (!r) continue;
+    let summary: SaveSummary | null = null;
+    try {
+      const st = sanitizeState(JSON.parse(r.text));
+      if (st) summary = summarize(st);
+    } catch {
+      /* こわれた世代は summary=null のまま(もどす対象に出さない) */
+    }
+    out.push({ slot, at: r.at, summary, bytes: r.text.length });
+  }
+  return out;
+}
+
+/** じどうバックアップが使う localStorage の合計バイト数(容量の実測・報告用) */
+export function backupBytes(): number {
+  let n = 0;
+  for (const key of BACKUP_KEYS) {
+    try {
+      n += (localStorage.getItem(key) ?? '').length;
+    } catch {
+      /* ignore */
+    }
+  }
+  return n;
+}
+
+/**
+ * text を第1世代へ入れ、古いものを1つずつ下へ玉突きする(いちばん古い世代は消える)。
+ * 第1世代とまったく同じ中身なら何もしない(同じ姿で世代を使いつぶさない)。
+ */
+function pushBackupText(text: string | null): void {
+  if (!text) return;
+  try {
+    if (readBackup(1)?.text === text) return;
+    for (let i = BACKUP_KEYS.length - 1; i >= 1; i--) {
+      const from = localStorage.getItem(BACKUP_KEYS[i - 1]);
+      if (from === null) localStorage.removeItem(BACKUP_KEYS[i]);
+      else localStorage.setItem(BACKUP_KEYS[i], from);
+    }
+    localStorage.setItem(BACKUP_KEYS[0], JSON.stringify({ at: Date.now(), text } satisfies BackupRecord));
+  } catch (e) {
+    // 容量オーバーなど。本体のセーブは すでに書けているので、ここは失敗してよい
+    console.warn('[save] じどうバックアップに入れられませんでした', e);
+  }
+}
+
+/** こよみの日が変わってからの さいしょのセーブなら、直前のセーブを1世代ぶん逃がす */
+function rotateBackupsIfNewDay(prevText: string | null): void {
+  try {
+    const today = localDateKey(Date.now());
+    if (localStorage.getItem(BACKUP_DAY_KEY) === today) return;
+    localStorage.setItem(BACKUP_DAY_KEY, today);
+    pushBackupText(prevText);
+  } catch (e) {
+    console.warn('[save] じどうバックアップの世代交代に失敗', e);
+  }
+}
+
+/**
+ * 選んだ世代へ もどす。もどす前に いまのセーブを じどうバックアップへ逃がすので、
+ * 「もどしたけど やっぱり さっきのが よかった」も1手で取り消せる。
+ */
+export function restoreBackup(slot: number): boolean {
+  const r = readBackup(slot);
+  if (!r) return false;
+  let state: GameState | null = null;
+  try {
+    state = sanitizeState(JSON.parse(r.text)); // 復元はいままでどおり検証つきの1本道
+  } catch {
+    return false;
+  }
+  if (!state) return false;
+  const text = JSON.stringify(state);
+  pushBackupText(readSaveText()); // 先に中身を読んであるので、玉突きしても取り違えない
+  return writeSaveText(text);
 }

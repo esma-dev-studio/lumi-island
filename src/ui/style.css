@@ -287,6 +287,17 @@ body { font-family: var(--font); color: var(--ink); }
 
 /* ---- クラフト・店 ---- */
 .craft-list { display: flex; flex-direction: column; gap: 6px; }
+/* v19 レシピ一覧の節見出し(どうぐ/かぐ/りょうり/いろみず/かざり)。
+   40をこえたレシピを たどれるように、スクロールしても見出しが上に残る(position: sticky)。
+   .panel が スクロールする箱なので、その上ばりに くっつく。 */
+.craft-sec {
+  position: sticky; top: -14px; z-index: 1; /* -14px = .panel の上パディングぶん(すきま無くくっつける) */
+  margin: 8px 0 0; padding: 6px 2px 5px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  font-weight: 900; font-size: 0.76rem; letter-spacing: 0.06em; color: var(--ink-soft);
+}
+.craft-list > .craft-sec:first-child { margin-top: 0; }
 .craft-row {
   display: flex; align-items: center; gap: 8px; background: #fff;
   border: 1px solid var(--line); border-radius: 5px; padding: 7px 10px; font-size: 0.84rem;
@@ -400,6 +411,9 @@ body { font-family: var(--font); color: var(--ink); }
 .title-screen {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   padding: calc(var(--sa-t) + 8px) calc(var(--sa-r) + 8px) calc(var(--sa-b) + 8px) calc(var(--sa-l) + 8px);
+  /* せっていを開くと縦に長くなるので、はみ出したら指でスクロールできるようにする(.panelと同じ流儀)。
+     align-items:center のままはみ出すと上が切れて届かないので、中央寄せは .title-inner の auto マージンで行う */
+  overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
   /* 背景は3Dの夜の島。DOM側は文字が読める程度の薄い夜色ビネットだけ重ねる */
   background:
     radial-gradient(ellipse 120% 95% at 50% 45%, rgba(10, 16, 34, 0) 46%, rgba(10, 16, 34, 0.5) 100%),
@@ -407,17 +421,19 @@ body { font-family: var(--font); color: var(--ink); }
 }
 .title-confirm {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
   background: rgba(10, 14, 26, 0.55); z-index: 5;
 }
 .tc-box {
   background: rgba(246, 241, 230, 0.96); color: #4a3b2c; border-radius: 8px;
   padding: 22px 26px; max-width: 360px; text-align: center; line-height: 1.85;
+  margin: auto 0; /* 中身が高いときも上が切れない(はみ出したらスクロール) */
 }
 .tc-msg { font-size: 0.92rem; margin-bottom: 16px; }
 .tc-btns { display: flex; gap: 10px; justify-content: center; }
 .tc-btns .title-btn { width: 120px; }
 .tc-btns .title-btn.danger { width: 120px; background: #b45a48; border: none; color: #fff; }
-.title-inner { text-align: center; color: #e8e2d2; max-width: 420px; width: 90%; }
+.title-inner { text-align: center; color: #e8e2d2; max-width: 420px; width: 90%; margin: auto 0; }
 .title-jp { font-size: 2.5rem; font-weight: 900; letter-spacing: 0.14em; text-shadow: 0 2px 22px rgba(8, 12, 24, 0.85), 0 0 26px rgba(159, 232, 200, 0.35); }
 .title-en { font-size: 0.95rem; letter-spacing: 0.42em; color: #9fe8c8; margin-top: 2px; }
 .title-sub { font-size: 0.86rem; color: #9fb2d8; margin: 14px 0 30px; }
@@ -437,12 +453,52 @@ body { font-family: var(--font); color: var(--ink); }
 .tx-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
 .tx-row .title-btn { width: auto; padding: 5px 20px; font-size: 0.82rem; }
 .help-grid { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; text-align: left; }
+/* そうさ一覧は17行ある。スクロールは外がわ(.title-screen / .panel)に1本だけ持たせ、
+   ここには入れ子のスクロール枠を作らない——指の画面で「どちらが動くのか」が分からなくなるため */
+/* 節の小見出し(2列ぶち抜き)。行のかたまりを見分けるための細い区切り線つき */
+.help-sec {
+  grid-column: 1 / -1; margin-top: 8px; padding-top: 7px; border-top: 1px solid #3a4358;
+  color: #9fb2d8; font-size: 0.74rem; letter-spacing: 0.06em; font-weight: 700;
+}
+.help-sec:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+.pause-panel .help-sec { border-top-color: var(--line); color: var(--amber); }
 .help-grid kbd {
   font-family: var(--font); background: #2c3a55; border: 1px solid #4a5878;
   border-radius: 4px; padding: 0 7px; font-size: 0.78rem;
 }
 .title-credit { margin-top: 26px; font-size: 0.7rem; color: #6a7690; }
 .title-loading { color: #9fe8c8; font-size: 0.92rem; padding: 12px; }
+
+/* v19 データのまもり(ファイルへの書き出し・よみこみ・じどうバックアップ)。
+   モーダルの中は明るい紙(.tc-box)なので、中のボタンだけ紙用の色に上書きする。
+   新しいクラスは tm-*(TodayCardの tc-* と名前がぶつからないように分けてある) */
+.tx-head {
+  margin: 13px 0 8px; padding-top: 11px; border-top: 1px solid #3a4358;
+  color: #9fb2d8; font-size: 0.8rem; letter-spacing: 0.06em; text-align: left;
+}
+.tx-col { display: flex; flex-direction: column; gap: 7px; }
+.tx-col .title-btn.tx-wide {
+  width: 100%; min-height: 44px; padding: 10px 8px; font-size: 0.85rem; letter-spacing: 0.04em;
+}
+.tx-note { margin-top: 11px; color: #7f8ca8; font-size: 0.72rem; line-height: 1.7; text-align: left; }
+.tx-file { display: none; }
+.tm-sum {
+  display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center;
+  margin: 12px 0; padding: 9px 10px; border-radius: 6px;
+  background: rgba(74, 59, 44, 0.08); font-weight: 700; font-size: 0.9rem;
+}
+.tm-note { display: block; margin-top: 8px; color: #7d6b58; font-size: 0.76rem; line-height: 1.7; }
+.tm-file { display: block; margin-top: 6px; font-weight: 700; font-size: 0.82rem; color: #6b5a45; word-break: break-all; }
+.tc-box .title-btn.sub { background: #fff; border: 1px solid rgba(74, 59, 44, 0.28); color: #4a3b2c; }
+.tc-box .title-btn.sub:hover { border-color: var(--amber); color: var(--amber); }
+.tc-btns.tm-col { flex-direction: column; }
+.tc-btns.tm-col .title-btn { width: 100%; }
+.tm-pick {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  min-height: 44px; padding: 9px 14px; line-height: 1.5; text-align: left;
+}
+.tm-pick b { font-size: 0.9rem; }
+.tm-pick span { font-size: 0.78rem; opacity: 0.82; }
 
 /* ---- ポーズメニュー ---- */
 .pause-panel { min-width: 300px; }
@@ -653,6 +709,9 @@ html.touch-ui .title-sub { font-size: 0.9rem; }
 html.touch-ui .title-extra { font-size: 0.88rem; }
 html.touch-ui .tc-box { max-width: 420px; }
 html.touch-ui .tc-btns .title-btn { width: 150px; padding: 12px 0; }
+/* v19 たてならびの選択(まえの データに もどす)は はば いっぱい・44px以上 */
+html.touch-ui .tc-btns.tm-col .title-btn { width: 100%; padding: 10px 14px; }
+html.touch-ui .tx-col .title-btn.tx-wide { font-size: 0.92rem; padding: 12px 8px; }
 
 /* --- たてむき --- */
 @media (orientation: portrait) {

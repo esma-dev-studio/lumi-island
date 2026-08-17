@@ -1,0 +1,158 @@
+{
+  "measures": {
+    "tx_wide": [
+      {
+        "w": 486,
+        "h": 50,
+        "text": "セーブを ファイルに ほぞん"
+      },
+      {
+        "w": 486,
+        "h": 50,
+        "text": "ファイルから よみこむ"
+      },
+      {
+        "w": 486,
+        "h": 50,
+        "text": "まえの データに もどす"
+      }
+    ],
+    "confirm_btns": [
+      {
+        "w": 150,
+        "h": 50,
+        "text": "はい"
+      },
+      {
+        "w": 150,
+        "h": 50,
+        "text": "やめる"
+      }
+    ],
+    "tm_pick": [
+      {
+        "w": 281,
+        "h": 69,
+        "text": "8/17 16:593にちめ ・ ルミナ 95 "
+      }
+    ],
+    "tm_pick3": [
+      {
+        "w": 304,
+        "h": 69,
+        "text": "8/16 16:5913にちめ ・ ルミナ 23"
+      },
+      {
+        "w": 304,
+        "h": 69,
+        "text": "8/15 16:5912にちめ ・ ルミナ 19"
+      },
+      {
+        "w": 304,
+        "h": 69,
+        "text": "8/14 16:5911にちめ ・ ルミナ 17"
+      }
+    ],
+    "storage": {
+      "save": {
+        "version": 1,
+        "time": {
+          "day": 3,
+          "hour": 10
+        },
+        "player": {
+          "x": 0,
+          "z": 6,
+          "rotY": 0
+        },
+        "lumina": 95,
+        "tools": [
+          "axe",
+          "rod",
+          "sickle"
+        ],
+        "inventory": {
+          "wood": 12,
+          "fish": 4
+        },
+        "recipes": [
+          "r_sickle",
+          "r_rod",
+          "r_flowerbed",
+          "r_shelldeco",
+          "r_bookcase",
+          "r_dishrack",
+          "r_flowervase",
+          "r_wall_leaf",
+          "r_floor_rug",
+          "r_broom",
+          "r_jar",
+          "r_gardentable",
+          "r_net",
+          "r_shovel",
+          "r_strawmat",
+          "r_kitchen"
+        ],
+        "furniture": [],
+        "furnitureSeq": 1,
+        "quests": {
+          "q_wood": "done",
+          "q_fish": "done",
+          "q_ore": "locked",
+          "q_lantern": "locked",
+          "q_lumi": "locked",
+          "q2_boat": "locked",
+          "q2_meet": "locked",
+          "q2_shell": "locked",
+          "q2_starweed": "locked",
+          "q2_lens": "locked",
+          "q2_light": "locked"
+        },
+        "npcs": {
+          "minamo": {
+            "friendship": 0,
+            "talkedToday": false,
+            "giftedToday": false
+          },
+          "nokto": {
+            "friendship": 0,
+            "talkedToday": false,
+            "giftedToday": false
+          },
+          "tsumugi": {
+            "friendship": 0,
+            "talkedToday": false,
+            "giftedToday": false
+          }
+        },
+        "islandLevel": 1,
+        "flags": {
+          "tut_move": true
+        },
+        "codex": {
+          "wood": 30,
+          "fish": 12
+        },
+        "stats": {
+          "bdg_ft_fish": 3,
+          "bdg_ft_bug": 5,
+          "bdg_ft_cook": 6,
+          "place_total": 9,
+          "quest_done": 2
+        },
+        "homeStyle": {
+          "wall": "wall_cream",
+          "floor": "floor_wood"
+        },
+        "garden": []
+      },
+      "bytes": 2328,
+      "backups": [
+        407,
+        407,
+        407
+      ]
+    }
+  },
+  "errors": []
+}

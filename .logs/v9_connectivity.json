@@ -1,12 +1,12 @@
 {
  "grid": 501,
  "step": 0.2,
- "walkableCells": 164066,
+ "walkableCells": 164026,
  "components": 6,
  "top": [
   {
-   "cells": 164014,
-   "areaM2": 6561,
+   "cells": 163974,
+   "areaM2": 6559,
    "sample": [
     -48.2,
     -26.4
@@ -56,6 +56,6 @@
  "nodeCount": 81,
  "bugSpots": 1,
  "digSpots": 4,
- "circleColliders": 105,
+ "circleColliders": 106,
  "rectColliders": 22
 }

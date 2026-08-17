@@ -39,7 +39,16 @@ interface WindInst {
   phase: number;
 }
 
-export function scatterDeco(scene: Scene): void {
+/**
+ * 島の草花・小石をまく。
+ *
+ * @param visible 島の見た目が画面に出ているか。false のあいだは風のゆれを止める。
+ *   別空間(部屋・NPCの家・入り江)にいるあいだ草は1本も見えないのに、
+ *   260本ぶんの行列を組みなおして毎回3本のバッファをGPUへ送っていた
+ *   (CPUプロファイル実測: 家の中で 2.32% / 入り江で 2.92%)。
+ *   渡さないときは今までどおり常に動く。
+ */
+export function scatterDeco(scene: Scene, visible: () => boolean = () => true): void {
   const srcs: Record<DecoKey, Mesh> = {
     thin: makeThinGrassSource(scene),
     wide: makeGrassTuftSource(scene),
@@ -123,6 +132,7 @@ export function scatterDeco(scene: Scene): void {
   let acc = 0;
   let t = 0;
   scene.onBeforeRenderObservable.add(() => {
+    if (!visible()) return; // 別空間にいるあいだは草が1本も見えない(時計も進めない=出た瞬間の姿は同じ)
     const dt = scene.getEngine().getDeltaTime() / 1000;
     acc += dt;
     t += dt;

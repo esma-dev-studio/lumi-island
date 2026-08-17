@@ -1,0 +1,114 @@
+{
+ "when": "2026-08-07T10:50:18.264Z",
+ "vsync": "off",
+ "sampleMs": 9000,
+ "rows": [
+  {
+   "label": "meadow_ON_0",
+   "frames": 1022,
+   "p50": 6.8,
+   "p95": 15.3,
+   "p99": 46,
+   "avg": 8.83,
+   "activeMeshes": 55,
+   "bugs": 5,
+   "digs": 4
+  },
+  {
+   "label": "meadow_OFF_0",
+   "frames": 990,
+   "p50": 7.7,
+   "p95": 16.7,
+   "p99": 30.2,
+   "avg": 9.11,
+   "activeMeshes": 52,
+   "bugs": 7,
+   "digs": 4
+  },
+  {
+   "label": "digarea_ON_0",
+   "frames": 1311,
+   "p50": 6.6,
+   "p95": 10.3,
+   "p99": 14.9,
+   "avg": 6.87,
+   "activeMeshes": 43,
+   "bugs": 7,
+   "digs": 4
+  },
+  {
+   "label": "digarea_OFF_0",
+   "frames": 1385,
+   "p50": 6.2,
+   "p95": 9.1,
+   "p99": 13.6,
+   "avg": 6.51,
+   "activeMeshes": 42,
+   "bugs": 7,
+   "digs": 4
+  },
+  {
+   "label": "meadow_ON_1",
+   "frames": 1318,
+   "p50": 6.6,
+   "p95": 9.9,
+   "p99": 12.5,
+   "avg": 6.84,
+   "activeMeshes": 55,
+   "bugs": 7,
+   "digs": 4
+  },
+  {
+   "label": "meadow_OFF_1",
+   "frames": 1263,
+   "p50": 6.3,
+   "p95": 12,
+   "p99": 14.2,
+   "avg": 7.14,
+   "activeMeshes": 52,
+   "bugs": 7,
+   "digs": 4
+  },
+  {
+   "label": "digarea_ON_1",
+   "frames": 1337,
+   "p50": 5.9,
+   "p95": 11.4,
+   "p99": 13,
+   "avg": 6.74,
+   "activeMeshes": 43,
+   "bugs": 7,
+   "digs": 4
+  },
+  {
+   "label": "digarea_OFF_1",
+   "frames": 1454,
+   "p50": 6,
+   "p95": 9,
+   "p99": 11.3,
+   "avg": 6.2,
+   "activeMeshes": 42,
+   "bugs": 7,
+   "digs": 4
+  }
+ ],
+ "summary": {
+  "meadow": {
+   "onP50": 6.7,
+   "offP50": 7,
+   "onP95": 12.6,
+   "offP95": 14.35,
+   "deltaP95": -1.75,
+   "deltaP50": -0.3
+  },
+  "digarea": {
+   "onP50": 6.25,
+   "offP50": 6.1,
+   "onP95": 10.85,
+   "offP95": 9.05,
+   "deltaP95": 1.8,
+   "deltaP50": 0.15
+  }
+ },
+ "consoleErrors": 0
+}

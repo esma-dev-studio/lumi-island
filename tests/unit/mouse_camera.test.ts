@@ -304,7 +304,9 @@ describe('そうさほうほう(視点操作の行)', () => {
     expect(hasRow(list, 'マウスドラッグ', 'カメラを まわす')).toBe(true);
     expect(hasRow(list, 'ホイール', 'ズーム(よる・ひく)')).toBe(true);
     // 既存の行は消えていない
-    expect(hasRow(list, 'W A S D', 'あるく')).toBe(true);
+    // v19: そうさほうほうは src/ui/helpText.ts の1本に統合したので、
+    // ポーズメニューの歩く行も タイトルと同じ「W A S D/矢印」になった
+    expect(hasRow(list, 'W A S D/矢印', 'あるく')).toBe(true);
     expect(hasRow(list, 'Shift', 'はしる')).toBe(true);
     expect(hasRow(list, 'R', '(はいち中)まわす')).toBe(true);
   });

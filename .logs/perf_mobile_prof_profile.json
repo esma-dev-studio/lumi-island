@@ -1,0 +1,787 @@
+{
+ "tag": "prof",
+ "when": "2026-08-17T07:40:10.292Z",
+ "rate": 4,
+ "profiles": [
+  {
+   "id": "day_run",
+   "label": "昼の島を走る",
+   "top": [
+    {
+     "where": "(program) @ :0",
+     "samples": 1522,
+     "pct": 10.13
+    },
+    {
+     "where": "project @ /src/scenes/WorldMarkerController.ts:49",
+     "samples": 647,
+     "pct": 4.3
+    },
+    {
+     "where": "bindVertexArray @ :0",
+     "samples": 487,
+     "pct": 3.24
+    },
+    {
+     "where": "isReady @ /node_modules/.vite/deps/chunk-FXMMDBNX.js:1070",
+     "samples": 459,
+     "pct": 3.05
+    },
+    {
+     "where": "_evaluateActiveMeshes @ /node_modules/.vite/deps/chunk-VL3V4BGP.js:5610",
+     "samples": 405,
+     "pct": 2.69
+    },
+    {
+     "where": "uniformMatrix4fv @ :0",
+     "samples": 386,
+     "pct": 2.57
+    },
+    {
+     "where": "Mesh.thinInstanceSetMatrixAt @ /node_modules/.vite/deps/@babylonjs_loaders_glTF_2__0.js:7007",
+     "samples": 313,
+     "pct": 2.08
+    },
+    {
+     "where": "drawElements @ :0",
+     "samples": 282,
+     "pct": 1.88
+    },
+    {
+     "where": "_renderSubMeshForShadowMap @ /node_modules/.vite/deps/chunk-FXMMDBNX.js:865",
+     "samples": 280,
+     "pct": 1.86
+    },
+    {
+     "where": "_getInstancesRenderList @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:5256",
+     "samples": 256,
+     "pct": 1.7
+    },
+    {
+     "where": "updatePondWave @ /src/entities/water.ts:196",
+     "samples": 247,
+     "pct": 1.64
+    },
+    {
+     "where": "_prepareRenderingManager @ /node_modules/.vite/deps/chunk-2HSL44OV.js:537",
+     "samples": 211,
+     "pct": 1.4
+    },
+    {
+     "where": "_prepareShadowDefines @ /node_modules/.vite/deps/chunk-FXMMDBNX.js:1050",
+     "samples": 193,
+     "pct": 1.28
+    },
+    {
+     "where": "isInFrustum @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:5968",
+     "samples": 159,
+     "pct": 1.06
+    },
+    {
+     "where": "_isSynchronized @ /node_modules/.vite/deps/chunk-LBLD6RCF.js:215",
+     "samples": 152,
+     "pct": 1.01
+    },
+    {
+     "where": "isReadyForSubMesh @ /node_modules/.vite/deps/@babylonjs_core_Materials_standardMaterial.js:430",
+     "samples": 147,
+     "pct": 0.98
+    },
+    {
+     "where": "bindForSubMesh @ /node_modules/.vite/deps/@babylonjs_core_Materials_standardMaterial.js:917",
+     "samples": 141,
+     "pct": 0.94
+    },
+    {
+     "where": "computeWorldMatrix @ /node_modules/.vite/deps/chunk-LBLD6RCF.js:868",
+     "samples": 136,
+     "pct": 0.9
+    },
+    {
+     "where": "render @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:5651",
+     "samples": 135,
+     "pct": 0.9
+    },
+    {
+     "where": "update @ /src/scenes/WorldMarkerController.ts:68",
+     "samples": 111,
+     "pct": 0.74
+    },
+    {
+     "where": "_bindLight @ /node_modules/.vite/deps/chunk-CLZTON2V.js:238",
+     "samples": 110,
+     "pct": 0.73
+    },
+    {
+     "where": "render @ /src/scenes/GameScene.ts:1118",
+     "samples": 104,
+     "pct": 0.69
+    },
+    {
+     "where": "notifyObservers @ /node_modules/.vite/deps/chunk-GCT36VBF.js:221",
+     "samples": 103,
+     "pct": 0.69
+    },
+    {
+     "where": "_bind @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:366",
+     "samples": 101,
+     "pct": 0.67
+    },
+    {
+     "where": "bufferSubData @ :0",
+     "samples": 100,
+     "pct": 0.67
+    },
+    {
+     "where": "_renderSubMesh @ /node_modules/.vite/deps/chunk-4573GTMJ.js:631",
+     "samples": 97,
+     "pct": 0.65
+    },
+    {
+     "where": "_getDrawWrapper @ /node_modules/.vite/deps/chunk-LDBAOHAG.js:118",
+     "samples": 94,
+     "pct": 0.63
+    },
+    {
+     "where": "bindBuffer @ :0",
+     "samples": 92,
+     "pct": 0.61
+    },
+    {
+     "where": "CopyMatrixToArray @ /node_modules/.vite/deps/chunk-2EYI762J.js:59",
+     "samples": 92,
+     "pct": 0.61
+    },
+    {
+     "where": "_internalIsSubMeshReady @ /node_modules/.vite/deps/chunk-4573GTMJ.js:366",
+     "samples": 90,
+     "pct": 0.6
+    }
+   ]
+  },
+  {
+   "id": "night_island",
+   "label": "夜の島(ホタル・光だまり)",
+   "top": [
+    {
+     "where": "(program) @ :0",
+     "samples": 1040,
+     "pct": 10.87
+    },
+    {
+     "where": "project @ /src/scenes/WorldMarkerController.ts:49",
+     "samples": 417,
+     "pct": 4.36
+    },
+    {
+     "where": "isReady @ /node_modules/.vite/deps/chunk-FXMMDBNX.js:1070",
+     "samples": 307,
+     "pct": 3.21
+    },
+    {
+     "where": "bindVertexArray @ :0",
+     "samples": 271,
+     "pct": 2.83
+    },
+    {
+     "where": "_evaluateActiveMeshes @ /node_modules/.vite/deps/chunk-VL3V4BGP.js:5610",
+     "samples": 269,
+     "pct": 2.81
+    },
+    {
+     "where": "uniformMatrix4fv @ :0",
+     "samples": 269,
+     "pct": 2.81
+    },
+    {
+     "where": "_renderSubMeshForShadowMap @ /node_modules/.vite/deps/chunk-FXMMDBNX.js:865",
+     "samples": 217,
+     "pct": 2.27
+    },
+    {
+     "where": "(anonymous) @ /src/entities/deco.ts:106",
+     "samples": 207,
+     "pct": 2.16
+    },
+    {
+     "where": "_prepareShadowDefines @ /node_modules/.vite/deps/chunk-FXMMDBNX.js:1050",
+     "samples": 159,
+     "pct": 1.66
+    },
+    {
+     "where": "updatePondWave @ /src/entities/water.ts:196",
+     "samples": 159,
+     "pct": 1.66
+    },
+    {
+     "where": "_getInstancesRenderList @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:5256",
+     "samples": 152,
+     "pct": 1.59
+    },
+    {
+     "where": "pathDist @ /src/entities/terrain.ts:35",
+     "samples": 140,
+     "pct": 1.46
+    },
+    {
+     "where": "drawElements @ :0",
+     "samples": 128,
+     "pct": 1.34
+    },
+    {
+     "where": "isReadyForSubMesh @ /node_modules/.vite/deps/@babylonjs_core_Materials_standardMaterial.js:430",
+     "samples": 122,
+     "pct": 1.28
+    },
+    {
+     "where": "_isSynchronized @ /node_modules/.vite/deps/chunk-LBLD6RCF.js:215",
+     "samples": 112,
+     "pct": 1.17
+    },
+    {
+     "where": "_prepareRenderingManager @ /node_modules/.vite/deps/chunk-2HSL44OV.js:537",
+     "samples": 104,
+     "pct": 1.09
+    },
+    {
+     "where": "CopyMatrixToArray @ /node_modules/.vite/deps/chunk-2EYI762J.js:59",
+     "samples": 95,
+     "pct": 0.99
+    },
+    {
+     "where": "isInFrustum @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:5968",
+     "samples": 92,
+     "pct": 0.96
+    },
+    {
+     "where": "_getDrawWrapper @ /node_modules/.vite/deps/chunk-LDBAOHAG.js:118",
+     "samples": 84,
+     "pct": 0.88
+    },
+    {
+     "where": "bufferSubData @ :0",
+     "samples": 84,
+     "pct": 0.88
+    },
+    {
+     "where": "render @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:5651",
+     "samples": 78,
+     "pct": 0.82
+    },
+    {
+     "where": "update @ /src/scenes/WorldMarkerController.ts:68",
+     "samples": 73,
+     "pct": 0.76
+    },
+    {
+     "where": "texImage2D @ :0",
+     "samples": 72,
+     "pct": 0.75
+    },
+    {
+     "where": "_processRendering @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:5478",
+     "samples": 66,
+     "pct": 0.69
+    },
+    {
+     "where": "_renderForCamera @ /node_modules/.vite/deps/chunk-VL3V4BGP.js:5814",
+     "samples": 63,
+     "pct": 0.66
+    },
+    {
+     "where": "computeWorldMatrix @ /node_modules/.vite/deps/chunk-LBLD6RCF.js:868",
+     "samples": 63,
+     "pct": 0.66
+    },
+    {
+     "where": "ProcessLateAnimationBindings @ /node_modules/.vite/deps/chunk-NHZFFIRQ.js:1048",
+     "samples": 62,
+     "pct": 0.65
+    },
+    {
+     "where": "MultiplyMatricesToArray @ /node_modules/.vite/deps/chunk-2EYI762J.js:27",
+     "samples": 59,
+     "pct": 0.62
+    },
+    {
+     "where": "notifyObservers @ /node_modules/.vite/deps/chunk-GCT36VBF.js:221",
+     "samples": 55,
+     "pct": 0.58
+    },
+    {
+     "where": "setFloat @ /node_modules/.vite/deps/chunk-WMZ2AX2I.js:566",
+     "samples": 48,
+     "pct": 0.5
+    }
+   ]
+  },
+  {
+   "id": "cove_night",
+   "label": "入り江の夜",
+   "top": [
+    {
+     "where": "(program) @ :0",
+     "samples": 2307,
+     "pct": 23.75
+    },
+    {
+     "where": "_evaluateActiveMeshes @ /node_modules/.vite/deps/chunk-VL3V4BGP.js:5610",
+     "samples": 335,
+     "pct": 3.45
+    },
+    {
+     "where": "(anonymous) @ /src/entities/deco.ts:106",
+     "samples": 284,
+     "pct": 2.92
+    },
+    {
+     "where": "updatePondWave @ /src/entities/water.ts:196",
+     "samples": 180,
+     "pct": 1.85
+    },
+    {
+     "where": "_prepareRenderingManager @ /node_modules/.vite/deps/chunk-2HSL44OV.js:537",
+     "samples": 135,
+     "pct": 1.39
+    },
+    {
+     "where": "bufferSubData @ :0",
+     "samples": 133,
+     "pct": 1.37
+    },
+    {
+     "where": "update @ /src/scenes/WorldMarkerController.ts:68",
+     "samples": 118,
+     "pct": 1.21
+    },
+    {
+     "where": "bindVertexArray @ :0",
+     "samples": 111,
+     "pct": 1.14
+    },
+    {
+     "where": "project @ /src/scenes/WorldMarkerController.ts:49",
+     "samples": 108,
+     "pct": 1.11
+    },
+    {
+     "where": "ProcessLateAnimationBindings @ /node_modules/.vite/deps/chunk-NHZFFIRQ.js:1048",
+     "samples": 108,
+     "pct": 1.11
+    },
+    {
+     "where": "render @ /src/scenes/GameScene.ts:1118",
+     "samples": 102,
+     "pct": 1.05
+    },
+    {
+     "where": "_renderForCamera @ /node_modules/.vite/deps/chunk-VL3V4BGP.js:5814",
+     "samples": 97,
+     "pct": 1
+    },
+    {
+     "where": "isReadyForSubMesh @ /node_modules/.vite/deps/@babylonjs_core_Materials_standardMaterial.js:430",
+     "samples": 92,
+     "pct": 0.95
+    },
+    {
+     "where": "notifyObservers @ /node_modules/.vite/deps/chunk-GCT36VBF.js:221",
+     "samples": 86,
+     "pct": 0.89
+    },
+    {
+     "where": "bindForSubMesh @ /node_modules/.vite/deps/@babylonjs_core_Materials_standardMaterial.js:917",
+     "samples": 83,
+     "pct": 0.85
+    },
+    {
+     "where": "CopyMatrixToArray @ /node_modules/.vite/deps/chunk-2EYI762J.js:59",
+     "samples": 81,
+     "pct": 0.83
+    },
+    {
+     "where": "render @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:5651",
+     "samples": 77,
+     "pct": 0.79
+    },
+    {
+     "where": "bindBuffer @ :0",
+     "samples": 69,
+     "pct": 0.71
+    },
+    {
+     "where": "_BoundingInfo @ /node_modules/.vite/deps/chunk-4LS4K7CW.js:430",
+     "samples": 69,
+     "pct": 0.71
+    },
+    {
+     "where": "drawElements @ :0",
+     "samples": 67,
+     "pct": 0.69
+    },
+    {
+     "where": "isInFrustum @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:5968",
+     "samples": 66,
+     "pct": 0.68
+    },
+    {
+     "where": "_update @ /node_modules/.vite/deps/chunk-4LS4K7CW.js:87",
+     "samples": 66,
+     "pct": 0.68
+    },
+    {
+     "where": "setTransformMatrix @ /node_modules/.vite/deps/chunk-VL3V4BGP.js:4028",
+     "samples": 65,
+     "pct": 0.67
+    },
+    {
+     "where": "uniformMatrix4fv @ :0",
+     "samples": 65,
+     "pct": 0.67
+    },
+    {
+     "where": "texImage2D @ :0",
+     "samples": 62,
+     "pct": 0.64
+    },
+    {
+     "where": "isReady @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:4649",
+     "samples": 57,
+     "pct": 0.59
+    },
+    {
+     "where": "computeWorldMatrix @ /node_modules/.vite/deps/chunk-LBLD6RCF.js:868",
+     "samples": 57,
+     "pct": 0.59
+    },
+    {
+     "where": "pushNoDuplicate @ /node_modules/.vite/deps/chunk-SZB5QSYK.js:113",
+     "samples": 56,
+     "pct": 0.58
+    },
+    {
+     "where": "_bindLight @ /node_modules/.vite/deps/chunk-CLZTON2V.js:238",
+     "samples": 54,
+     "pct": 0.56
+    },
+    {
+     "where": "render @ /node_modules/.vite/deps/chunk-VL3V4BGP.js:6182",
+     "samples": 50,
+     "pct": 0.51
+    }
+   ]
+  },
+  {
+   "id": "festival_fly",
+   "label": "ほしまつりのランタンとばし",
+   "top": [
+    {
+     "where": "(program) @ :0",
+     "samples": 1161,
+     "pct": 7.95
+    },
+    {
+     "where": "bindVertexArray @ :0",
+     "samples": 697,
+     "pct": 4.77
+    },
+    {
+     "where": "uniformMatrix4fv @ :0",
+     "samples": 519,
+     "pct": 3.55
+    },
+    {
+     "where": "_getInstancesRenderList @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:5256",
+     "samples": 417,
+     "pct": 2.86
+    },
+    {
+     "where": "isReady @ /node_modules/.vite/deps/chunk-FXMMDBNX.js:1070",
+     "samples": 378,
+     "pct": 2.59
+    },
+    {
+     "where": "drawElements @ :0",
+     "samples": 322,
+     "pct": 2.21
+    },
+    {
+     "where": "isReadyForSubMesh @ /node_modules/.vite/deps/@babylonjs_core_Materials_standardMaterial.js:430",
+     "samples": 319,
+     "pct": 2.18
+    },
+    {
+     "where": "(anonymous) @ /src/entities/deco.ts:106",
+     "samples": 309,
+     "pct": 2.12
+    },
+    {
+     "where": "render @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:5651",
+     "samples": 308,
+     "pct": 2.11
+    },
+    {
+     "where": "_evaluateActiveMeshes @ /node_modules/.vite/deps/chunk-VL3V4BGP.js:5610",
+     "samples": 267,
+     "pct": 1.83
+    },
+    {
+     "where": "project @ /src/scenes/WorldMarkerController.ts:49",
+     "samples": 264,
+     "pct": 1.81
+    },
+    {
+     "where": "_renderSubMeshForShadowMap @ /node_modules/.vite/deps/chunk-FXMMDBNX.js:865",
+     "samples": 223,
+     "pct": 1.53
+    },
+    {
+     "where": "bindForSubMesh @ /node_modules/.vite/deps/@babylonjs_core_Materials_standardMaterial.js:917",
+     "samples": 210,
+     "pct": 1.44
+    },
+    {
+     "where": "_bindLight @ /node_modules/.vite/deps/chunk-CLZTON2V.js:238",
+     "samples": 197,
+     "pct": 1.35
+    },
+    {
+     "where": "_isSynchronized @ /node_modules/.vite/deps/chunk-LBLD6RCF.js:215",
+     "samples": 194,
+     "pct": 1.33
+    },
+    {
+     "where": "getMaterial @ /node_modules/.vite/deps/chunk-LDBAOHAG.js:311",
+     "samples": 172,
+     "pct": 1.18
+    },
+    {
+     "where": "computeWorldMatrix @ /node_modules/.vite/deps/chunk-LBLD6RCF.js:868",
+     "samples": 171,
+     "pct": 1.17
+    },
+    {
+     "where": "_prepareShadowDefines @ /node_modules/.vite/deps/chunk-FXMMDBNX.js:1050",
+     "samples": 171,
+     "pct": 1.17
+    },
+    {
+     "where": "_prepareRenderingManager @ /node_modules/.vite/deps/chunk-2HSL44OV.js:537",
+     "samples": 160,
+     "pct": 1.1
+    },
+    {
+     "where": "CopyMatrixToArray @ /node_modules/.vite/deps/chunk-2EYI762J.js:59",
+     "samples": 152,
+     "pct": 1.04
+    },
+    {
+     "where": "uniform1fv @ :0",
+     "samples": 148,
+     "pct": 1.01
+    },
+    {
+     "where": "updateUniform @ /node_modules/.vite/deps/chunk-NOUDRYXL.js:448",
+     "samples": 123,
+     "pct": 0.84
+    },
+    {
+     "where": "_internalIsSubMeshReady @ /node_modules/.vite/deps/chunk-4573GTMJ.js:366",
+     "samples": 121,
+     "pct": 0.83
+    },
+    {
+     "where": "setFloat @ /node_modules/.vite/deps/chunk-WMZ2AX2I.js:566",
+     "samples": 115,
+     "pct": 0.79
+    },
+    {
+     "where": "bindShadowLight @ /node_modules/.vite/deps/chunk-AB4RR6WO.js:1035",
+     "samples": 114,
+     "pct": 0.78
+    },
+    {
+     "where": "_bind @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:366",
+     "samples": 112,
+     "pct": 0.77
+    },
+    {
+     "where": "_renderSubMesh @ /node_modules/.vite/deps/chunk-4573GTMJ.js:631",
+     "samples": 104,
+     "pct": 0.71
+    },
+    {
+     "where": "isInFrustum @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:5968",
+     "samples": 101,
+     "pct": 0.69
+    },
+    {
+     "where": "_processRendering @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:5478",
+     "samples": 95,
+     "pct": 0.65
+    },
+    {
+     "where": "PrepareStringDefinesForClipPlanes @ /node_modules/.vite/deps/chunk-6K6MOUSX.js:44",
+     "samples": 92,
+     "pct": 0.63
+    }
+   ]
+  },
+  {
+   "id": "home",
+   "label": "家の中",
+   "top": [
+    {
+     "where": "(program) @ :0",
+     "samples": 1489,
+     "pct": 10.06
+    },
+    {
+     "where": "isReady @ /node_modules/.vite/deps/chunk-FXMMDBNX.js:1070",
+     "samples": 570,
+     "pct": 3.85
+    },
+    {
+     "where": "bindVertexArray @ :0",
+     "samples": 493,
+     "pct": 3.33
+    },
+    {
+     "where": "_renderSubMeshForShadowMap @ /node_modules/.vite/deps/chunk-FXMMDBNX.js:865",
+     "samples": 405,
+     "pct": 2.74
+    },
+    {
+     "where": "uniformMatrix4fv @ :0",
+     "samples": 377,
+     "pct": 2.55
+    },
+    {
+     "where": "(anonymous) @ /src/entities/deco.ts:106",
+     "samples": 344,
+     "pct": 2.32
+    },
+    {
+     "where": "_evaluateActiveMeshes @ /node_modules/.vite/deps/chunk-VL3V4BGP.js:5610",
+     "samples": 341,
+     "pct": 2.3
+    },
+    {
+     "where": "drawElements @ :0",
+     "samples": 323,
+     "pct": 2.18
+    },
+    {
+     "where": "updatePondWave @ /src/entities/water.ts:196",
+     "samples": 318,
+     "pct": 2.15
+    },
+    {
+     "where": "_prepareShadowDefines @ /node_modules/.vite/deps/chunk-FXMMDBNX.js:1050",
+     "samples": 287,
+     "pct": 1.94
+    },
+    {
+     "where": "_getInstancesRenderList @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:5256",
+     "samples": 273,
+     "pct": 1.85
+    },
+    {
+     "where": "_isSynchronized @ /node_modules/.vite/deps/chunk-LBLD6RCF.js:215",
+     "samples": 205,
+     "pct": 1.39
+    },
+    {
+     "where": "isInFrustum @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:5968",
+     "samples": 181,
+     "pct": 1.22
+    },
+    {
+     "where": "(garbage collector) @ :0",
+     "samples": 166,
+     "pct": 1.12
+    },
+    {
+     "where": "CopyMatrixToArray @ /node_modules/.vite/deps/chunk-2EYI762J.js:59",
+     "samples": 161,
+     "pct": 1.09
+    },
+    {
+     "where": "_getDrawWrapper @ /node_modules/.vite/deps/chunk-LDBAOHAG.js:118",
+     "samples": 156,
+     "pct": 1.05
+    },
+    {
+     "where": "_prepareRenderingManager @ /node_modules/.vite/deps/chunk-2HSL44OV.js:537",
+     "samples": 147,
+     "pct": 0.99
+    },
+    {
+     "where": "bufferSubData @ :0",
+     "samples": 137,
+     "pct": 0.93
+    },
+    {
+     "where": "ProcessLateAnimationBindings @ /node_modules/.vite/deps/chunk-NHZFFIRQ.js:1048",
+     "samples": 135,
+     "pct": 0.91
+    },
+    {
+     "where": "texImage2D @ :0",
+     "samples": 129,
+     "pct": 0.87
+    },
+    {
+     "where": "notifyObservers @ /node_modules/.vite/deps/chunk-GCT36VBF.js:221",
+     "samples": 125,
+     "pct": 0.84
+    },
+    {
+     "where": "uniform1fv @ :0",
+     "samples": 110,
+     "pct": 0.74
+    },
+    {
+     "where": "MultiplyMatricesToArray @ /node_modules/.vite/deps/chunk-2EYI762J.js:27",
+     "samples": 109,
+     "pct": 0.74
+    },
+    {
+     "where": "resolveCollision @ /src/scenes/IslandScene.ts:696",
+     "samples": 97,
+     "pct": 0.66
+    },
+    {
+     "where": "render @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:5651",
+     "samples": 97,
+     "pct": 0.66
+    },
+    {
+     "where": "bindBuffer @ :0",
+     "samples": 95,
+     "pct": 0.64
+    },
+    {
+     "where": "_processRendering @ /node_modules/.vite/deps/chunk-SSL3GHYJ.js:5478",
+     "samples": 94,
+     "pct": 0.64
+    },
+    {
+     "where": "render @ /src/scenes/GameScene.ts:1118",
+     "samples": 91,
+     "pct": 0.62
+    },
+    {
+     "where": "_BoundingInfo @ /node_modules/.vite/deps/chunk-4LS4K7CW.js:430",
+     "samples": 90,
+     "pct": 0.61
+    },
+    {
+     "where": "get _disableAlphaBlending @ /node_modules/.vite/deps/chunk-RMZGRZZN.js:836",
+     "samples": 89,
+     "pct": 0.6
+    }
+   ]
+  }
+ ]
+}

@@ -380,13 +380,13 @@ export class GameScene {
     // 室内で保存したセーブは室内から始める(indoorが無い旧セーブは屋外あつかい)。
     // 保存位置が室内の床から外れていたら入口へ戻す(壊れたセーブで海に立たせない)
     this.indoor = this.state.flags.indoor === true;
-    this.island.home.setActive(this.indoor);
+    this.island.setHomeRoom(this.indoor);
     // v12 NPCの家の中で保存したセーブは その家から始める(フラグの無い旧セーブは島あつかい)。
     // マイホームの室内が立っていたら そちらを優先し、複数の家のフラグが同時に立っていたら
     // NPC_HOMES の順で先の1つだけを採る(壊れたセーブで「どこにもいない」状態を作らない)
     this.npcHome = this.indoor ? null : (NPC_HOMES.find((h) => this.state.flags[npcHomeFlag(h.id)] === true)?.id ?? null);
     for (const h of NPC_HOMES) this.state.flags[npcHomeFlag(h.id)] = h.id === this.npcHome;
-    this.island.npcHomes.setActive(this.npcHome);
+    this.island.setNpcRoom(this.npcHome);
     // v11 よるの入り江で保存したセーブは入り江から始める(in_coveが無い旧セーブは島あつかい)。
     // 室内フラグとぶつかったら室内を優先する(両方立つことはないが、壊れたセーブで海に立たせない)
     this.inCove = !this.indoor && !this.npcHome && this.state.flags.in_cove === true;
@@ -942,7 +942,7 @@ export class GameScene {
   applyIndoor(indoor: boolean): void {
     this.indoor = indoor;
     this.state.flags.indoor = indoor;
-    this.island.home.setActive(indoor);
+    this.island.setHomeRoom(indoor);
     this.restoreAllOcclusionImmediately(); // 半透明のまま画がすり替わらないように
     if (indoor) {
       this.island.home.applyStyle(this.state.homeStyle); // 入るたびに貼りなおす(セーブと画を必ず一致させる)
@@ -988,7 +988,7 @@ export class GameScene {
     const def = id ? (NPC_HOME_BY_ID[id] ?? null) : null;
     this.npcHome = def?.id ?? null;
     for (const h of NPC_HOMES) this.state.flags[npcHomeFlag(h.id)] = h.id === this.npcHome;
-    this.island.npcHomes.setActive(this.npcHome);
+    this.island.setNpcRoom(this.npcHome);
     this.restoreAllOcclusionImmediately(); // 半透明のまま画がすり替わらないように
     if (def) {
       const sp = npcHomeSpawnWorld(def);

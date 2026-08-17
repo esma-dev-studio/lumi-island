@@ -81,6 +81,8 @@ export class DayNight {
   private tmpA = new Color3();
   /** 天気の寒色ぐあい(0=はれ 1=本降り)。WeatherSystemが毎フレーム書き込む */
   private cold = 0;
+  /** 部屋にいるあいだの環境光の倍率(1=島にいる。setIndoorDamp 参照) */
+  private indoorDamp = 1;
   private lastHour = 6;
   private lastPx: number | undefined;
   private lastPz: number | undefined;
@@ -130,6 +132,24 @@ export class DayNight {
     return this.cold;
   }
 
+  /**
+   * 部屋にいるあいだ、島の環境光(空の光と太陽)にかける倍率(1=そのまま)。
+   *
+   * 別空間の部屋は 島から離れた所に建っているだけで、空の光も太陽も そのまま当たる。
+   * そのため部屋の点光源をいくら弱めても「暗い部屋」にならなかった(ノクトの部屋)。
+   * ここを小さくすると その部屋にいるあいだだけ 全体が落ちる。
+   * 部屋を出るときに 1 へ戻すのは IslandScene.setNpcRoom / setHomeRoom の役目。
+   */
+  setIndoorDamp(v: number): void {
+    const d = Math.max(0.2, Math.min(1, v));
+    if (Math.abs(d - this.indoorDamp) < 0.004) return;
+    this.indoorDamp = d;
+    this.update(this.lastHour, this.lastPx, this.lastPz);
+  }
+  get indoorDampLevel(): number {
+    return this.indoorDamp;
+  }
+
   /** 即時更新(デバッグ・イベント用) */
   update(hour: number, px?: number, pz?: number): void {
     this.lastHour = hour;
@@ -159,7 +179,7 @@ export class DayNight {
     this.scene.fogDensity = L(a.fogD, b.fogD) * (1 + w * W_FOG_UP);
     Color3.LerpToRef(a.sunC, b.sunC, t, this.sun.diffuse);
     if (w > 0) Color3.LerpToRef(this.sun.diffuse, C_OVERCAST_SUN, w * W_LIGHT_MIX, this.sun.diffuse);
-    this.sun.intensity = L(a.sunI, b.sunI) * (1 - w * W_SUN_DOWN);
+    this.sun.intensity = L(a.sunI, b.sunI) * (1 - w * W_SUN_DOWN) * this.indoorDamp;
     Color3.LerpToRef(a.hemiC, b.hemiC, t, this.hemi.diffuse);
     Color3.LerpToRef(a.hemiG, b.hemiG, t, this.hemi.groundColor);
     if (w > 0) {
@@ -167,7 +187,8 @@ export class DayNight {
       Color3.LerpToRef(this.hemi.groundColor, C_OVERCAST_HEMI, w * W_LIGHT_MIX * 0.5, this.hemi.groundColor);
     }
     // 開花後は夜の環境光がわずかに明るくなる(島がめざめた感じ)
-    this.hemi.intensity = L(a.hemiI, b.hemiI) * (1 + (this.lumiBoost - 1) * 0.08) * (1 - w * W_HEMI_DOWN);
+    this.hemi.intensity =
+      L(a.hemiI, b.hemiI) * (1 + (this.lumiBoost - 1) * 0.08) * (1 - w * W_HEMI_DOWN) * this.indoorDamp;
 
     // 太陽の向き(6時=東から、18時=西へ。夜は月の固定方向)
     const dayT = Math.max(0, Math.min(1, (hour - 6) / 12.5));

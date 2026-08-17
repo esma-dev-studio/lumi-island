@@ -328,10 +328,22 @@ export function applyPondTint(w: WaterRefs): void {
   w.pondSurfMat.emissiveColor.set(t.r * e, t.g * e, t.b * e);
 }
 
-/** 池の更新(表面のさざ波+時刻の色)。重い更新は15Hzに間引く */
+/**
+ * 池の更新(表面のさざ波+時刻の色)。重い更新は15Hzに間引く。
+ *
+ * さらに「池がカメラに入っていないフレーム」は頂点の計算ごと やめる。
+ * さざ波は1246頂点ぶんの sin/cos(約7500回)+ 位置と法線の2本をGPUへ送る処理で、
+ * 島のいちばん重い毎フレーム仕事。池は島の東がわの1か所にしかないので、
+ * 反対がわを歩いているあいだは 1ピクセルも映らない。
+ * 時計(acc)はためたままにするので、視界に戻った最初のフレームで まとめて進み、
+ * 波の位相は「ずっと動いていた」ときと同じになる(止まって見えることはない)。
+ */
 export function updatePond(w: WaterRefs, dtSec: number): void {
   w.wave.acc += dtSec;
   if (w.wave.acc < 1 / 15) return;
+  // frustumPlanes は最初の描画までは無い(そのときは判定せず、今までどおり更新する)
+  const planes = w.pond.getScene().frustumPlanes;
+  if (planes && !w.wave.mesh.isInFrustum(planes)) return;
   updatePondWave(w.wave, w.wave.acc); // ためた分をまとめて進める(時間は飛ばさない)
   w.wave.acc = 0;
   applyPondTint(w);
