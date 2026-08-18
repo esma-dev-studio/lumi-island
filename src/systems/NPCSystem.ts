@@ -11,6 +11,7 @@ import { GATHER_NODES } from '../data/island';
 import {
   FESTIVAL_FAR, FESTIVAL_FROM, FESTIVAL_LANDING, FESTIVAL_TO, festivalStand,
 } from './FestivalSystem';
+import { chatStandOf, type ChatPairDef } from './ChatEventSystem';
 import type { GameState } from '../game/GameState';
 import { displayContents } from '../game/GameState';
 import { questFor } from './QuestSystem';
@@ -58,6 +59,29 @@ export const FESTIVAL_SPOT_KEY = 'festival';
 const FESTIVAL_ENTRY: ScheduleEntry = {
   from: FESTIVAL_FROM, to: FESTIVAL_TO, spot: FESTIVAL_SPOT_KEY, activity: 'watch',
 };
+
+// ---------------------------------------------------------------------------
+// v21 NPCどうしの「立ち話」の集合。
+//
+// **やっていることは まつりと まったく同じ「立ち位置の差しかえ」だけ**。
+// 中身(だれが・いつ・どこで・何を話すか)は src/systems/ChatEventSystem.ts が
+// ぜんぶ決める。ここは 差しかえの強さの順番に 1段 足すだけ。
+//
+// 差しかえの強さ(上から順に強い):
+//   1. ツムギの工房前ロック(最初の依頼を受けるまで動かない)
+//   2. 朝の来訪(7〜9時)
+//   3. ほしまつり(18〜21時)
+//   4. **立ち話** ← ここ。**いちばん よわい**
+//        - 依頼が1つでも動いている日は ChatEventSystem が そもそも null を返す
+//          (誘導が指す人は いつもの場所にいる、が こわれない)
+//        - 在宅の枠(activity:'home')は 上書きしない(ねている人を 外に出さない)
+//   5. 依頼の受注・報告相手の questEntry
+//   6. ふだんのスケジュール
+// ---------------------------------------------------------------------------
+export const CHAT_SPOT_KEY = 'chat';
+// activity は 'watch'。まつりの輪と同じで、到着したら その場から動かず(wanderR:0)
+// spot.rotY(=相手のほう)を 向きつづける枠は 'watch' だけ(update の分岐を参照)
+const CHAT_ENTRY: ScheduleEntry = { from: 0, to: 30, spot: CHAT_SPOT_KEY, activity: 'watch' };
 
 /** まつりの集合の入力(GameSceneが GameState と時計から作る) */
 export interface FestivalProbe {
@@ -199,6 +223,8 @@ export class NPCSystem {
   private visitProbe: (() => { id: string; friendship: number; questCritical: boolean }[]) | null = null;
   /** v16 まつりの集合の読み取り口(GameSceneが差しこむ)。無いときは まつりなし */
   private festivalProbe: (() => FestivalProbe) | null = null;
+  /** v21 立ち話の読み取り口(GameSceneが差しこむ)。無いときは 立ち話なし */
+  private chatProbe: (() => ChatPairDef | null) | null = null;
 
   constructor(
     private scene: Scene,
@@ -216,6 +242,24 @@ export class NPCSystem {
   /** v16 まつりの集合に使う「いま まつりか・だれが集まるか」を渡す(GameSceneが作る) */
   setFestivalProbe(probe: () => FestivalProbe): void {
     this.festivalProbe = probe;
+  }
+
+  /** v21 立ち話に使う「いま どの組が 立ち話をしているか」を渡す(GameSceneが作る) */
+  setChatProbe(probe: () => ChatPairDef | null): void {
+    this.chatProbe = probe;
+  }
+
+  /**
+   * v21 その人が いま 立ち話の輪に 入っているか。
+   * まつりと同じ理由で、家の中で会っているあいだ(hostId)は 差しかえない。
+   * 立ち話は 島の人どうしだけなので、島にいるときしか 出さない。
+   */
+  private chatPairOf(rt: NpcRuntime): ChatPairDef | null {
+    if (!this.chatProbe || this.hostId !== null) return null;
+    if (this.area !== 'island') return null;
+    const pair = this.chatProbe();
+    if (!pair) return null;
+    return pair.a === rt.def.id || pair.b === rt.def.id ? pair : null;
   }
 
   /**
@@ -288,13 +332,17 @@ export class NPCSystem {
     this.placeAt(id, spot.x, spot.z, spot.rotY);
   }
 
-  /** そのNPCを 指定の世界座標へ すぐ動かす(見せ場のツーショットで となりに立ってもらう) */
-  placeAt(id: string, x: number, z: number, rotY?: number): void {
+  /**
+   * そのNPCを 指定の世界座標へ すぐ動かす(見せ場のツーショットで となりに立ってもらう)。
+   * @param y v21 高さを 直接 指定する(省略=地面の高さ)。
+   *          とうだいの てっぺんのように「地面ではない ところ」に 立たせる見せ場に つかう
+   */
+  placeAt(id: string, x: number, z: number, rotY?: number, y?: number): void {
     const rt = this.npcs.get(id);
     if (!rt) return;
     rt.x = x;
     rt.z = z;
-    rt.y = this.island.groundY(x, z);
+    rt.y = y ?? this.island.groundY(x, z);
     if (rotY !== undefined) rt.rotY = rotY;
     rt.subTarget = null;
     rt.hidden = false;
@@ -456,6 +504,8 @@ export class NPCSystem {
     if (this.isVisiting(rt.def.id, this.island.time.day, hour)) return VISIT_ENTRY;
     // v16 ほしまつり(18〜21時)。在宅も 依頼中の立ち位置も 上書きして 桟橋のたもとへ集まる
     if (this.festivalSlot(rt) >= 0) return FESTIVAL_ENTRY;
+    // v21 立ち話。いちばん よわい差しかえ:在宅の枠は 上書きしない(ねている人を 外へ出さない)
+    if (entry.activity !== 'home' && this.chatPairOf(rt) !== null) return CHAT_ENTRY;
     if (entry.activity === 'home' && this.questCritical(rt.def.id)) {
       entry = rt.def.questEntry;
     }
@@ -472,6 +522,12 @@ export class NPCSystem {
     if (entry.spot === FESTIVAL_SPOT_KEY) {
       const stand = festivalStand(this.festivalSlot(rt), this.festivalTotal());
       return { x: stand.x, z: stand.z, rotY: stand.rotY, wanderR: 0 };
+    }
+    // v21 立ち話: 相手のほうを向いて 向かいあう(wanderR:0=その場から動かない)
+    if (entry.spot === CHAT_SPOT_KEY) {
+      const pair = this.chatPairOf(rt);
+      const stand = pair ? chatStandOf(pair, rt.def.id) : null;
+      if (stand) return stand;
     }
     return npcSpot(rt.def.id, entry.spot);
   }
@@ -635,6 +691,16 @@ export class NPCSystem {
         this.apply(rt);
       }
     }
+  }
+
+  /**
+   * v21 見せ場のあいだ、その人に 決まった姿勢を とらせる(釣りの構えなど)。
+   * 世界が 凍っているあいだ(見せ場)は update が まわらないので、そのまま 保たれる。
+   */
+  playClip(id: string, name: string): void {
+    const rt = this.npcs.get(id);
+    if (!rt || !rt.view.groups.has(name)) return;
+    rt.view.play(name);
   }
 
   /** 会話カメラ用: 向きを直接指定する(talking中はスケジュール更新で上書きされない) */

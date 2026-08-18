@@ -745,6 +745,119 @@ function buildAquarium(scene: Scene, item: 'f_aquarium' | 'f_aquarium_big', cont
   return { root, colliderR: s.colliderR };
 }
 
+// ---------------------------------------------------------------------------
+// v21 ぬしの トロフィー(3種)。
+//
+// このゲームには「かべに 掛ける」しくみが無い(かべがみ wall_◯◯ は 内装のスロットで、
+// 家具ではない)。そこで f_starmap / f_far_map と同じ流儀で、
+// **かべぎわに 立てかける がくぶち**として作る —— 見た目は 壁かけ、置きかたは 床置き。
+//
+// 部品の わけかた(教訓4: 巻き順と法線は 形ごとに そろえる):
+//   わく・台・銘板 = 角のある部品だけ('keep')
+//   魚            = 丸い部品だけ('flip')の 別メッシュにして parent でぶら下げる
+//     (f_fishtrophy と まったく同じ作り。混ぜると 昼に 真っ黒になる)
+// ---------------------------------------------------------------------------
+interface TrophySpec {
+  /** 背板の色(その釣り場の 水の色) */
+  back: string;
+  /** 魚の せなか・腹 */
+  body: string;
+  belly: string;
+  /** 魚の 長さ(m)。ぬしごとに すこし ちがう */
+  len: number;
+  /** 夜に 光るか(ヨルノヌシだけ) */
+  glow?: boolean;
+}
+
+const TROPHY_SPECS: Record<string, TrophySpec> = {
+  f_trophy_koi: { back: '#3f5a4a', body: '#d08a4e', belly: '#f0e4d2', len: 0.5 },
+  f_trophy_dai: { back: '#3d5570', body: '#cf7f88', belly: '#f6e6e6', len: 0.46 },
+  f_trophy_yoru: { back: '#25324a', body: '#5f7fa8', belly: '#cfe0f0', len: 0.54, glow: true },
+};
+
+function makeTrophyMesh(scene: Scene, item: ItemId): FurnitureMesh {
+  const s = TROPHY_SPECS[item];
+  const A = A0();
+  const FRAME = Color3.FromHexString('#7a5a3c');
+  const FRAME_D = Color3.FromHexString('#5a4028');
+  const BACK = Color3.FromHexString(s.back);
+  const W = 0.74; // わくの よこはば
+  const H = 0.52; // わくの たかさ
+  const Y0 = 0.16; // わくの 下ばし(台の 上)
+  // 台(かべぎわに 立てかけるための 小さな あし)
+  fbox(A, 0, 0.035, 0.02, 0.6, 0.07, 0.16, FRAME_D);
+  for (const sx of [-0.24, 0.24]) fbox(A, sx, 0.115, 0.02, 0.07, 0.09, 0.12, FRAME_D);
+  // うしろの つっかえ棒(たおれないことを 形で見せる)
+  fboxR(A, 0, 0.36, -0.13, 0.05, 0.5, 0.045, FRAME_D, { x: 0.36 });
+  // 背板(水の色)。わくより うしろへ 引っこめる
+  fbox(A, 0, Y0 + H / 2, -0.012, W - 0.1, H - 0.1, 0.016, BACK);
+  // わく(4本。上下は 少し ふとく)
+  fbox(A, 0, Y0, 0, W, 0.07, 0.05, FRAME);
+  fbox(A, 0, Y0 + H, 0, W, 0.075, 0.05, FRAME);
+  for (const sx of [-(W / 2) + 0.03, W / 2 - 0.03]) fbox(A, sx, Y0 + H / 2, 0, 0.06, H, 0.05, FRAME);
+  // わくの 内がわの ふち(額の 段差)
+  fbox(A, 0, Y0 + 0.055, 0.018, W - 0.13, 0.018, 0.014, FRAME_D);
+  fbox(A, 0, Y0 + H - 0.055, 0.018, W - 0.13, 0.018, 0.014, FRAME_D);
+  // 銘板(下の さん の まん中)
+  fbox(A, 0, Y0 - 0.005, 0.03, 0.3, 0.05, 0.012, Color3.FromHexString('#c9a86b'));
+  fbox(A, 0, Y0 - 0.005, 0.037, 0.22, 0.012, 0.008, Color3.FromHexString('#8d7040'));
+  const root = toMesh(scene, item, A, 'keep');
+  // ---- 魚(丸い部品だけの 別メッシュ)----
+  const F = A0();
+  const BODY = Color3.FromHexString(s.body);
+  const BODY_D = BODY.scale(0.72);
+  const BELLY = Color3.FromHexString(s.belly);
+  const cy = Y0 + H / 2 + 0.01;
+  const L = s.len;
+  // からだ(頭が +X・尾が -X の 横向き。正面から 魚の形が 読めるようにする)
+  const seg: [number, number, number, number][] = [
+    [-0.34, -0.01, 0.1, 0.055],
+    [-0.18, 0.005, 0.15, 0.088],
+    [0.0, 0.015, 0.17, 0.105],
+    [0.18, 0.005, 0.15, 0.085],
+    [0.32, -0.015, 0.1, 0.055],
+  ];
+  for (let i = 0; i < seg.length; i++) {
+    const [sx, sy, rx, ry] = seg[i];
+    appendBlob(F, sx * L, cy + sy, 0.05, rx * L, ry, 0.035, jitterColor(BODY, 210 + i, 0.06), {
+      segs: 8, noise: 0.05, seed: 210 + i, bottomDark: 0.18,
+    });
+  }
+  appendBlob(F, -0.04 * L, cy - 0.05, 0.05, 0.24 * L, 0.04, 0.03, BELLY, { segs: 7, noise: 0.05, seed: 216, bottomDark: 0 });
+  appendBlob(F, 0.42 * L, cy - 0.02, 0.05, 0.06 * L, 0.03, 0.024, BODY_D, { segs: 6, noise: 0.05, seed: 217 }); // 口さき
+  // 尾びれ(上下に ひらいた V)
+  for (const t of [-1, 1]) {
+    appendBlob(F, -0.5 * L, cy + t * 0.075, 0.05, 0.11 * L, 0.06, 0.016,
+      jitterColor(BODY_D, 220 + t, 0.1), { segs: 5, noise: 0.1, seed: 220 + t, bottomDark: 0.1 });
+  }
+  appendBlob(F, -0.43 * L, cy, 0.05, 0.07 * L, 0.035, 0.018, BODY_D, { segs: 5, noise: 0.08, seed: 222 });
+  // 背びれ・しりびれ・胸びれ
+  appendBlob(F, -0.05 * L, cy + 0.1, 0.05, 0.17 * L, 0.05, 0.016, jitterColor(BODY_D, 223, 0.08), { segs: 5, noise: 0.1, seed: 223 });
+  appendBlob(F, -0.1 * L, cy - 0.08, 0.05, 0.11 * L, 0.035, 0.016, jitterColor(BODY_D, 224, 0.08), { segs: 5, noise: 0.1, seed: 224 });
+  appendBlob(F, 0.05 * L, cy - 0.03, 0.078, 0.1 * L, 0.026, 0.02, jitterColor(BODY_D, 225, 0.1), { segs: 5, noise: 0.1, seed: 225 });
+  // 目(横向きなので 顔に 見えないよう 片がわ 1つ。ドームの左右対称2点は「顔」になる)
+  appendBlob(F, 0.32 * L, cy + 0.02, 0.082, 0.02, 0.02, 0.012, Color3.FromHexString('#22384c'), {
+    segs: 5, noise: 0.03, seed: 226, bottomDark: 0,
+  });
+  const fish = faceOutward(toMesh(scene, `${item}_fish`, F, 'flip'));
+  fish.parent = root;
+  fish.isPickable = false;
+  if (!s.glow) return { root, colliderR: 0.3 };
+  // ヨルノヌシだけ 夜に 光る。光るのは「魚の かたち」そのもの
+  // (光る部品は 不透明部品の 前へ 出す。中に うめると 光って見えない)
+  const G = A0();
+  for (let i = 0; i < seg.length; i++) {
+    const [sx, sy, rx, ry] = seg[i];
+    appendBlob(G, sx * L, cy + sy, 0.062, rx * L * 0.94, ry * 0.94, 0.03,
+      Color3.FromHexString('#bfe0f2'), { segs: 7, noise: 0.04, seed: 230 + i, bottomDark: 0 });
+  }
+  const glowPart = faceOutward(toMesh(scene, `${item}_glow`, G, 'flip'));
+  glowPart.material = getGlowMats(scene).blue;
+  glowPart.parent = root;
+  glowPart.isPickable = false;
+  return { root, glowPart, colliderR: 0.3 };
+}
+
 /**
  * 家具のメッシュ。
  * 第3引数は展示家具の中身(入っている順の配列)。ItemId 1つも受けるのは、
@@ -1845,6 +1958,77 @@ export function makeFurnitureMesh(
       fbox(A, 0.16, 0.83, 0.006, 0.006, 0.07, 0.004, INK);
       return { root: toMesh(scene, 'f_far_map', A, 'keep'), colliderR: 0.24 };
     }
+    // ---- v21 なかよし度10「ふたりの じかん」の しるし2種 ----
+    case 'f_pair_bench': {
+      // ツムギと 二人で 組んだ ベンチ。ウッドベンチ(f_bench)より よこに ながく、
+      // **かたっぽの あしだけ すこし ふとい**(プレイヤーが けずった ほう)。
+      // その1点が セリフと 見た目を つないでいるので、太さの差は のこすこと
+      const A = A0();
+      const SEAT = Color3.FromHexString('#9a7550');
+      fbox(A, 0, 0.44, 0, 1.42, 0.06, 0.42, SEAT); // すわる板
+      fbox(A, 0, 0.47, -0.19, 1.42, 0.04, 0.05, WOOD_D); // 後ろの ふち
+      // 背もたれ(たてざん2本+よこ板2枚)
+      for (const sx of [-0.6, 0.6]) fboxR(A, sx, 0.68, -0.19, 0.07, 0.46, 0.06, WOOD_D, { x: -0.13 });
+      fboxR(A, 0, 0.66, -0.175, 1.3, 0.09, 0.045, SEAT, { x: -0.13 });
+      fboxR(A, 0, 0.83, -0.195, 1.3, 0.09, 0.045, SEAT, { x: -0.13 });
+      // ひじかけ
+      for (const sx of [-0.68, 0.68]) {
+        fbox(A, sx, 0.63, 0.02, 0.06, 0.05, 0.36, WOOD);
+        fbox(A, sx, 0.54, 0.16, 0.06, 0.2, 0.06, WOOD_D);
+      }
+      // あし4本。左の2本だけ ふとい(0.115) = 二人で つくった しるし
+      for (const sx of [-0.58, 0.58]) {
+        for (const sz of [-0.14, 0.14]) {
+          const w = sx < 0 ? 0.115 : 0.085;
+          fbox(A, sx, 0.21, sz, w, 0.42, w, WOOD_D);
+        }
+      }
+      fbox(A, 0, 0.18, 0, 1.16, 0.05, 0.05, WOOD_D); // 貫
+      return { root: toMesh(scene, 'f_pair_bench', A, 'keep'), colliderR: 0.66 };
+    }
+    case 'f_travel_map': {
+      // テンの たびの ちず。かわの おびを まいた かけじく。
+      // f_far_map と おなじ「かけじく」の 形だが、**行った島の しるし(ピン)が たくさん**
+      // ならんでいて、いちばん あたらしい しるし(赤)だけが 大きい = この島
+      const A = A0();
+      const PAPER = Color3.FromHexString('#e0d3b4');
+      const INK = Color3.FromHexString('#5c6a55');
+      const ISLE = Color3.FromHexString('#a89066');
+      const LEATHER = Color3.FromHexString('#7d5a3a');
+      const MARK = Color3.FromHexString('#c05a4a');
+      fbox(A, 0, 0.03, 0, 0.54, 0.06, 0.15, LEATHER); // 台
+      for (const sx of [-0.28, 0.28]) appendTrunk(A, [[sx, 0.05, 0], [sx, 0.98, 0]], 0.024, 0.021, WOOD_D, 131);
+      fbox(A, 0, 0.99, 0, 0.62, 0.035, 0.05, WOOD); // 上の さお
+      fbox(A, 0, 0.13, 0, 0.62, 0.035, 0.05, WOOD); // 下の さお
+      fbox(A, 0, 0.56, -0.006, 0.52, 0.83, 0.012, PAPER); // 紙
+      // かわの おび(まきものを とめていた しるし。左はしに たらす)
+      fbox(A, -0.2, 0.56, 0.012, 0.05, 0.83, 0.008, LEATHER);
+      fbox(A, -0.2, 0.2, 0.02, 0.07, 0.05, 0.014, Color3.FromHexString('#b89a5e')); // 留め金
+      // 海の線
+      for (let i = 0; i < 7; i++) {
+        fbox(A, (i % 2 ? 0.06 : -0.04), 0.22 + i * 0.1, 0.004, 0.36 - (i % 3) * 0.06, 0.007, 0.004, INK);
+      }
+      // 島(たくさん)と、いちばん あたらしい しるし
+      const isles: [number, number, number][] = [
+        [-0.09, 0.84, 0.04], [0.14, 0.71, 0.05], [-0.13, 0.6, 0.038],
+        [0.1, 0.47, 0.055], [-0.02, 0.36, 0.042], [0.16, 0.27, 0.036],
+      ];
+      for (const [ix, iy, ir] of isles) {
+        appendBlob(A, ix, iy, 0.006, ir, ir * 0.7, 0.006, jitterColor(ISLE, ix * 137, 0.12), { segs: 8, noise: 0.16 });
+        fbox(A, ix, iy, 0.01, 0.012, 0.012, 0.006, INK); // しるし(小さな点)
+      }
+      // この島の しるし(赤くて 大きい。ちずの まん中より すこし下)
+      appendBlob(A, 0.0, 0.55, 0.008, 0.075, 0.05, 0.007, Color3.FromHexString('#c2a86e'), { segs: 9, noise: 0.14 });
+      fbox(A, 0.0, 0.55, 0.014, 0.028, 0.028, 0.008, MARK);
+      fbox(A, 0.0, 0.55, 0.016, 0.05, 0.008, 0.006, MARK);
+      fbox(A, 0.0, 0.55, 0.016, 0.008, 0.05, 0.006, MARK);
+      return { root: toMesh(scene, 'f_travel_map', A, 'keep'), colliderR: 0.26 };
+    }
+    // ---- v21 ぬしの トロフィー3種(作りは makeTrophyMesh 1本にまとめてある)----
+    case 'f_trophy_koi':
+    case 'f_trophy_dai':
+    case 'f_trophy_yoru':
+      return makeTrophyMesh(scene, item);
     case 'd_grillfish':
     case 'd_mushsoup':
     case 'd_berrypie':

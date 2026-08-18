@@ -170,6 +170,15 @@ export const HINT_RULES = [
     src: 'InteractionRouting: <kbd>E</kbd>とうだいに レンズを つける',
   },
   { cat: 'fish', re: /つりをする|つりあげる|まってる/, src: 'InteractionRouting: <kbd>E</kbd>つりをする / FishingSystem: まってる… <kbd>Esc</kbd>やめる / !! <kbd>E</kbd>つりあげる' },
+  // v21 ぬし釣り(タイミング押し3回)のあいだに出る3つの文言。
+  // 釣りの さいちゅうに 出るものなので、ふつうの釣りと まったく同じ fish にそろえる。
+  // 既存の式は 1文字も 変えていない: 「ひっぱる」「ぬしが」は ほかのどのヒントにも 出ない語で、
+  // 上の blocked(/には .*(ひつよう|まってから)/)にも 当たらない
+  // (v4コーパスの8件は 1件も 動かない)
+  {
+    cat: 'fish', re: /ぬしが かかった|ひっぱる|ぬしが にげていく/,
+    src: 'FishingSystem.hint(v21 ぬし): ぬしが かかった! まだ ひっぱらない(あと Nかい) / !! <kbd>E</kbd>ひっぱる(あと Nかい) / ぬしが にげていく…',
+  },
   { cat: 'shop', re: /お店をみる|うる・かう/, src: 'InteractionRouting: <kbd>E</kbd>お店をみる(うる・かう)' },
   // v20第3章 テンの店(週がわり)。ツムギ工房と同じ shop = 誘導中に出たら 矛盾とみなす
   { cat: 'shop', re: /テンの店を みる|しゅうがわり/, src: 'InteractionRouting: <kbd>E</kbd>テンの店を みる(しゅうがわり)' },

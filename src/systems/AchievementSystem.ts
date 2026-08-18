@@ -10,6 +10,8 @@ import { BUG_IDS } from './BugSystem';
 import { NIGHT_TRAIN_KEY } from './NightTrainSystem';
 import { MARKET_VISIT_KEY } from './TrainRideSystem';
 import { FESTIVAL_FLY_KEY } from './FestivalSystem';
+import { BOND_TOTAL_KEY } from './BondEventSystem';
+import { BOSS_FISH, NUSHI_TOTAL_KEY } from './BossFishSystem';
 
 /** 達成の記録に使う stats のキーの接頭辞 */
 export const ACH_PREFIX = 'ach_';
@@ -283,6 +285,27 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     id: 'a_market_first', name: 'はじめての いちば島',
     desc: 'よるの えきから でんしゃに のって、うみの むこうの いちばへ 行ってみよう',
     target: 1, icon: 'train', progress: (s) => statCount(s, MARKET_VISIT_KEY),
+  },
+  // ---- v21 なかよし度カンストの「ふたりの じかん」 ----
+  // 数えるのは stats の bond_total(BondEventSystem が1回だけ足す)。
+  // 未達成欄の desc は「どうすれば 始まるか」だけを 言う(何が起きるかは 書かない)
+  {
+    id: 'a_bond_first', name: 'ふたりの じかん',
+    desc: 'だれかと なかよし度10に なってから、もういちど 話しかけてみよう',
+    target: 1, icon: 'heart', progress: (s) => statCount(s, BOND_TOTAL_KEY),
+  },
+  {
+    id: 'a_bond_all', name: 'みんなとの おもいで',
+    desc: '島の みんなと「ふたりの じかん」を すごそう',
+    target: 5, icon: 'f_pair_bench', progress: (s) => statCount(s, BOND_TOTAL_KEY),
+  },
+  // ---- v21 ぬし釣り ----
+  // 数えるのは stats の nushi_total(BossFishSystem が1か所につき1回だけ足す)。
+  // desc は「かよう」ことだけを 教える(時間帯は 書かない = 見つけた ときの おどろきを のこす)
+  {
+    id: 'a_nushi_all', name: 'ぬしの ぬし',
+    desc: 'おなじ 釣り場に かよいつめて、3つの ぬしを ぜんぶ つりあげよう',
+    target: BOSS_FISH.length, icon: 'f_trophy_yoru', progress: (s) => statCount(s, NUSHI_TOTAL_KEY),
   },
   {
     id: 'a_all_quests', name: 'おねがいマスター', desc: '島のみんなの おねがいを 5つ かなえよう',

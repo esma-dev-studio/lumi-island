@@ -483,6 +483,21 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
         },
       });
     }
+    // v21 帰りの桟橋の 先での 釣り(よるの入り江の ぬし「ヨルノヌシ」の釣り場)。
+    //
+    // 島の釣り場と まったく同じ候補づくり。**ふねの のりばより かならず 弱い**
+    // (釣り=50 / のりば=door 35)ので、のりばに 重なるところでは 島へ帰るほうが 勝つ
+    // = 入り江から 出られなくなる、は 構造的に 起きない。
+    // どこが釣り場かは FishingCast.fishingGate(帰りの桟橋の 先がわだけ)が1か所で決める。
+    const coveFish = gs.fishing.canFish(px, pz);
+    if (coveFish.zone) {
+      cands.push({
+        id: 'fishing', kind: 'fish', targetId: coveFish.zone,
+        priority: PRIORITY.fishing, distance: 1.0, enabled: coveFish.ok,
+        hint: coveFish.ok ? '<kbd>E</kbd>つりをする' : `つりには ${coveFish.reason}`,
+        run: () => gs.fishing.start(gs.player, gs.playerView),
+      });
+    }
     const coveBest = selectInteraction(cands, objectiveActionContext(gs.lastObjective));
     if (!coveBest) return '';
     if (want) coveBest.run();

@@ -178,9 +178,11 @@ test('翌朝: かざりも E候補も 片づいている', async ({ page }) => {
   await page.waitForTimeout(600);
   const hint = (await page.locator('.hud-hint').textContent()) ?? '';
   expect(hint).not.toContain('ほしランタン');
-  // ずかんの ひとことメモは「見たあと」の文になっている
+  // ずかんの ひとことメモは「見たあと」の文になっている。
+  // v21で ひとことメモが 2つ(ほしまつり・ぬし)に なったので、まつりの1つめを 名ざしで見る
   await page.keyboard.press('KeyZ');
-  await expect(page.locator('.codex-note')).toBeVisible({ timeout: 8000 });
-  await expect(page.locator('.codex-note')).toContainText('ほしランタン');
+  const fesNote = page.locator('.codex-note').first();
+  await expect(fesNote).toBeVisible({ timeout: 8000 });
+  await expect(fesNote).toContainText('ほしランタン');
   await page.keyboard.press('KeyZ');
 });

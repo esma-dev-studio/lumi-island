@@ -16,6 +16,7 @@ import { ACHIEVEMENTS, achievedCount, achievementRows } from '../systems/Achieve
 import { isRewardGranted, rewardIcon, rewardLabel, rewardOf } from '../systems/AchievementRewards';
 import { hasReadLetter, readLetterCount } from '../systems/BottleSystem';
 import { festivalMemo } from '../systems/FestivalSystem';
+import { nushiMemo } from '../systems/BossFishSystem';
 import { badgeCountByCategory, badgeRows, earnedBadgeCount } from '../systems/BadgeSystem';
 import {
   BADGES, BADGE_CATEGORIES, BADGE_CATEGORY_ORDER, BADGE_TIERS, type BadgeDef,
@@ -224,9 +225,16 @@ export class CodexUI {
     // v16 しまの ぎょうじ(ほしまつり)の ひとことメモ。
     // まだ 見ていない子には「いつ・どこ」だけ。見たあとは やりかたと 回数が出る
     const fes = festivalMemo(s);
+    // v21 ぬしの ひとことメモ。まつりと まったく同じ形で ならべる:
+    // まだ 見ていない子には「同じ釣り場に かよう」ことだけ、つったあとは のこりの場所が出る
+    const nushi = nushiMemo(s);
     const memo = `<div class="codex-note${fes.seen ? ' seen' : ''}">
       <span class="inv-ico">${icon('festival')}</span>
       <span class="codex-note-text"><b>${fes.title}</b><small>${fes.text}</small></span>
+    </div>
+    <div class="codex-note${nushi.seen ? ' seen' : ''}">
+      <span class="inv-ico">${icon('f_trophy_yoru')}</span>
+      <span class="codex-note-text"><b>${nushi.title}</b><small>${nushi.text}</small></span>
     </div>`;
 
     this.el.innerHTML = `
@@ -238,7 +246,7 @@ export class CodexUI {
       <div class="codex-grid">${comboCells}</div>
       <div class="panel-sub">てがみ <small>${readLetterCount(s)} / ${LETTERS.length}</small></div>
       <div class="codex-grid">${letterCells}</div>
-      <div class="panel-sub">しまの ぎょうじ</div>
+      <div class="panel-sub">しまの ぎょうじ・いいつたえ</div>
       ${memo}
       <div class="panel-sub">じっせき <small>${achievedCount(s)} / ${ACHIEVEMENTS.length}</small></div>
       <div class="ach-list">${achRows}</div>

@@ -7,7 +7,10 @@
 //
 // ここでは「地面が水面より低い点=水」という1つの規則(entities/terrain.ts の waterBodyAt)だけを見て、
 // プレイヤーのまわりから実際の水面点をさがす。池でも海でも同じ手順で決まる。
-import { waterBodyAt, pondShoreR, type WaterBody } from '../entities/terrain';
+import {
+  COVE_PIER, COVE_SEA_Y, coveHeightLocal, coveLocal, insideCoveArea, onCovePier,
+  waterBodyAt, pondShoreR, type WaterBody,
+} from '../entities/terrain';
 import { POND } from '../data/island';
 import { SEA_Y, onPier, PIER } from '../entities/water';
 
@@ -57,8 +60,18 @@ export const waterSurfaceY = (body: WaterBody): number => (body === 'pond' ? PON
 /**
  * その点がウキを落とせる水面か。桟橋の板の下は「見えない水」なので除く。
  * 水かどうかの判定そのものは entities/terrain.ts の waterBodyAt にまかせる(コピーしない)。
+ *
+ * v21 よるの入り江の中だけは 入り江の地形(coveHeightLocal)で 見る。
+ * 入り江は 島の地形の上では「深い海の底」(高さ約-4m)なので、島の規則のままだと
+ * **入り江の砂浜も 岩ばたも ぜんぶ水**に見えてしまい、ウキが 陸へ落ちる。
+ * 入り江の帰りの桟橋の板の上も、島の桟橋と同じく のぞく。
  */
 export function castableWaterAt(x: number, z: number): WaterBody | null {
+  if (insideCoveArea(x, z)) {
+    if (onCovePier(x, z)) return null;
+    const { lx, lz } = coveLocal(x, z);
+    return coveHeightLocal(lx, lz) < COVE_SEA_Y ? 'sea' : null;
+  }
   if (onPier(x, z)) return null;
   return waterBodyAt(x, z);
 }
@@ -169,10 +182,23 @@ export function findCastPoint(px: number, pz: number, opts: FindCastOptions = {}
 }
 
 /**
+ * v21 よるの入り江で 釣りができる範囲(帰りの桟橋の先がわ だけ)。
+ *
+ * ここに 限っている理由:
+ *   - 砂浜からだと、投げ先が 波うちぎわの ほそい水になり、ウキが 岸に かかる
+ *   - **ふねの のりばの Eより 弱い**(釣り=50 / のりば=door 35)ので、
+ *     のりばに 重なる ところで 釣りが 出ても「島へ帰れない」は 起きない。
+ *     それでも 板の 手前がわ(付け根)は 対象にせず、先がわだけにしてある
+ */
+export const COVE_FISH_FROM_Z = COVE_PIER.z1 - 4;
+
+/**
  * 釣り場の下ごしらえ(安い判定)。ここを通った場所だけ findCastPoint をかける。
  * 桟橋の先=海 / 池の岸線から外へ1mまで=池。実際に投げられるかは findCastPoint が決める。
+ * v21 よるの入り江の 帰りの桟橋の先も 海としてあつかう(ぬし「ヨルノヌシ」の釣り場)。
  */
 export function fishingGate(x: number, z: number): FishZone {
+  if (onCovePier(x, z)) return z > COVE_FISH_FROM_Z ? 'sea' : null;
   if (onPier(x, z) && z > PIER.z1 - 5) return 'sea';
   const dx = x - POND.x, dz = z - POND.z;
   const d = Math.hypot(dx, dz);

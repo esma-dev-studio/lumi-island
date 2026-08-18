@@ -58,7 +58,13 @@ export type ItemId =
   // テンの店の 限定家具3種と、第3章で おぼえる家具2種
   | 'f_market_lantern' | 'f_travel_trunk' | 'f_station_clock' | 'f_aroma_lamp' | 'f_far_map'
   // テンの店の 限定かべがみ・ゆかいた
-  | 'wall_lantern' | 'wall_market' | 'floor_stone' | 'floor_mat';
+  | 'wall_lantern' | 'wall_market' | 'floor_stone' | 'floor_mat'
+  // ---- v21 生命感パック ----
+  // なかよし度10の「ふたりの じかん」でしか 手に入らない3点
+  | 'sunsetfish' | 'f_pair_bench' | 'f_travel_map'
+  // ぬし(3か所)と、その トロフィー家具3種
+  | 'nushi_koi' | 'nushi_dai' | 'nushi_yoru'
+  | 'f_trophy_koi' | 'f_trophy_dai' | 'f_trophy_yoru';
 
 export type ToolId = 'axe' | 'pickaxe' | 'rod' | 'sickle' | 'net' | 'shovel';
 
@@ -285,6 +291,51 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   wall_market: { id: 'wall_market', name: 'いちばかべ', sell: 40, kind: 'decor', desc: 'いちばの のれんのような、たてじまと ふだの もようの かべがみ' },
   floor_stone: { id: 'floor_stone', name: 'いしのゆか', sell: 40, kind: 'decor', desc: 'いちば通りの しきいしを うつした、まるい石の ゆかいた' },
   floor_mat: { id: 'floor_mat', name: 'ゴザのゆか', sell: 40, kind: 'decor', desc: 'かわいた 草を あんだ ゴザの ゆか。ひんやり すずしい' },
+  // =========================================================================
+  // v21 生命感パック。入手経路は **1回きりの出来事だけ** ——
+  // お店・レシピ・くみあわせ・くじ引きの どこにも 出さない。
+  // ぜんぶ だいじなもの(keyItem・売値0)にしてある: 二度と手に入らないので、
+  // うっかり 売ったり あげたりして 無くならないように 構造で止める
+  // (ひかりのレンズ・じっせきの ごほうび3点と まったく同じ考え方)。
+  // =========================================================================
+  // ---- なかよし度10「ふたりの じかん」の しるし(src/systems/BondEventSystem.ts)----
+  sunsetfish: {
+    id: 'sunsetfish', name: 'ゆうやけうお', sell: 0, kind: 'food', keyItem: true,
+    desc: 'ミナモと 二人で つった、ゆうやけの いろの 魚。うることは できない',
+  },
+  f_pair_bench: {
+    id: 'f_pair_bench', name: 'ふたりのベンチ', sell: 0, kind: 'furniture', keyItem: true,
+    desc: 'ツムギと 二人で けずって 組んだ ベンチ。かたっぽの あしだけ すこし ふとい',
+  },
+  f_travel_map: {
+    id: 'f_travel_map', name: 'たびのちず', sell: 0, kind: 'furniture', keyItem: true,
+    desc: 'テンが 行った島に しるしを つけてきた ちず。いちばん あたらしい しるしが この島',
+  },
+  // ---- ぬし(src/systems/BossFishSystem.ts)。同じ釣り場で20ひき つった人の前にだけ 出る ----
+  nushi_koi: {
+    id: 'nushi_koi', name: 'ヌシコイ', sell: 0, kind: 'food', keyItem: true,
+    desc: 'あさの 池の そこに ひそんでいた、うでほどの 大きな コイ。うることは できない',
+  },
+  nushi_dai: {
+    id: 'nushi_dai', name: 'シマダイさま', sell: 0, kind: 'food', keyItem: true,
+    desc: 'まひるの おきから 来た、しま もようの 大ダイ。うることは できない',
+  },
+  nushi_yoru: {
+    id: 'nushi_yoru', name: 'ヨルノヌシ', sell: 0, kind: 'food', keyItem: true,
+    desc: 'よるの入り江の そこで 光っていた 大きな魚。うることは できない',
+  },
+  f_trophy_koi: {
+    id: 'f_trophy_koi', name: 'ヌシコイのがく', sell: 0, kind: 'furniture', keyItem: true,
+    desc: 'ヌシコイを うつしとった 木のがくぶち。かべぎわに かけて かざる',
+  },
+  f_trophy_dai: {
+    id: 'f_trophy_dai', name: 'シマダイのがく', sell: 0, kind: 'furniture', keyItem: true,
+    desc: 'シマダイさまを うつしとった 木のがくぶち。かべぎわに かけて かざる',
+  },
+  f_trophy_yoru: {
+    id: 'f_trophy_yoru', name: 'ヨルノヌシのがく', sell: 0, kind: 'furniture', glow: true, keyItem: true,
+    desc: 'ヨルノヌシを うつしとった 木のがくぶち。よるは 魚の かたちが あお白く 光る',
+  },
 };
 
 // ---------------------------------------------------------------------------

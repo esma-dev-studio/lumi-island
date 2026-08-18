@@ -17,6 +17,7 @@ import {
   type LanternSeed,
 } from '../entities/effects';
 import { FESTIVAL_FLY_POINT } from '../systems/FestivalSystem';
+import type { BondSceneKind } from '../systems/BondEventSystem';
 import { toast } from '../ui/Toast';
 import { sfx } from '../audio/AudioSystem';
 import { save } from '../save/SaveSystem';
@@ -25,7 +26,8 @@ import { SLEEP_TOTAL_KEY } from '../systems/BadgeSystem';
 import type { GameScene } from './GameScene';
 
 export type SequenceState =
-  | 'idle' | 'sleeping' | 'intro' | 'bloom' | 'travel' | 'voyage' | 'lighthouse' | 'festival' | 'train';
+  | 'idle' | 'sleeping' | 'intro' | 'bloom' | 'travel' | 'voyage' | 'lighthouse' | 'festival'
+  | 'train' | 'bond';
 
 const SLEEP_FADE_IN = 0.45; // 暗転までの秒
 const SLEEP_TOTAL = 1.05; // 起床までの秒
@@ -100,6 +102,65 @@ const FES_FIRST_DELAY = 0.7;
 /** 光の粒を出す間かく(秒) */
 const FES_SPARK_EVERY = 0.5;
 
+// ---- v21 なかよし度カンストの「ふたりの じかん」(全体で約12.4秒) ----
+//
+// 5人ぶんの見せ場を **1つの runner** で作る。ちがうのは
+//   立ち位置(二人ぶん)・見せる時刻・カメラの2カット・山場の演出だけ。
+// 過去の見せ場(とうだいの点灯・ランタンとばし)と同じ流儀にそろえてある:
+//   - 状態(フラグ・ごほうび)は 呼ぶ前に GameScene が確定ずみ。ここは見せるだけ
+//   - カメラは +Z 側(手前)から二人の「真横」に立つ(教訓1: 肩ごし構図を作らない)
+//   - カメラの高さは世界の高さで持つ(相対にすると地表より下へ潜って地面が底ぬけする)
+//
+// 時刻について: 見せ場のあいだだけ **見た目の時刻**を差しかえる(ゲームの時計は 1分も動かない)。
+// 「ゆうやけの さんばし」「よるの 高台」は その空気が 見せ場そのものなので、
+// 昼に さそわれても かならず その時間の画になる。前後を 短い暗転で つつんで
+// 「そのゆうがた」へ とんだように 見せる(家の出入りと同じ0.4秒の暗転)。
+const BOND_FADE_IN = 0.42; // 暗転しきるまで
+const BOND_SWAP = 0.5; // 二人を置いて 時刻を差しかえる瞬間
+const BOND_CUT2 = 6.6; // カット2(引き)へ
+const BOND_PEAK = 6.9; // 山場(魚がはねる・ながれぼし・できあがり)
+const BOND_FADE_OUT = 11.0; // また暗転しはじめる
+const BOND_RESTORE = 11.5; // 立ち位置と時刻を もとにもどす
+const BOND_TOTAL = 12.2;
+/** カット1(寄り)の カメラ距離と 目の高さ(注視点からの相対) */
+const BOND_CAM_D0 = 3.2;
+const BOND_CAM_D1 = 4.0;
+const BOND_CAM_H0 = 0.45;
+const BOND_CAM_H1 = 0.8;
+/**
+ * カット2(引き)の カメラ距離と 目の高さ。
+ * 13.5mまで引いたら 二人が 米つぶになった(実機のスクショで確認)ので 9mで止める。
+ */
+const BOND_CAM_D2 = 9.0;
+const BOND_CAM_H2 = 3.6;
+/** 見せ場のあいだ 光の粒を出す間かく(秒) */
+const BOND_SPARK_EVERY = 0.55;
+
+/** 見せ場1本ぶんの 立ち位置(GameScene が場所から作る) */
+export interface BondStage {
+  /** プレイヤーの立ち位置 */
+  px: number;
+  py: number;
+  pz: number;
+  /** 相手の立ち位置 */
+  nx: number;
+  ny: number;
+  nz: number;
+  /** 二人が 見ている先(注視点。二人は そろって こちらを 向く) */
+  lookX: number;
+  lookZ: number;
+  /**
+   * カメラを 二人の どちらがわに 立てるか(+1 / -1)。
+   *
+   * **向きそのものは 指定させない**: カメラの向きは 二人をむすぶ線の
+   * 「まっすぐ横」に かならず なるよう applyBondCamera が 計算する。
+   * 最初は 向きを 直に わたす形にしていて、うっかり 二人の ならびと 同じ向きを
+   * 書いてしまい、**一人が もう一人の 真うしろに かくれた**(実機のスクショで発覚)。
+   * 教訓1「会話ツーショットのカメラは 二人の真横を基準に置く」を 構造で 守る。
+   */
+  camSide: 1 | -1;
+}
+
 export class SequenceDirector {
   private state: SequenceState = 'idle';
   private t = 0; // 現在の状態の経過秒
@@ -132,6 +193,16 @@ export class SequenceDirector {
   private fesX = 0;
   private fesZ = 0;
   private fesBaseY = 0;
+  // ---- v21 ふたりの じかん ----
+  private bondNpc = '';
+  private bondKind: BondSceneKind = 'pier_dusk';
+  private bondHour = 18;
+  private bondStage: BondStage | null = null;
+  private bondFade: HTMLElement | null = null;
+  private bondPlaced = false;
+  private bondRestored = false;
+  private bondPeaked = false;
+  private bondSparkT = 0;
 
   constructor(private gs: GameScene) {}
 
@@ -584,6 +655,210 @@ export class SequenceDirector {
     }
   }
 
+  // ---------- v21 なかよし度カンストの「ふたりの じかん」 ----------
+  /**
+   * 見せ場をはじめる。呼ぶ前に GameScene が 状態(フラグ・ごほうび)を確定させている
+   * ——見せ場は「見せるだけ」(とうだいの点灯・ランタンとばしと まったく同じ流儀)。
+   * 連打しても1回ぶん(ほかの演出中は動かさない)。
+   *
+   * @param npcId  いっしょに すごす相手
+   * @param kind   画の種類(BondEventDef.scene)
+   * @param hour   見せ場のあいだ 見せる時刻(ゲームの時計は 動かさない)
+   * @param stage  二人の立ち位置と 見ている先(GameScene が場所から作る)
+   */
+  startBond(npcId: string, kind: BondSceneKind, hour: number, stage: BondStage): void {
+    if (this.state !== 'idle') return;
+    this.state = 'bond';
+    this.t = 0;
+    this.bondNpc = npcId;
+    this.bondKind = kind;
+    this.bondHour = hour;
+    this.bondStage = stage;
+    this.bondPlaced = false;
+    this.bondRestored = false;
+    this.bondPeaked = false;
+    this.bondSparkT = 0;
+    const gs = this.gs;
+    gs.restoreAllOcclusionImmediately();
+    gs.player.locked = true;
+    if (!this.bondFade) {
+      const el = document.createElement('div');
+      // CSS(src/ui/style.css)は触らずに、この演出ぶんだけ要素へ直接書く
+      el.style.cssText =
+        'position:absolute;inset:0;background:#0e1626;opacity:0;pointer-events:none;' +
+        `transition:opacity ${BOND_FADE_IN}s ease;z-index:20`;
+      document.getElementById('ui-root')!.appendChild(el);
+      this.bondFade = el;
+    }
+    this.bondFade.style.opacity = '1'; // まず 暗転(そのゆうがたへ とぶ)
+    sfx('door_close');
+  }
+
+  /** いま「ふたりの じかん」の見せ場の最中か(検証・撮影用) */
+  get bonding(): boolean {
+    return this.state === 'bond';
+  }
+
+  /** いま見せている相手(検証・撮影用) */
+  get bondTarget(): string | null {
+    return this.state === 'bond' ? this.bondNpc : null;
+  }
+
+  /** 見せ場の1フレーム: 立ち位置・時刻・カメラ・山場の演出 */
+  private updateBond(dt: number): void {
+    const gs = this.gs;
+    const st = this.bondStage;
+    if (!st) return;
+    const t = this.t;
+    // ---- 暗転しきったところで 二人を置き、時刻を差しかえる ----
+    if (!this.bondPlaced && t >= BOND_SWAP) {
+      this.bondPlaced = true;
+      // ミオは「見た目だけ」その場へ。あしもと(GameState.player)は うごかさない
+      // (でんしゃの車内と まったく同じやりかた。セーブの座標を いじらない)
+      gs.playerView.root.position.set(st.px, st.py, st.pz);
+      gs.playerView.root.rotation.y = Math.atan2(st.lookX - st.px, st.lookZ - st.pz);
+      gs.npcs.placeAt(this.bondNpc, st.nx, st.nz, Math.atan2(st.lookX - st.nx, st.lookZ - st.nz) + Math.PI, st.ny);
+      // 場面に合った姿勢(さんばしは 二人とも 釣りの構え / 工房は 手を うごかす)
+      const pose = this.bondKind === 'pier_dusk' ? 'fish_idle' : 'idle';
+      gs.playerView.play(pose);
+      gs.npcs.playClip(this.bondNpc, this.bondKind === 'shop_craft' ? 'interact' : pose);
+      this.applyBondCamera(0);
+      gs.camCtl.snapDialogue(); // 遠くへ とぶので 補間しない
+      if (this.bondFade) this.bondFade.style.opacity = '0';
+    }
+    if (!this.bondPlaced) return;
+    // ミオの見た目は **毎フレーム** 置きなおす。
+    // PlayerController.update は locked でも apply() で 立ち位置を 書きもどすので、
+    // 1回だけ置くと つぎのフレームで 足もと(GameState.player)へ もどってしまう
+    // ——実機のスクショで「相手だけ 写って ミオが いない」画になって 気づいた
+    // (航海 updateVoyage が 毎フレーム 置きなおしているのと 同じ理由)。
+    if (!this.bondRestored) {
+      gs.playerView.root.position.set(st.px, st.py, st.pz);
+      gs.playerView.root.rotation.y = Math.atan2(st.lookX - st.px, st.lookZ - st.pz);
+    }
+    // ---- 見た目の時刻(ゲームの時計は 1分も動かない)----
+    if (!this.bondRestored) gs.island.dayNight.update(this.bondHour, st.px, st.pz);
+    // 入り江の見せ場のあいだも ビームだけは まわす(とうだいの点灯と同じ理由)
+    if (this.bondKind === 'lighthouse_top') gs.island.cove.tickLight(dt, this.bondHour);
+    // ---- カメラ ----
+    const k =
+      t < BOND_CUT2
+        ? smooth(Math.min(1, (t - BOND_SWAP) / (BOND_CUT2 - BOND_SWAP))) * 0.5
+        : 0.5 + smooth(Math.min(1, (t - BOND_CUT2) / (BOND_FADE_OUT - BOND_CUT2))) * 0.5;
+    this.applyBondCamera(k);
+    // ---- 山場(1回だけ)----
+    if (!this.bondPeaked && t >= BOND_PEAK) {
+      this.bondPeaked = true;
+      this.bondPeak();
+    }
+    // ---- 光の粒(乱数は使わず 経過時間から位置を決める)----
+    this.bondSparkT += dt;
+    if (this.bondSparkT >= BOND_SPARK_EVERY) {
+      this.bondSparkT = 0;
+      const a = t * 1.9;
+      const mx = (st.px + st.nx) / 2;
+      const mz = (st.pz + st.nz) / 2;
+      const my = (st.py + st.ny) / 2;
+      burst(mx + Math.cos(a) * 1.1, my + 1.1 + Math.sin(a * 1.6) * 0.35, mz + Math.sin(a) * 1.1, this.bondSparkKind(), 4);
+    }
+    // ---- 山場のあとの ながれぼし(ノクトだけ。1.4秒かけて 空を よこぎる)----
+    if (this.bondKind === 'hill_night' && t >= BOND_PEAK && t < BOND_PEAK + 1.4) {
+      const p = (t - BOND_PEAK) / 1.4;
+      burst(st.lookX * 0.2 + st.px + 14 - p * 26, st.py + 11 - p * 3.4, st.pz - 10 - p * 4, 'ore', 3);
+    }
+    // ---- おわりの暗転と 後片づけ ----
+    if (this.bondFade && t >= BOND_FADE_OUT && !this.bondRestored) this.bondFade.style.opacity = '1';
+    if (!this.bondRestored && t >= BOND_RESTORE) {
+      this.bondRestored = true;
+      // 立ち位置・時刻を もとへ(演出のあいだに動かしたものは かならず 片づける)
+      gs.player.teleport(gs.player.x, gs.player.z, gs.player.rotY);
+      gs.playerView.play('idle');
+      gs.npcs.snapToSchedule(gs.island.time.hour);
+      gs.island.dayNight.update(gs.island.time.hour, gs.player.x, gs.player.z);
+      if (this.bondFade) this.bondFade.style.opacity = '0';
+    }
+  }
+
+  /** 光の粒の いろ(場面ごと) */
+  private bondSparkKind(): 'bloom' | 'moss' | 'craft' | 'ore' | 'splash' {
+    switch (this.bondKind) {
+      case 'pier_dusk':
+        return 'splash';
+      case 'hill_night':
+        return 'ore';
+      case 'shop_craft':
+        return 'craft';
+      case 'lighthouse_top':
+        return 'moss';
+      default:
+        return 'bloom';
+    }
+  }
+
+  /** 山場(1回だけ)。場面ごとの「いちばん いい瞬間」 */
+  private bondPeak(): void {
+    const st = this.bondStage;
+    if (!st) return;
+    const mx = (st.px + st.nx) / 2;
+    const mz = (st.pz + st.nz) / 2;
+    const my = (st.py + st.ny) / 2;
+    switch (this.bondKind) {
+      case 'pier_dusk':
+        // ゆうやけうおが はねる(水しぶき+きらめき)
+        sfx('catch');
+        burst(mx + (st.lookX - mx) * 0.22, my - 0.6, mz + (st.lookZ - mz) * 0.22, 'splash', 16);
+        burst(mx + (st.lookX - mx) * 0.22, my + 0.4, mz + (st.lookZ - mz) * 0.22, 'bloom', 10);
+        break;
+      case 'hill_night':
+        sfx('bloom'); // ながれぼし(尾は updateBond が 1.4秒かけて ひく)
+        burst(mx + 12, my + 11, mz - 10, 'ore', 8);
+        break;
+      case 'shop_craft':
+        sfx('quest'); // ベンチが できあがる
+        burst(mx, my + 0.7, mz, 'craft', 18);
+        break;
+      case 'lighthouse_top':
+        sfx('bloom'); // レンズの ひかりが 目の前を よこぎる
+        burst(mx, my + 0.6, mz, 'moss', 14);
+        break;
+      default:
+        sfx('quest'); // ちずを ひらく
+        burst(mx, my + 0.8, mz, 'bloom', 14);
+    }
+  }
+
+  /**
+   * 見せ場のカメラ。k=0(寄りのはじめ)→1(引ききり)。
+   *
+   * 自由配置(beginDialogue)を使うのは、**二人の真横**に立ちたいから
+   * (見せ場カメラ beginEvent は かならず +Z 側に立つので、向きを えらべない)。
+   * 教訓1: 自由配置カメラを 地表より下へ置かない —— 高さは かならず 足もとより上。
+   */
+  private applyBondCamera(k: number): void {
+    const st = this.bondStage;
+    if (!st) return;
+    const mx = (st.px + st.nx) / 2;
+    const mz = (st.pz + st.nz) / 2;
+    const my = Math.min(st.py, st.ny); // 低いほうの足もとを基準にする(坂で顔が切れない)
+    const e = Math.min(1, Math.max(0, k));
+    const dist = e < 0.5
+      ? BOND_CAM_D0 + (BOND_CAM_D1 - BOND_CAM_D0) * (e / 0.5)
+      : BOND_CAM_D1 + (BOND_CAM_D2 - BOND_CAM_D1) * ((e - 0.5) / 0.5);
+    const height = e < 0.5
+      ? BOND_CAM_H0 + (BOND_CAM_H1 - BOND_CAM_H0) * (e / 0.5)
+      : BOND_CAM_H1 + (BOND_CAM_H2 - BOND_CAM_H1) * ((e - 0.5) / 0.5);
+    // 二人をむすぶ線と 直角の向き(=真横)。左右の距離差が 0 になるので 肩ごしにならない
+    const ax = st.nx - st.px;
+    const az = st.nz - st.pz;
+    const len = Math.hypot(ax, az) || 1;
+    const cx = (az / len) * st.camSide;
+    const cz = (-ax / len) * st.camSide;
+    this.gs.camCtl.beginDialogue(
+      [mx + cx * dist, my + 1.35 + height, mz + cz * dist],
+      [mx, my + 1.35, mz]
+    );
+  }
+
   /** 自宅ベッドで寝る。連打しても1回ぶんしか実行されない */
   sleep(): void {
     if (this.state !== 'idle') return; // 排他: sleeping中の再実行を防ぐ
@@ -667,6 +942,17 @@ export class SequenceDirector {
         gs.camCtl.endEvent();
         gs.camCtl.snapTo(gs.player.x, gs.player.y, gs.player.z);
         gs.onLighthouseLit(); // 依頼の達成・ロカのよろこびの会話・じっせき
+      }
+      return;
+    }
+
+    if (this.state === 'bond') {
+      this.updateBond(dt);
+      if (this.t >= BOND_TOTAL) {
+        this.state = 'idle';
+        gs.camCtl.endDialogue();
+        gs.camCtl.snapTo(gs.player.x, gs.player.y, gs.player.z);
+        gs.onBondEventDone(this.bondNpc); // あとの ことば・じっせき・セーブ
       }
       return;
     }

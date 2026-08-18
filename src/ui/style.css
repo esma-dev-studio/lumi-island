@@ -142,6 +142,29 @@ body { font-family: var(--font); color: var(--ink); }
 }
 .npc-marker.report { background: #4f9a78; }
 .npc-marker.hidden { display: none; }
+
+/* ---- v21 立ち話の ふきだし(会話ボックスとは 別もの。操作も 世界も 止めない) ---- */
+.chat-bubble {
+  position: absolute; transform: translate(-50%, -100%);
+  max-width: min(300px, 46vw); pointer-events: none; z-index: 5;
+  background: rgba(250, 246, 236, 0.95); color: #3a3226;
+  border: 1px solid rgba(120, 104, 76, 0.4); border-radius: 12px;
+  padding: 6px 11px; font-size: 0.84rem; line-height: 1.5;
+  box-shadow: 0 3px 10px rgba(30, 24, 12, 0.22);
+  animation: marker-float 2.4s ease-in-out infinite;
+}
+/* しっぽ(下向きの 小さな三角) */
+.chat-bubble::after {
+  content: ''; position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%);
+  border-left: 6px solid transparent; border-right: 6px solid transparent;
+  border-top: 7px solid rgba(250, 246, 236, 0.95);
+}
+.chat-bubble-dots { display: none; color: #7a6a4e; letter-spacing: 2px; font-weight: 900; }
+/* 遠くて 聞こえないときは「••」だけの 小さな ふきだしにする */
+.chat-bubble.quiet { padding: 3px 9px; }
+.chat-bubble.quiet .chat-bubble-dots { display: inline; }
+.chat-bubble.hidden { display: none; }
+html.touch-ui .chat-bubble { font-size: 0.92rem; max-width: min(340px, 52vw); }
 @keyframes marker-float {
   0%, 100% { margin-top: 0; }
   50% { margin-top: -5px; }

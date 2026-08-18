@@ -118,6 +118,8 @@ export const BADGES: BadgeDef[] = [
   { id: 'fi_rare1', name: 'にじうお 1ぴき', desc: 'よるの さんばしで にじうおを つろう', cat: 'fish', tier: 'silver', src: 'rarefish', target: 1, pict: 'rarefish' },
   { id: 'fi_rare3', name: 'にじうお 3びき', desc: 'にじうおを ぜんぶで 3びき つろう', cat: 'fish', tier: 'gold', src: 'rarefish', target: 3, pict: 'rarefish' },
   { id: 'fi_aqua', name: 'すいそうに 10ぴき', desc: 'すいそうに 魚を ぜんぶで 10ぴき いれよう', cat: 'fish', tier: 'silver', src: 'display_fish', target: 10, pict: 'f_aquarium' },
+  // v21 ぬし。ふつうの魚の しきい値には 1つも さわらない(別の source)
+  { id: 'fi_nushi', name: 'ぬしを ぜんぶ', desc: '池・さんばし・入り江の ぬしを ぜんぶ つりあげよう', cat: 'fish', tier: 'gold', src: 'nushi_total', target: 3, pict: 'f_trophy_yoru' },
 
   // ============================================================
   // むしとり(9)…… 累計3段+種類コンプ+めずらしい虫+むしかご
@@ -190,6 +192,9 @@ export const BADGES: BadgeDef[] = [
   { id: 'fr_tsumugi', name: 'ツムギと なかよし10', desc: 'ツムギとの なかよし度を 10に しよう', cat: 'friend', tier: 'gold', src: 'friend_tsumugi', target: 10, pict: 'f_finetable' },
   { id: 'fr_ten', name: 'テンと なかよし', desc: 'テンとの なかよし度を 5に しよう', cat: 'friend', tier: 'silver', src: 'friend_ten', target: 5, pict: 'gift_parcel' },
   { id: 'fr_roka', name: 'ロカと なかよし10', desc: 'ロカとの なかよし度を 10に しよう', cat: 'friend', tier: 'gold', src: 'friend_roka', target: 10, pict: 'f_lighthouse_lantern' },
+  // v21 立ち話と「ふたりの じかん」
+  { id: 'fr_chat', name: 'たちばなしを きいた', desc: '島の 二人が 話しているところに 近づいて みよう', cat: 'friend', tier: 'bronze', src: 'chat_heard', target: 1, pict: 'chat' },
+  { id: 'fr_bond', name: 'みんなと ふたりの じかん', desc: '5人 ぜんいんと「ふたりの じかん」を すごそう', cat: 'friend', tier: 'gold', src: 'bond_total', target: 5, pict: 'f_pair_bench' },
 
   // ============================================================
   // たんけん(9)…… 入り江・ボトル・てがみ・にじ・あめ
@@ -258,8 +263,9 @@ export const BADGE_BY_ID: Record<string, BadgeDef> = Object.fromEntries(BADGES.m
  */
 export const BADGE_COUNT_MIN = 98;
 // v16 ほしまつり3つを足して106個。上限は「うっかり増えすぎた」を見つけるための帯なので、
-// 足したぶんだけ 上へずらす(減らす側の下限は そのまま)
-export const BADGE_COUNT_MAX = 108;
+// 足したぶんだけ 上へずらす(減らす側の下限は そのまま)。
+// v21 生命感パック(ぬし・立ち話・ふたりのじかん)で3つ足して111個
+export const BADGE_COUNT_MAX = 111;
 
 /** ならび順つきの カテゴリ一覧(ずかんの見出しの順) */
 export const BADGE_CATEGORY_ORDER: BadgeCategory[] = (

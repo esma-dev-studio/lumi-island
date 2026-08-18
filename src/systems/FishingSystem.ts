@@ -15,6 +15,11 @@ import { toast } from '../ui/Toast';
 import { sfx } from '../audio/AudioSystem';
 import { sharedWeather } from './WeatherSystem';
 import { ITEMS, type ItemId } from '../data/items';
+import { statAdd } from '../game/GameState';
+import {
+  BOSS_BY_SPOT, NUSHI_ROUNDS, NushiFight, catchNushi, fishCountKey, fishSpotOf, nushiReady,
+  type FishSpot,
+} from './BossFishSystem';
 
 export type { FishZone }; // 実体は FishingCast.ts(水面の判定と同じ場所に置く)
 
@@ -91,9 +96,11 @@ export function pickFishFor(
  * 釣りの状態(明示的な状態機械)。演出が終わるまで次の釣りを始めさせないための区別を持つ。
  *   idle → casting →(着水)→ waiting →(ヒット)→ bite →(E)→ reeling →(アニメ終了)→ cooldown → idle
  *                                                   └(時間切れ:にげられた)→ idle
+ *   v21 ぬしが かかった回だけ bite の代わりに nushi(タイミング押し3回)へ入る。
+ *   勝てば reeling へ、しくじれば にげられて idle。
  *   Esc(cancel)はどの状態からでも片付けて idle に戻す。
  */
-export type FishingState = 'idle' | 'casting' | 'waiting' | 'bite' | 'reeling' | 'cooldown';
+export type FishingState = 'idle' | 'casting' | 'waiting' | 'bite' | 'nushi' | 'reeling' | 'cooldown';
 
 // 演出の長さ(秒)。アニメクリップの長さは tools/chargen/anim.mjs のクリップ定義に合わせている
 const CAST_SPLASH_RATIO = 0.42; // fish_cast(1.1秒)のうち、竿を振り抜いてウキが着水するまでの割合
@@ -129,6 +136,19 @@ export class FishingSystem {
    * (デバッグAPIを ふやさずに「めずらしい魚が つれた画」を とるための穴)。
    */
   nextFishOverride: ItemId | null = null;
+  /**
+   * v21 いま よるの入り江にいるか(GameScene が毎フレーム入れる)。
+   * 水そのもの(FishZone)は 島の海も 入り江の海も 'sea' なので、
+   * 「かよった釣り場」を 分けるのは この1つだけ。
+   */
+  inCove = false;
+  /** v21 いまの釣り場('pond' | 'sea' | 'cove')。投げた瞬間に決めて にげられるまで変えない */
+  private spot: FishSpot | null = null;
+  /** v21 この回は ぬしが かかるか(着水の瞬間に1度だけ決める) */
+  private nushiPending = false;
+  /** v21 ぬしとの やりとり(nushi 状態のあいだだけ 中身がある) */
+  private fight: NushiFight | null = null;
+  private nushiFish: Mesh;
   private waitT = 0;
   private biteT = 0;
   private castT = 0;
@@ -168,6 +188,19 @@ export class FishingSystem {
     appendTrunk(R, [[0, 0, 0], [0, 0.55, 0.12], [0, 1.0, 0.38]], 0.018, 0.007, Color3.FromHexString('#6f5438'), 5);
     this.rod = toMesh(scene, 'rodProp', R);
     this.rod.setEnabled(false);
+    // v21 ぬしの すがた。ふつうの魚(ウキ 0.09m)の 6倍ちかい 大きさで、
+    // やりとりの あいだ 水面を きっては もぐる。丸い部品だけなので orient は 'flip'
+    const F = A0();
+    const body = Color3.FromHexString('#5b6f86');
+    const belly = Color3.FromHexString('#cfd8e2');
+    appendBlob(F, 0, 0, 0, 0.62, 0.34, 0.3, body, { segs: 9, noise: 0.05 });
+    appendBlob(F, -0.12, -0.1, 0, 0.42, 0.16, 0.2, belly, { segs: 8, noise: 0.04 });
+    appendBlob(F, 0.52, 0.02, 0, 0.16, 0.12, 0.1, body, { segs: 7, noise: 0.05 }); // 頭
+    appendBlob(F, -0.66, 0.06, 0, 0.2, 0.24, 0.05, body, { segs: 6, noise: 0.06 }); // 尾びれ
+    appendBlob(F, 0.02, 0.3, 0, 0.24, 0.14, 0.04, body, { segs: 6, noise: 0.06 }); // せびれ
+    this.nushiFish = toMesh(scene, 'nushiFish', F, 'flip');
+    this.nushiFish.isPickable = false;
+    this.nushiFish.setEnabled(false);
   }
 
   /**
@@ -215,6 +248,8 @@ export class FishingSystem {
     const plan = findCastPoint(player.x, player.z, { rotY: player.rotY, zone: check.zone });
     if (!plan) return; // 水面が見つからない場所では始めない(canFishと同じ規則なので、ふつうは起きない)
     this.zone = plan.zone;
+    // v21 かよった釣り場(池 / さんばし / よるの入り江)。ぬしの判定は これだけを見る
+    this.spot = fishSpotOf(plan.zone, this.inCove);
     player.locked = true;
     this.spotX = player.x;
     this.spotZ = player.z;
@@ -257,14 +292,29 @@ export class FishingSystem {
 
   /** E押下(bite中はキャッチ、それ以外は何もしない=演出中・クールダウン中の連打は捨てる) */
   action(player: PlayerController, view: CharacterView): void {
+    // v21 ぬしとの やりとり中は「タイミング押し」。連打は はやい押し=失敗になる
+    if (this.state === 'nushi') {
+      if (!this.fight || this.fight.finished) return;
+      const ok = this.fight.press();
+      sfx(ok ? 'catch' : 'miss');
+      return;
+    }
     if (this.state !== 'bite') return;
     const item = this.pickFish();
     sfx('catch');
     // 取得はこの1回だけ(以降はreelingが終わるまでbiteに戻らないので二重取得しない)
     invAddRecorded(this.game, item, 1); // 釣り上げはずかんに記録する
+    // v21 かよった釣り場の 累計(ぬしの解禁が これだけを見る)。
+    // ふつうの釣果の でかた(pickFishFor)には 1ミリも さわっていない
+    if (this.spot) statAdd(this.game, fishCountKey(this.spot));
     // めずらしい魚はすこし特別に(依頼はどちらの魚でも進む)。演出・効果音は全部の魚で同じ
     toast(`+1 ${ITEMS[item].name}${CATCH_NOTE[item] ?? ''}`, item);
     this.onCatch?.(item);
+    this.startReel(player, view);
+  }
+
+  /** 巻き上げ演出へ入る(ふつうの魚も ぬしも 同じ道すじを通る) */
+  private startReel(player: PlayerController, view: CharacterView): void {
     // 巻き上げ演出が終わるまで reeling を維持する(この間は動けない・次の釣りも始められない)
     this.state = 'reeling';
     this.reelFrom.copyFrom(this.bobber.position);
@@ -281,6 +331,22 @@ export class FishingSystem {
     });
   }
 
+  /**
+   * v21 ぬしを つりあげた。状態(フラグ・ずかん・トロフィー)は BossFishSystem が確定させ、
+   * ここは 見せるだけ(とうだいの点灯・ほしまつりと同じ流儀)。
+   */
+  private winNushi(player: PlayerController, view: CharacterView): void {
+    const r = this.spot ? catchNushi(this.game, this.spot, this.game.time.hour) : null;
+    if (r) {
+      sfx('quest');
+      toast(r.def.toast, r.def.item);
+      toast(`「${r.trophyName}」を 手に入れた! 家に かざろう`, r.def.trophy);
+      this.onCatch?.(r.def.item);
+    }
+    this.nushiFish.setEnabled(false);
+    this.startReel(player, view);
+  }
+
   cancel(player: PlayerController, view: CharacterView): void {
     if (this.state === 'idle') return;
     this.seq++; // 進行中の演出のonEndを無効化する(遅れて届いても何もしない)
@@ -295,6 +361,9 @@ export class FishingSystem {
     this.bobber.setEnabled(false);
     this.rod.setEnabled(false);
     this.rod.parent = null;
+    this.nushiFish.setEnabled(false);
+    this.fight = null;
+    this.nushiPending = false;
     if (this.line) {
       this.line.dispose();
       this.line = null;
@@ -306,6 +375,9 @@ export class FishingSystem {
     this.bobber.setEnabled(true);
     sfx('splash');
     this.state = 'waiting';
+    // v21 この回 ぬしが かかるか(着水の瞬間に1度だけ決める)。
+    // 条件は BossFishSystem がぜんぶ持つ = ここに 日づけ・回数の計算を 写経しない
+    this.nushiPending = nushiReady(this.game, this.spot, this.game.time.hour);
     // 雨のあいだは待ち時間が短くなる(はれ・くもり・雨上がりは 1.0 のまま)。
     // 倍率の決め方は src/systems/WeatherSystem.ts にまとめてある
     const wet = sharedWeather().fishWaitScale(this.game.time.day, this.game.time.hour);
@@ -323,13 +395,16 @@ export class FishingSystem {
     view.play('idle');
   }
 
-  /** 演出を中断して待機に戻す(にげられた時) */
-  private missed(player: PlayerController, view: CharacterView): void {
+  /**
+   * 演出を中断して待機に戻す(にげられた時)。
+   * v21 ぬしに にげられたときだけ 文言を さしかえる(フラグは 立てないので 何度でも やりなおせる)。
+   */
+  private missed(player: PlayerController, view: CharacterView, note?: string): void {
     this.seq++; // この回は終わり。以降に届くonEndは無視する
     this.teardown();
     this.state = 'idle';
     player.locked = false;
-    toast('にげられた…', 'fish');
+    toast(note ? `にげられた… ${note}` : 'にげられた…', 'fish');
     sfx('miss');
     view.play('surprised');
   }
@@ -388,11 +463,25 @@ export class FishingSystem {
       this.bobber.position.y += Math.sin(this.bobTime * 3) * 0.0006;
       this.waitT -= dt;
       if (this.waitT <= 0) {
-        this.state = 'bite';
-        sfx('bite');
-        this.biteT = BITE_S;
         this.bobber.position.y -= 0.055; // ぐっと沈む
+        if (this.nushiPending && this.spot) {
+          // v21 ぬしが かかった。ふつうの「!」1回ではなく、タイミング押し3回へ
+          this.state = 'nushi';
+          this.fight = new NushiFight();
+          sfx('bite');
+          const def = BOSS_BY_SPOT[this.spot];
+          if (def) toast(def.hit, def.item);
+          this.nushiFish.position.copyFrom(this.bobber.position);
+          this.nushiFish.setEnabled(true);
+        } else {
+          this.state = 'bite';
+          sfx('bite');
+          this.biteT = BITE_S;
+        }
       }
+    } else if (this.state === 'nushi') {
+      this.updateNushi(dt, player, view);
+      if (this.state !== 'nushi') return; // 決着したフレームは ここで抜ける
     } else if (this.state === 'bite') {
       this.biteT -= dt;
       if (this.biteT <= 0) {
@@ -421,9 +510,59 @@ export class FishingSystem {
     }
   }
 
+  /**
+   * v21 ぬしとの やりとりの1フレーム。
+   * 判定(押しごろ・失敗)は BossFishSystem.NushiFight が ぜんぶ持つ。
+   * ここは 見た目(魚が 水を きる・もぐる)と 決着の受けわたしだけ。
+   */
+  private updateNushi(dt: number, player: PlayerController, view: CharacterView): void {
+    const f = this.fight;
+    if (!f) return;
+    const before = f.phase;
+    f.update(dt);
+    if (before === 'wait' && f.phase === 'window') sfx('bite'); // ぐっと 出た合図
+    // 見た目: wait=もぐっている(水面すれすれ)/ window=水を きって 出ている
+    const up = f.phase === 'window' ? 0.42 + Math.sin(this.bobTime * 11) * 0.06 : -0.16;
+    this.nushiFish.position.set(
+      this.bobber.position.x,
+      this.bobber.position.y + up,
+      this.bobber.position.z
+    );
+    this.nushiFish.rotation.y = this.bobTime * (f.phase === 'window' ? 2.4 : 0.8);
+    this.nushiFish.rotation.z = f.phase === 'window' ? Math.sin(this.bobTime * 9) * 0.35 : 0;
+    if (!f.settled) return;
+    if (f.phase === 'won') {
+      this.winNushi(player, view);
+    } else {
+      this.nushiFish.setEnabled(false);
+      this.missed(player, view, 'ぬしは まだ そこに いる');
+    }
+  }
+
+  /** v21 ぬしとの やりとりの ようす(HUD・検証・テストが読む)。やっていなければ null */
+  get nushiState(): { spot: FishSpot; phase: string; hits: number; round: number; remain: number } | null {
+    if (this.state !== 'nushi' || !this.fight || !this.spot) return null;
+    return {
+      spot: this.spot,
+      phase: this.fight.phase,
+      hits: this.fight.hits,
+      round: this.fight.round,
+      remain: this.fight.remain,
+    };
+  }
+
   get hint(): string | null {
     if (this.state === 'casting' || this.state === 'waiting') return 'まってる… <kbd>Esc</kbd>やめる';
     if (this.state === 'bite') return '<b class="bite">!!</b> <kbd>E</kbd>つりあげる';
+    if (this.state === 'nushi') {
+      const f = this.fight;
+      if (!f) return null;
+      const left = `${Math.max(0, NUSHI_ROUNDS - f.hits)}かい`;
+      if (f.phase === 'window') return `<b class="bite">!!</b> <kbd>E</kbd>ひっぱる(あと ${left})`;
+      if (f.phase === 'won') return 'つりあげてる…';
+      if (f.phase === 'lost') return 'ぬしが にげていく…';
+      return `ぬしが かかった! まだ ひっぱらない(あと ${left})`;
+    }
     if (this.state === 'reeling') return 'つりあげてる…';
     return null;
   }

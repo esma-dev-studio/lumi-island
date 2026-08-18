@@ -8,6 +8,11 @@ import { todayCard } from '../systems/TodayCard';
 import {
   festivalAttendees, festivalFlyCount, isFestivalDay, isFestivalTime,
 } from '../systems/FestivalSystem';
+import { activeChatPair } from '../systems/ChatEventSystem';
+import { bondCount, bondDone } from '../systems/BondEventSystem';
+import {
+  BOSS_FISH, inNushiHour, nushiCaught, nushiCount, nushiUnlocked, spotCatchCount,
+} from '../systems/BossFishSystem';
 import { lanternFlightState } from '../entities/effects';
 import { ambienceState, musicState, rainState } from '../audio/AudioSystem';
 
@@ -57,6 +62,42 @@ export function installLumiDebugApi(gs: GameScene): void {
       flyTotal: festivalFlyCount(gs.state),
       sequence: gs.seq.current,
       lanterns: lanternFlightState(),
+    }),
+    /**
+     * v21 NPCどうしの 立ち話の ようす(読み取りだけ)。
+     * 吹き出しは 会話ボックスとは別の要素なので、E2E・撮影ハーネスは ここを読む。
+     */
+    chat: () => ({
+      day: gs.island.time.day,
+      hour: gs.island.time.hour,
+      pair: gs.chat.activePairId,
+      script: gs.chat.activeScriptId,
+      bubble: gs.chat.bubble,
+      text: gs.chatBubble.visibleText,
+      stands: (activeChatPair(gs.state, gs.island.time.day, gs.island.time.hour) ?? { a: '', b: '' }),
+    }),
+    /** v21 「ふたりの じかん」の ようす(読み取りだけ) */
+    bond: () => ({
+      sequence: gs.seq.current,
+      target: gs.seq.bondTarget,
+      total: bondCount(gs.state),
+      done: Object.fromEntries(
+        ['minamo', 'nokto', 'tsumugi', 'roka', 'ten'].map((id) => [id, bondDone(gs.state, id)])
+      ),
+    }),
+    /** v21 ぬしの ようす(読み取りだけ)。やりとりの局面も そのまま読める */
+    nushi: () => ({
+      hour: gs.island.time.hour,
+      fishing: gs.fishing.state,
+      fight: gs.fishing.nushiState,
+      total: nushiCount(gs.state),
+      spots: BOSS_FISH.map((d) => ({
+        spot: d.spot,
+        caught: nushiCaught(gs.state, d.spot),
+        count: spotCatchCount(gs.state, d.spot),
+        unlocked: nushiUnlocked(gs.state, d.spot),
+        inHour: inNushiHour(d, gs.island.time.hour),
+      })),
     }),
     /**
      * v13 じっせきの ごほうびを「もう受けとった」ことにする(何も もらわずに 印だけ立てる)。

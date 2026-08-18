@@ -3,7 +3,8 @@ import type { GameState } from '../game/GameState';
 import { statAdd } from '../game/GameState';
 import { questFor, acceptQuest, completeQuest, questShortfall } from '../systems/QuestSystem';
 import { currentObjective } from '../systems/ObjectiveSystem';
-import { NPC_BY_ID, dailyLine, greetingTier } from '../data/npcs';
+import { NPC_BY_ID, greetingTier } from '../data/npcs';
+import { bondEventOf, bondReady, dailyLineWithMemory } from '../systems/BondEventSystem';
 import type { QuestDef } from '../data/quests';
 import { ITEMS, type ItemId } from '../data/items';
 import { applyGift, canGift, friendshipText, type GiftResult } from '../systems/GiftSystem';
@@ -34,6 +35,12 @@ export interface QuestDialogueDeps {
   onCelebrate: () => void; // ルミの木開花
   onBoatRepaired: () => void; // v11第2章 ふねの修理がおわった
   onStationOrdered: () => void; // v20第3章 えきの こうじを たのんだ(翌朝できあがる)
+  /**
+   * v21 なかよし度カンストの「ふたりの じかん」がはじまる。
+   * 会話がおわった瞬間に GameScene が 状態を確定させてから 見せ場へ入る
+   * (とうだいの点灯・ほしまつりと まったく同じ流儀)。
+   */
+  onBondEvent: (npcId: string) => void;
 }
 
 /** 家の拡張こうじを たのめる相手(島の大工=ツムギ) */
@@ -85,8 +92,9 @@ export class QuestDialogueController {
       const variants = npcDef.greetings[greetingTier(f)];
       lines = [variants[(d.state.time.day + f) % variants.length]];
       // ふだんの ひとこと(その日の話題)。あいさつのあとに足す。
-      // 依頼の受注・報告の会話には まざらない(ここは「依頼が無いとき」の枝)
-      const daily = dailyLine(npcDef, d.state.time.day);
+      // 依頼の受注・報告の会話には まざらない(ここは「依頼が無いとき」の枝)。
+      // v21 「ふたりの じかん」を おえた人は 話題が1本 ふえる(dailyLinesWithMemory)
+      const daily = dailyLineWithMemory(npcId, d.state, d.state.time.day);
       if (daily) lines = [...lines, daily];
     }
     // 依頼の受注(offer)と報告(done)は、会話の終わりに状態が変わる大事な場面。
@@ -104,10 +112,22 @@ export class QuestDialogueController {
       rtNpc.talkedToday = true;
       rtNpc.friendship += 1;
     }
+    // ---------------------------------------------------------------------
+    // v21 なかよし度カンスト(10)の「ふたりの じかん」。
+    //
+    // Eの候補も ホットヒントも 1つも 増やさない: **ふだんの会話の 最後に つづける**だけ。
+    // 依頼の受注・報告(questCritical)のときは 誘わない —— 大事な場面を こわさない。
+    // なかよし度は この会話で +1 されたあとに 見るので、
+    // 「9で 話しかけて 10になった、その場で さそわれる」も 成り立つ。
+    // ---------------------------------------------------------------------
+    const bond = !questCritical && bondReady(d.state, npcId) ? bondEventOf(npcId) : null;
+    if (bond) lines = [...lines, ...bond.invite];
     const endConversation = (): void => {
       d.npcs.setTalking(npcId, false);
       d.onDialogueCamera(null);
       after?.();
+      // 会話がおわってから 見せ場へ(会話カメラを かたづけた あと)
+      if (bond) d.onBondEvent(npcId);
     };
     /** ふだんの会話(あいさつ・雑談)と、その最終行に出す任意ボタン */
     const showNormalTalk = (): void => {
@@ -118,13 +138,15 @@ export class QuestDialogueController {
       // questCritical(受注・報告)の会話には出さない(理由は上の questCritical のところ)。
       // v10 家の拡張こうじ。おくりものと同じ「最終行の任意ボタン」の仕組みで足す。
       // 大工はツムギだけ・未発注・お金が足りているときにだけ出る(発注すると消える)
+      // v21 「ふたりの じかん」に さそわれている最終行にも 寄り道の入口は出さない
+      // (受注・報告と同じ「大事な場面」なので、bond も questCritical と同じあつかいにする)
       const cost = nextHomeExpandCost(d.state);
-      if (!questCritical && npcId === HOME_BUILDER_NPC && cost !== null && canOrderHomeExpansion(d.state)) {
+      if (!questCritical && !bond && npcId === HOME_BUILDER_NPC && cost !== null && canOrderHomeExpansion(d.state)) {
         d.dialogue.addExtraAction(`こうじを たのむ(${cost}ルミナ)`, () =>
           this.openHomeOrder(npcId, endConversation)
         );
       }
-      if (!questCritical && canGift(d.state, npcId)) {
+      if (!questCritical && !bond && canGift(d.state, npcId)) {
         d.dialogue.addExtraAction('おくりものをする', () => this.openGift(npcId, endConversation));
       }
     };

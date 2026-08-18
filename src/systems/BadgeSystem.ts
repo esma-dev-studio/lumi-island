@@ -18,6 +18,9 @@ import { BUG_IDS } from './BugSystem';
 import { BOTTLE_TOTAL_KEY, readLetterCount } from './BottleSystem';
 import { COMBO_FOUND_KEY } from './ComboSystem';
 import { festivalFlyCount } from './FestivalSystem';
+import { bondCount } from './BondEventSystem';
+import { CHAT_HEARD_KEY } from './ChatEventSystem';
+import { nushiCount } from './BossFishSystem';
 import { MARKET_VISIT_KEY } from './TrainRideSystem';
 import { GIFT_TOTAL_KEY } from './GiftSystem';
 import { insideGardenZone } from './GardenSystem';
@@ -105,6 +108,9 @@ export const BADGE_SOURCES: Record<string, BadgeSource> = {
   nightfish: { label: 'ヨザカナの数', read: (s) => codexCount(s, 'nightfish') },
   rarefish: { label: 'にじうおの数', read: (s) => codexCount(s, 'rarefish') },
   display_fish: { label: 'すいそうに入れた数', read: (s) => statCount(s, 'display_fish') },
+  // v21 ぬし。ふつうの魚の数(fish_total / fish_kinds)には 入れない
+  // ——しきい値を1つも 動かさないため(前のセーブの バッジの進みぐあいが ずれない)
+  nushi_total: { label: 'つりあげた ぬしの数', read: nushiCount },
   // ---- むしとり ----
   bug_total: { label: 'つかまえた虫の数', read: (s) => sum(s, BUG_IDS) },
   bug_kinds: { label: 'つかまえた虫の種類', read: (s) => kinds(s, BUG_IDS) },
@@ -156,6 +162,9 @@ export const BADGE_SOURCES: Record<string, BadgeSource> = {
   friend_tsumugi: { label: 'ツムギとのなかよし度', read: (s) => friendOf(s, 'tsumugi') },
   friend_roka: { label: 'ロカとのなかよし度', read: (s) => friendOf(s, 'roka') },
   friend_ten: { label: 'テンとのなかよし度', read: (s) => friendOf(s, 'ten') },
+  // v21 数え方は それぞれのシステム1つずつ(ここに 条件を写経しない)
+  bond_total: { label: 'ふたりの じかんの かいすう', read: bondCount },
+  chat_heard: { label: '立ち話を きいた かいすう', read: (s) => statCount(s, CHAT_HEARD_KEY) },
   // ---- たんけん ----
   // 「はじめての こうかい」だけ cove_visit ではなく roka_arrived を見る:
   // cove_visit は v14で足したカウンタなので、前のセーブでは0のまま。

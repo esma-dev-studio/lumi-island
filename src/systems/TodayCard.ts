@@ -29,6 +29,7 @@ import { discoveredCount, hasKitchen } from './ComboSystem';
 import { trainCardText } from './TrainRideSystem';
 import { GIFT_TOTAL_KEY } from './GiftSystem';
 import { STYLE_CHANGE_KEY } from './BadgeSystem';
+import { sensedNushi } from './BossFishSystem';
 
 /** カードを出す時間帯(この間に 1日1回だけ出る)。就寝は 6時に起きるので かならず入る */
 export const CARD_FROM = 6;
@@ -60,9 +61,11 @@ export const QUIET_TEXT = 'しずかな 一日に なりそう。のんびり �
  * きょう起きること(強い順)。上から2件までを カードに出す。
  *
  * 順番の意味:
- *   来訪 > 花だん > おみやげ > 虹 > ボトル
+ *   来訪 > ぬしのきはい > 花だん > おみやげ > 虹 > ボトル
  *   じぶんが うえた花(花だん)と、人が たずねてくる日(来訪)を いちばん上にする——
  *   どちらも「その日にしか 見られない・自分の行いの結果」だから。
+ *   v21の「ぬしの きはい」も同じ たぐい(その釣り場に かよいつめた人にしか 出ない)ので、
+ *   来訪の すぐ下に 置いてある。
  */
 function eventsOf(s: GameState, day: number): TodayEvent[] {
   const out: TodayEvent[] = [];
@@ -73,12 +76,22 @@ function eventsOf(s: GameState, day: number): TodayEvent[] {
     out.push({ id: 'visit', text: `${NPC_BY_ID[visitor].name}が あそびに くるかも`, icon: 'heart' });
   }
 
-  // 2) 花だんが まんかいに なる(src/systems/GardenSystem.ts plotsBloomingOn)
+  // 2) v21 ぬしの きはい(src/systems/BossFishSystem.ts sensedNushi)。
+  // 「かよいつめた釣り場が あって、まだ つっていない」ときだけ 出る = 条件が そろった人にしか 見えない。
+  // 来訪の つぎに 強くしてあるのは、来訪・花だんと同じ「自分の行いの けっか」で、
+  // しかも **その人にしか 見えない** から(2件までの枠に かならず 入るようにする)。
+  // どこ・いつ は 言わない(ずかんのメモと じっせきの desc が そこを 受けもつ)
+  const nushi = sensedNushi(s);
+  if (nushi) {
+    out.push({ id: 'nushi', text: 'ぬしの きはいが する…', icon: nushi.trophy });
+  }
+
+  // 3) 花だんが まんかいに なる(src/systems/GardenSystem.ts plotsBloomingOn)
   if (plotsBloomingOn(s.garden, day) > 0) {
     out.push({ id: 'bloom', text: 'はなだんが まんかいに なりそう', icon: 'flower' });
   }
 
-  // 3) 家に おじゃますると おみやげ(src/data/npcs.ts homeGiftFor)
+  // 4) 家に おじゃますると おみやげ(src/data/npcs.ts homeGiftFor)
   for (const def of NPCS) {
     const st = s.npcs?.[def.id];
     if (!st) continue;
@@ -92,12 +105,12 @@ function eventsOf(s: GameState, day: number): TodayEvent[] {
     break; // 4日周期で位相をずらしてあるので ふつうは1軒。念のため 1件で切る
   }
 
-  // 4) あめのち にじ(src/systems/WeatherSystem.ts willRainbowOn)
+  // 5) あめのち にじ(src/systems/WeatherSystem.ts willRainbowOn)
   if (willRainbowOn(day)) {
     out.push({ id: 'rainbow', text: 'あめのち にじの よかん', icon: 'rainbow' });
   }
 
-  // 5) 浜に メッセージボトル(src/systems/BottleSystem.ts isBottleDay)
+  // 6) 浜に メッセージボトル(src/systems/BottleSystem.ts isBottleDay)
   if (isBottleDay(day)) {
     out.push({ id: 'bottle', text: 'はまに ボトルが ながれつく日', icon: 'bottle' });
   }

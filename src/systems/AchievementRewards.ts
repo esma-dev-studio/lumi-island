@@ -68,6 +68,11 @@ export const ACHIEVEMENT_REWARDS: Record<string, AchievementReward> = {
   a_festival: { kind: 'lumina', amount: 100 },
   // v20 いちば島は「お金を つかう場所」なので、ごほうびも ルミナで そろえる
   a_market_first: { kind: 'lumina', amount: 120 },
+  // v21 見せ場そのものが ごほうび(限定家具・ゆうやけうお・トロフィー)なので、
+  // ここは ルミナだけにする。「ものを 二重に くばる」と ありがたみが うすれる
+  a_bond_first: { kind: 'lumina', amount: 80 },
+  a_bond_all: { kind: 'lumina', amount: 150 },
+  a_nushi_all: { kind: 'lumina', amount: 150 },
   a_all_quests: { kind: 'lumina', amount: 200 },
 };
 

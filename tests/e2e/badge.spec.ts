@@ -13,7 +13,8 @@ const GAME = '/?scene=game&debug=1';
 const GAME_LOAD = '/?scene=game&debug=1&load=1';
 
 /** src/data/badges.ts の BADGES.length。データ側を増やしたら ここも合わせる */
-const BADGE_TOTAL = 108; // v16 ほしまつり3つ / v20 いちば島・テンの2つを足した
+// v16 ほしまつり3つ / v20 いちば島・テンの2つ / v21 生命感パック3つ(ぬし・立ち話・ふたりのじかん)を足した
+const BADGE_TOTAL = 111;
 
 const errors: string[] = [];
 function watchErrors(page: Page): void {
@@ -82,7 +83,7 @@ async function openBadgeTab(page: Page): Promise<void> {
 const cell = (page: Page, name: string) =>
   page.locator('.codex-panel .badge-cell').filter({ hasText: name }).first();
 
-test('バッジタブ: 108マスが シルエット+進捗で ならぶ → 初つりで色つきに かわる', async ({ page }) => {
+test('バッジタブ: ぜんぶのマスが シルエット+進捗で ならぶ → 初つりで色つきに かわる', async ({ page }) => {
   watchErrors(page);
   await page.goto(GAME);
   await waitReady(page);

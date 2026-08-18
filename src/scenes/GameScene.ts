@@ -3,7 +3,7 @@
 import type { Engine } from '@babylonjs/core/Engines/engine';
 import { IslandScene } from './IslandScene';
 import { CameraController } from './CameraController';
-import { SequenceDirector } from './SequenceDirector';
+import { SequenceDirector, type BondStage } from './SequenceDirector';
 import { routeInteraction, HOME_EXIT } from './InteractionRouting';
 import { homeShot, HOME_SPAWN, HOME_BED, insideHomeFloor, setHomeExpandedLayout } from './HomeInterior';
 import {
@@ -21,7 +21,7 @@ import { WorldPauseController } from './WorldPauseController';
 import { InputRouter } from './InputRouter';
 import { CharacterView } from '../characters/CharacterView';
 import { CHARACTERS } from '../data/characters';
-import { POIS } from '../data/island';
+import { NPC_SPOTS, POIS } from '../data/island';
 import { ITEMS, isCookedFood, validateItemData } from '../data/items';
 import {
   applyHomeStyle, invAddRecorded, invRemove, newGameState, statAdd, type GameState,
@@ -31,6 +31,17 @@ import { InteractionSystem } from '../systems/InteractionSystem';
 import { FishingSystem } from '../systems/FishingSystem';
 import { PlacementSystem, type PlacedRuntime } from '../systems/PlacementSystem';
 import { NPCSystem, visitPraiseFacts, visitProbeOf } from '../systems/NPCSystem';
+// v21 生命感パック(立ち話・ふたりのじかん・ぬし)
+import {
+  CHAT_HEARD_KEY, ChatEventSystem, activeChatPair, validateChatData,
+} from '../systems/ChatEventSystem';
+import {
+  bondEventOf, completeBond, validateBondData, type BondSceneKind,
+} from '../systems/BondEventSystem';
+import { validateBossFishData } from '../systems/BossFishSystem';
+import { ChatBubbleUI } from '../ui/ChatBubbleUI';
+/** 立ち話・見せ場で 二人が ならぶ ときの あいだ(m)。会話のツーショットと同じ間合い */
+const BOND_PAIR_GAP = 1.15;
 import {
   NPC_BY_ID, greetingTier, homeGiftFor, homeTalkLine, visitPraiseLines, type NpcArea,
 } from '../data/npcs';
@@ -160,6 +171,10 @@ export class GameScene {
   bulletinUI!: BulletinUI;
   /** v15 朝の「きょうの島」カード(1日1回・3秒で消える お知らせ) */
   todayCardUI!: TodayCardUI;
+  /** v21 NPCどうしの立ち話(すすみぐあいは純ロジック) */
+  chat!: ChatEventSystem;
+  /** v21 立ち話の 吹き出し(会話ボックスとは 別の要素。世界も 操作も 止めない) */
+  chatBubble!: ChatBubbleUI;
   codexUI!: CodexUI;
   /** v13 メッセージボトルの手紙(ずかんからの読み返しも ここを通る) */
   letterUI!: LetterUI;
@@ -286,6 +301,9 @@ export class GameScene {
     // v15 でんごんばん(広場の板を Eで見る)と、朝の「きょうの島」カード
     this.bulletinUI = new BulletinUI(() => this.state, () => this.island.time.day);
     this.todayCardUI = new TodayCardUI();
+    // v21 立ち話(進行は純ロジック / 吹き出しは会話ボックスとは別の要素)
+    this.chat = new ChatEventSystem();
+    this.chatBubble = new ChatBubbleUI(this.scene);
     this.codexUI = new CodexUI(() => this.state);
     // ずかんより あとに作る: DOMの ならび順が そのまま かさなり順になるので、
     // ずかんを開いたまま 手紙を ひらいても 手紙が 上に来る(z-indexは style.css にも入れてある)
@@ -345,7 +363,14 @@ export class GameScene {
       onCelebrate: () => this.seq.start('bloom'),
       onBoatRepaired: () => this.island.applyBoatRepaired(true),
       onStationOrdered: () => orderStation(this.state, this.island.time.day),
+      onBondEvent: (npcId) => this.startBondEvent(npcId),
     });
+    // v21 立ち話の集合(3組・時間帯ごと)。
+    // NPCSystem がするのは まつりと同じ「立ち位置の差しかえ」だけなので、
+    // 立ち話中も 会話・受注・報告は ふだんどおり動く(Eの候補は 1つも 増えない)
+    this.npcs.setChatProbe(() =>
+      activeChatPair(this.state, this.island.time.day, this.island.time.hour)
+    );
 
     // イベント連携
     this.pauseMenu.onBackToTitle = () => {
@@ -499,6 +524,9 @@ export class GameScene {
     for (const p of validateAchievementRewards()) console.warn('[data]', p);
     for (const p of validateBadges()) console.warn('[data]', p);
     for (const p of validateFestivalData()) console.warn('[data]', p);
+    for (const p of validateChatData()) console.warn('[data]', p);
+    for (const p of validateBondData()) console.warn('[data]', p);
+    for (const p of validateBossFishData()) console.warn('[data]', p);
     this.inputRouter.attach();
     this.touch.attach();
     if (this.opts.debug) installLumiDebugApi(this); // 決定的テスト用のAPI(実プレイ検証はデバッグなしで行う)
@@ -636,6 +664,171 @@ export class GameScene {
     sfx('quest');
     toast('ほしランタンが そらへ のぼっていった。みんなと きょうの ことを おぼえていよう', 'festival');
     save(this.state);
+  }
+
+  // ---------- v21 NPCどうしの 立ち話 ----------
+  /**
+   * 立ち話の1フレーム。
+   *
+   * 止める条件(suspended)を きびしくしてあるのが 要点:
+   *   会話中・モーダル中・見せ場中・世界が凍っているとき・島にいないとき・
+   *   どちらかに 話しかけているとき は 吹き出しを 出さない。
+   * **プレイヤーが 話しかけたら ふつうの会話が かならず 勝つ**を、
+   * 「Eの候補を作らない」+「話しかけられたら だまる」の2つで 成り立たせている。
+   */
+  private updateChat(dt: number, frozen: boolean): void {
+    const talking = this.dialogue.open;
+    const suspended =
+      frozen || talking || this.seq.active || this.modalOpen ||
+      this.indoor || this.inCove || this.inMarket || this.npcHome !== null;
+    this.chat.update(this.state, dt, {
+      day: this.island.time.day,
+      hour: this.island.time.hour,
+      px: this.player.x,
+      pz: this.player.z,
+      suspended,
+    });
+    if (this.chat.justHeard) {
+      statAdd(this.state, CHAT_HEARD_KEY); // v14 と同じ流儀の バッジ用カウンタ
+      save(this.state);
+    }
+    const b = this.chat.bubble;
+    if (!b) {
+      this.chatBubble.hide();
+      return;
+    }
+    const p = this.npcs.positionOf(b.speaker);
+    if (!p || p.hidden) {
+      this.chatBubble.hide();
+      return;
+    }
+    this.chatBubble.show(p.x, p.y, p.z, b.text);
+  }
+
+  // ---------- v21 なかよし度カンストの「ふたりの じかん」 ----------
+  /**
+   * 見せ場ごとの 立ち位置(二人ぶん)と カメラの向き。
+   *
+   * 実測ずみの点だけを 土台にしてある(tests/unit/bond_event.test.ts が機械検査):
+   *   さんばしの先 … 桟橋の板の上(PIER の内がわ)
+   *   高台        … ノクトの hill スポットの となり
+   *   工房前      … ツムギの shop スポットの となり
+   *   とうだいの てっぺん … 灯台の ランタンの 高さ(地面ではないので y を 直に わたす)
+   *   いちばの丘  … テンの hill スポットの となり
+   * カメラの向きは 場所ごとに「海・空が ひらけている ほう」を えらんである
+   * (二人の 真横から 見て、うしろに 見どころが 入る画にする)。
+   */
+  private bondStageFor(kind: BondSceneKind): BondStage {
+    const g = (x: number, z: number): number => this.island.groundY(x, z);
+    switch (kind) {
+      case 'pier_dusk': {
+        // 桟橋の先。二人は よこに ならんで 沖(+Z)へ さおを 出す。
+        // カメラは 沖がわ(+Z)から 二人の 真横=顔が 見える がわ。
+        // うしろには ゆうやけの 島と 桟橋が 入る
+        const z = 48.6;
+        return {
+          px: 4.55, py: g(4.55, z), pz: z,
+          nx: 4.55 - BOND_PAIR_GAP, ny: g(4.55 - BOND_PAIR_GAP, z), nz: z,
+          lookX: 4, lookZ: z + 20,
+          camSide: 1,
+        };
+      }
+      case 'hill_night': {
+        // 高台の 観測スペース。二人は 北(-Z)の 見晴らしを 見上げる。
+        // カメラは 南(+Z)がわ。二人ごしに 夜空と ながれぼしが 入る
+        const s = NPC_SPOTS.nokto.hill;
+        const z = s.z + 0.4;
+        return {
+          px: s.x + 1.0, py: g(s.x + 1.0, z), pz: z,
+          nx: s.x + 1.0 - BOND_PAIR_GAP, ny: g(s.x + 1.0 - BOND_PAIR_GAP, z), nz: z,
+          lookX: s.x, lookZ: s.z - 20,
+          camSide: 1,
+        };
+      }
+      case 'shop_craft': {
+        // ツムギ工房の 軒先。二人は できあがった ベンチのほうを むく。
+        // カメラは 南(+Z)がわ。うしろに 工房の 建物が 入る
+        const s = NPC_SPOTS.tsumugi.shop;
+        const z = s.z + 1.5;
+        return {
+          px: s.x + 0.9, py: g(s.x + 0.9, z), pz: z,
+          nx: s.x + 0.9 - BOND_PAIR_GAP, ny: g(s.x + 0.9 - BOND_PAIR_GAP, z), nz: z,
+          lookX: s.x, lookZ: s.z + 8,
+          camSide: 1,
+        };
+      }
+      case 'lighthouse_top': {
+        // とうだいの てっぺん。ランタンの まわりの てすりに、**島がわへ よって** 立つ
+        // (ランタンを 二人のあいだに はさむと、まぶしい 光が 顔を かくす。実機で 確認して直した)。
+        // 二人の ならびは とうだいの 接線ぞい、カメラは 島がわ = ランタンの 光が うしろから さす。
+        // 地面ではないので y を 直に わたす
+        const lh = this.island.cove.lighthouseWorld;
+        // ランタン室の 下の 岩の上(ランタンの 玉と ちょうど 目の高さが そろう)。
+        // ランタン室の中(半径0.6の柱の内がわ)に 立たせると 屋根に 頭が つきぬけ、
+        // 玉が 二人のあいだに 入って 顔を かくす(entities/cove.ts の寸法から)
+        const y = this.island.cove.lampWorldY() - 1.05;
+        const len = Math.hypot(-lh.x, -lh.z) || 1;
+        const dx = -lh.x / len; // とうだいから 島(原点)へ の 単位ベクトル
+        const dz = -lh.z / len;
+        const bx = lh.x + dx * 1.15;
+        const bz = lh.z + dz * 1.15;
+        const half = BOND_PAIR_GAP / 2;
+        return {
+          px: bx + dz * half, py: y, pz: bz - dx * half,
+          nx: bx - dz * half, ny: y, nz: bz + dx * half,
+          lookX: lh.x + dx * 40, lookZ: lh.z + dz * 40,
+          camSide: 1, // 島がわ(=二人が 見ている ほう)から。ランタンの 光は うしろ
+        };
+      }
+      default: {
+        // いちば島の 見はらしの丘。二人は 海(南東)を むく。
+        // カメラは 海がわ = うしろに いちばの ちょうちんが 入る
+        const s = NPC_SPOTS.ten.hill;
+        const z = s.z - 0.6;
+        return {
+          px: s.x - 0.5, py: g(s.x - 0.5, z), pz: z,
+          nx: s.x - 0.5 + BOND_PAIR_GAP, ny: g(s.x - 0.5 + BOND_PAIR_GAP, z), nz: z,
+          lookX: s.x + 14, lookZ: s.z + 12,
+          camSide: -1,
+        };
+      }
+    }
+  }
+
+  /**
+   * 「ふたりの じかん」をはじめる(会話がおわった瞬間に QuestDialogueController が呼ぶ)。
+   * 状態(1回きりのフラグ・ごほうび・累計)を **ここで確定させてから** 見せ場を始める
+   * ——とうだいの点灯・ランタンとばしと まったく同じ流儀。
+   */
+  startBondEvent(npcId: string): void {
+    if (this.seq.active) return;
+    const r = completeBond(this.state, npcId);
+    if (!r) return;
+    save(this.state);
+    this.seq.startBond(npcId, r.def.scene, r.def.sceneHour, this.bondStageFor(r.def.scene));
+  }
+
+  /** 見せ場のあと: あとの ことば・ごほうびの しらせ(じっせき・バッジは毎秒の判定が拾う) */
+  onBondEventDone(npcId: string): void {
+    const def = bondEventOf(npcId);
+    if (!def) return;
+    sfx('quest');
+    toast(def.toast, def.reward?.item ?? 'heart');
+    if (def.reward) toast(`「${ITEMS[def.reward.item].name}」を 手に入れた!`, def.reward.item);
+    // ふつうの会話と 同じ道すじ(カメラ・終わりかた)にそろえる
+    const rt = this.npcs.npcs.get(npcId);
+    if (rt) {
+      this.npcs.setTalking(npcId, true, this.player.x, this.player.z);
+      this.player.face(rt.x, rt.z);
+      this.focusDialogueCamera(npcId);
+    }
+    this.dialogue.show(NPC_BY_ID[npcId].name, def.after, () => {
+      if (rt) {
+        this.npcs.setTalking(npcId, false);
+        this.focusDialogueCamera(null);
+      }
+      save(this.state);
+    });
   }
 
   // ---------- 地面の ひろいもの(雨のカタツムリ・v13 メッセージボトル) ----------
@@ -1371,6 +1564,8 @@ export class GameScene {
         this.cooking.update(frozen ? 0 : dt);
         this.player.speedMul = this.cooking.walkMul;
         this.fishing.waitMul = this.cooking.fishWaitMul;
+        // v21 いま よるの入り江にいるか。ぬしの「かよった釣り場」を 分ける唯一の情報
+        this.fishing.inCove = this.inCove;
         this.inter.actionSpeed = this.cooking.gatherSpeedMul;
         setBugFleeScale(this.cooking.bugFleeMul);
         setCookGlow(this.cooking.has('glow'));
@@ -1401,6 +1596,7 @@ export class GameScene {
         }
         if (wx.rainbow <= 0.001 && this.rainbowToldToday && wx.rain > 0.5) this.rainbowToldToday = false;
         this.seq.update(dt);
+        this.updateChat(dt, frozen);
         const hint = this.routeWithPickups(uiOpen);
         this.shownHint = uiOpen || this.pauseMenu.open ? '' : hint;
         this.hud.setHint(this.shownHint);
