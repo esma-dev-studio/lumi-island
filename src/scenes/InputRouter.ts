@@ -115,6 +115,20 @@ export class InputRouter {
     gs.placement.rotate();
   }
 
+  /**
+   * 1・2キー: 会話の最終行に出ている任意ボタン(「こうじを たのむ」「おくりものをする」
+   * 「はい/やめる」など)を えらぶ。ボタンが出ていなければ 何も起きない。
+   *
+   * クリックの保険。マウスのクリックが 何かの拍子に とどかなくても、
+   * キーボードだけで 会話の選択を 最後まで通せるようにしてある
+   * (v14.1で 透明なオーバーレイが クリックを吸い、こうじも おくりものも
+   *  たのめなくなった実害への備え。原因そのものは style.css 側で直してある)。
+   * @returns えらべたか(えらべなければ 押されなかったのと同じ)
+   */
+  chooseDialogueExtra(i: number): boolean {
+    return this.gs.dialogue.chooseExtra(i);
+  }
+
   /** Esc・メニュー/やめるボタン: 演出中は無効 → 開いているUIを閉じる → ポーズ */
   escape(): void {
     const gs = this.gs;
@@ -193,6 +207,13 @@ export class InputRouter {
       }
       if (e.code === 'Escape') {
         this.escape();
+        return;
+      }
+      // 会話の選択ボタンの番号(上段の数字キーでもテンキーでも同じ)。
+      // 会話にボタンが出ていないときは false が返るので、ほかの操作を1つも横取りしない
+      if (e.code === 'Digit1' || e.code === 'Numpad1' || e.code === 'Digit2' || e.code === 'Numpad2') {
+        const i = e.code === 'Digit1' || e.code === 'Numpad1' ? 0 : 1;
+        if (this.chooseDialogueExtra(i)) e.preventDefault();
         return;
       }
       const k = map[e.code];

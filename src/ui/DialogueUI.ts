@@ -97,6 +97,30 @@ export class DialogueUI {
     return this.extras.map((e) => e.label);
   }
 
+  /**
+   * いま画面に出ている任意ボタンだけを数える(最終行でなければ 0)。
+   * ボタンは最終行にしか出さないので、キーの1・2もそのときだけ効く。
+   */
+  private get extrasShown(): boolean {
+    return this.open && this.idx >= this.lines.length - 1 && this.extras.length > 0;
+  }
+
+  /**
+   * 数字キー(1・2)で任意ボタンをえらぶ。押せる状態でなければ何もしない(false)。
+   *
+   * クリックの保険。マウスが何かの拍子に効かなくても、キーボードだけで
+   * 「こうじを たのむ」「おくりものをする」まで たどりつけるようにしてある
+   * (v14.1で 透明なオーバーレイが クリックを吸い、進めなくなった実害への備え)。
+   * ボタンの左肩に出る小さな数字(.dlg-key)が、そのまま この番号。
+   */
+  chooseExtra(i: number): boolean {
+    if (!this.extrasShown) return false;
+    const e = this.extras[i];
+    if (!e) return false;
+    e.handler();
+    return true;
+  }
+
   advance(): void {
     if (!this.open) return;
     if (this.blockAdvance) {
@@ -128,9 +152,15 @@ export class DialogueUI {
     const last = this.idx >= this.lines.length - 1;
     (this.el.querySelector('.dlg-name') as HTMLElement).textContent = this.speaker;
     (this.el.querySelector('.dlg-text') as HTMLElement).textContent = this.lines[this.idx];
+    // ボタンの左肩の小さな数字は、そのまま押せるキー(1・2)。
+    // 指の画面では意味がないので、CSS(html.touch-ui .dlg-key)で消してある。
     const extra = last
       ? this.extras
-          .map((e, i) => `<button class="craft-btn sub" data-dlg-extra="${i}" style="margin-right:10px">${e.label}</button>`)
+          .map(
+            (e, i) =>
+              `<button class="craft-btn sub" data-dlg-extra="${i}" style="margin-right:10px">` +
+              `<span class="dlg-key">${i + 1}</span>${e.label}</button>`
+          )
           .join('')
       : '';
     (this.el.querySelector('.dlg-next') as HTMLElement).innerHTML = extra + nextLabel(last);

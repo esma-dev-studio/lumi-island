@@ -538,7 +538,9 @@ describe('UI(選択パネルと会話ボタン)', () => {
     dlg.advance();
     const btn = el.querySelector('[data-dlg-extra]') as HTMLElement;
     expect(btn).not.toBeNull();
-    expect(btn.textContent).toBe('おくりものをする');
+    // 文言のほかに、押せるキーの番号(左肩の小さな「1」)が付く
+    expect(btn.querySelector('.dlg-key')?.textContent).toBe('1');
+    expect(btn.textContent).toBe('1おくりものをする');
     btn.click();
     expect(pressed).toBe(1);
     expect(dlg.open).toBe(true); // ボタンは会話を送らない

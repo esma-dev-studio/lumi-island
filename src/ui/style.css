@@ -36,6 +36,35 @@ body { font-family: var(--font); color: var(--ink); }
 }
 #ui-root { position: fixed; left: 0; top: 0; width: var(--app-w); height: var(--app-h); pointer-events: none; }
 #ui-root > * { pointer-events: auto; }
+
+/* ---- 表示専用(見せるだけ)のオーバーレイは クリックを 1つも 受けとらない ---- */
+/*
+ * すぐ上の `#ui-root > *` は **id を1つ含む** ので、クラスに書いた
+ * `pointer-events: none`(例: `.sleep-fade { pointer-events: none }`)より 強い。
+ * つまり #ui-root の直下では、クラスだけの pointer-events:none は **だまって効かない**。
+ * 押すものではない要素は、ここに同じ強さで並べて 打ち消しておく
+ * (タッチUIの根も同じ理由で touch.css が `#ui-root > .touch-root` と書いている)。
+ *
+ * ★ #ui-root の直下に 新しい「見せるだけ」の要素を足したら、必ずここにも足すこと。
+ *   tests/unit/overlay_hit.test.ts が src を全数走査し、もれていれば落ちる。
+ *
+ * 実害(v14.1で発覚): 一度でも ねると .sleep-fade(画面ぜんたい・透明・消えない)が
+ * #ui-root の いちばん後ろに 残りつづけ、会話の「こうじを たのむ」「おくりものをする」
+ * などの クリックを ぜんぶ 吸っていた(キーボードのEだけが効く状態)。
+ */
+#ui-root > .sleep-fade,
+#ui-root > .chat-bubble,
+#ui-root > .dir-arrow,
+#ui-root > .npc-marker,
+#ui-root > .craft-pop,
+#ui-root > .combo-found,
+#ui-root > .toast-box,
+#ui-root > .hud-top,
+#ui-root > .hud-fx,
+#ui-root > .hud-hint,
+#ui-root > .obj-hud {
+  pointer-events: none;
+}
 #boot-screen {
   position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
   background: linear-gradient(#16213c, #0e1830); z-index: 99;
@@ -557,6 +586,14 @@ html.touch-ui .chat-bubble { font-size: 0.92rem; max-width: min(340px, 52vw); }
   font-family: var(--font); background: var(--amber); color: #fff; border-radius: 4px;
   padding: 0 6px; margin-right: 4px; font-size: 0.74rem;
 }
+/* 任意ボタンの左肩の小さな数字(=押せるキー)。文字より弱く、じゃまにならない大きさ */
+.dlg-key {
+  display: inline-block; min-width: 1.15em; margin-right: 5px;
+  border: 1px solid var(--amber); border-radius: 3px;
+  font-size: 0.66rem; font-weight: 900; line-height: 1.5; text-align: center;
+}
+/* 指の画面にはキーボードが無いので、数字は出さない */
+html.touch-ui .dlg-key { display: none; }
 
 /* ---- 依頼 ---- */
 .quest-row { background: #fff; border: 1px solid var(--line); border-radius: 5px; padding: 8px 12px; }

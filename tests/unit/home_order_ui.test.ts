@@ -75,6 +75,18 @@ describe('会話ボックスの任意ボタン', () => {
     expect(ended).toBe(1);
   });
 
+  it('ボタンの中の数字(小さな「1」)を押しても、そのボタンが押されたことになる', () => {
+    const dlg = new DialogueUI();
+    const pressed: string[] = [];
+    dlg.show('ツムギ', ['ひとこと']);
+    dlg.addExtraAction('こうじを たのむ(300ルミナ)', () => pressed.push('order'));
+    dlg.addExtraAction('おくりものをする', () => pressed.push('gift'));
+    const keys = [...dlgEl().querySelectorAll('.dlg-key')] as HTMLElement[];
+    expect(keys.map((k) => k.textContent)).toEqual(['1', '2']);
+    keys[1].click(); // 数字そのものを押しても closest でボタンにたどりつく
+    expect(pressed).toEqual(['gift']);
+  });
+
   it('確認中(blockAdvance)はEでもクリックでも会話が進まない', () => {
     const dlg = new DialogueUI();
     let cancelled = 0;
@@ -85,5 +97,53 @@ describe('会話ボックスの任意ボタン', () => {
     dlg.advance();
     expect(dlg.open).toBe(true);
     expect(cancelled).toBe(2); // クリックとEの両方が「やめる」に落ちる
+  });
+});
+
+/**
+ * v14.1 数字キー(1・2)でのえらびかた。
+ * クリックが 何かの拍子に とどかなくても、キーボードだけで 選択を通せるようにする保険
+ * (実害: 透明なオーバーレイが クリックを吸い、こうじも おくりものも たのめなくなった)。
+ */
+describe('会話の任意ボタンを数字キーでえらぶ(chooseExtra)', () => {
+  it('1・2がそれぞれ左・右のボタンに当たる', () => {
+    const dlg = new DialogueUI();
+    const pressed: string[] = [];
+    dlg.show('ツムギ', ['ひとこと']);
+    dlg.addExtraAction('こうじを たのむ(300ルミナ)', () => pressed.push('order'));
+    dlg.addExtraAction('おくりものをする', () => pressed.push('gift'));
+    expect(dlg.chooseExtra(0)).toBe(true);
+    expect(dlg.chooseExtra(1)).toBe(true);
+    expect(pressed).toEqual(['order', 'gift']);
+    expect(dlg.open).toBe(true); // クリックと同じで、会話は送らない
+  });
+
+  it('ボタンが出ていない場面では何も起きない(ほかの操作を横取りしない)', () => {
+    const dlg = new DialogueUI();
+    let pressed = 0;
+    // 会話が閉じている
+    expect(dlg.chooseExtra(0)).toBe(false);
+    // 最終行でない(ボタンはまだ画面に出ていない)
+    dlg.show('ツムギ', ['1ぎょうめ', '2ぎょうめ']);
+    dlg.addExtraAction('おくりものをする', () => pressed++);
+    expect(dlg.chooseExtra(0)).toBe(false);
+    expect(pressed).toBe(0);
+    // 最終行になったら効く
+    dlg.advance();
+    expect(dlg.chooseExtra(0)).toBe(true);
+    expect(pressed).toBe(1);
+    // 出ていない番号は何も起きない
+    expect(dlg.chooseExtra(1)).toBe(false);
+    expect(pressed).toBe(1);
+  });
+
+  it('会話を閉じたあとは効かない(持ちこさない)', () => {
+    const dlg = new DialogueUI();
+    let pressed = 0;
+    dlg.show('ツムギ', ['ひとこと']);
+    dlg.addExtraAction('おくりものをする', () => pressed++);
+    dlg.close();
+    expect(dlg.chooseExtra(0)).toBe(false);
+    expect(pressed).toBe(0);
   });
 });
