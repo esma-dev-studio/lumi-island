@@ -1,0 +1,110 @@
+{
+ "tag": "before",
+ "port": "5215",
+ "notes": [
+  {
+   "label": "01_beach_wash",
+   "hour": 11.1,
+   "cold": 0,
+   "drawCalls": 43513,
+   "activeMeshes": 33,
+   "totalMeshes": 504,
+   "surf": null,
+   "foamVerts": 0,
+   "glintVerts": 0,
+   "patchTris": 0,
+   "moteTris": 0
+  },
+  {
+   "label": "02_sea_sparkle_day",
+   "hour": 15.6,
+   "cold": 0,
+   "drawCalls": 84434,
+   "activeMeshes": 12,
+   "totalMeshes": 504,
+   "surf": null,
+   "foamVerts": 0,
+   "glintVerts": 0,
+   "patchTris": 0,
+   "moteTris": 0
+  },
+  {
+   "label": "03_night_sea_moonpath",
+   "hour": 22.1,
+   "cold": 0,
+   "drawCalls": 133499,
+   "activeMeshes": 23,
+   "totalMeshes": 507,
+   "surf": null,
+   "foamVerts": 0,
+   "glintVerts": 0,
+   "patchTris": 0,
+   "moteTris": 0
+  },
+  {
+   "label": "04_island_overview",
+   "hour": 12.1,
+   "cold": 0,
+   "drawCalls": 250297,
+   "activeMeshes": 232,
+   "totalMeshes": 505,
+   "surf": null,
+   "foamVerts": 0,
+   "glintVerts": 0,
+   "patchTris": 0,
+   "moteTris": 0
+  },
+  {
+   "label": "05_grass_closeup",
+   "hour": 12.3,
+   "cold": 0,
+   "drawCalls": 355632,
+   "activeMeshes": 102,
+   "totalMeshes": 508,
+   "surf": null,
+   "foamVerts": 0,
+   "glintVerts": 0,
+   "patchTris": 0,
+   "moteTris": 0
+  },
+  {
+   "label": "06_tree_motes",
+   "hour": 12.3,
+   "cold": 0,
+   "drawCalls": 409511,
+   "activeMeshes": 22,
+   "totalMeshes": 509,
+   "surf": null,
+   "foamVerts": 0,
+   "glintVerts": 0,
+   "patchTris": 0,
+   "moteTris": 0
+  },
+  {
+   "label": "07_rain_shore",
+   "hour": 11.1,
+   "cold": 1,
+   "drawCalls": 65588,
+   "activeMeshes": 33,
+   "totalMeshes": 504,
+   "surf": null,
+   "foamVerts": 0,
+   "glintVerts": 0,
+   "patchTris": 0,
+   "moteTris": 0
+  },
+  {
+   "label": "08_pond_edge",
+   "hour": 11.1,
+   "cold": 0,
+   "drawCalls": 44821,
+   "activeMeshes": 32,
+   "totalMeshes": 504,
+   "surf": null,
+   "foamVerts": 0,
+   "glintVerts": 0,
+   "patchTris": 0,
+   "moteTris": 0
+  }
+ ]
+}

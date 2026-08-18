@@ -6,6 +6,7 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 import { PATHS, POND, POIS, BUILDINGS } from '../data/island';
+import { GARDEN_AREA } from '../systems/GardenSystem';
 
 const SIZE = 150; // 一辺(m)
 const RES = 130; // 分割数
@@ -299,6 +300,9 @@ const C_SEABED = new Color3(0.74, 0.68, 0.52);
 const C_WETSAND = new Color3(0.56, 0.49, 0.37); // 池の濡れた岸(乾いた砂より暗い)
 const C_PONDBED = new Color3(0.30, 0.32, 0.25); // 池の底(泥のオリーブ)
 const C_PONDBED2 = new Color3(0.37, 0.35, 0.27); // 底のむら(砂まじり)
+// v22 草地のごく淡いむら(引きの画で緑一色に見せない)。どちらも C_GRASS のすぐ隣の色
+const C_GRASS_SUN = new Color3(0.545, 0.688, 0.400); // 日なたで色のぬけた草(黄みどり)
+const C_GRASS_DAMP = new Color3(0.398, 0.586, 0.396); // しめった濃い草(青みどり)
 // 高台: 灰色一色にしないための土・岩の層
 const C_HILL_DIRT = new Color3(0.47, 0.40, 0.29);
 const C_HILL_ROCK2 = new Color3(0.40, 0.385, 0.35);
@@ -355,8 +359,25 @@ function terrainColor(x: number, z: number, h: number): Color3 {
   // 広場は踏み固められた土
   const plaza = g(x, z, 0, -1, 10);
   if (plaza > 0.25) c = Color3.Lerp(c, C_PATH, sstep(Math.min(1, (plaza - 0.25) / 0.5)) * 0.75);
+  // v22 地面のごく淡いむら(引きの画で草地が「緑一色」に見えないようにする)。
+  //
+  // ノイズは1段だけ・波長およそ36m。既存の細かいゆらぎ(下の v)が「1mスケールの粒」なのに対し、
+  // こちらは「引きで見たときのまだら」を受けもつ。日なたで色のぬけた草(暖)と、
+  // しめった濃い草(寒)のあいだを ごく弱く行き来させるだけで、色みそのものは動かさない。
+  //
+  // 除外するところ: 道・砂浜・畑(お庭)。どれも「人がならした面」なので、
+  // まだらを入れると 手入れされていないように見える。
+  let mv = 1;
+  const inGarden =
+    x > GARDEN_AREA.minX - 1 && x < GARDEN_AREA.maxX + 1 &&
+    z > GARDEN_AREA.minZ - 1 && z < GARDEN_AREA.maxZ + 1;
+  if (pd >= 2.4 && h >= 0.66 && !inGarden) {
+    const mo = vnoise(x * 0.028 + 51, z * 0.028 + 83) - 0.5; // -0.5..0.5
+    c = Color3.Lerp(c, mo > 0 ? C_GRASS_SUN : C_GRASS_DAMP, Math.min(0.2, Math.abs(mo) * 0.4));
+    mv = 1 + mo * 0.07;
+  }
   // 微妙な色ゆらぎ
-  const v = 0.94 + n * 0.12;
+  const v = (0.94 + n * 0.12) * mv;
   return new Color3(c.r * v, c.g * v, c.b * v);
 }
 

@@ -1,8 +1,8 @@
 {
  "grid": 501,
  "step": 0.2,
- "walkableCells": 164026,
- "components": 6,
+ "walkableCells": 164454,
+ "components": 7,
  "top": [
   {
    "cells": 163974,
@@ -10,6 +10,14 @@
    "sample": [
     -48.2,
     -26.4
+   ]
+  },
+  {
+   "cells": 428,
+   "areaM2": 17,
+   "sample": [
+    22,
+    50
    ]
   },
   {
@@ -43,19 +51,11 @@
     34.2,
     -29.4
    ]
-  },
-  {
-   "cells": 1,
-   "areaM2": 0,
-   "sample": [
-    34.4,
-    -29.2
-   ]
   }
  ],
  "nodeCount": 81,
  "bugSpots": 1,
  "digSpots": 4,
- "circleColliders": 106,
+ "circleColliders": 114,
  "rectColliders": 22
 }

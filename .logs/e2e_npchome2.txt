@@ -1,0 +1,10 @@
+
+Running 5 tests using 1 worker
+
+  ok 1 tests\e2e\npc_home.spec.ts:114:1 › 在宅なら おじゃまできる: 入る → 家トーク → 出る (12.9s)
+  ok 2 tests\e2e\npc_home.spec.ts:170:1 › 留守のときは入れない(表示だけで、Eを押しても何も起きない) (6.9s)
+  ok 3 tests\e2e\npc_home.spec.ts:185:1 › おみやげの日: なかよし度3以上なら1日1回だけ もらえる (15.2s)
+  ok 4 tests\e2e\npc_home.spec.ts:216:1 › 家の中でセーブ → 読み直しても 同じ家の中から始まる (14.2s)
+  ok 5 tests\e2e\npc_home.spec.ts:249:1 › 3軒それぞれに入れる(ノクトは昼・ツムギとミナモは夜) (34.7s)
+
+  5 passed (1.4m)

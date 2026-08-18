@@ -22,6 +22,7 @@ import {
   makeRubble, makeShoreGlow, makeStarweed, LIGHTHOUSE_LAMP_Y, type BoatMesh, type LighthouseLight, type ShoreGlow,
 } from '../entities/cove';
 import { makeLamp } from '../entities/buildings';
+import { washEnvelope } from '../entities/water';
 import { attachLightPool, registerGlowSource } from '../entities/effects';
 import type { GatherNodeDef } from '../data/island';
 import type { CircleCollider } from './IslandScene';
@@ -35,6 +36,8 @@ const LAMP_TINT = Color3.FromHexString('#ffe0a8');
  * 本物の灯台のように「ゆっくり」まわす: 速いと おもちゃのパトランプに見える。
  */
 const BEAM_SPEED = (Math.PI * 2) / 12;
+/** v22 波の寄せ引きの位相(0..1)。定数=乱数なし=撮影が毎回おなじ画になる */
+const COVE_WASH_PHASE = 0.37;
 
 /** ローカル座標(入り江の中心が原点)を世界座標へ */
 export const coveWorld = (lx: number, lz: number): { x: number; z: number } => ({ x: COVE.x + lx, z: COVE.z + lz });
@@ -456,8 +459,11 @@ export class CoveArea {
     // 強さは ART_DIRECTION の「にじむ淡い光」に合わせて ひかえめに(輪が光りすぎるとネオンになる)
     this.shore.glowMat.alpha = 0.46 * night * (0.76 + 0.24 * Math.sin(this.t * 0.85));
     this.shore.glowMat.emissiveColor.copyFrom(GLOW_TINT).scaleInPlace(0.55 + night * 0.45);
-    // 波の泡は昼夜を問わず寄せては返す
-    this.shore.foamMat.alpha = 0.26 + 0.13 * Math.sin(this.t * 0.72 + 1.1);
+    // 波の泡は昼夜を問わず寄せては返す。
+    // v22: 島の海岸線と おなじ「さっと寄せて ゆっくり引く」リズムにそろえる(washEnvelope)。
+    // 入り江の帯は静的メッシュ(entities/cove.ts の shoreBand)なので、こちらは濃さで寄せ引きを出す
+    // ——島がわは頂点アルファの山が帯の中を行き来する。見えかたの語彙は同じにする。
+    this.shore.foamMat.alpha = 0.1 + 0.3 * washEnvelope(this.t, COVE_WASH_PHASE);
     // ほしくさのゆれ(かたまりごとに位相をずらす)
     for (let i = 0; i < this.clumps.length; i++) {
       const p = i * 0.7;

@@ -1,0 +1,4 @@
+perf_mobile: tag=pair_on1 rate=4x port=5213 sample=7s repeat=3 dsf=2 mobile=true
+GPU: ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x00009A49) Direct3D11 vs_5_0 ps_5_0, D3D11) / Google Inc. (Intel) (dpr=2)
+warmup: 8s hardwareScalingLevel=1 settled=true → rate=4x
+[1][day_run] 昼の島を走る                 p50=  36.2 p95= 114.1 p99= 325.9 max= 325.9 frames=  43 stall=8 draw=296 mesh=46/517 hw=1 移動=5/5

@@ -1,0 +1,90 @@
+連結成分の検査(格子0.2m)...
+{
+ "grid": 501,
+ "step": 0.2,
+ "walkableCells": 164454,
+ "components": 7,
+ "top": [
+  {
+   "cells": 163974,
+   "areaM2": 6559,
+   "sample": [
+    -48.2,
+    -26.4
+   ]
+  },
+  {
+   "cells": 428,
+   "areaM2": 17,
+   "sample": [
+    22,
+    50
+   ]
+  },
+  {
+   "cells": 48,
+   "areaM2": 2,
+   "sample": [
+    -50,
+    49.2
+   ]
+  },
+  {
+   "cells": 1,
+   "areaM2": 0,
+   "sample": [
+    26.8,
+    -28
+   ]
+  },
+  {
+   "cells": 1,
+   "areaM2": 0,
+   "sample": [
+    28.8,
+    -26.2
+   ]
+  },
+  {
+   "cells": 1,
+   "areaM2": 0,
+   "sample": [
+    34.2,
+    -29.4
+   ]
+  }
+ ],
+ "nodeCount": 81,
+ "bugSpots": 1,
+ "digSpots": 4,
+ "circleColliders": 114,
+ "rectColliders": 22
+}
+[meadow] v9=ON  cycle0 p50=8 p95=10.5 p99=20.7 frames=1052 activeMeshes=61 虫=5
+[meadow] v9=OFF cycle0 p50=7.3 p95=16.3 p99=54.3 frames=945 activeMeshes=58 虫=7
+[digarea] v9=ON  cycle0 p50=6.2 p95=7.7 p99=8.5 frames=1450 activeMeshes=49 虫=7
+[digarea] v9=OFF cycle0 p50=6.2 p95=7.6 p99=8.3 frames=1476 activeMeshes=48 虫=7
+[meadow] v9=ON  cycle1 p50=6.9 p95=8.4 p99=9.3 frames=1311 activeMeshes=61 虫=7
+[meadow] v9=OFF cycle1 p50=6.5 p95=8.2 p99=9.2 frames=1374 activeMeshes=58 虫=7
+[digarea] v9=ON  cycle1 p50=6 p95=7.5 p99=8.2 frames=1499 activeMeshes=49 虫=3
+[digarea] v9=OFF cycle1 p50=6.2 p95=7.5 p99=8.1 frames=1477 activeMeshes=48 虫=7
+{
+ "meadow": {
+  "onP50": 7.45,
+  "offP50": 6.9,
+  "onP95": 9.45,
+  "offP95": 12.25,
+  "deltaP95": -2.8,
+  "deltaP50": 0.55
+ },
+ "digarea": {
+  "onP50": 6.1,
+  "offP50": 6.2,
+  "onP95": 7.6,
+  "offP95": 7.55,
+  "deltaP95": 0.05,
+  "deltaP50": -0.1
+ }
+}
+consoleエラー: 0件
+判定: p95の悪化は最大 0.05ms(基準2ms以内)

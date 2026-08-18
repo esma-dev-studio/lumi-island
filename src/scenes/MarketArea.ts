@@ -25,6 +25,7 @@ import {
   makeSimpleDeck, makeStationTrain, makeTrainReflection, type StationTrainMesh,
 } from '../entities/station';
 import { attachLightPool, registerGlowSource, unregisterGlowSource } from '../entities/effects';
+import { washEnvelope } from '../entities/water';
 import { coveNightLevel } from './CoveArea';
 
 /** ローカル座標(いちば島の中心が原点)を世界座標へ */
@@ -38,6 +39,8 @@ const STRING_Y = 2.3;
 const STRING_LANTERNS = 5;
 /** 柱の高さ */
 const POLE_H = 2.55;
+/** v22 波の寄せ引きの位相(0..1)。入り江(0.37)とずらして、同じ島の連なりに見せない */
+const MARKET_WASH_PHASE = 0.68;
 
 /**
  * いちば島ぜんたい(地面・海・波うちぎわ・駅ホーム・屋台・ちょうちんの通り・見はらしの丘)。
@@ -226,7 +229,9 @@ export class MarketArea {
     if (!this.active) return;
     this.t += dtSec;
     const night = coveNightLevel(hour);
-    this.foam.mat.alpha = 0.24 + 0.12 * Math.sin(this.t * 0.72 + 1.1);
+    // v22 島の海岸線・入り江と おなじ「さっと寄せて ゆっくり引く」リズム(washEnvelope)。
+    // いちば島の帯は静的メッシュ(entities/market.ts makeMarketFoam)なので、濃さで寄せ引きを出す
+    this.foam.mat.alpha = 0.09 + 0.28 * washEnvelope(this.t, MARKET_WASH_PHASE);
     // ちょうちんは 風で ゆっくり ゆれる(1つずつ 位相をずらす)
     for (let i = 0; i < this.lanterns.length; i++) {
       const p = i * 0.83;

@@ -8,12 +8,17 @@ import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
 import {
   buildTerrain, COVE, coveGroundY, coveWalkable, insideCoveArea, terrainHeight, walkableGround, type Terrain,
 } from '../entities/terrain';
-import { initEffects, attachLightPool, registerGlowSource, unregisterGlowSource, burst } from '../entities/effects';
-import { buildWater, onPier, updatePond, PIER, SEA_Y, type WaterRefs } from '../entities/water';
+import {
+  initEffects, attachLightPool, registerGlowSource, unregisterGlowSource, burst,
+  initTreeMotes, updateTreeMotes,
+} from '../entities/effects';
+import {
+  buildWater, onPier, updatePond, updateSeaSurface, MOON_FALLBACK_AZ, PIER, SEA_Y, type WaterRefs,
+} from '../entities/water';
 import {
   makeTree, makeBerryTree, makeRock, makeOreNode, makeGrassNode, makeMoss, makeLumiTree, getGlowMats,
   makeFlowerNode, makeMushroomNode, makeShellNode, makeStarShard,
-  makeTwigNode, makeCutGrassNode, makeClayNode, makeGlassFloat,
+  makeTwigNode, makeCutGrassNode, makeClayNode, makeGlassFloat, makeGroundPatches,
 } from '../entities/flora';
 import {
   scatterDeco, buildPondShore, buildHillDeck, hillDeckRails, deckGroundY, HILL_DECK,
@@ -44,6 +49,7 @@ import { CoveArea, COVE_CIRCLES, COVE_NODES, ISLAND_BOAT, coveNightLevel } from 
 import { MarketArea } from './MarketArea';
 import { TrainCarArea } from './TrainCarArea';
 import { makeBoat, makeHorizonSpark, makeHorizonTrain, type BoatMesh } from '../entities/cove';
+import { Sky, moonSkyDir } from '../entities/sky';
 import {
   MARKET_CIRCLES, insideMarketArea, marketGroundY, marketWalkable,
 } from '../entities/marketTerrain';
@@ -126,6 +132,12 @@ export class IslandScene {
    * ドアの前そのものは建物のコライダーの内がわのことがあるので、build のあとに実測する。
    */
   readonly npcHomeExits = new Map<string, { x: number; z: number }>();
+  /**
+   * v15 そら(グラデーション・星と天の川・月・雲)。
+   * 別空間(入り江・いちば島・部屋)へ移っても消さない「どこでも同じ空」なので、
+   * islandMeshes(丸ごと消す対象)には わざと入れていない。
+   */
+  sky!: Sky;
   cove!: CoveArea; // v11 よるの入り江(島にいるあいだは消えている)
   market!: MarketArea; // v20 いちば島(島にいるあいだは消えている)
   trainCar!: TrainCarArea; // v20 でんしゃの車内(乗っているあいだだけ出る)
@@ -224,6 +236,11 @@ export class IslandScene {
     // 水面は空映りのごく弱い自己発光を持つが、発光レイヤーの対象にはしない
     // (池ぜんたいがグローに焼かれると重くなり、ふちもにじむ)
     this.dayNight.glow.addExcludedMesh(this.water.pond);
+    // v22 波うちぎわの泡と海面のきらめきも 発光レイヤーから外す。
+    // きらめきは すでに加算合成の「光を足す」表現なので、二重ににじませると
+    // 海の上に白い もやが かかる(虹・ランタンの かさを外しているのと同じ理由)。
+    this.dayNight.glow.addExcludedMesh(this.water.surf.foam.mesh);
+    this.dayNight.glow.addExcludedMesh(this.water.surf.glint.mesh);
     this.shadows = new CascadedShadowGenerator(1024, this.dayNight.sun);
     this.shadows.numCascades = 2;
     this.shadows.lambda = 0.92;
@@ -499,6 +516,20 @@ export class IslandScene {
     scatterDeco(s, () => this.islandVisible);
     getGlowMats(s); // 初期化
 
+    // ---- v22 草地のクローバー/小花のパッチ(静的メッシュ1枚。当たり判定は足さない) ----
+    // 引きの画で草地が「緑一色」に見えないようにするための、地面の変化のうちの1つ。
+    // もう1つ(地面色のごく淡いむら)は terrain.terrainColor が頂点カラーで持っている。
+    makeGroundPatches(s);
+
+    // ---- v22 昼の空気感: 木立ちのそばで舞う光の粒(メッシュ1枚) ----
+    // 夜のホタルと同じ流儀で「昼だけ・木の近くだけ」。とまり木は林の木から決定論で選ぶ
+    const moteSpots: { x: number; y: number; z: number }[] = [];
+    for (let i = 0; i < DECO_TREES.length && moteSpots.length < 8; i += 4) {
+      const [tx, tz] = DECO_TREES[i];
+      moteSpots.push({ x: tx, y: terrainHeight(tx, tz), z: tz });
+    }
+    initTreeMotes(s, moteSpots);
+
     // ---- うみどり(海の上を旋回するだけ) ----
     // 影・遮蔽フェード・当たり判定のどれにも入れない(空の上なので影は落とせず、負荷だけ増える)
     for (let i = 0; i < SEABIRD_CIRCLES.length; i++) {
@@ -595,6 +626,16 @@ export class IslandScene {
     this.islandMeshes = islandMeshes.filter(
       (m) => !roomRoots.some((r) => m === r || m.isDescendantOf(r))
     );
+    // ---- v15 そら(グラデーション・星と天の川・月の満ち欠け・ひるの雲) ----
+    // **islandMeshes のスナップショットより「あと」で作るのが要点**: 空は 島でも 入り江でも
+    // いちば島でも 部屋でも 同じものが かかっていてほしいので、「別空間へ移るときに
+    // 丸ごと消すもの」には 入れない(作りの理由は src/entities/sky.ts の頭に書いてある)。
+    this.sky = new Sky(s);
+    // 発光レイヤーに焼くと 星が にじんだ白いまるに つぶれ、負荷も上がる(ビーム・きらめきと同じ理由)
+    for (const m of this.sky.meshes) this.dayNight.glow.addExcludedMesh(m);
+    // 時刻の色を決める場所を1か所にするため、空の更新は DayNight からまとめて呼ばれる
+    this.dayNight.attachSky(this.sky, () => this.time.day);
+
     this.cove = new CoveArea(s, this.water.seaMat, islandMeshes);
     // ビームは34mの大きな半透明面。発光レイヤーに焼くと画面ぜんたいがにじみ、負荷も上がるので外す
     // (水面を発光レイヤーから外しているのと同じ理由)
@@ -1076,6 +1117,54 @@ export class IslandScene {
     this.water.pond.position.y = POND.waterY + Math.sin(this.waterT * 0.9) * 0.012;
     // 水面のさざ波(表面のゆらぎ)と時刻の色。中身は15Hzに間引かれる
     updatePond(this.water, dtSec);
+    // v22 波うちぎわの泡の寄せ引きと、海面のきらめき(中身は12Hzに間引かれる)
+    const night = coveNightLevel(this.time.hour);
+    const rain = this.dayNight.coldLevel;
+    const az = this.lightAzimuth(night);
+    updateSeaSurface(this.water, dtSec, { azX: az.x, azZ: az.z, night, rain });
+    // v22 昼の木立ちの粒(夜と雨は出ない)
+    updateTreeMotes(dtSec, 1 - night, rain);
+  }
+
+  /**
+   * きらめきを出す向き(島の中心から見た「光源のある方角」の単位ベクトル)。
+   *
+   * 昼は太陽。DirectionalLight.direction は「光の進む向き」なので、反転して方角にする。
+   * 夜は月——**DayNight は並行作業中なので いっさい触らない**。月ができたときに
+   * `moonDir`(光の進む向き)か `moon.direction` が生えていれば そちらを読み、
+   * まだ無ければ MOON_FALLBACK_AZ(+Z=南の海)へ月の道を出す。
+   * 浜べ(z≈40)と桟橋(z 35.5〜50.5)から いちばん よく見える向きなので、
+   * 固定のままでも「夜の海」の絵は成立する。
+   */
+  private lightAzimuth(night: number): { x: number; z: number } {
+    const sd = this.dayNight.sun.direction;
+    const sl = Math.hypot(sd.x, sd.z) || 1;
+    let mx = MOON_FALLBACK_AZ.x;
+    let mz = MOON_FALLBACK_AZ.z;
+    const dn = this.dayNight as DayNight & {
+      moonDir?: { x: number; z: number };
+      moon?: { direction: { x: number; z: number } };
+    };
+    const md = dn.moonDir ?? dn.moon?.direction;
+    if (md) {
+      const ml = Math.hypot(md.x, md.z);
+      if (ml > 1e-3) {
+        mx = -md.x / ml;
+        mz = -md.z / ml;
+      }
+    } else {
+      // v22の申し送りの接続: 空(sky.ts)の月と同じ式から方角を出す。
+      // moonSkyDir の az は 0=+Z(南の海)・正が東なので、方角ベクトルは (sin az, cos az)。
+      // これで「月の道」が 実際に見えている月の下に そろう
+      const a = moonSkyDir(this.time.hour).az;
+      mx = Math.sin(a);
+      mz = Math.cos(a);
+    }
+    // 昼と夜のあいだは向きを補間する(夕方に きらめきが ぱっと飛ばないように)
+    const x = (-sd.x / sl) * (1 - night) + mx * night;
+    const z = (-sd.z / sl) * (1 - night) + mz * night;
+    const l = Math.hypot(x, z) || 1;
+    return { x: x / l, z: z / l };
   }
 
   // ---------- 夜のほしのかけら ----------

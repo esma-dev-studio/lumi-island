@@ -1,0 +1,21 @@
+perf_mobile: tag=pair_off1 rate=4x port=5213 sample=7s repeat=3 dsf=2 mobile=true
+GPU: ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x00009A49) Direct3D11 vs_5_0 ps_5_0, D3D11) / Google Inc. (Intel) (dpr=2)
+warmup: 8s hardwareScalingLevel=1 settled=true → rate=4x
+--off: sky
+[1][day_run] 昼の島を走る                 p50=  52.7 p95= 107.7 p99= 147.6 max=   151 frames= 134 stall=0 draw=295 mesh=45/520 hw=1 移動=6/6
+--off: sky
+[1][home] 家の中                    p50=  57.2 p95= 131.4 p99= 192.2 max= 192.2 frames=  33 stall=2 draw=40 mesh=13/524 hw=1 移動=2/2
+--off: sky
+[2][day_run] 昼の島を走る                 p50= 109.6 p95= 265.1 p99= 324.3 max= 324.3 frames=  68 stall=0 draw=291 mesh=43/520 hw=1 移動=6/6
+--off: sky
+[2][home] 家の中                    p50=  54.3 p95= 151.3 p99= 161.4 max= 246.1 frames= 110 stall=0 draw=40 mesh=13/524 hw=1 移動=6/6
+--off: sky
+[3][day_run] 昼の島を走る                 p50=  95.2 p95= 203.3 p99= 307.7 max= 307.7 frames=  77 stall=0 draw=289 mesh=42/520 hw=1 移動=6/6
+--off: sky
+[3][home] 家の中                    p50=  40.2 p95=  69.1 p99=    82 max=    85 frames= 215 stall=0 draw=40 mesh=13/524 hw=1 移動=7/7
+
+場面                     p50     p95     p99   判定  (p95 の全周回)
+昼の島を走る                     95.2  203.3  307.7   OVER  [107.7,265.1,203.3]
+家の中                        54.3  131.4  161.4   OVER  [131.4,151.3,69.1]
+RESULT FAIL 予算p95<=33ms 超過=2件 consoleエラー=0件
+-> .logs/perf_mobile_pair_off1.json

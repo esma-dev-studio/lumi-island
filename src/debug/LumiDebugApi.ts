@@ -117,6 +117,25 @@ export function installLumiDebugApi(gs: GameScene): void {
      * 音は画面に写らないので、スクショでは 絶対に確かめられない。
      */
     audio: () => ({ rain: rainState(), ambience: ambienceState(), music: musicState() }),
+    /**
+     * v15 そらの ようす(読み取りだけ・副作用なし)。
+     * 星・雲の出ぐあいと 月の満ち欠けは 時刻と日付から決まる関数なので、
+     * 撮影ハーネスは「いま星が出ているか」をスクショではなく ここで確かめる。
+     */
+    sky: () => ({
+      day: gs.island.time.day,
+      hour: Math.round(gs.island.time.hour * 100) / 100,
+      ...gs.island.sky.debugState,
+      // 天気(0=はれ 1=本降り)。くもり・雨の夜は 星と月が かくれるので、
+      // 「星が うすい」ときに 空の不具合か 天気かを 見わけられるようにしておく
+      cold: Math.round(gs.island.dayNight.coldLevel * 100) / 100,
+      vignette: gs.skyEnabled,
+    }),
+    /**
+     * v15 そらとビネットを まとめて 出し入れする(before/after の撮影・性能くらべ専用)。
+     * false で v14.2 とまったく同じ絵になる。
+     */
+    setSky: (on: boolean) => gs.setSkyEnabled(on),
     unlockAll: () => {
       gs.state.flags.unlock_inv = true;
       gs.state.flags.unlock_craft = true;

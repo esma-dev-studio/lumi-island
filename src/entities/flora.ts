@@ -4,7 +4,9 @@ import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
-import { vnoise } from './terrain';
+import { pathDist, terrainHeight, vnoise } from './terrain';
+import { BUILDINGS, POIS, POND } from '../data/island';
+import { GARDEN_AREA } from '../systems/GardenSystem';
 
 export interface Arrays {
   pos: number[];
@@ -646,6 +648,107 @@ export function makeStarShard(scene: Scene, seed: number): Mesh {
   applyArrays(mesh, A);
   mesh.material = getGlowMats(scene).blue;
   mesh.isPickable = false;
+  return mesh;
+}
+
+// ===========================================================================
+// v22 クローバーと小花のパッチ(草地の「緑一色」をやわらげる静的メッシュ)
+//
+// 作りかたの約束:
+//  - 島ぜんぶで **メッシュ1枚**。毎フレームの仕事はゼロ(風にもゆれない=既存の草の役目)。
+//  - 置き場所は決定論ノイズだけで決まる(Math.random は使わない)。
+//  - **当たり判定は1つも足さない**。踏みこえられる ぺたんとした草花なので、
+//    歩ける範囲は1ミリも変わらない(tests/unit/ground_water_v22.test.ts が機械検査)。
+//  - 花は「ふちを地面へ沈め・まん中を持ち上げた」ごく浅いドーム。
+//    平らな板を地面ぎりぎりに置くと、地形メッシュ(1.15m格子の折れ面)と解析の高さのずれで
+//    半分うまったり浮いたりするが、ドームなら どちらに転んでも かならず頭が出る。
+// ===========================================================================
+/** パッチのかたまりの数(上限) */
+const PATCH_CLUSTERS = 32;
+/** かたまりの ひろがり(m) */
+const PATCH_R = 1.0;
+const C_CLOVER = Color3.FromHexString('#77a259');
+const C_CLOVER2 = Color3.FromHexString('#89b366');
+const C_PETAL_WHITE = Color3.FromHexString('#efeade');
+const C_PETAL_YELLOW = Color3.FromHexString('#eed88b');
+
+/** そこにパッチを置いてよい草地か(道・砂浜・広場・建物まわり・池・お庭はよける) */
+function patchAllowed(x: number, z: number, h: number): boolean {
+  if (h < 0.78 || h > 3.0) return false; // 砂浜と高台の岩肌は草地ではない
+  if (pathDist(x, z) < 2.4) return false;
+  if (Math.hypot(x, z + 1) < 12) return false; // 広場は踏み固められた土
+  if (Math.hypot(x - POND.x, z - POND.z) < 12) return false; // 池の岸は既存のしつらえにまかせる
+  if (x > GARDEN_AREA.minX - 2 && x < GARDEN_AREA.maxX + 2 && z > GARDEN_AREA.minZ - 2 && z < GARDEN_AREA.maxZ + 2) {
+    return false; // 畑(お庭)は手入れされた面
+  }
+  for (const b of BUILDINGS) {
+    const p = POIS[b.id];
+    if (Math.hypot(x - p.x, z - p.z) < Math.max(b.w, b.d) * 0.95) return false;
+  }
+  return true;
+}
+
+/**
+ * 草地に散らす クローバー/小花のパッチ(島ぜんぶで1メッシュ)。
+ *
+ * 形は **平たい板ではなく 小さなドーム** にしてある。
+ * 最初は「上向きの扇」で作ったが、実機の接写で 白い三角の紙きれが草に散っているようにしか
+ * 見えなかった(均一な塗り+かたい輪郭=ステッカー調。教訓1)。
+ * appendBlob の丸いふくらみに変えると 面ごとの明暗がついて、草の中の小花に見える。
+ */
+export function makeGroundPatches(scene: Scene): Mesh {
+  const A = A0();
+  let clusters = 0;
+  for (let i = 0; i < 1200 && clusters < PATCH_CLUSTERS; i++) {
+    const cx = (vnoise(i * 2.3 + 17, 41) - 0.5) * 110;
+    const cz = (vnoise(29, i * 1.9 + 7) - 0.5) * 110;
+    const ch = terrainHeight(cx, cz);
+    if (!patchAllowed(cx, cz, ch)) continue;
+    // かたまりの性格を1つ選ぶ: 白い小花・黄色い小花・クローバーの三つ葉まじり
+    const kind = Math.floor(vnoise(i * 5.7 + 3, 13) * 2.999);
+    const heads = 5 + Math.floor(vnoise(i * 3.1 + 61, 23) * 3.99); // 5〜8つ
+    for (let k = 0; k < heads; k++) {
+      const a = vnoise(i * 7 + k * 3, 31) * Math.PI * 2;
+      const rr = 0.12 + vnoise(k * 5 + i, 19) * PATCH_R;
+      const px = cx + Math.cos(a) * rr;
+      const pz = cz + Math.sin(a) * rr;
+      const ph = terrainHeight(px, pz);
+      if (!patchAllowed(px, pz, ph)) continue;
+      const seed = i * 17 + k;
+      // 三つ葉。かたまりの半分くらいに混ぜる(花だけだと「置いた飾り」に見える)
+      if (kind === 2 || vnoise(seed, 53) > 0.66) {
+        const lr = 0.03 + vnoise(seed, 3) * 0.014;
+        const th0 = vnoise(seed, 11) * Math.PI * 2;
+        for (let l = 0; l < 3; l++) {
+          const la = th0 + (l / 3) * Math.PI * 2;
+          appendBlob(
+            A, px + Math.cos(la) * lr * 0.85, ph + 0.016, pz + Math.sin(la) * lr * 0.85,
+            lr, 0.011, lr * 0.9, jitterColor(l % 2 ? C_CLOVER : C_CLOVER2, seed + l, 0.13),
+            { segs: 4, noise: 0.22, seed: seed + l * 3, bottomDark: 0.18 }
+          );
+        }
+      }
+      if (kind === 2) continue; // クローバーだけのかたまり
+      // 花: 小さな まるいふくらみ1つ。芯は色の層(bottomDark)で出す
+      const petal = kind === 0 ? C_PETAL_WHITE : C_PETAL_YELLOW;
+      const fr = 0.026 + vnoise(seed + 5, 29) * 0.014;
+      appendBlob(A, px, ph + 0.028 + fr * 0.4, pz, fr, fr * 0.62, fr, jitterColor(petal, seed, 0.06), {
+        segs: 5, noise: 0.16, seed: seed + 2, bottomDark: 0.3,
+      });
+    }
+    clusters++;
+  }
+  // 法線の向きは **実機のスクショで1個目を確かめてから決めた**(教訓1)。
+  // appendBlob だけの形は 'flip' が定石だが、ここは ひらたく つぶした ごく小さな球を
+  // ばらまいた形で、'flip' だと 白い花が 灰色の小石に、三つ葉が 黒い板に見えた
+  // (無照明で描くと 色は正しく出たので、原因が 色ではなく法線だと特定できた)。
+  // 'keep' で 白い花・明るい緑の三つ葉に なることを 接写で確認してある。
+  const mesh = toMesh(scene, 'groundPatches', A, 'keep');
+  // 影は落とさないし受けもしない。地面すれすれの平たい面を影マップの受け手にすると、
+  // 自分の深度と地形の深度がほぼ同じで シャドウアクネが出て 上面が黒くなる
+  // (ほりあと makeDigMound と まったく同じ理由。実機の接写で 実際に黒くなった)
+  mesh.receiveShadows = false;
+  mesh.freezeWorldMatrix();
   return mesh;
 }
 

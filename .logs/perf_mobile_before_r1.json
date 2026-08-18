@@ -1,0 +1,9 @@
+{
+ "tag": "before_r1",
+ "when": "2026-08-18T09:33:18.395Z",
+ "fatal": "waitFor timeout: window.__lumi && window.__lumi.ready === true",
+ "scenes": [],
+ "errors": [
+  "[lumi] boot failed buildSeaSurface is not defined\nReferenceError: buildSeaSurface is not defined\n    at buildWater (http://localhost:5213/src/entities/water.ts?t=1787045411116:110:71)\n    at IslandScene.build (http://localhost:5213/src/scenes/IslandScene.ts?t=1787045411116:262:18)\n    at GameScene.init (http://localhost:5213/src/scenes/GameScene.ts?t=1787045411116:288:17)\n    at bootGame (http://localhost:5213/src/main.ts?t=1787045411116:148:14)\n    at async boot (http://localhost:5213/src/main.ts?t=1787045411116:175:5)"
+ ]
+}

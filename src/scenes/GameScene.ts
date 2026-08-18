@@ -1,8 +1,11 @@
 // ゲーム本体シーン: 各システム・UI・コントローラの組み立てとフレームループ
 // 個別の責務は systems/ と scenes/*Controller に分離してある。
 import type { Engine } from '@babylonjs/core/Engines/engine';
+import { Effect } from '@babylonjs/core/Materials/effect';
+import { PostProcess } from '@babylonjs/core/PostProcesses/postProcess';
 import { IslandScene } from './IslandScene';
 import { CameraController } from './CameraController';
+import { setDayNightDepth, dayNightDepthOn } from './DayNight';
 import { SequenceDirector, type BondStage } from './SequenceDirector';
 import { routeInteraction, HOME_EXIT } from './InteractionRouting';
 import { homeShot, HOME_SPAWN, HOME_BED, insideHomeFloor, setHomeExpandedLayout } from './HomeInterior';
@@ -131,11 +134,42 @@ const WALK_JUMP_MAX = 1.5;
  */
 const FESTIVAL_MURMUR_R = 24;
 
+// ---------------------------------------------------------------------------
+// v15 ごく薄いビネット(画面の四すみを すこしだけ落とす)
+//
+// **オフにするところ**:
+//   1) この下の VIGNETTE_ON を false にする(恒久的に切る)
+//   2) 実行中は GameScene.setSkyEnabled(false) / window.__lumiDebug.setSky(false)
+//      で 空といっしょに カメラから外れる(検証の before/after 用)
+// どちらの場合も ポストプロセスは カメラに ぶら下がらないので、描画の道すじは
+// v14.2 とまったく同じ(オフにしたときに 余分な1パスが のこらない)。
+// ---------------------------------------------------------------------------
+const VIGNETTE_ON = true;
+/** 四すみの落としぐあい(0.032 = 3.2%)。派手にしないため 0.02〜0.04 の範囲でだけ使う */
+const VIGNETTE_AMOUNT = 0.032;
+const VIGNETTE_NAME = 'lumiVignette';
+Effect.ShadersStore[`${VIGNETTE_NAME}FragmentShader`] = `
+precision highp float;
+varying vec2 vUV;
+uniform sampler2D textureSampler;
+uniform float amount;
+void main(void) {
+  vec4 c = texture2D(textureSampler, vUV);
+  vec2 d = vUV - vec2(0.5);
+  // まん中=0・四すみ=1 の量。2乗して「四すみだけ」に効かせる(へりのまん中は 4分の1)
+  float r = clamp(dot(d, d) * 2.0, 0.0, 1.0);
+  gl_FragColor = vec4(c.rgb * (1.0 - amount * r * r), c.a);
+}
+`;
+
 export class GameScene {
   island: IslandScene;
   player!: PlayerController;
   playerView!: CharacterView;
   camCtl!: CameraController;
+  /** v15 ごく薄いビネット(上の VIGNETTE_ON を参照)。切ってあるときは null */
+  private vignette: PostProcess | null = null;
+  private vignetteOn = false;
   markers!: WorldMarkerController;
   questDlg!: QuestDialogueController;
   dialogueCam!: DialogueCameraPlanner;
@@ -277,6 +311,7 @@ export class GameScene {
     // ここで読み取り口を1つだけ差しこむ)。src/systems/BugSystem.ts を参照
     this.island.playerProbe = () => ({ x: this.player.x, z: this.player.z, speed: this.player.speed });
     this.camCtl = new CameraController(this.scene);
+    if (VIGNETTE_ON) this.buildVignette(); // v15 ごく薄いビネット(このファイルの頭を参照)
     // 矢印・光の柱の足もとの高さは「別空間もふくむ床の高さ」から取る
     // (入り江の目的地=灯台・帰りの桟橋にも 正しい高さで誘導を出すため)
     this.markers = new WorldMarkerController(this.scene, (x, z) => this.island.groundY(x, z));
@@ -1542,6 +1577,48 @@ export class GameScene {
     this.occlusion.restoreAllImmediately();
   }
 
+  // ---------- v15 そらと ひかり ----------
+  /**
+   * ビネットのポストプロセスを1枚だけ作って カメラにつける。
+   *
+   * ポストプロセスを1枚でも足すと、Babylonは画面を いったんテクスチャへ描くようになる。
+   * engine は antialias:true で作ってあるので、そのままだと ギザギザ消しが効かなくなり
+   * 輪郭が あらくなる。samples を立てて そこだけ もとに戻す
+   * (=「ビネットを足したら 絵が あらくなった」を 構造的に起こさない)。
+   */
+  private buildVignette(): void {
+    const pp = new PostProcess(VIGNETTE_NAME, VIGNETTE_NAME, ['amount'], null, 1, this.camCtl.cam);
+    pp.onApply = (effect) => effect.setFloat('amount', VIGNETTE_AMOUNT);
+    pp.samples = Math.min(4, Math.max(1, this.engine.getCaps().maxMSAASamples ?? 1));
+    this.vignette = pp;
+    this.vignetteOn = true;
+  }
+
+  /**
+   * v15「空と光」(空のドーム・星と天の川・月・雲・時刻の色のふかみ・ビネット)を
+   * まとめて 出す/しまう。
+   *
+   * false にすると v14.2 とまったく同じ絵になる。**同じビルドの 同じ瞬間に**
+   * before/after を撮って比べるための口で、tools/shots_visual_sky.mjs と
+   * tools/perf_mobile.mjs --off sky が これを呼ぶ。ふだんの遊びでは使わない。
+   */
+  setSkyEnabled(on: boolean): void {
+    this.island.sky.setEnabled(on);
+    setDayNightDepth(on);
+    if (this.vignette && this.vignetteOn !== on) {
+      this.vignetteOn = on;
+      if (on) this.camCtl.cam.attachPostProcess(this.vignette);
+      else this.camCtl.cam.detachPostProcess(this.vignette);
+    }
+    // 色表を入れかえたので、いまの時刻で塗りなおす(次の15Hzを待たずに 絵へ出す)
+    this.island.dayNight.update(this.island.time.hour, this.player.x, this.player.z);
+  }
+
+  /** v15 の空が 出ているか(検証・撮影ハーネスが読む) */
+  get skyEnabled(): boolean {
+    return dayNightDepthOn();
+  }
+
   // ---------- メインループ ----------
   render(): void {
     const dt = Math.min(0.25, this.engine.getDeltaTime() / 1000);
@@ -1682,5 +1759,7 @@ export class GameScene {
     this.inter.cancelAction(); // 採取中に破棄されても、あとから素材が入ったり破棄済みMeshを触ったりしない
     this.inputRouter.detach();
     this.touch.dispose();
+    this.vignette?.dispose(); // ポストプロセスはカメラより長生きするので、明示的に片づける
+    this.vignette = null;
   }
 }

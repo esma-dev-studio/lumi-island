@@ -1,0 +1,20 @@
+  2) tests\e2e\npc_home.spec.ts:185:1 › おみやげの日: なかよし度3以上なら1日1回だけ もらえる ──────────────────────────────
+
+    Error: page.evaluate: TypeError: Cannot read properties of undefined (reading 'game')
+        at eval (eval at evaluate (:311:30), <anonymous>:1:15)
+        at eval (<anonymous>)
+        at UtilityScript.evaluate (<anonymous>:311:30)
+        at UtilityScript.<anonymous> (<anonymous>:1:44)
+        at eval (eval at evaluate (:311:30), <anonymous>:1:15)
+        at UtilityScript.evaluate (<anonymous>:311:30)
+        at UtilityScript.<anonymous> (<anonymous>:1:44)
+        at ev (C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\tests\e2e\npc_home.spec.ts:33:45)
+        at readDialogue (C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\tests\e2e\npc_home.spec.ts:105:17)
+        at C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\tests\e2e\npc_home.spec.ts:201:17
+
+    Error Context: test-results\npc_home-おみやげの日-なかよし度3以上なら1日1回だけ-もらえる\error-context.md
+
+  2 failed
+    tests\e2e\npc_home.spec.ts:114:1 › 在宅なら おじゃまできる: 入る → 家トーク → 出る ────────────────────────────────
+    tests\e2e\npc_home.spec.ts:185:1 › おみやげの日: なかよし度3以上なら1日1回だけ もらえる ───────────────────────────────
+  3 passed (1.6m)

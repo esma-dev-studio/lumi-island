@@ -1,0 +1,32 @@
+perf_mobile: tag=v22_off rate=4x port=5214 sample=8s repeat=2 dsf=2 mobile=true
+GPU: ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x00009A49) Direct3D11 vs_5_0 ps_5_0, D3D11) / Google Inc. (Intel) (dpr=2)
+warmup: 11s hardwareScalingLevel=1 settled=true → rate=4x
+--off: ground
+[1][day_run] 昼の島を走る                 p50=  32.5 p95=  67.9 p99=  94.8 max=   122 frames= 241 stall=0 draw=326 mesh=60/521 hw=1 移動=8/8
+--off: ground
+[1][night_island] 夜の島(ホタル・光だまり)          p50=  27.5 p95=  41.2 p99=  62.5 max=  82.9 frames= 297 stall=0 draw=278 mesh=34/534 hw=1 移動=7/8
+--off: ground
+[1][cove_night] 入り江の夜                  p50=  18.3 p95=  49.5 p99=  60.5 max=  78.8 frames= 382 stall=0 draw=64 mesh=29/533 hw=1 移動=7/8
+--off: ground
+[1][festival_fly] ほしまつりのランタンとばし          p50=  48.7 p95=  99.5 p99= 109.2 max= 144.8 frames= 154 stall=0 draw=342 mesh=57/532 hw=1 移動=0/8
+--off: ground
+[1][home] 家の中                    p50=  20.3 p95=    45 p99=  61.8 max=    79 frames= 377 stall=0 draw=46 mesh=16/538 hw=1 移動=8/8
+--off: ground
+[2][day_run] 昼の島を走る                 p50=  30.7 p95=  66.8 p99=  81.8 max= 118.8 frames= 255 stall=0 draw=352 mesh=59/539 hw=1 移動=8/8
+--off: ground
+[2][night_island] 夜の島(ホタル・光だまり)          p50=  31.7 p95=  68.4 p99=  96.7 max=   123 frames= 239 stall=0 draw=313 mesh=38/546 hw=1 移動=7/8
+--off: ground
+[2][cove_night] 入り江の夜                  p50=  16.6 p95=  42.6 p99=  61.2 max=  71.5 frames= 408 stall=0 draw=63 mesh=29/543 hw=1 移動=7/8
+--off: ground
+[2][festival_fly] ほしまつりのランタンとばし          p50=    38 p95=  86.5 p99= 111.3 max= 136.7 frames= 193 stall=0 draw=340 mesh=54/543 hw=1 移動=0/8
+--off: ground
+[2][home] 家の中                    p50=  17.6 p95=  41.3 p99=  50.8 max=  60.2 frames= 410 stall=0 draw=46 mesh=16/543 hw=1 移動=8/8
+
+場面                     p50     p95     p99   判定  (p95 の全周回)
+昼の島を走る                     30.7   66.8   81.8   OVER  [67.9,66.8]
+夜の島(ホタル・光だまり)              27.5   41.2   62.5   OVER  [41.2,68.4]
+入り江の夜                      16.6   42.6   60.5   OVER  [49.5,42.6]
+ほしまつりのランタンとばし                38   86.5  109.2   OVER  [99.5,86.5]
+家の中                        17.6   41.3   50.8   OVER  [45,41.3]
+RESULT FAIL 予算p95<=33ms 超過=5件 consoleエラー=0件
+-> .logs/perf_mobile_v22_off.json

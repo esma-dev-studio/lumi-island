@@ -1,0 +1,25 @@
+  ok 65 tests\e2e\sleep.spec.ts:90:1 › ベッドでEを10回連打しても日付は1日だけ進む (10.9s)
+  ok 66 tests\e2e\sleep.spec.ts:122:1 › 睡眠中はプレイヤーが動かず、NPCも動かない (9.8s)
+  ok 67 tests\e2e\sleep.spec.ts:137:1 › 睡眠直後にリロードしても朝の時刻から始まる(同期後セーブ) (13.2s)
+  ok 68 tests\e2e\sleep.spec.ts:155:1 › 睡眠途中にEscを押しても状態が壊れない(ポーズも開かない) (9.6s)
+  ok 69 tests\e2e\sleep.spec.ts:171:1 › 室内で壁に向かって歩いても外へ抜けない(自動脱出も島へ飛ばさない) (20.9s)
+
+
+  1) tests\e2e\npc_home.spec.ts:249:1 › 3軒それぞれに入れる(ノクトは昼・ツムギとミナモは夜) ────────────────────────────────
+
+    TimeoutError: page.waitForFunction: Timeout 30000ms exceeded.
+
+      299 |
+      300 |   // 3軒め: 22時なら ミナモの小屋も 在宅
+    > 301 |   await page.waitForFunction("__lumiDebug.npcPos('minamo')?.hidden === true", undefined, { timeout: 30000 });
+          |              ^
+      302 |   await goToMinamoDoor(page);
+      303 |   expect(await hint(page)).toContain('おじゃまする');
+      304 |   await page.keyboard.press('e');
+        at C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\tests\e2e\npc_home.spec.ts:301:14
+
+    Error Context: test-results\npc_home-3軒それぞれに入れる-ノクトは昼・ツムギとミナモは夜-\error-context.md
+
+  1 failed
+    tests\e2e\npc_home.spec.ts:249:1 › 3軒それぞれに入れる(ノクトは昼・ツムギとミナモは夜) ─────────────────────────────────
+  68 passed (22.5m)

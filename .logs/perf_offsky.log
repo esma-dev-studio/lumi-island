@@ -1,0 +1,42 @@
+perf_mobile: tag=offsky rate=4x port=5213 sample=9s repeat=3 dsf=2 mobile=true
+GPU: ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x00009A49) Direct3D11 vs_5_0 ps_5_0, D3D11) / Google Inc. (Intel) (dpr=2)
+warmup: 8s hardwareScalingLevel=1 settled=true → rate=4x
+--off: sky
+[1][day_run] 昼の島を走る                 p50=  54.8 p95=  92.8 p99= 115.9 max= 126.9 frames= 164 stall=0 draw=327 mesh=62/521 hw=1 移動=8/8
+--off: sky
+[1][night_island] 夜の島(ホタル・光だまり)          p50=  32.2 p95=  65.4 p99= 153.8 max= 233.7 frames= 212 stall=1 draw=287 mesh=38/534 hw=1 移動=7/8
+--off: sky
+[1][cove_night] 入り江の夜                  p50=  14.6 p95=  23.7 p99=  36.5 max=  59.4 frames= 616 stall=0 draw=44 mesh=18/533 hw=1 移動=8/9
+--off: sky
+[1][festival_fly] ほしまつりのランタンとばし          p50=  55.1 p95= 107.1 p99= 123.8 max= 137.1 frames= 159 stall=0 draw=341 mesh=56/536 hw=1 移動=0/9
+--off: sky
+[1][home] 家の中                    p50=    17 p95=  40.1 p99=  52.2 max=  62.4 frames= 471 stall=0 draw=42 mesh=13/538 hw=1 移動=9/9
+--off: sky
+[2][day_run] 昼の島を走る                 p50=  32.8 p95=  68.5 p99=  92.4 max=   116 frames= 272 stall=0 draw=359 mesh=62/540 hw=1 移動=9/9
+--off: sky
+[2][night_island] 夜の島(ホタル・光だまり)          p50=  31.4 p95=  45.3 p99=  84.1 max= 110.3 frames= 301 stall=0 draw=289 mesh=28/544 hw=1 移動=8/9
+--off: sky
+[2][cove_night] 入り江の夜                  p50=  43.6 p95= 103.1 p99= 150.8 max=   220 frames= 190 stall=0 draw=60 mesh=26/544 hw=1 移動=7/8
+--off: sky
+[2][festival_fly] ほしまつりのランタンとばし          p50=  67.4 p95= 182.8 p99= 281.9 max= 353.5 frames= 128 stall=0 draw=339 mesh=53/544 hw=1 移動=0/9
+--off: sky
+[2][home] 家の中                    p50=  35.2 p95=  85.9 p99= 135.2 max= 187.7 frames= 227 stall=0 draw=42 mesh=13/544 hw=1 移動=7/8
+--off: sky
+[3][day_run] 昼の島を走る                 p50=  40.2 p95= 184.9 p99= 241.8 max= 266.1 frames= 167 stall=0 draw=341 mesh=54/540 hw=1 移動=8/8
+--off: sky
+[3][night_island] 夜の島(ホタル・光だまり)          p50=  28.4 p95=  50.6 p99=    61 max=  67.7 frames= 316 stall=0 draw=299 mesh=31/547 hw=1 移動=8/9
+--off: sky
+[3][cove_night] 入り江の夜                  p50=  14.3 p95=  26.5 p99=  33.3 max=  48.2 frames= 592 stall=0 draw=44 mesh=18/544 hw=1 移動=8/9
+--off: sky
+[3][festival_fly] ほしまつりのランタンとばし          p50=    39 p95=  86.2 p99= 108.8 max= 123.7 frames= 202 stall=0 draw=338 mesh=53/544 hw=1 移動=0/9
+--off: sky
+[3][home] 家の中                    p50=    18 p95=  47.3 p99=  68.7 max= 147.1 frames= 446 stall=0 draw=41 mesh=13/544 hw=1 移動=9/9
+
+場面                     p50     p95     p99   判定  (p95 の全周回)
+昼の島を走る                     40.2   92.8  115.9   OVER  [92.8,68.5,184.9]
+夜の島(ホタル・光だまり)              31.4   50.6   84.1   OVER  [65.4,45.3,50.6]
+入り江の夜                      14.6   26.5   36.5   OK    [23.7,103.1,26.5]
+ほしまつりのランタンとばし              55.1  107.1  123.8   OVER  [107.1,182.8,86.2]
+家の中                          18   47.3   68.7   OVER  [40.1,85.9,47.3]
+RESULT FAIL 予算p95<=33ms 超過=4件 consoleエラー=0件
+-> .logs/perf_mobile_offsky.json

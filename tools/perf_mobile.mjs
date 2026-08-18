@@ -283,6 +283,23 @@ async function applyOff(names) {
       else if (n === 'deco') { for (const m of s.meshes) if (/^deco/.test(m.name)) m.setEnabled(false); done.push(n); }
       else if (n === 'pond') { g.island.water.wave.mesh.setEnabled(false); done.push(n); }
       else if (n === 'ui') { document.getElementById('ui-root').style.display = 'none'; done.push(n); }
+      // v15 そら(ドーム・星・月・雲)とビネットを まるごと切って v14.2 の描画に戻す。
+      // これだけは「見た目を変える参考計測」ではなく **同じビルド・同じ機械・同じ分で
+      // before/after を比べるための本命**にできる: 切った状態が v14.2 そのものだから。
+      // 並列で他のエージェントが 地面や水を いじっていても、その差が 両方に等しく乗る。
+      else if (n === 'sky') { g.setSkyEnabled(false); done.push(n); }
+      // v22 地と水(波うちぎわの泡・海面のきらめき・草地のパッチ)を まるごと切って
+      // v14.2 の描画に戻す。--off sky と まったく同じ考えかたで、
+      // **同じビルド・同じ機械・同じ分**で before/after を比べるための本命にできる。
+      // 泡ときらめきは頂点の書きかえも止める(acc を大きく負にすると、間引きの門を二度とこえない)。
+      // 昼の木立ちの粒(treeMotes)だけは 出す/出さないを IslandScene が毎フレーム入れ直すので
+      // ここでは切れない。1ドローコール・576三角形なので、その分だけ差が小さく出る。
+      else if (n === 'ground') {
+        for (const m of s.meshes) if (/^(seaFoam|seaGlint|groundPatches)$/.test(m.name)) m.setEnabled(false);
+        const w = g.island.water.surf;
+        if (w) w.acc = -1e9;
+        done.push(n);
+      }
     }
     return JSON.stringify(done);
   })()`);

@@ -6,6 +6,7 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { Constants } from '@babylonjs/core/Engines/constants';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 import { POND } from '../data/island';
@@ -32,6 +33,11 @@ const C_SHALLOW = wcol('#b6b898'); // 浅瀬(底の砂が透ける)
 const C_MID = wcol('#7ea295'); // 中ほど
 const C_DEEP = wcol('#537873'); // 深いところ
 const C_SHADE = wcol('#43594d'); // 土手・木のかげ
+/** v22 水ぎわの明るみ(浅瀬の砂が透けて見える色。海の泡のような白にはしない) */
+const C_POND_RIM = wcol('#cfcaa6');
+/** 明るみの効き。1段だけに とどめる(0.29より深いところには出ない) */
+const POND_RIM_FALL = 3.4;
+const POND_RIM_MIX = 0.34;
 
 export interface WaterRefs {
   seaMat: StandardMaterial;
@@ -42,6 +48,8 @@ export interface WaterRefs {
   sea: Mesh;
   pond: Mesh; // ごく弱い上下動(IslandScene.update)用
   wave: PondWave;
+  /** v22 波うちぎわの泡の帯と、海面のきらめき(見た目だけ) */
+  surf: SeaSurface;
 }
 
 interface PondWave {
@@ -151,7 +159,7 @@ export function buildWater(scene: Scene): WaterRefs {
   }
 
   // 岸辺のしつらえ(濡れた土・小石・アシ等)はIslandSceneがdeco.buildPondShoreで置く
-  const refs: WaterRefs = { seaMat, pondMat, pondSurfMat, sea, pond, wave };
+  const refs: WaterRefs = { seaMat, pondMat, pondSurfMat, sea, pond, wave, surf: buildSeaSurface(scene) };
   applyPondTint(refs);
   return refs;
 }
@@ -256,6 +264,13 @@ function makePondSurface(scene: Scene): PondWave {
       const sh = Math.min(1, Math.max(0, (shN - 0.46) * 2.6)) * Math.min(1, Math.max(0, (1 - wet) * 1.4)) * 0.7;
       let c = d < 0.5 ? Color3.Lerp(C_SHALLOW, C_MID, d * 2) : Color3.Lerp(C_MID, C_DEEP, (d - 0.5) * 2);
       c = Color3.Lerp(c, C_SHADE, sh);
+      // v22 池の水ぎわの ごく控えめな明るみ。
+      // 泡は「海らしさ」の記号なので池には付けない(付けると池が小さな海に見える)。
+      // 代わりに水ぎわ1段だけを わずかに あかるくして「水が岸にふれている」を出す。
+      // 触るのは色だけ——濃さ(アルファ)は1ミリも変えないので、
+      // tests/unit/pond_water_edge.test.ts の「本物の水の上は0.7以上」はそのまま通る。
+      const rim = Math.max(0, 1 - wet * POND_RIM_FALL) * vis * (0.7 + fine * 0.55);
+      c = Color3.Lerp(c, C_POND_RIM, Math.min(1, rim) * POND_RIM_MIX);
       const v = 0.93 + fine * 0.14;
       col.push(c.r * v, c.g * v, c.b * v, (0.72 + d * 0.28) * vis);
     }
@@ -347,4 +362,451 @@ export function updatePond(w: WaterRefs, dtSec: number): void {
   updatePondWave(w.wave, w.wave.acc); // ためた分をまとめて進める(時間は飛ばさない)
   w.wave.acc = 0;
   applyPondTint(w);
+}
+
+// ===========================================================================
+// v22「地と水」: 波うちぎわの泡の帯と、海面のきらめき
+//
+// ここも pondSurfaceVisibility と まったく同じ流儀で、**見た目だけ**の規則にする。
+// 歩ける・水・釣れるの判定(terrain.walkableGround / waterBodyAt / systems/FishingCast)は
+// この節の関数をひとつも参照しないし、この節を変えても 歩ける範囲は1ミリも動かない
+// (tests/unit/ground_water_v22.test.ts が 格子ダンプのバイト一致で機械検査する)。
+//
+// 帯の位置と幅の決めかた(教訓「水面は 地面<水面 の述語で切る」):
+//   水ぎわ = terrainHeight(x,z) が SEA_Y をまたぐところ。角度ごとに二分法で1点だけ求める。
+//   帯の幅 = そこから「地面が水面+FOAM_RUNUP まで上がる」までの水平距離。
+//     ゆるい砂浜(南)では数m、急な草地の岸では1m弱になる
+//     ——「砂浜と草地で帯の幅を変える」を、砂か草かの分類ではなく こう配から導いている。
+//
+// 描画のならび: 帯もきらめきも **描画グループ1**(海より あとに描く)。
+//   海(alpha 0.9)は alphaIndex を明示していない = 既定の Number.MAX_VALUE なので、
+//   グループ0にいるかぎり どんな alphaIndex を入れても 海に上ぬりされて沖がわが消える
+//   (ほしまつりの うつりこみと まったく同じ理由。entities/effects.ts の buildGlowQuad 参照)。
+//   グループ1は深度を引きつぐので、桟橋の板の下に かくれるぶんは かくれたまま。
+// ===========================================================================
+
+/** 海岸線をいくつに分けて追うか。まわり約300mなので1区間およそ1.6m */
+const SHORE_SEG = 192;
+/**
+ * 泡の帯の断面(帯の幅を1としたときの位置)。マイナス=沖がわ / プラス=陸がわ。
+ * 沖へ0.72・陸へ1.15ぶん出しておき、寄せ引きの山がこの中を行き来する。
+ * 8枚あるのは、山の前がわを きりっと立てるため(6枚だと ぼやけた にじみに見えた。実機で確認)。
+ */
+const FOAM_U = [-0.72, -0.44, -0.2, 0.02, 0.26, 0.54, 0.84, 1.15];
+/**
+ * 帯を地面から浮かせる量(m)。地形メッシュは1.15m格子の折れ面なので、
+ * 解析の高さ terrainHeight より最大4cmほど下にくることがある。光だまり(0.07)と同じ値にする。
+ */
+const FOAM_LIFT = 0.07;
+/**
+ * 「濡れる高さ」(m)。水面からここまで地面が上がるまでの水平距離で 岸のゆるさを測る。
+ *
+ * 実測(tools の probe で 192方向を走査): この島の水ぎわの こう配は 0.05〜0.5m/m と幅があり、
+ * 14cm 上がるまでの水平距離は 0.30m(急な草の岸)〜6m以上(ゆるい砂浜)にひらく。
+ * 地形の色は h<0.62 が砂・それ以上が草なので、この距離が長い所ほど「砂浜」に見える
+ * ——つまり これ1本で「砂浜と草地で帯の幅を変える」が出る(南北で分けたりはしない)。
+ */
+const FOAM_RUNUP = 0.14;
+/** 走らせる距離の上限(m)。これを超えるほど ゆるい所は「いちばん広い帯」でよい */
+const FOAM_RUN_MAX = 6;
+/** 帯の幅 = FOAM_W_BASE + 走った距離 × FOAM_W_GAIN(min/maxでおさえる) */
+const FOAM_W_BASE = 0.5;
+const FOAM_W_GAIN = 0.55;
+const FOAM_W_MIN = 0.7;
+const FOAM_W_MAX = 2.6;
+/** 寄せ引きの周期(秒)。ゆっくり——速いと「洗濯機」に見える */
+const WASH_PERIOD = 13.5;
+/** 山の手前(陸がわ)は短く切り、うしろ(沖がわ)へ長く尾をひく=くだけた泡の形 */
+const WASH_FRONT = 0.22;
+const WASH_BACK = 0.74;
+/** 山が行き来する範囲(帯の中の位置)。陸へ行きすぎると「乾いた砂の上のしみ」に見える */
+const WASH_FROM = -0.5;
+const WASH_TO = 0.45;
+/**
+ * となりの角度と水ぎわの半径がこれ以上ちがったら、そのあいだに帯を張らない(m)。
+ *
+ * 島の西がわ(方位249〜276度)には、沖に細い砂すじ(バー)と そのうちがわの浅い潟がある。
+ * 外から水ぎわをさがすと、角度によって「バーの外ふち(r≈58)」と「島本体の岸(r≈43)」を
+ * 交互に拾うので、そのままつなぐと **海の上を15mまたぐ まっすぐな白い板** が出る(実機で確認)。
+ * どちらも本物の岸なので、つながない=そこだけ泡を出さない、が いちばん素直。
+ */
+const FOAM_CUT = 3.0;
+/** 泡の帯の更新の間引き(Hz)。池のさざ波(15Hz)より ゆっくりでよい */
+const FOAM_HZ = 12;
+
+/** きらめきの数。1つ=小さな板1枚(2三角形)なので、ぜんぶで400三角形 */
+const GLINT_N = 200;
+/** きらめきを置く沖への距離のはば(m) */
+const GLINT_OUT0 = 2.5;
+const GLINT_OUT1 = 40;
+/** 昼のきらめきの色(白すぎない あたたかい光) */
+const C_GLINT_DAY = Color3.FromHexString('#fff2d2');
+/** 夜の月の道の色(つめたい青白) */
+const C_GLINT_NIGHT = Color3.FromHexString('#c6d8ff');
+/**
+ * 夜の月の方角の予備値。**+Z(南)の海**へ出す。
+ * 浜べ(z≈40)と桟橋(z 35.5〜50.5)から いちばん よく見える向きで、
+ * 「月の道」が いちばん ごちそうになる構図だから。
+ * DayNight に月ができたら(moonDir / moon.direction)そちらを読む——IslandScene.lightAzimuth を参照。
+ */
+export const MOON_FALLBACK_AZ = { x: 0, z: 1 };
+
+/** 波うちぎわの泡の帯(頂点アルファのグラデ帯。色は固定でアルファだけ書きかえる) */
+interface FoamBand {
+  mesh: Mesh;
+  mat: StandardMaterial;
+  col: Float32Array;
+  /** 頂点ごとの「帯の中の位置」(FOAM_U の値) */
+  bandU: Float32Array;
+  /** 頂点ごとの濃さのむら(静的)。のっぺりした輪に見せない */
+  lace: Float32Array;
+  /** 区間ごとの寄せ引きの位相(座標から決まる=乱数なし) */
+  phase: Float32Array;
+  /** 区間ごとの泡の強さ */
+  amp: Float32Array;
+  cols: number;
+  rows: number;
+}
+
+/** 海面のきらめき(小さな板をまばらに置き、光源の方角にあるものだけ明滅させる) */
+interface SeaGlints {
+  mesh: Mesh;
+  mat: StandardMaterial;
+  col: Float32Array;
+  /** 島の中心から見た向き(単位ベクトル)。光源の方角との内積で「光の道」を作る */
+  azX: Float32Array;
+  azZ: Float32Array;
+  phase: Float32Array;
+  speed: Float32Array;
+  amp: Float32Array;
+  n: number;
+}
+
+export interface SeaSurface {
+  foam: FoamBand;
+  glint: SeaGlints;
+  t: number;
+  acc: number;
+  /**
+   * 直近に入れた見た目の値(検証・撮影ハーネスが読む。読むだけで副作用はない)。
+   * foamPeak は **頭打ちする前** の山の高さ(1をこえることがある)。
+   * 実際に描くアルファは1で止めるが、こちらは「むらと強さに どれだけ余裕があるか」を
+   * 見るための値なので そのまま残してある。
+   */
+  shown: { foamPeak: number; glintOn: number; night: number; rain: number; azX: number; azZ: number };
+}
+
+/** 光の方角(単位ベクトル)と天気。IslandScene が毎フレーム渡す */
+export interface SeaEnv {
+  /** 光源のある方角(島の中心から見た向き)。昼=太陽 / 夜=月 */
+  azX: number;
+  azZ: number;
+  /** 夜のふかさ(0=昼 1=まよなか) */
+  night: number;
+  /** 雨あし(0=はれ 1=本降り) */
+  rain: number;
+}
+
+/** 島の海岸線の1点(角度θの向きの水ぎわの半径と、そこの帯の幅) */
+interface ShoreSample {
+  r: number;
+  width: number;
+}
+
+/**
+ * 角度θの向きの水ぎわを探す。
+ * 外(r=78。ここは必ず海底)から内へ0.5mきざみで下り、はじめて地面が水面以上になった所を
+ * 二分法で 1cm まで詰める。池(底は0.36mで海面0.3より上)は水ぎわを作らないので混ざらない。
+ */
+function scanIslandShore(theta: number): ShoreSample {
+  const cs = Math.cos(theta);
+  const sn = Math.sin(theta);
+  const hAt = (r: number): number => terrainHeight(cs * r, sn * r);
+  let lo = 12; // 陸がわ(地面が水面以上)
+  let hi = 78; // 沖がわ(地面が水面より下)
+  let found = false;
+  for (let r = 78; r >= 12; r -= 0.5) {
+    if (hAt(r) >= SEA_Y) {
+      lo = r;
+      hi = r + 0.5;
+      found = true;
+      break;
+    }
+  }
+  if (!found) return { r: 48, width: FOAM_W_MIN }; // 起こらないが、形は必ず返す
+  for (let i = 0; i < 12; i++) {
+    const m = (lo + hi) / 2;
+    if (hAt(m) >= SEA_Y) lo = m;
+    else hi = m;
+  }
+  const rShore = (lo + hi) / 2;
+  // 帯の幅: 「地面が水面+FOAM_RUNUP まで上がる」までの水平距離から決める。
+  // ゆるい浜ほど遠くまで濡れる=帯が広い。急な草の岸では すぐ届くので細い帯になる。
+  let run = FOAM_RUN_MAX;
+  for (let d = 0.15; d <= FOAM_RUN_MAX; d += 0.15) {
+    if (hAt(rShore - d) >= SEA_Y + FOAM_RUNUP) {
+      run = d;
+      break;
+    }
+  }
+  const width = FOAM_W_BASE + run * FOAM_W_GAIN;
+  return { r: rShore, width: Math.min(FOAM_W_MAX, Math.max(FOAM_W_MIN, width)) };
+}
+
+const clamp01 = (t: number): number => (t < 0 ? 0 : t > 1 ? 1 : t);
+
+/**
+ * 寄せ引きの1周期のかたち(0=いちばん引いた 1=いちばん寄せた)。
+ * ただの sin にすると「行ったり来たり」に見えるので、寄せは速く・引きは ゆっくりにする
+ * (本物の波は さっと寄せて、ゆっくり ひいていく)。
+ * 島・入り江・いちば島の3つの岸で 同じリズムを使う(CoveArea / MarketArea が呼ぶ)。
+ */
+export function washEnvelope(t: number, phase: number): number {
+  const u = (((t / WASH_PERIOD + phase) % 1) + 1) % 1;
+  // 前半0.35で寄せ(速い)、のこりで引く(ゆっくり)
+  const k = u < 0.35 ? u / 0.35 : 1 - (u - 0.35) / 0.65;
+  return k * k * (3 - 2 * k);
+}
+
+/** 泡の帯を1枚つくる(島の海岸線ぜんたい) */
+function buildFoamBand(scene: Scene, shore: ShoreSample[]): FoamBand {
+  const rows = FOAM_U.length;
+  const cols = SHORE_SEG + 1;
+  const pos: number[] = [];
+  const col: number[] = [];
+  const idx: number[] = [];
+  const bandU = new Float32Array(rows * cols);
+  const lace = new Float32Array(rows * cols);
+  const phase = new Float32Array(cols);
+  const amp = new Float32Array(cols);
+  // 頂点のならびは「リングごとに1周」= 池の水面(makePondSurface)と同じ行優先。
+  // 面の張りかた(下のidx)も同じなので、行優先で読み書きするかぎり食いちがいが起きない。
+  for (let s = 0; s < cols; s++) {
+    const si = s % SHORE_SEG;
+    const th = (si / SHORE_SEG) * Math.PI * 2;
+    // 位相は「岸にそって波がころがる」ように θ で ゆっくり回し、ノイズで ばらけさせる。
+    // 座標だけから決まる = 乱数なし = 何度見ても同じ画になる
+    phase[s] = (th * 0.42 + vnoise(Math.cos(th) * 3.1 + 71, Math.sin(th) * 3.1 + 13) * 0.9) % 1;
+    amp[s] = 0.72 + vnoise(Math.cos(th) * 2.2 + 5, Math.sin(th) * 2.2 + 41) * 0.55;
+    // 水ぎわが とんでいる所(沖の砂すじ ⇔ 島本体の岸)は、そのあいだに帯を張らない。
+    // 面をつくるのは s と s+1 なので、とんでいる区間の 両はしを 0 にする
+    const dPrev = Math.abs(shore[si].r - shore[(si + SHORE_SEG - 1) % SHORE_SEG].r);
+    const dNext = Math.abs(shore[(si + 1) % SHORE_SEG].r - shore[si].r);
+    if (dPrev > FOAM_CUT || dNext > FOAM_CUT) amp[s] = 0;
+  }
+  for (let r = 0; r < rows; r++) {
+    const u = FOAM_U[r];
+    // いちばん外・いちばん内のリングは濃さ0にして、帯の切り口を見せない
+    const edge = r === 0 || r === rows - 1 ? 0 : 1;
+    for (let s = 0; s < cols; s++) {
+      const si = s % SHORE_SEG;
+      const th = (si / SHORE_SEG) * Math.PI * 2;
+      const cs = Math.cos(th);
+      const sn = Math.sin(th);
+      const rr = shore[si].r - u * shore[si].width;
+      const px = cs * rr;
+      const pz = sn * rr;
+      pos.push(px, Math.max(terrainHeight(px, pz), SEA_Y) + FOAM_LIFT, pz);
+      const v = r * cols + s;
+      bandU[v] = u;
+      // 濃さのむら(泡のレース)。**世界座標**で引くので 波長が3.5mと11mになり、
+      // 「岸ぞいに ちぎれた泡」に見える(方向ベクトルで引いていたときは 波長25mで
+      // ひとつづきの ぼやけた帯にしかならなかった。実機で確認)。
+      // s=cols-1 は si=0 と同じ点なので、輪のつなぎ目で値が食いちがうことはない。
+      const fine = vnoise(px * 0.29 + 17, pz * 0.29 + 5);
+      const broad = vnoise(px * 0.09 + 43, pz * 0.09 + 29);
+      lace[v] = edge * Math.min(1.2, Math.max(0, (fine * 0.85 + broad * 0.55 - 0.28) * 1.55));
+      // 色は白。砂も海も明るいので、うすい灰白では「よごれ」に見える(実機で確認)。
+      // ごくわずかに寒色へ寄せて、あたたかい砂と見分けがつくようにする
+      const w = 0.93 + vnoise(px * 0.5 + 61, pz * 0.5 + 37) * 0.07;
+      col.push(w * 0.985, w, w, 0);
+    }
+  }
+  for (let r = 0; r < rows - 1; r++) {
+    for (let s = 0; s < SHORE_SEG; s++) {
+      const a = r * cols + s;
+      idx.push(a, a + cols, a + 1, a + 1, a + cols, a + cols + 1);
+    }
+  }
+  const mesh = new Mesh('seaFoam', scene);
+  const vd = new VertexData();
+  vd.positions = pos;
+  vd.indices = idx;
+  vd.colors = col;
+  vd.normals = pos.map((_, i) => (i % 3 === 1 ? 1 : 0)); // 上向き
+  vd.applyToMesh(mesh, true);
+  mesh.hasVertexAlpha = true;
+  mesh.isPickable = false;
+  mesh.renderingGroupId = 1;
+  mesh.alphaIndex = 1;
+  mesh.freezeWorldMatrix();
+  const mat = new StandardMaterial('seaFoamMat', scene);
+  mat.diffuseColor = Color3.White();
+  mat.specularColor = Color3.Black();
+  // 夜に まっ黒な帯にならないための ごく弱い内光(入り江の泡と同じ流儀)。
+  // 上げすぎると 夜の泡だけが 光って見えるので、月あかりに見える ぎりぎりに置く
+  mat.emissiveColor = Color3.FromHexString('#161c20');
+  mat.backFaceCulling = false;
+  mesh.material = mat;
+  return { mesh, mat, col: new Float32Array(col), bandU, lace, phase, amp, cols, rows };
+}
+
+/** 海面のきらめきをまとめて1枚のメッシュに(小さな板をまばらに置く) */
+function buildSeaGlints(scene: Scene, shore: ShoreSample[]): SeaGlints {
+  const pos: number[] = [];
+  const col: number[] = [];
+  const idx: number[] = [];
+  const azX = new Float32Array(GLINT_N);
+  const azZ = new Float32Array(GLINT_N);
+  const phase = new Float32Array(GLINT_N);
+  const speed = new Float32Array(GLINT_N);
+  const amp = new Float32Array(GLINT_N);
+  let n = 0;
+  for (let i = 0; i < GLINT_N * 3 && n < GLINT_N; i++) {
+    // 角度と沖への距離を決定論ノイズで散らす(等間隔のリングに見せない)
+    const th = (vnoise(i * 2.7 + 3, 19) + i * 0.61803) * Math.PI * 2;
+    const cs = Math.cos(th);
+    const sn = Math.sin(th);
+    const si = ((Math.round((((th / (Math.PI * 2)) % 1) + 1) % 1 * SHORE_SEG) % SHORE_SEG) + SHORE_SEG) % SHORE_SEG;
+    const out = GLINT_OUT0 + vnoise(i * 1.9 + 31, i * 0.7 + 11) * (GLINT_OUT1 - GLINT_OUT0);
+    const rr = shore[si].r + out;
+    const px = cs * rr;
+    const pz = sn * rr;
+    if (terrainHeight(px, pz) > SEA_Y - 0.12) continue; // 本物の水の上だけ(浅瀬・岩の上には置かない)
+    const rot = vnoise(i * 3.3 + 7, i * 1.1 + 23) * Math.PI;
+    const len = 0.34 + vnoise(i + 53, 9) * 0.5;
+    const wid = 0.09 + vnoise(i + 91, 3) * 0.1;
+    const cr = Math.cos(rot);
+    const sr = Math.sin(rot);
+    const base = pos.length / 3;
+    const y = SEA_Y + 0.03;
+    for (const [lx, lz] of [[-len, -wid], [len, -wid], [len, wid], [-len, wid]] as [number, number][]) {
+      pos.push(px + lx * cr - lz * sr, y, pz + lx * sr + lz * cr);
+      col.push(1, 1, 1, 0);
+    }
+    idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    azX[n] = cs;
+    azZ[n] = sn;
+    phase[n] = vnoise(i * 5.1 + 13, 29) * Math.PI * 2;
+    speed[n] = 1.15 + vnoise(i * 0.9 + 61, 7) * 1.5;
+    amp[n] = 0.55 + vnoise(i * 1.3 + 17, 43) * 0.45;
+    n++;
+  }
+  const mesh = new Mesh('seaGlint', scene);
+  const vd = new VertexData();
+  vd.positions = pos;
+  vd.indices = idx;
+  vd.colors = col;
+  vd.normals = pos.map((_, i) => (i % 3 === 1 ? 1 : 0));
+  vd.applyToMesh(mesh, true);
+  mesh.hasVertexAlpha = true;
+  mesh.isPickable = false;
+  mesh.renderingGroupId = 1;
+  mesh.alphaIndex = 3; // 泡(1)より あと・ほしまつりのランタン(5)より 前
+  mesh.freezeWorldMatrix();
+  const mat = new StandardMaterial('seaGlintMat', scene);
+  mat.diffuseColor = Color3.Black();
+  mat.specularColor = Color3.Black();
+  mat.emissiveColor = Color3.White(); // 最終色 = 頂点カラー(光の当たり方によらない「水にのった光」)
+  mat.disableLighting = true;
+  mat.backFaceCulling = false;
+  mat.alphaMode = Constants.ALPHA_ADD; // 海の上に「光を足す」
+  mat.fogEnabled = false; // 遠くのきらめきが霧に沈むと消えてしまう
+  mesh.material = mat;
+  return { mesh, mat, col: new Float32Array(col), azX, azZ, phase, speed, amp, n };
+}
+
+/** 波うちぎわの泡ときらめきを作る(buildWaterの中から1回だけ) */
+export function buildSeaSurface(scene: Scene): SeaSurface {
+  // 描画グループ1は「海より あとに描く」ためだけに使う。深度・ステンシルの自動クリアを
+  // 切らないと、グループ0で描いた桟橋・地形との前後関係が消えて板をすかして泡が見える
+  // (ほしまつりのランタンと同じ設定。二重に呼んでも害はない)
+  scene.setRenderingAutoClearDepthStencil(1, false, false, false);
+  const shore: ShoreSample[] = [];
+  for (let s = 0; s < SHORE_SEG; s++) shore.push(scanIslandShore((s / SHORE_SEG) * Math.PI * 2));
+  return {
+    foam: buildFoamBand(scene, shore),
+    glint: buildSeaGlints(scene, shore),
+    t: 0,
+    acc: 1,
+    shown: { foamPeak: 0, glintOn: 0, night: 0, rain: 0, azX: 0, azZ: 0 },
+  };
+}
+
+/**
+ * 毎フレーム: 泡の寄せ引きと、きらめきの明滅。
+ * 重い更新は FOAM_HZ に間引き、島が画面に出ていないあいだは IslandScene が呼ばない。
+ */
+export function updateSeaSurface(w: WaterRefs, dtSec: number, env: SeaEnv): void {
+  const ss = w.surf;
+  ss.acc += dtSec;
+  if (ss.acc < 1 / FOAM_HZ) return;
+  ss.t += ss.acc;
+  ss.acc = 0;
+  const t = ss.t;
+  // 雨のときは 泡もきらめきも ひかえめに(既存の天気連携と同じ流儀: 消さずに弱める)
+  const wet = clamp01(env.rain);
+  const foamDamp = 1 - wet * 0.5;
+  const glintDamp = 1 - wet * 0.82;
+
+  // ---- 泡の帯 ----
+  const f = ss.foam;
+  let peak = 0;
+  for (let s = 0; s < f.cols; s++) {
+    // 寄せ引きの山の位置(帯の中の座標)。いちばん引いたときは沖がわ、寄せたときは陸がわ
+    const wpos = WASH_FROM + (WASH_TO - WASH_FROM) * washEnvelope(t, f.phase[s]);
+    const a0 = f.amp[s] * foamDamp;
+    for (let r = 0; r < f.rows; r++) {
+      const v = r * f.cols + s;
+      const d = f.bandU[v] - wpos;
+      const k = d >= 0 ? d / WASH_FRONT : -d / WASH_BACK;
+      let a = 0;
+      if (k < 1) {
+        const e = 1 - k;
+        a = e * e * (3 - 2 * e) * f.lace[v] * a0;
+      }
+      if (a > peak) peak = a;
+      f.col[v * 4 + 3] = a > 1 ? 1 : a;
+    }
+  }
+  f.mesh.updateVerticesData(VertexBuffer.ColorKind, f.col, false, false);
+
+  // ---- 海面のきらめき ----
+  const g = ss.glint;
+  const night = clamp01(env.night);
+  // 夜は しぼった帯(月の道)、昼は もっと広い面(太陽のきらめき)
+  const lobe = 3 + night * 6;
+  const level = (0.55 + 0.45 * (1 - night)) * glintDamp;
+  const cr = C_GLINT_DAY.r + (C_GLINT_NIGHT.r - C_GLINT_DAY.r) * night;
+  const cg = C_GLINT_DAY.g + (C_GLINT_NIGHT.g - C_GLINT_DAY.g) * night;
+  const cb = C_GLINT_DAY.b + (C_GLINT_NIGHT.b - C_GLINT_DAY.b) * night;
+  let on = 0;
+  for (let i = 0; i < g.n; i++) {
+    const align = g.azX[i] * env.azX + g.azZ[i] * env.azZ;
+    let a = 0;
+    if (align > 0.02) {
+      // 明滅: sinの山のてっぺんだけを残して「ちらっ…ちらっ」にする(まばらに見せる)
+      const blink = Math.sin(t * g.speed[i] + g.phase[i]);
+      if (blink > 0.42) {
+        const b = (blink - 0.42) / 0.58;
+        a = Math.pow(align, lobe) * b * b * (3 - 2 * b) * g.amp[i] * level;
+      }
+    }
+    if (a > 0.02) on++;
+    const base = i * 16;
+    for (let k = 0; k < 4; k++) {
+      g.col[base + k * 4] = cr;
+      g.col[base + k * 4 + 1] = cg;
+      g.col[base + k * 4 + 2] = cb;
+      g.col[base + k * 4 + 3] = a > 1 ? 1 : a;
+    }
+  }
+  g.mesh.updateVerticesData(VertexBuffer.ColorKind, g.col, false, false);
+
+  ss.shown.foamPeak = Math.round(peak * 1000) / 1000;
+  ss.shown.glintOn = on;
+  ss.shown.night = Math.round(night * 100) / 100;
+  ss.shown.rain = Math.round(wet * 100) / 100;
+  ss.shown.azX = Math.round(env.azX * 100) / 100;
+  ss.shown.azZ = Math.round(env.azZ * 100) / 100;
 }

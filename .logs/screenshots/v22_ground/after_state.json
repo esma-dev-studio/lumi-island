@@ -1,0 +1,166 @@
+{
+ "tag": "after",
+ "port": "5214",
+ "notes": [
+  {
+   "label": "01_beach_wash",
+   "hour": 11.1,
+   "cold": 0,
+   "drawCalls": 80281,
+   "activeMeshes": 39,
+   "totalMeshes": 511,
+   "surf": {
+    "foamPeak": 1.354,
+    "glintOn": 29,
+    "night": 0,
+    "rain": 0,
+    "azX": 0.53,
+    "azZ": 0.85
+   },
+   "foamVerts": 1544,
+   "glintVerts": 800,
+   "patchTris": 17072,
+   "moteTris": 576
+  },
+  {
+   "label": "02_sea_sparkle_day",
+   "hour": 15.6,
+   "cold": 0,
+   "drawCalls": 140571,
+   "activeMeshes": 18,
+   "totalMeshes": 512,
+   "surf": {
+    "foamPeak": 1.333,
+    "glintOn": 23,
+    "night": 0,
+    "rain": 0,
+    "azX": -0.85,
+    "azZ": 0.53
+   },
+   "foamVerts": 1544,
+   "glintVerts": 800,
+   "patchTris": 17072,
+   "moteTris": 576
+  },
+  {
+   "label": "03_night_sea_moonpath",
+   "hour": 22.1,
+   "cold": 0,
+   "drawCalls": 202021,
+   "activeMeshes": 29,
+   "totalMeshes": 515,
+   "surf": {
+    "foamPeak": 1.294,
+    "glintOn": 14,
+    "night": 1,
+    "rain": 0,
+    "azX": 0,
+    "azZ": 1
+   },
+   "foamVerts": 1544,
+   "glintVerts": 800,
+   "patchTris": 17072,
+   "moteTris": 576
+  },
+  {
+   "label": "04_island_overview",
+   "hour": 12.1,
+   "cold": 0,
+   "drawCalls": 300667,
+   "activeMeshes": 237,
+   "totalMeshes": 513,
+   "surf": {
+    "foamPeak": 1.382,
+    "glintOn": 26,
+    "night": 0,
+    "rain": 0,
+    "azX": 0.09,
+    "azZ": 1
+   },
+   "foamVerts": 1544,
+   "glintVerts": 800,
+   "patchTris": 17072,
+   "moteTris": 576
+  },
+  {
+   "label": "05_grass_closeup",
+   "hour": 12.2,
+   "cold": 0,
+   "drawCalls": 440069,
+   "activeMeshes": 108,
+   "totalMeshes": 513,
+   "surf": {
+    "foamPeak": 1.336,
+    "glintOn": 28,
+    "night": 0,
+    "rain": 0,
+    "azX": 0.03,
+    "azZ": 1
+   },
+   "foamVerts": 1544,
+   "glintVerts": 800,
+   "patchTris": 17072,
+   "moteTris": 576
+  },
+  {
+   "label": "06_tree_motes",
+   "hour": 12.3,
+   "cold": 0,
+   "drawCalls": 507989,
+   "activeMeshes": 28,
+   "totalMeshes": 516,
+   "surf": {
+    "foamPeak": 1.384,
+    "glintOn": 25,
+    "night": 0,
+    "rain": 0,
+    "azX": 0,
+    "azZ": 1
+   },
+   "foamVerts": 1544,
+   "glintVerts": 800,
+   "patchTris": 17072,
+   "moteTris": 576
+  },
+  {
+   "label": "07_rain_shore",
+   "hour": 11.1,
+   "cold": 1,
+   "drawCalls": 12393,
+   "activeMeshes": 38,
+   "totalMeshes": 512,
+   "surf": {
+    "foamPeak": 0.702,
+    "glintOn": 21,
+    "night": 0,
+    "rain": 1,
+    "azX": 0.52,
+    "azZ": 0.85
+   },
+   "foamVerts": 1544,
+   "glintVerts": 800,
+   "patchTris": 17072,
+   "moteTris": 576
+  },
+  {
+   "label": "08_pond_edge",
+   "hour": 11.1,
+   "cold": 0,
+   "drawCalls": 74045,
+   "activeMeshes": 138,
+   "totalMeshes": 511,
+   "surf": {
+    "foamPeak": 1.397,
+    "glintOn": 17,
+    "night": 0,
+    "rain": 0,
+    "azX": 0.53,
+    "azZ": 0.85
+   },
+   "foamVerts": 1544,
+   "glintVerts": 800,
+   "patchTris": 17072,
+   "moteTris": 576
+  }
+ ]
+}

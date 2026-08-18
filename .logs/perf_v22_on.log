@@ -1,0 +1,22 @@
+perf_mobile: tag=v22_on rate=4x port=5214 sample=8s repeat=2 dsf=2 mobile=true
+GPU: ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x00009A49) Direct3D11 vs_5_0 ps_5_0, D3D11) / Google Inc. (Intel) (dpr=2)
+warmup: 12s hardwareScalingLevel=1 settled=true → rate=4x
+[1][day_run] 昼の島を走る                 p50=  31.1 p95=  66.5 p99= 121.9 max= 129.8 frames= 238 stall=0 draw=328 mesh=62/521 hw=1 移動=8/8
+[1][night_island] 夜の島(ホタル・光だまり)          p50=    29 p95=  37.8 p99=  46.5 max=  95.3 frames= 300 stall=0 draw=289 mesh=40/534 hw=1 移動=7/8
+[1][cove_night] 入り江の夜                  p50=  19.1 p95=    40 p99=  54.3 max=  63.6 frames= 392 stall=0 draw=63 mesh=29/533 hw=1 移動=7/8
+[1][festival_fly] ほしまつりのランタンとばし          p50=  47.1 p95=    86 p99= 128.2 max= 132.4 frames= 167 stall=0 draw=346 mesh=60/532 hw=1 移動=0/8
+[1][home] 家の中                    p50=  14.4 p95=  32.9 p99=    45 max=  52.4 frames= 466 stall=0 draw=46 mesh=16/538 hw=1 移動=8/8
+[2][day_run] 昼の島を走る                 p50=  33.3 p95=  66.5 p99=  89.9 max= 105.7 frames= 235 stall=0 draw=358 mesh=63/539 hw=1 移動=8/8
+[2][night_island] 夜の島(ホタル・光だまり)          p50=  36.4 p95=  76.7 p99=    95 max= 130.4 frames= 218 stall=0 draw=311 mesh=38/546 hw=1 移動=7/8
+[2][cove_night] 入り江の夜                  p50=  20.9 p95=  47.6 p99=  61.5 max=    80 frames= 355 stall=0 draw=64 mesh=29/543 hw=1 移動=7/8
+[2][festival_fly] ほしまつりのランタンとばし          p50=    35 p95=  72.6 p99=  87.4 max= 111.9 frames= 210 stall=0 draw=344 mesh=57/543 hw=1 移動=0/8
+[2][home] 家の中                    p50=  16.1 p95=  39.8 p99=  50.3 max=  55.9 frames= 423 stall=0 draw=46 mesh=16/543 hw=1 移動=8/8
+
+場面                     p50     p95     p99   判定  (p95 の全周回)
+昼の島を走る                     31.1   66.5   89.9   OVER  [66.5,66.5]
+夜の島(ホタル・光だまり)                29   37.8   46.5   OVER  [37.8,76.7]
+入り江の夜                      19.1     40   54.3   OVER  [40,47.6]
+ほしまつりのランタンとばし                35   72.6   87.4   OVER  [86,72.6]
+家の中                        14.4   32.9     45   OK    [32.9,39.8]
+RESULT FAIL 予算p95<=33ms 超過=4件 consoleエラー=0件
+-> .logs/perf_mobile_v22_on.json

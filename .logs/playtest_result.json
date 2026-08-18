@@ -9,350 +9,335 @@
   "lensCrafted": true,
   "lighthouseLit": true,
   "coveRoundTrip": true,
-  "totalSec": 830,
+  "totalSec": 656,
   "timeline": [
     {
       "sec": 3,
       "label": "タイトル表示"
     },
     {
-      "sec": 4,
+      "sec": 5,
       "label": "ゲーム開始(新規)"
     },
     {
-      "sec": 5,
+      "sec": 6,
       "label": "目標: tut_move"
     },
     {
-      "sec": 6,
+      "sec": 7,
       "label": "目標: q_wood_offer"
     },
     {
-      "sec": 9,
+      "sec": 10,
       "label": "目標: q_wood_gather"
     },
     {
-      "sec": 19,
+      "sec": 24,
       "label": "はじめての採取"
     },
     {
-      "sec": 46,
+      "sec": 48,
       "label": "はじめての夜(発光を確認)"
     },
     {
-      "sec": 46,
+      "sec": 62,
       "label": "目標: q_wood_report"
     },
     {
-      "sec": 66,
+      "sec": 74,
       "label": "目標: q_fish_offer"
     },
     {
-      "sec": 75,
+      "sec": 84,
       "label": "目標: q_fish_mats_wood"
     },
     {
-      "sec": 81,
+      "sec": 90,
       "label": "目標: q_fish_mats_stone"
     },
     {
-      "sec": 86,
+      "sec": 95,
       "label": "目標: q_fish_craft_r_sickle"
     },
     {
-      "sec": 87,
+      "sec": 96,
       "label": "はじめてのクラフト"
     },
     {
-      "sec": 87,
+      "sec": 96,
       "label": "目標: q_fish_mats_wood"
     },
     {
-      "sec": 101,
+      "sec": 124,
       "label": "目標: q_fish_mats_fiber"
     },
     {
-      "sec": 104,
+      "sec": 133,
       "label": "目標: q_fish_craft_r_rod"
     },
     {
-      "sec": 105,
+      "sec": 134,
       "label": "目標: q_fish_fish"
     },
     {
-      "sec": 127,
+      "sec": 154,
       "label": "目標: q_fish_report"
     },
     {
-      "sec": 170,
+      "sec": 197,
       "label": "目標: q_ore_offer"
     },
     {
-      "sec": 183,
+      "sec": 210,
       "label": "目標: q_ore_gather"
     },
     {
-      "sec": 192,
+      "sec": 219,
       "label": "目標: q_ore_report"
     },
     {
-      "sec": 197,
+      "sec": 223,
       "label": "目標: q_lantern_offer"
     },
     {
-      "sec": 211,
-      "label": "目標: q_lantern_mats_wood"
-    },
-    {
-      "sec": 224,
+      "sec": 237,
       "label": "目標: q_lantern_mats_moss"
     },
     {
-      "sec": 234,
+      "sec": 251,
       "label": "目標: q_lantern_craft_r_lantern"
     },
     {
-      "sec": 236,
+      "sec": 252,
       "label": "目標: q_lantern_place"
     },
     {
-      "sec": 249,
+      "sec": 265,
       "label": "はじめての家具配置"
     },
     {
-      "sec": 249,
+      "sec": 265,
       "label": "目標: q_lantern_report"
     },
     {
-      "sec": 253,
+      "sec": 268,
       "label": "目標: q_lumi_offer"
     },
     {
-      "sec": 254,
+      "sec": 270,
       "label": "目標: q_lumi_mats_stone"
     },
     {
-      "sec": 262,
+      "sec": 278,
       "label": "目標: q_lumi_mats_ore"
     },
     {
-      "sec": 270,
+      "sec": 289,
       "label": "目標: q_lumi_craft_r_stonelamp"
     },
     {
-      "sec": 271,
+      "sec": 290,
       "label": "目標: q_lumi_place"
-    },
-    {
-      "sec": 285,
-      "label": "目標: q_lumi_mats_wood"
-    },
-    {
-      "sec": 294,
-      "label": "目標: q_lumi_mats_moss"
-    },
-    {
-      "sec": 310,
-      "label": "目標: q_lumi_craft_r_lantern"
     },
     {
       "sec": 311,
+      "label": "目標: q_lumi_mats_stone"
+    },
+    {
+      "sec": 320,
+      "label": "目標: q_lumi_mats_ore"
+    },
+    {
+      "sec": 329,
+      "label": "目標: q_lumi_craft_r_stonelamp"
+    },
+    {
+      "sec": 331,
       "label": "目標: q_lumi_place"
     },
     {
-      "sec": 325,
+      "sec": 342,
       "label": "目標: q_lumi_report"
     },
     {
-      "sec": 329,
+      "sec": 347,
       "label": "目標: q2_boat_offer"
     },
     {
-      "sec": 329,
+      "sec": 347,
       "label": "ルミの木 開花!"
     },
     {
-      "sec": 347,
+      "sec": 365,
       "label": "マイホーム 入室→就寝→退出: OK"
     },
     {
-      "sec": 347,
+      "sec": 365,
       "label": "=== 第2章 開始 ==="
     },
     {
-      "sec": 348,
+      "sec": 365,
       "label": "目標: q2_boat_offer"
     },
     {
-      "sec": 373,
+      "sec": 391,
       "label": "目標: q2_boat_wood"
     },
     {
-      "sec": 413,
+      "sec": 431,
       "label": "目標: q2_boat_report"
     },
     {
-      "sec": 430,
+      "sec": 448,
       "label": "ふねが なおった(boat_repaired)"
     },
     {
-      "sec": 430,
+      "sec": 448,
       "label": "目標: ch2_first_sail"
     },
     {
-      "sec": 451,
+      "sec": 469,
       "label": "よるの入り江へ 上陸した"
     },
     {
-      "sec": 451,
+      "sec": 469,
       "label": "目標: q2_meet_offer"
     },
     {
-      "sec": 458,
+      "sec": 476,
       "label": "ロカと であった"
     },
     {
-      "sec": 458,
+      "sec": 476,
       "label": "目標: q2_shell_offer"
     },
     {
-      "sec": 459,
+      "sec": 478,
       "label": "目標: q2_shell_gather"
     },
     {
-      "sec": 470,
+      "sec": 488,
       "label": "目標: q2_shell_report"
     },
     {
-      "sec": 476,
+      "sec": 495,
       "label": "ひかりの貝を 見せた"
     },
     {
-      "sec": 476,
+      "sec": 495,
       "label": "目標: q2_starweed_offer"
     },
     {
-      "sec": 478,
+      "sec": 496,
       "label": "目標: q2_starweed_gather"
     },
     {
-      "sec": 487,
+      "sec": 506,
       "label": "目標: q2_starweed_report"
     },
     {
-      "sec": 493,
+      "sec": 512,
       "label": "ほしくさを 見せた"
     },
     {
-      "sec": 493,
+      "sec": 512,
       "label": "目標: q2_lens_offer"
     },
     {
-      "sec": 494,
+      "sec": 513,
       "label": "目標: q2_lens_mats_ore_sail_island"
     },
     {
-      "sec": 725,
+      "sec": 542,
       "label": "目標: q2_lens_mats_ore"
     },
     {
-      "sec": 761,
+      "sec": 584,
       "label": "目標: q2_lens_craft_r_lens"
     },
     {
-      "sec": 762,
+      "sec": 585,
       "label": "ひかりのレンズが できた"
     },
     {
-      "sec": 762,
+      "sec": 585,
       "label": "目標: q2_lens_report_sail_cove"
     },
     {
-      "sec": 795,
+      "sec": 621,
       "label": "目標: q2_lens_report"
     },
     {
-      "sec": 800,
+      "sec": 626,
       "label": "目標: q2_light_offer"
     },
     {
-      "sec": 801,
+      "sec": 628,
       "label": "目標: q2_light_attach"
     },
     {
-      "sec": 814,
+      "sec": 641,
       "label": "とうだいに あかりが ともった!"
     },
     {
-      "sec": 814,
+      "sec": 641,
       "label": "目標: free_sail_island"
     },
     {
-      "sec": 830,
+      "sec": 656,
       "label": "島へ 帰りついた(入り江の往復)"
     },
     {
-      "sec": 830,
-      "label": "終了(13分50秒)"
+      "sec": 656,
+      "label": "終了(10分56秒)"
     }
   ],
   "errors": 0,
   "errorSamples": [],
   "fps": [
-    15,
-    159,
-    147,
-    147,
-    166,
-    189,
-    170,
-    123,
-    166,
-    168,
-    168,
-    145,
-    166,
-    175,
-    188,
-    160,
-    173,
-    128,
-    150,
-    162,
-    182,
-    177,
-    173,
-    175,
-    148,
-    170,
-    134,
-    181,
+    8,
     136,
-    212,
-    204,
-    251,
-    219,
-    232,
-    194,
-    208,
-    203,
-    252,
-    219,
-    201,
-    156,
-    251,
-    199,
-    215,
-    201,
-    210,
-    221,
-    188,
-    180,
-    182,
-    198,
+    125,
+    128,
+    158,
+    150,
+    147,
+    140,
+    159,
+    148,
     139,
-    208,
-    216
+    144,
+    162,
+    132,
+    149,
+    163,
+    166,
+    110,
+    161,
+    157,
+    157,
+    164,
+    169,
+    134,
+    157,
+    145,
+    160,
+    151,
+    164,
+    157,
+    153,
+    135,
+    162,
+    167,
+    164,
+    136,
+    161,
+    142,
+    154,
+    151,
+    154,
+    197,
+    117
   ],
   "quests": {
     "q_wood": "done",

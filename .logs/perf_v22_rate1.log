@@ -1,0 +1,22 @@
+perf_mobile: tag=v22_rate1 rate=1x port=5214 sample=8s repeat=2 dsf=2 mobile=true
+GPU: ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x00009A49) Direct3D11 vs_5_0 ps_5_0, D3D11) / Google Inc. (Intel) (dpr=2)
+warmup: 8s hardwareScalingLevel=1 settled=true → rate=1x
+[1][day_run] 昼の島を走る                 p50=   6.6 p95=   8.6 p99=   9.5 max=  19.4 frames=1224 stall=0 draw=330 mesh=63/520 hw=1 移動=8/8
+[1][night_island] 夜の島(ホタル・光だまり)          p50=   6.4 p95=   7.8 p99=   8.7 max=  11.1 frames=1296 stall=0 draw=290 mesh=41/533 hw=1 移動=7/8
+[1][cove_night] 入り江の夜                  p50=     5 p95=   6.3 p99=   6.8 max=   7.7 frames=1644 stall=0 draw=63 mesh=29/532 hw=1 移動=6/8
+[1][festival_fly] ほしまつりのランタンとばし          p50=   7.2 p95=  10.2 p99=  11.2 max=  12.8 frames=1078 stall=0 draw=346 mesh=60/531 hw=1 移動=0/8
+[1][home] 家の中                    p50=   5.1 p95=   6.9 p99=   7.7 max=   9.1 frames=1586 stall=0 draw=46 mesh=16/533 hw=1 移動=8/8
+[2][day_run] 昼の島を走る                 p50=   6.4 p95=   8.6 p99=  10.5 max=  20.4 frames=1237 stall=0 draw=358 mesh=63/538 hw=1 移動=8/8
+[2][night_island] 夜の島(ホタル・光だまり)          p50=   6.3 p95=   8.3 p99=   9.6 max=  28.6 frames=1292 stall=0 draw=319 mesh=42/545 hw=1 移動=7/8
+[2][cove_night] 入り江の夜                  p50=   5.2 p95=   6.7 p99=   7.8 max=  23.6 frames=1563 stall=0 draw=64 mesh=29/542 hw=1 移動=6/8
+[2][festival_fly] ほしまつりのランタンとばし          p50=   6.6 p95=     9 p99=  11.1 max= 340.3 frames=1152 stall=0 draw=343 mesh=57/542 hw=1 移動=0/8
+[2][home] 家の中                    p50=     5 p95=   6.9 p99=   7.9 max=  11.3 frames=1591 stall=0 draw=46 mesh=16/542 hw=1 移動=8/8
+
+場面                     p50     p95     p99   判定  (p95 の全周回)
+昼の島を走る                      6.4    8.6    9.5   OK    [8.6,8.6]
+夜の島(ホタル・光だまり)               6.3    7.8    8.7   OK    [7.8,8.3]
+入り江の夜                         5    6.3    6.8   OK    [6.3,6.7]
+ほしまつりのランタンとばし               6.6      9   11.1   OK    [10.2,9]
+家の中                           5    6.9    7.7   OK    [6.9,6.9]
+RESULT PASS 予算p95<=33ms 超過=0件 consoleエラー=0件
+-> .logs/perf_mobile_v22_rate1.json

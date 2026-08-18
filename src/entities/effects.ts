@@ -1,5 +1,6 @@
 // 演出部品: 採取パーティクル・アイテム飛び・発光家具の光だまり・天気の見た目(モジュールシングルトン)
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
@@ -71,6 +72,11 @@ export function initEffects(s: Scene): void {
   lanternHaloMat = null;
   lanternReflMat = null;
   lanternGlowTex = null;
+  // v22 昼の木立ちの粒(旧シーンのメッシュ・マテリアルを持ちこまない)
+  motes = null;
+  moteT = 0;
+  moteAcc = 1;
+  moteLevel = 0;
   // 丸いドットのテクスチャ(外部素材なし)
   const tex = new DynamicTexture('fxDot', { width: 32, height: 32 }, s, false);
   const ctx = tex.getContext() as CanvasRenderingContext2D;
@@ -1029,6 +1035,182 @@ export function updateLanternFlight(dt: number): void {
       f.refl.visibility = LANTERN_REFL_FLOOR + (1 - LANTERN_REFL_FLOOR) * fade * fade;
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// v22 昼の空気感: 木立ちのそばで ゆっくり舞う 光の粒(花粉・こまかい葉くず)。
+//
+// 夜のホタル(systems/BugSystem)と まったく同じ流儀にする:
+//   - 出るのは **昼だけ・木の近くだけ**。夜と雨のときは出さない。
+//   - 動きは 時計と とまり木の座標だけで決まる(乱数を1つも引かない)= 撮影が決定的。
+//   - メッシュは **1枚**。粒は「たてよこ2枚の板を十字に組んだ」小さな形で、
+//     どの角度から見ても かならず何かが見える(板1枚だと真横から消える)。
+// 位置の書きこみは 12Hz。粒は毎秒10cmほどしか動かないので、なめらかさは足りる。
+// ---------------------------------------------------------------------------
+/** とまり木1本あたりの粒の数 */
+const MOTE_PER_SPOT = 6;
+/**
+ * 粒の半径(m)。大きいと「ホタルの昼版」に見えるので小さく。
+ * ただし 3.5cm では 実機で ほとんど見えなかったので 5cm まで上げてある。
+ */
+const MOTE_R = 0.05;
+/**
+ * 木のまわりを漂うひろがり(m)と高さ。
+ * 高さは **葉かげの下・目の高さ** に置く。足もと(0.75〜1.15m)だと 草にまぎれて
+ * 「地面のほこり」に見え、木立ちの空気感にならなかった(実機で確認)。
+ */
+const MOTE_SPREAD = 2.2;
+const MOTE_Y0 = 1.35;
+const MOTE_Y1 = 2.35;
+const MOTE_HZ = 12;
+
+/**
+ * 粒1つぶんの形(原点まわりのローカル座標)。六角形を たてとよこに1枚ずつ。
+ * 大きさは定数なので 1回だけ組んで 使いまわす(毎フレームの ごみを出さない)。
+ */
+const MOTE_SHAPE: [number, number, number][] = ((): [number, number, number][] => {
+  const r = MOTE_R;
+  const out: [number, number, number][] = [[0, 0, 0]];
+  for (let k = 0; k < 6; k++) {
+    const a = (k / 6) * Math.PI * 2;
+    out.push([Math.cos(a) * r, Math.sin(a) * r, 0]);
+  }
+  out.push([0, 0, 0]);
+  for (let k = 0; k < 6; k++) {
+    const a = (k / 6) * Math.PI * 2 + 0.5;
+    out.push([0, Math.sin(a) * r, Math.cos(a) * r]);
+  }
+  return out;
+})();
+/** 粒1つぶんの頂点数(六角形2枚=中心+6点 が2組) */
+const MOTE_VERTS = MOTE_SHAPE.length;
+
+interface TreeMotes {
+  mesh: Mesh;
+  mat: StandardMaterial;
+  pos: Float32Array;
+  /** 粒ごとの中心(とまり木の座標) */
+  sx: Float32Array;
+  sy: Float32Array;
+  sz: Float32Array;
+  phase: Float32Array;
+  n: number;
+}
+let motes: TreeMotes | null = null;
+let moteT = 0;
+let moteAcc = 1;
+let moteLevel = 0;
+
+/**
+ * 木立ちの粒を作る(IslandScene.build から1回だけ)。
+ * @param spots 粒を漂わせる木の足もと(世界座標)。林・並木から決定論で選んだもの
+ */
+export function initTreeMotes(s: Scene, spots: { x: number; y: number; z: number }[]): void {
+  const n = spots.length * MOTE_PER_SPOT;
+  const pos: number[] = [];
+  const col: number[] = [];
+  const idx: number[] = [];
+  const sx = new Float32Array(n);
+  const sy = new Float32Array(n);
+  const sz = new Float32Array(n);
+  const phase = new Float32Array(n);
+  // 十字に組んだ六角形2枚(たて・よこ)。どの角度から見ても かならず丸い点に見える。
+  // 四角い板にしたら 実機で「小さな白いカード」に見えたので、六角形にしてある
+  // (裏面カリングは切ってあるので巻き順は問わない)。
+  const local = MOTE_SHAPE;
+  for (let i = 0; i < n; i++) {
+    const sp = spots[Math.floor(i / MOTE_PER_SPOT)];
+    sx[i] = sp.x;
+    sy[i] = sp.y;
+    sz[i] = sp.z;
+    phase[i] = (i * 1.37) % (Math.PI * 2);
+    const base = i * MOTE_VERTS;
+    for (const [lx, ly, lz] of local) {
+      pos.push(lx, ly, lz);
+      const v = 0.9 + ((i * 7) % 5) * 0.04;
+      col.push(v, v * 0.97, v * 0.86, 1);
+    }
+    // 六角形2枚(中心+6点の扇)
+    for (let f = 0; f < 2; f++) {
+      const c = base + f * 7;
+      for (let k = 0; k < 6; k++) idx.push(c, c + 1 + k, c + 1 + ((k + 1) % 6));
+    }
+  }
+  const mesh = new Mesh('treeMotes', s);
+  const vd = new VertexData();
+  vd.positions = pos;
+  vd.indices = idx;
+  vd.colors = col;
+  vd.normals = pos.map(() => 0);
+  vd.applyToMesh(mesh, true);
+  mesh.isPickable = false;
+  mesh.setEnabled(false);
+  const mat = new StandardMaterial('treeMoteMat', s);
+  mat.diffuseColor = Color3.Black();
+  mat.specularColor = Color3.Black();
+  mat.emissiveColor = Color3.FromHexString('#efe6c0'); // 日ざしを受けた花粉の色(白に振り切らない)
+  mat.disableLighting = true;
+  mat.backFaceCulling = false;
+  mat.alpha = 0;
+  mesh.material = mat;
+  motes = { mesh, mat, pos: new Float32Array(pos), sx, sy, sz, phase, n };
+  moteT = 0;
+  moteAcc = 1;
+  moteLevel = 0;
+  updateTreeMotes(0, 0, 0);
+}
+
+/**
+ * 昼の粒の1フレーム。
+ * @param dt   秒
+ * @param day  昼のつよさ(0=夜 1=まひる)。DayNightの夜の深さの裏返しをIslandSceneが渡す
+ * @param rain 雨あし(0=はれ 1=本降り)。雨のときは舞わない
+ */
+export function updateTreeMotes(dt: number, day: number, rain: number): void {
+  if (!motes) return;
+  const want = Math.max(0, Math.min(1, day)) * (1 - Math.max(0, Math.min(1, rain)));
+  moteLevel = want;
+  const on = want > 0.03;
+  if (motes.mesh.isEnabled(false) !== on) motes.mesh.setEnabled(on);
+  motes.mat.alpha = 0.62 * want;
+  if (!on) return;
+  moteAcc += dt;
+  if (moteAcc < 1 / MOTE_HZ) return;
+  moteT += moteAcc;
+  moteAcc = 0;
+  const t = moteT;
+  const p = motes.pos;
+  const local = MOTE_SHAPE;
+  for (let i = 0; i < motes.n; i++) {
+    const ph = motes.phase[i];
+    // ゆっくりした8の字。3つの周期がどれも素どうしなので、同じ形をくり返さない
+    const cx = motes.sx[i] + Math.sin(t * 0.17 + ph) * MOTE_SPREAD + Math.sin(t * 0.29 + ph * 1.7) * 0.42;
+    const cz = motes.sz[i] + Math.cos(t * 0.21 + ph * 1.3) * MOTE_SPREAD + Math.cos(t * 0.13 + ph) * 0.38;
+    const cy = motes.sy[i] + MOTE_Y0 + (MOTE_Y1 - MOTE_Y0) * (0.5 + 0.5 * Math.sin(t * 0.23 + ph * 2.1));
+    // 形はそのまま、まるごと平行移動するだけ(形の計算は初期化のときの1回だけ)
+    let b = i * MOTE_VERTS * 3;
+    for (let k = 0; k < MOTE_VERTS; k++) {
+      p[b++] = cx + local[k][0];
+      p[b++] = cy + local[k][1];
+      p[b++] = cz + local[k][2];
+    }
+  }
+  // 第3引数(updateExtends)を true にするのが要点。粒はメッシュの原点から
+  // 何十mも はなれた木のそばへ動くのに、これを false にすると 当たり判定用の
+  // 外わく(BoundingInfo)が 作ったときのまま(原点まわり±5cm)で残り、
+  // **カメラが原点を見ていないフレームでは まるごと視錐台カリングで消える**。
+  // 実測: 木の目の前に立っても isInFrustum が false で、1粒も描かれていなかった。
+  motes.mesh.updateVerticesData(VertexBuffer.PositionKind, p, true, false);
+}
+
+/** 昼の粒の状態(検証・撮影用。読むだけで副作用はない) */
+export function treeMoteState(): { count: number; level: number; alpha: number; visible: boolean } {
+  return {
+    count: motes?.n ?? 0,
+    level: Math.round(moteLevel * 100) / 100,
+    alpha: Math.round((motes?.mat.alpha ?? 0) * 100) / 100,
+    visible: motes?.mesh.isEnabled(false) ?? false,
+  };
 }
 
 /** 毎フレーム: 飛んでいくアイテムの更新 */

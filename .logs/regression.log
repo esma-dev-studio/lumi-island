@@ -1,0 +1,198 @@
+[00:36] タイトル表示
+[00:43] ゲーム開始(新規)
+[00:44] 目標: tut_move
+[00:45] 目標: q_wood_offer
+[00:51] 目標: q_wood_gather
+nav 55s 迂回はじめ: (-20.0,-6.0)へ 14.9m で足ぶみ → 45度 左まわり(24秒まで)
+nav 57s 迂回おわり: 14.9m→11.6m まで近づけた
+[01:03] はじめての採取
+hb 64s pos=(-21.8,-3.7) obj=q_wood_gather hour=19.2
+nav 74s 迂回はじめ: (-26.0,14.0)へ 11.6m で足ぶみ → 45度 左まわり(24秒まで)
+nav 77s 迂回: 45度でも進めない → 90度に広げる
+nav 79s 迂回: 逆まわり(右)へ
+nav 83s 迂回おわり: 11.6m→8.4m まで近づけた
+hb 84s pos=(-24.0,9.3) obj=q_wood_gather hour=20.0
+[01:27] はじめての夜(発光を確認)
+[01:28] 目標: q_wood_report
+hb 104s pos=(-2.7,-6.7) obj=q_wood_report hour=20.8
+[01:46] 目標: q_fish_offer
+[01:58] 目標: q_fish_mats_wood
+[02:04] 目標: q_fish_mats_stone
+hb 124s pos=(19.9,25.3) obj=q_fish_mats_stone hour=21.4
+[02:09] 目標: q_fish_craft_r_sickle
+[02:10] はじめてのクラフト
+[02:10] 目標: q_fish_mats_wood
+hb 144s pos=(-25.1,13.7) obj=q_fish_mats_wood hour=22.2
+[02:25] 目標: q_fish_mats_fiber
+[02:32] 目標: q_fish_craft_r_rod
+[02:34] 目標: q_fish_fish
+hb 164s pos=(-10.9,30.1) obj=q_fish_fish hour=22.9
+[02:59] 目標: q_fish_report
+nav 183s 迂回はじめ: (23.5,12.9)へ 37.0m で足ぶみ → 45度 左まわり(17秒まで)
+nav 184s 迂回: 45度でも進めない → 90度に広げる
+hb 184s pos=(5.3,45.2) obj=q_fish_report hour=23.7
+nav 199s 迂回おわり: 時間切れ(37.0m)。直進を試す
+nav 202s 迂回はじめ: (23.5,12.9)へ 37.0m で足ぶみ → 45度 右まわり(9秒まで)
+hb 204s pos=(5.3,43.3) obj=q_fish_report hour=0.5
+nav 205s 迂回おわり: 37.0m→33.0m まで近づけた
+nav 207s 迂回はじめ: (23.5,12.9)へ 32.1m で足ぶみ → 45度 右まわり(8秒まで)
+nav 208s 迂回おわり: 32.1m→29.3m まで近づけた
+nav 217s 迂回はじめ: (23.5,12.9)へ 9.3m で足ぶみ → 45度 右まわり(8秒まで)
+nav 219s 迂回おわり: 9.3m→5.5m まで近づけた
+[03:42] 目標: q_ore_offer
+hb 224s pos=(26.6,8.4) obj=q_ore_offer hour=1.3
+[03:55] 目標: q_ore_gather
+hb 244s pos=(34.8,-29.1) obj=q_ore_gather hour=2.0
+[04:05] 目標: q_ore_report
+[04:09] 目標: q_lantern_offer
+[04:24] 目標: q_lantern_mats_wood
+hb 264s pos=(-2.5,0.8) obj=q_lantern_mats_wood hour=2.7
+nav 268s 迂回はじめ: (-20.0,-6.0)へ 15.2m で足ぶみ → 45度 左まわり(24秒まで)
+nav 269s 迂回: 45度でも進めない → 90度に広げる
+nav 272s 迂回おわり: 15.2m→11.4m まで近づけた
+[04:37] 目標: q_lantern_mats_moss
+hb 284s pos=(-18.8,-22.4) obj=q_lantern_mats_moss hour=3.5
+[04:48] 目標: q_lantern_craft_r_lantern
+[04:49] 目標: q_lantern_place
+[05:03] はじめての家具配置
+[05:03] 目標: q_lantern_report
+hb 304s pos=(0.8,5.4) obj=q_lantern_report hour=4.3
+[05:07] 目標: q_lumi_offer
+[05:09] 目標: q_lumi_mats_wood
+[05:19] 目標: q_lumi_mats_moss
+hb 324s pos=(-11.6,3.5) obj=q_lumi_mats_moss hour=5.0
+nav 327s 迂回はじめ: (-2.0,-24.0)へ 27.7m で足ぶみ → 45度 左まわり(24秒まで)
+nav 328s 迂回おわり: 27.7m→24.6m まで近づけた
+hb 344s pos=(-5.7,-28.0) obj=q_lumi_mats_moss hour=5.8
+[05:50] 目標: q_lumi_craft_r_lantern
+[05:52] 目標: q_lumi_place
+hb 364s pos=(-2.5,2.2) obj=q_lumi_place hour=6.5
+[06:07] 目標: q_lumi_mats_wood
+[06:18] 目標: q_lumi_mats_moss
+hb 384s pos=(-20.0,-21.4) obj=q_lumi_mats_moss hour=7.3
+[06:31] 目標: q_lumi_craft_r_lantern
+[06:33] 目標: q_lumi_place
+hb 404s pos=(4.3,0.8) obj=q_lumi_place hour=8.1
+[06:48] 目標: q_lumi_report
+[06:55] 目標: q2_boat_offer
+[06:55] ルミの木 開花!
+hb 424s pos=(-24.0,6.5) obj=q2_boat_offer hour=8.8
+nav 427s 迂回はじめ: (-30.9,6.7)へ 6.9m で足ぶみ → 45度 左まわり(20秒まで)
+nav 429s 迂回おわり: 6.9m→3.7m まで近づけた
+[07:16] マイホーム 入室→就寝→退出: OK
+[07:16] === 第2章 開始 ===
+[07:16] 目標: q2_boat_offer
+nav 442s 迂回はじめ: (23.3,12.7)へ 48.1m で足ぶみ → 45度 左まわり(16秒まで)
+hb 444s pos=(-24.8,11.2) obj=q2_boat_offer hour=6.4
+nav 444s 迂回: 45度でも進めない → 90度に広げる
+nav 446s 迂回: 逆まわり(右)へ
+nav 449s 迂回: 45度でも進めない → 90度に広げる
+nav 453s 迂回おわり: 48.1m→44.4m まで近づけた
+hb 464s pos=(6.8,12.7) obj=q2_boat_offer hour=7.2
+[07:51] 目標: q2_boat_wood
+hb 484s pos=(1.6,13.8) obj=q2_boat_wood hour=8.0
+nav 498s 迂回はじめ: (-30.0,-4.0)へ 16.0m で足ぶみ → 45度 左まわり(24秒まで)
+nav 501s 迂回: 45度でも進めない → 90度に広げる
+hb 504s pos=(-17.8,2.0) obj=q2_boat_wood hour=8.8
+nav 505s 迂回おわり: 16.0m→12.9m まで近づけた
+nav 513s 迂回はじめ: (-30.0,-4.0)へ 2.4m で足ぶみ → 45度 左まわり(24秒まで)
+[08:42] 目標: q2_boat_report
+hb 524s pos=(-15.7,-1.2) obj=q2_boat_report hour=9.6
+[08:59] ふねが なおった(boat_repaired)
+[08:59] 目標: ch2_first_sail
+hb 544s pos=(10.1,22.4) obj=ch2_first_sail hour=10.3
+[09:22] よるの入り江へ 上陸した
+[09:22] 目標: q2_meet_offer
+hb 564s pos=(-56.1,59.7) obj=q2_meet_offer hour=10.7
+[09:29] ロカと であった
+[09:29] 目標: q2_shell_offer
+[09:31] 目標: q2_shell_gather
+[09:44] 目標: q2_shell_report
+hb 584s pos=(-48.0,61.1) obj=q2_shell_report hour=11.4
+[09:51] ひかりの貝を 見せた
+[09:51] 目標: q2_starweed_offer
+[09:52] 目標: q2_starweed_gather
+[10:02] 目標: q2_starweed_report
+hb 604s pos=(-59.8,58.0) obj=q2_starweed_report hour=12.1
+[10:07] ほしくさを 見せた
+[10:07] 目標: q2_lens_offer
+[10:09] 目標: q2_lens_mats_ore_sail_island
+nav 615s 迂回はじめ: (-51.2,66.8)へ 4.8m で足ぶみ → 45度 左まわり(24秒まで)
+nav 616s 迂回: 45度でも進めない → 90度に広げる
+nav 618s 迂回: 逆まわり(右)へ
+nav 620s 迂回: 45度でも進めない → 90度に広げる
+nav 624s 迂回: 45度でも進めない → 90度に広げる
+hb 624s pos=(-48.4,63.8) obj=q2_lens_mats_ore_sail_island hour=12.8
+nav 625s 迂回: 両がわ詰まり → いったん下がる
+nav 627s 迂回: 両がわ詰まり → いったん下がる
+nav 629s 迂回: 両がわ詰まり → いったん下がる
+nav 631s 迂回: 両がわ詰まり → いったん下がる
+nav 633s 迂回: 両がわ詰まり → いったん下がる
+nav 635s 迂回: 両がわ詰まり → いったん下がる
+nav 636s 迂回: 両がわ詰まり → いったん下がる
+nav 638s 迂回: 両がわ詰まり → いったん下がる
+nav 639s 迂回: 両がわ詰まり → いったん下がる
+nav 640s 迂回おわり: 時間切れ(3.3m)。直進を試す
+nav 643s 迂回はじめ: (-51.2,66.8)へ 3.3m で足ぶみ → 45度 右まわり(24秒まで)
+nav 644s 迂回: 45度でも進めない → 90度に広げる
+hb 644s pos=(-49.2,64.1) obj=q2_lens_mats_ore_sail_island hour=13.6
+nav 645s 迂回: 逆まわり(左)へ
+nav 646s 迂回: 45度でも進めない → 90度に広げる
+nav 653s 迂回: 45度でも進めない → 90度に広げる
+nav 654s 迂回: 両がわ詰まり → いったん下がる
+nav 656s 迂回: 両がわ詰まり → いったん下がる
+nav 659s 迂回: 両がわ詰まり → いったん下がる
+nav 661s 迂回: 両がわ詰まり → いったん下がる
+nav 664s 迂回: 両がわ詰まり → いったん下がる
+hb 664s pos=(-62.5,64.3) obj=q2_lens_mats_ore_sail_island hour=14.4
+nav 666s 迂回: 両がわ詰まり → いったん下がる
+nav 667s 迂回おわり: 時間切れ(3.3m)。直進を試す
+nav 670s 迂回はじめ: (-51.2,66.8)へ 3.3m で足ぶみ → 45度 右まわり(24秒まで)
+nav 673s 迂回: 45度でも進めない → 90度に広げる
+nav 678s 迂回: 45度でも進めない → 90度に広げる
+nav 680s 迂回: 逆まわり(左)へ
+hb 684s pos=(-51.9,65.6) obj=q2_lens_mats_ore_sail_island hour=15.2
+nav 685s 迂回: 45度でも進めない → 90度に広げる
+nav 690s 迂回: 45度でも進めない → 90度に広げる
+nav 693s 迂回: 両がわ詰まり → いったん下がる
+nav 694s 迂回おわり: 時間切れ(1.1m)。直進を試す
+nav 698s 迂回はじめ: (-51.2,66.8)へ 1.1m で足ぶみ → 45度 左まわり(13秒まで)
+nav 699s 迂回: 45度でも進めない → 90度に広げる
+nav 700s 迂回: 逆まわり(右)へ
+nav 703s 迂回: 45度でも進めない → 90度に広げる
+hb 704s pos=(-50.6,62.6) obj=q2_lens_mats_ore_sail_island hour=16.0
+nav 706s 迂回: 45度でも進めない → 90度に広げる
+nav 707s 迂回: 両がわ詰まり → いったん下がる
+nav 710s 迂回: 両がわ詰まり → いったん下がる
+nav 711s 迂回おわり: 時間切れ(1.1m)。直進を試す
+nav 713s 迂回はじめ: (-51.2,66.8)へ 1.1m で足ぶみ → 45度 左まわり(8秒まで)
+nav 716s 迂回: 45度でも進めない → 90度に広げる
+nav 718s 迂回: 逆まわり(右)へ
+nav 721s 迂回: 45度でも進めない → 90度に広げる
+nav 722s 迂回おわり: 時間切れ(1.1m)。直進を試す
+hb 724s pos=(-51.3,67.4) obj=q2_lens_mats_ore_sail_island hour=16.8
+[12:14] 目標: q2_lens_mats_ore
+nav 741s 迂回はじめ: (30.0,-21.0)へ 64.3m で足ぶみ → 45度 左まわり(24秒まで)
+nav 743s 迂回おわり: 64.3m→60.4m まで近づけた
+hb 744s pos=(12.1,32.0) obj=q2_lens_mats_ore hour=17.2
+nav 751s 迂回はじめ: (30.0,-21.0)へ 45.5m で足ぶみ → 45度 左まわり(24秒まで)
+nav 753s 迂回: 45度でも進めない → 90度に広げる
+nav 754s 迂回: 逆まわり(右)へ
+nav 757s 迂回おわり: 45.5m→42.5m まで近づけた
+hb 764s pos=(30.0,3.0) obj=q2_lens_mats_ore hour=18.0
+[12:58] 目標: q2_lens_craft_r_lens
+[13:01] ひかりのレンズが できた
+[13:01] 目標: q2_lens_report_sail_cove
+hb 784s pos=(26.1,-18.7) obj=q2_lens_report_sail_cove hour=18.7
+hb 804s pos=(3.9,25.4) obj=q2_lens_report_sail_cove hour=19.5
+[13:40] 目標: q2_lens_report
+[13:43] 目標: q2_light_offer
+[13:44] 目標: q2_light_attach
+hb 824s pos=(-53.4,60.1) obj=q2_light_attach hour=19.9
+[14:02] とうだいに あかりが ともった!
+[14:02] 目標: free_sail_island
+hb 845s pos=(-54.5,60.8) obj=free_sail_island hour=20.2
+[14:17] 島へ 帰りついた(入り江の往復)
+[14:19] 終了(14分19秒)
+RESULT {"completed":true,"homeRoundTrip":true,"boatRepaired":true,"coveArrived":true,"rokaMet":true,"shellsShown":true,"starweedShown":true,"lensCrafted":true,"lighthouseLit":true,"coveRoundTrip":true,"totalSec":859,"errors":0,"fpsAvg":88}
+regression exit=0
