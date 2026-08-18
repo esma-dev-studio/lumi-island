@@ -85,6 +85,9 @@ export const OBJ_RULES = [
   // NPC不在の待ち案内。「ほうこくしよう」より先に見る(不在時は報告ではなく就寝が次の行動)
   { cat: 'sleep', re: /ねているよ|ねて まとう|ベッドで .*ねよう/, src: 'ObjectiveSystem/NpcAvailabilityService: ◯◯は もう ねているよ<br>家のベッドで 朝まで ねよう / 家に はいって ベッドで ねよう' },
   { cat: 'report', re: /ほうこくしよう/, src: 'ObjectiveSystem: ◯◯に ほうこくしよう(headline=できた!)' },
+  // v20第3章 おつかい(たのむ人と とどける人がちがう依頼)。行きつく先が「その人に会う」
+  // なのは 報告と まったく同じなので report にそろえる
+  { cat: 'report', re: /に とどけよう/, src: 'ObjectiveSystem: ノクトに とどけよう(quests.ts reportNpc)' },
   // 「◯◯と はなそう」は v11第2章の offerLabel(ロカとの であい)。未受注の提案なので talk と同じ
   { cat: 'talk', re: /はなしを聞こう|話しかけよう|と はなそう/, src: 'ObjectiveSystem: ◯◯の はなしを聞こう / quests.ts offerLabel: ロカと はなそう' },
   // v11第2章 ふねの しゅうり代をためる段階。ためかたを絞らないので ANYTHING_OK_OBJ に入れてある
@@ -93,10 +96,19 @@ export const OBJ_RULES = [
   // 章のあいだの橋わたし(chapterBridge: ふねが なおってから 初上陸までの区間)。
   // どちらも ObjectiveSystem の sailObjective が作るので、画面に出る文はこの2つだけ
   { cat: 'sail', re: /ふねで .*(もどろう|わたろう)/, src: 'ObjectiveSystem sailObjective: ふねで しまへ もどろう / ふねで よるの入り江へ わたろう' },
+  // v20第3章 島 ⇄ いちば島 のまたぎ(withAreaTravel の trainObjective)と、
+  // 章のあいだの橋わたし(chapterBridge: えきが できてから 初上陸までの区間)。
+  // のりものへ向かう段階、という意味は ふねと まったく同じなので sail にそろえる
+  { cat: 'sail', re: /でんしゃ.*(のろう|かえろう)/, src: 'ObjectiveSystem trainObjective: よるの えきから でんしゃに のろう / でんしゃで しまへ かえろう' },
   // v11第2章 とうだいに レンズを つける段階
   { cat: 'lighthouse', re: /とうだいに .*つけよう/, src: 'ObjectiveSystem: とうだいに レンズを つけよう' },
   { cat: 'craft', re: /ざいりょうが そろった|Cで .+を作ろう/, src: 'ObjectiveSystem: ざいりょうが そろったよ! <kbd>C</kbd>で ◯◯を作ろう' },
+  // v20第3章 くみあわせで りょうりを1つ つくる段階(q3_taste)
+  { cat: 'craft', re: /くみあわせ.*つくろう/, src: 'ObjectiveSystem: <kbd>C</kbd>の「くみあわせ」で りょうりを 1つ つくろう' },
   { cat: 'place', re: /島に .*置こう|島に置こう|置こう/, src: 'ObjectiveSystem: ランタンを 島に置こう(もちもの→おく) / 光る家具を 島に置こう' },
+  // v20第3章 キッチンだいを 家の中に おく段階。既存の place は漢字の「置こう」だけを見るので、
+  // かな書きの「おこう」を あとから 足す(既存の式は 1文字も変えない)
+  { cat: 'place', re: /家の中に おこう/, src: 'ObjectiveSystem: キッチンだいを 家の中に おこう(もちもの→おく)' },
   { cat: 'fish', re: /つろう|つりあげよう/, src: 'ObjectiveSystem: 桟橋で サカナをつろう / quests.ts: サカナを 1匹 つろう' },
   // 素材別。「ルミナこうせき」は「いし」を含まないので順序の取り違えは起きないが、明示的に先に見る
   { cat: 'gatherOre', re: /こうせき.*(ほろう|あつめよう)/, src: 'ObjectiveSystem: 高台で こうせきをほろう / ルミナこうせきを あつめよう(ITEMS.ore.name)' },
@@ -142,6 +154,16 @@ export const HINT_RULES = [
     cat: 'sail', re: /ふねに のる|ふねで しまへ かえる/,
     src: 'InteractionRouting: <kbd>E</kbd>ふねに のる / <kbd>E</kbd>ふねで しまへ かえる',
   },
+  // v20第3章 「いつ来るか」だけを言う 表示だけの案内(押しても何も起きない)。
+  // のる/かえる より先に見る(「でんしゃに のる」は下の enter が拾う)
+  {
+    cat: 'blocked', re: /でんしゃ.*(くるよ|行ってしまった|9じごろ)/,
+    src: 'TrainRideSystem stationPrompt: でんしゃは こんやの 9じごろ くるよ / きょうの でんしゃは 行ってしまった。また つぎの よるに / つぎの でんしゃは あしたの よる 9じごろ',
+  },
+  // v20第3章 でんしゃの のりおり。自宅の出入りと同じ「常時許可」カテゴリにそろえる
+  // (島へ帰る唯一の手段なので、どの誘導中でも 矛盾にしない)
+  { cat: 'enter', re: /でんしゃに のる/, src: 'InteractionRouting: <kbd>E</kbd>でんしゃに のる' },
+  { cat: 'exit', re: /でんしゃで しまへ かえる/, src: 'InteractionRouting: <kbd>E</kbd>でんしゃで しまへ かえる' },
   // v11第2章 とうだいに レンズを つける(点灯の見せ場がはじまる)
   {
     cat: 'lighthouse', re: /とうだいに .*つける/,
@@ -149,6 +171,8 @@ export const HINT_RULES = [
   },
   { cat: 'fish', re: /つりをする|つりあげる|まってる/, src: 'InteractionRouting: <kbd>E</kbd>つりをする / FishingSystem: まってる… <kbd>Esc</kbd>やめる / !! <kbd>E</kbd>つりあげる' },
   { cat: 'shop', re: /お店をみる|うる・かう/, src: 'InteractionRouting: <kbd>E</kbd>お店をみる(うる・かう)' },
+  // v20第3章 テンの店(週がわり)。ツムギ工房と同じ shop = 誘導中に出たら 矛盾とみなす
+  { cat: 'shop', re: /テンの店を みる|しゅうがわり/, src: 'InteractionRouting: <kbd>E</kbd>テンの店を みる(しゅうがわり)' },
   { cat: 'sleep', re: /ねる[((]あさまで/, src: 'InteractionRouting: <kbd>E</kbd>ねる(あさまで)' },
   // v7 マイホーム: 自宅の出入り。sleepと同じ「常時許可」カテゴリ(下の isSemanticMatch を参照)
   { cat: 'enter', re: /家に はいる/, src: 'InteractionRouting: <kbd>E</kbd>家に はいる' },

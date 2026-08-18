@@ -525,3 +525,73 @@ describe('uxVerdictOf / isShopPanelTitle', () => {
     expect(isShopPanelTitle('')).toBe(false);
   });
 });
+
+describe('v20 第3章「よるの えき」の新しい語い', () => {
+  it('でんしゃの のりおりは 常時許可(enter / exit)', () => {
+    expect(categorizeHint('<kbd>E</kbd>でんしゃに のる')).toBe('enter');
+    expect(categorizeHint('<kbd>E</kbd>でんしゃで しまへ かえる')).toBe('exit');
+    // ふねと同じく、どの目的の最中でも 矛盾にしない(乗りものを 隠すと 詰む)
+    for (const obj of ['gatherLightshell', 'report', 'craft', 'place', 'gatherWood']) {
+      expect(isSemanticMatch(obj, 'enter'), obj).toBe(true);
+      expect(isSemanticMatch(obj, 'exit'), obj).toBe(true);
+    }
+  });
+
+  it('「いつ来るか」の案内は blocked(押しても何も起きない表示)', () => {
+    for (const h of [
+      'でんしゃは こんやの 9じごろ くるよ',
+      'きょうの でんしゃは 行ってしまった。また つぎの よるに',
+      'つぎの でんしゃは あしたの よる 9じごろ',
+    ]) {
+      expect(categorizeHint(h), h).toBe('blocked');
+      expect(isSemanticMatch('gatherWood', categorizeHint(h))).toBe(true);
+    }
+  });
+
+  it('テンの店は shop(誘導中に出たら 矛盾とみなす)', () => {
+    expect(categorizeHint('<kbd>E</kbd>テンの店を みる(しゅうがわり)')).toBe('shop');
+    expect(isSemanticMatch('gatherWood', 'shop')).toBe(false);
+    expect(isSemanticMatch('free', 'shop')).toBe(true);
+  });
+
+  it('でんしゃへの またぎ案内は sail(ふねと同じ「のりばへ向かう段階」)', () => {
+    expect(categorizeObjective('よるの えきから でんしゃに のろう')).toBe('sail');
+    expect(categorizeObjective('でんしゃで しまへ かえろう')).toBe('sail');
+    // ふねの2つは これまでどおり
+    expect(categorizeObjective('ふねで しまへ もどろう')).toBe('sail');
+    expect(categorizeObjective('ふねで よるの入り江へ わたろう')).toBe('sail');
+  });
+
+  it('おつかい・りょうり・キッチンの置きは それぞれ report / craft / place', () => {
+    expect(categorizeObjective('ノクトに とどけよう')).toBe('report');
+    expect(categorizeObjective('<kbd>C</kbd>の「くみあわせ」で りょうりを 1つ つくろう')).toBe('craft');
+    expect(categorizeObjective('キッチンだいを 家の中に おこう(もちもの→おく)')).toBe('place');
+  });
+
+  it('第3章の文言は 1つも unknown にならない', () => {
+    const objs = [
+      'もくざいを あつめよう', 'いしを あつめよう',
+      'こうじ代の 1000ルミナを ためよう(ツムギ工房で もちものを うろう)',
+      'よるの えきから でんしゃに のろう', 'でんしゃで しまへ かえろう',
+      'ひかりの貝を あつめよう', 'ノクトに とどけよう',
+      'テンと はなそう', 'テンに ほうこくしよう',
+    ];
+    for (const o of objs) expect(categorizeObjective(o), o).not.toBe('unknown');
+    const hints = [
+      '<kbd>E</kbd>でんしゃに のる', '<kbd>E</kbd>でんしゃで しまへ かえる',
+      '<kbd>E</kbd>テンの店を みる(しゅうがわり)', '<kbd>E</kbd>テンと はなす',
+      'でんしゃは こんやの 9じごろ くるよ', 'つぎの でんしゃは あしたの よる 9じごろ',
+      '<kbd>E</kbd>ひかりの貝をひろう',
+    ];
+    for (const h of hints) expect(categorizeHint(h), h).not.toBe('unknown');
+  });
+
+  it('v4コーパスの判定は 1件も 変わらない(新ルールが 古い判定を 横取りしない)', () => {
+    expect(categorizeHint('E木をきる')).toBe('gatherWood');
+    expect(categorizeHint('Eお店をみる(うる・かう)')).toBe('shop');
+    expect(categorizeHint('Eふねに のる')).toBe('sail');
+    expect(categorizeHint('Eふねで しまへ かえる')).toBe('sail');
+    expect(categorizeObjective('ツムギに ほうこくしよう', 'できた!')).toBe('report');
+    expect(categorizeObjective('しゅうり代の 500ルミナを ためよう(ツムギ工房で もちものを うろう)')).toBe('money');
+  });
+});

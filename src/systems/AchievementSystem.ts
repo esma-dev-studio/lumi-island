@@ -8,6 +8,7 @@
 import type { GameState } from '../game/GameState';
 import { BUG_IDS } from './BugSystem';
 import { NIGHT_TRAIN_KEY } from './NightTrainSystem';
+import { MARKET_VISIT_KEY } from './TrainRideSystem';
 import { FESTIVAL_FLY_KEY } from './FestivalSystem';
 
 /** 達成の記録に使う stats のキーの接頭辞 */
@@ -274,6 +275,14 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     id: 'a_festival', name: 'はじめての ほしまつり',
     desc: '7日ごとの ゆうがた、さんばしの まつりで ほしランタンを とばそう',
     target: 1, icon: 'festival', progress: (s) => statCount(s, FESTIVAL_FLY_KEY),
+  },
+  // ---- v20第3章 いちば島 ----
+  // えきが できて、2日に1度の でんしゃに のって はじめて 行ける場所。
+  // 未達成欄の desc は「どこへ・どうやって」だけを 言う(市場の中身は 書かない)
+  {
+    id: 'a_market_first', name: 'はじめての いちば島',
+    desc: 'よるの えきから でんしゃに のって、うみの むこうの いちばへ 行ってみよう',
+    target: 1, icon: 'train', progress: (s) => statCount(s, MARKET_VISIT_KEY),
   },
   {
     id: 'a_all_quests', name: 'おねがいマスター', desc: '島のみんなの おねがいを 5つ かなえよう',

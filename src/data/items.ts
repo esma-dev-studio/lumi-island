@@ -51,7 +51,14 @@ export type ItemId =
   | 'wall_rose' | 'wall_night'
   | 'floor_wood' | 'floor_tile' | 'floor_rug'
   // v14 じっせきの ごほうびでしか 手に入らない3点(お店・レシピ・くみあわせに 出さない)
-  | 'wall_bottle' | 'f_starlantern_gold' | 'f_lighthouse_lantern_night';
+  | 'wall_bottle' | 'f_starlantern_gold' | 'f_lighthouse_lantern_night'
+  // ---- v20 第3章「いちば島」 ----
+  // よその島の素材2種(テンの店でしか買えない)と、あずかりもの・まきもの
+  | 'aroma_leaf' | 'sweet_honey' | 'gift_parcel' | 'scroll'
+  // テンの店の 限定家具3種と、第3章で おぼえる家具2種
+  | 'f_market_lantern' | 'f_travel_trunk' | 'f_station_clock' | 'f_aroma_lamp' | 'f_far_map'
+  // テンの店の 限定かべがみ・ゆかいた
+  | 'wall_lantern' | 'wall_market' | 'floor_stone' | 'floor_mat';
 
 export type ToolId = 'axe' | 'pickaxe' | 'rod' | 'sickle' | 'net' | 'shovel';
 
@@ -232,6 +239,52 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     id: 'f_lighthouse_lantern_night', name: 'よるのとうだい', sell: 0, kind: 'furniture', glow: true, keyItem: true,
     desc: 'こんいろの 小さな とうだい。夜は てっぺんが あお白く ともる。じっせきの ごほうびでしか 手に入らない',
   },
+  // =========================================================================
+  // v20 第3章「いちば島」。入手経路は **テンの店(週がわり)だけ** ——
+  // SHOP_STOCK にも RECIPES の材料にも 出さない(ここでしか買えないことが 毎週かよう理由)。
+  // =========================================================================
+  aroma_leaf: {
+    id: 'aroma_leaf', name: 'かおりのは', sell: 24, kind: 'material',
+    desc: 'よその島の は。もむと あまい かおりが する。テンの店でだけ 買える',
+  },
+  sweet_honey: {
+    id: 'sweet_honey', name: 'あまいみつ', sell: 30, kind: 'material',
+    desc: 'よその島の 花から とれた みつ。びんの中で とろりと ひかる。テンの店でだけ 買える',
+  },
+  // 第3章の おつかいで あずかる もの。うる・あげるが できない(なくすと 話が すすまない)
+  gift_parcel: {
+    id: 'gift_parcel', name: 'あずかりもの', sell: 0, kind: 'material', keyItem: true,
+    desc: 'テンから あずかった、ぬのに つつまれた 小さな はこ。だれかに とどける',
+  },
+  // まきもの: 買った その場で ひらくので、もちものには 入らない(値だんは MarketStock が持つ)
+  scroll: {
+    id: 'scroll', name: 'まきもの', sell: 0, kind: 'material', keyItem: true,
+    desc: 'くみあわせの ひみつが 1つ かいてある まきもの。ひらくと 作りかたが わかる',
+  },
+  f_market_lantern: {
+    id: 'f_market_lantern', name: 'いちばのちょうちん', sell: 58, kind: 'furniture', glow: true,
+    desc: 'いちば島の 通りに ならぶ ちょうちん。夜は だいだい色に ぽっと ともる',
+  },
+  f_travel_trunk: {
+    id: 'f_travel_trunk', name: 'たびのトランク', sell: 62, kind: 'furniture',
+    desc: '革の帯を まいた 旅の かばん。ふたに たくさんの ふだが はってある',
+  },
+  f_station_clock: {
+    id: 'f_station_clock', name: 'えきのとけい', sell: 70, kind: 'furniture',
+    desc: 'まるい 文字ばんの おきどけい。よるの えきの 時計と おなじ かたち',
+  },
+  f_aroma_lamp: {
+    id: 'f_aroma_lamp', name: 'かおりのランプ', sell: 66, kind: 'furniture', glow: true,
+    desc: 'テンが おしえてくれた、かおりのはを たく ランプ。夜は みどりに ゆらめく',
+  },
+  f_far_map: {
+    id: 'f_far_map', name: 'よそじまのちず', sell: 84, kind: 'furniture',
+    desc: 'テンが なかよしの しるしに くれた、まだ 行ったことのない 島々の ちず',
+  },
+  wall_lantern: { id: 'wall_lantern', name: 'あかりかべ', sell: 40, kind: 'decor', desc: 'こい あめ色の地に ちょうちんの もようが ならぶ かべがみ' },
+  wall_market: { id: 'wall_market', name: 'いちばかべ', sell: 40, kind: 'decor', desc: 'いちばの のれんのような、たてじまと ふだの もようの かべがみ' },
+  floor_stone: { id: 'floor_stone', name: 'いしのゆか', sell: 40, kind: 'decor', desc: 'いちば通りの しきいしを うつした、まるい石の ゆかいた' },
+  floor_mat: { id: 'floor_mat', name: 'ゴザのゆか', sell: 40, kind: 'decor', desc: 'かわいた 草を あんだ ゴザの ゆか。ひんやり すずしい' },
 };
 
 // ---------------------------------------------------------------------------
@@ -403,7 +456,10 @@ export const DECOR_SLOT = {
   wall_rose: 'wall', wall_night: 'wall',
   // v14 じっせきの ごほうび限定(お店にもクラフトにも出ない)
   wall_bottle: 'wall',
+  // v20 テンの店の 週がわり限定(いちば島でしか買えない)
+  wall_lantern: 'wall', wall_market: 'wall',
   floor_wood: 'floor', floor_tile: 'floor', floor_rug: 'floor',
+  floor_stone: 'floor', floor_mat: 'floor',
 } as const satisfies Partial<Record<ItemId, 'wall' | 'floor'>>;
 
 export type DecorId = keyof typeof DECOR_SLOT;
@@ -533,6 +589,13 @@ export const RECIPES: RecipeDef[] = [
   { id: 'r_starmobile', name: 'ほしのモビール', out: 'f_starmobile', outKind: 'item', cost: { starweed: 2, fiber: 1 } },
   { id: 'r_shellwind', name: 'かいのふうりん', out: 'f_shellwind', outKind: 'item', cost: { shell: 2, twig: 1 } },
   { id: 'r_terrarium', name: 'こけのびん', out: 'f_terrarium', outKind: 'item', cost: { moss: 2, glassfloat: 1 } },
+  // ---- v20 第3章 テンが おしえてくれる2種 ----
+  // どちらも INITIAL_RECIPES にも RECIPE_DISCOVERY にも COMBOS にも入れない。
+  // かおりのランプ = 依頼 q3_taste の お礼 / よそじまのちず = なかよし度5の お礼。
+  // 材料に「よその島の素材」を1つ入れてあるので、作るには いちば島へ行く必要がある
+  // (= 週がわりの店に かよう理由が レシピの側からも できる)。
+  { id: 'r_aroma_lamp', name: 'かおりのランプ', out: 'f_aroma_lamp', outKind: 'item', cost: { aroma_leaf: 2, wood: 1 } },
+  { id: 'r_far_map', name: 'よそじまのちず', out: 'f_far_map', outKind: 'item', cost: { aroma_leaf: 1, sweet_honey: 1, wood: 2 } },
 ];
 
 // 最初から知っているレシピ。

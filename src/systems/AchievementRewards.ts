@@ -66,6 +66,8 @@ export const ACHIEVEMENT_REWARDS: Record<string, AchievementReward> = {
   a_night_train: { kind: 'item', item: 'f_lighthouse_lantern_night', count: 1 },
   // v16 ほしまつり。7日めまで あそびつづけた子への ごほうび(星のかけらの実績と同じ格)
   a_festival: { kind: 'lumina', amount: 100 },
+  // v20 いちば島は「お金を つかう場所」なので、ごほうびも ルミナで そろえる
+  a_market_first: { kind: 'lumina', amount: 120 },
   a_all_quests: { kind: 'lumina', amount: 200 },
 };
 

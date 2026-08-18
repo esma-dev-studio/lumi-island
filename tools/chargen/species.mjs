@@ -7,7 +7,7 @@ import {
 } from './features.mjs';
 import {
   buildTunic, buildSleeves, buildOveralls, buildVest, buildApron, buildBackpack, buildTowel, buildGlasses,
-  buildScarf,
+  buildScarf, buildFuroshiki,
 } from './outfits.mjs';
 import { buildClips } from './anim.mjs';
 import { mergeMeshes, validateMesh, meshStats, weldSeamNormals } from './geo.mjs';
@@ -202,6 +202,54 @@ export function makeSpecs() {
     };
   }
 
+  // ---------- テン(ニホンテン・島をめぐる行商人) ----------
+  // ひと目で「イタチのなかまの行商人」と分かる しるしを3つ重ねる:
+  //   1) 細くとがった鼻先(muzzle.kind:'weasel')… カワウソの 幅びろマズルと はっきり分ける
+  //   2) 長くて太い尻尾(tailMode:'thick' + len 0.28)… テンの尾は 体長の半分ほどある
+  //   3) 大きな背負い風呂敷(buildFuroshiki)… 包み+むすび目のかど+たすきがけ で 行商人と読ませる
+  // 毛色は 背と尾が 黄かっ色、顔の下半分〜のど〜おなかが クリーム色(テンの見分けどころ)。
+  {
+    const prop = {
+      ...defaultProportions(), height: 0.95, legRatio: 0.32, torsoRatio: 0.288, headRatio: 0.362,
+      shoulderW: 0.112, hipsW: 0.058, armOut: 22, upperArm: 0.085, foreArm: 0.075,
+      tail: { y: 0.325, z: -0.09, len: 0.2, droop: 0.045 },
+    };
+    const hb = headBounds(prop);
+    const H = prop.height;
+    specs.ten = {
+      id: 'ten', speciesId: 'ten', prop,
+      head: {
+        rx: 0.156, rz: 0.182, ...hb, cheek: 0.05, flat: 0.028, jawForward: 0.016,
+        // 頭は 横にせまく 前後に長い。頭頂は まるいままだが 下あご側を すぼめすぎない
+        profile: [[0, 0.44], [0.12, 0.7], [0.3, 0.9], [0.5, 1.0], [0.7, 0.99], [0.86, 0.85], [0.96, 0.48], [1, 0.13]],
+      },
+      eye: { thetaDeg: 26, y: hb.yBottom + (hb.yTop - hb.yBottom) * 0.52, w: 0.04, h: 0.046, out: 0.0032 },
+      face: { mouthT: 0.3 },
+      neckR: 0.048,
+      body: {
+        yBottom: prop.legRatio * H - 0.04, yTop: prop.legRatio * H + prop.torsoRatio * H,
+        hipsR: 0.098, waistR: 0.09, chestR: 0.095, shoulderR: 0.078, belly: 0.22, sx: 1.08, sz: 0.93,
+      },
+      arm: { thick: 0.95 },
+      leg: { thick: 0.95, bootFlare: 1.06, bootLen: 0.058 },
+      // 丸耳: ミナモより 大きく(r)・立てる(phiを上へ / tiltを浅く)
+      ears: { thetaDeg: 96, phiDeg: 50, r: 0.044, tilt: 46, scale: 1.0 },
+      muzzle: { kind: 'weasel', reach: 1.18 }, // 鼻先の のび。1.0だと 頭が大きいぶん 弱く見える
+      tailSpec: { len: 0.28, r: 0.045, sway: 0.16, bushy: true }, // 長くて ふさふさの尾。swayで正面からも のぞく
+      outfit: { kind: 'tunic', hemY: 0.31, topY: 0.56, flare: 0.018 }, // 短いはおり
+      // 背負い風呂敷: 体の はばより 外へ はみ出し、上は 肩より高く(行商人のシルエット)
+      furoshiki: { r: 0.15, y: 0.492, z: -0.17, sz: 0.8, sx: 1.18, earLen: 0.09 },
+      clipOpts: { earMode: 'perk', tailMode: 'thick' },
+      palette: {
+        fur: '#ab7b4a', furLight: '#f0e2c4', under: '#f0e2c4', tail: '#8a5f38',
+        nose: '#3a2e26', eye: '#3a2e24', earInner: '#d9a894',
+        // はおりは ミナモの青灰(#5d7382)と まぎれないよう、ぐっと こい藍にする
+        cloth1: '#3f5670', cloth2: '#33465c', accent: '#c9a06b', bag: '#7a8f6a',
+        hair: '#8a5f38',
+      },
+    };
+  }
+
   return specs;
 }
 
@@ -252,6 +300,14 @@ export function buildCharacter(id) {
       parts.push(...buildSleeves(rig, spec, { len: 0.5, mult: 1.42, cuff: 1.18 }));
       break;
     }
+    case 'ten': {
+      const ears = buildRoundEars(rig, spec);
+      parts.push(ears.earL, ears.earR);
+      parts.push(buildTailThick(rig, { tail: spec.tailSpec }));
+      parts.push(...buildTunic(rig, spec));
+      parts.push(...buildFuroshiki(rig, spec));
+      break;
+    }
     case 'roka': {
       parts.push(buildBeak(rig, spec));
       parts.push(...buildHeadTuft(rig, spec));
@@ -266,7 +322,7 @@ export function buildCharacter(id) {
   let mesh = mergeMeshes(parts);
   // ロカだけ: UVの継ぎ目の法線をそろえる(背中のまん中に細い光の線が出るため)。
   // 既存4体は見た目を変えないため対象外(呼ぶとGLBが作り直しになる)
-  if (spec.speciesId === 'roka') weldSeamNormals(mesh);
+  if (spec.speciesId === 'roka' || spec.speciesId === 'ten') weldSeamNormals(mesh);
   const offset = mesh.pos.length;
   mesh = mergeMeshes([mesh, ...eyeParts.map((e) => e.mesh)]);
   const blinkDelta = new Float32Array(mesh.pos.length);

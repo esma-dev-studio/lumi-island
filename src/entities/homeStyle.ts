@@ -324,10 +324,185 @@ function drawWallBottle(c: Ctx): void {
   }
 }
 
+// ===========================================================================
+// v20 第3章 テンの店の 週がわり限定(いちば島でしか買えない かべ2・ゆか2)
+// ===========================================================================
+
+/**
+ * かべがみ「あかりかべ」。こい あめ色の地に、いちばの ちょうちんが たてに ならぶ。
+ * ちょうちんは 上下に はみ出したぶんを 反対がわにも描いて タイルをつなげる。
+ */
+function drawWallLantern(c: Ctx): void {
+  c.fillStyle = '#6f5236';
+  c.fillRect(0, 0, TEX, TEX);
+  // 布のたて糸(こい木の地に 織り目)
+  for (let i = 0; i < 30; i++) {
+    c.fillStyle = rnd(i * 7 + 5) > 0.5 ? 'rgba(140,106,72,0.4)' : 'rgba(74,54,36,0.4)';
+    c.fillRect(rnd(i * 7 + 9) * TEX, 0, M(0.014 + rnd(i * 7 + 11) * 0.02), TEX);
+  }
+  // ちょうちん(直径10cm・33cm間かくの ちどり)。ほそい ひもで つるす
+  const pitch = TEX / 3;
+  for (let gy = 0; gy < 3; gy++) {
+    for (let gx = 0; gx < 3; gx++) {
+      const cx = gx * pitch + (gy % 2 ? pitch * 0.5 : 0) + pitch * 0.25;
+      const cy = gy * pitch + pitch * 0.4;
+      for (const [ox, oy] of [[0, 0], [TEX, 0], [-TEX, 0], [0, TEX], [0, -TEX]]) {
+        // つるす ひも
+        c.strokeStyle = 'rgba(58,42,28,0.8)';
+        c.lineWidth = M(0.006);
+        c.beginPath();
+        c.moveTo(cx + ox, cy + oy - M(0.11));
+        c.lineTo(cx + ox, cy + oy - M(0.055));
+        c.stroke();
+        // 紙のたま(たてに つぶした まる)
+        c.beginPath();
+        c.ellipse(cx + ox, cy + oy, M(0.05), M(0.058), 0, 0, Math.PI * 2);
+        c.fillStyle = 'rgba(242,217,160,0.94)';
+        c.fill();
+        c.strokeStyle = 'rgba(168,124,61,0.75)';
+        c.lineWidth = M(0.006);
+        c.stroke();
+        // たが(よこの ほそい線を2本)
+        for (const dy of [-0.02, 0.02]) {
+          c.beginPath();
+          c.moveTo(cx + ox - M(0.045), cy + oy + M(dy));
+          c.lineTo(cx + ox + M(0.045), cy + oy + M(dy));
+          c.stroke();
+        }
+      }
+    }
+  }
+  for (let i = 0; i < 1200; i++) {
+    c.fillStyle = rnd(i * 3 + 29) > 0.5 ? 'rgba(200,164,116,0.28)' : 'rgba(52,38,24,0.3)';
+    c.fillRect(rnd(i * 3 + 31) * TEX, rnd(i * 3 + 37) * TEX, M(0.008), M(0.008));
+  }
+}
+
+/**
+ * かべがみ「いちばかべ」。のれんのような たてじまに、木のふだ(値ふだ)を ちらす。
+ * 帯の色は 屋台の ひさし(entities/market.ts の AWNING)から とってある。
+ */
+function drawWallMarket(c: Ctx): void {
+  c.fillStyle = '#e0d3ba';
+  c.fillRect(0, 0, TEX, TEX);
+  // のれんの たてじま(20cmピッチ。2色を交ごに)
+  const pitch = TEX / 5;
+  const bands = ['#4f6a82', '#a87c3d', '#5f7a5c', '#b0553f', '#3f5568'];
+  for (let i = 0; i < 5; i++) {
+    c.fillStyle = bands[i];
+    c.globalAlpha = 0.62;
+    c.fillRect(i * pitch + M(0.03), 0, M(0.075), TEX);
+    c.globalAlpha = 1;
+    c.fillStyle = 'rgba(255,250,238,0.5)';
+    c.fillRect(i * pitch + M(0.125), 0, M(0.02), TEX);
+  }
+  // 木のふだ(小さな長方形。上下に はみ出したぶんも 反対がわへ)
+  for (let i = 0; i < 7; i++) {
+    const x = rnd(i * 13 + 3) * TEX;
+    const y = rnd(i * 13 + 7) * TEX;
+    const w = M(0.075);
+    const h = M(0.045);
+    for (const [ox, oy] of [[0, 0], [TEX, 0], [-TEX, 0], [0, TEX], [0, -TEX]]) {
+      c.fillStyle = 'rgba(196,158,110,0.95)';
+      c.fillRect(x + ox, y + oy, w, h);
+      c.strokeStyle = 'rgba(112,82,52,0.8)';
+      c.lineWidth = M(0.005);
+      c.strokeRect(x + ox, y + oy, w, h);
+      c.strokeStyle = 'rgba(112,82,52,0.55)';
+      c.beginPath();
+      c.moveTo(x + ox + M(0.012), y + oy + h * 0.55);
+      c.lineTo(x + ox + w - M(0.012), y + oy + h * 0.55);
+      c.stroke();
+    }
+  }
+  for (let i = 0; i < 1200; i++) {
+    c.fillStyle = rnd(i * 5 + 3) > 0.5 ? 'rgba(255,250,238,0.4)' : 'rgba(168,146,112,0.26)';
+    c.fillRect(rnd(i * 5 + 5) * TEX, rnd(i * 5 + 7) * TEX, M(0.008), M(0.008));
+  }
+}
+
+/** ゆかいた「いしのゆか」。いちば通りの しきいしを うつした、まるい石だたみ */
+function drawFloorStone(c: Ctx): void {
+  c.fillStyle = '#6a6259';
+  c.fillRect(0, 0, TEX, TEX); // めじ(土)
+  // まるい石を ちどりに ならべる(1辺25cmの ます目に 1こ)
+  const pitch = TEX / 4;
+  for (let gy = 0; gy < 4; gy++) {
+    for (let gx = 0; gx < 4; gx++) {
+      const k = gy * 4 + gx;
+      const cx = gx * pitch + (gy % 2 ? pitch * 0.5 : 0) + pitch * 0.5;
+      const cy = gy * pitch + pitch * 0.5;
+      const rx = M(0.1 + rnd(k * 3 + 1) * 0.018);
+      const ry = M(0.088 + rnd(k * 3 + 2) * 0.018);
+      const rot = (rnd(k * 3 + 3) - 0.5) * 0.8;
+      const g = rnd(k * 3 + 5);
+      for (const [ox, oy] of [[0, 0], [TEX, 0], [-TEX, 0], [0, TEX], [0, -TEX], [TEX, TEX], [-TEX, -TEX], [TEX, -TEX], [-TEX, TEX]]) {
+        c.beginPath();
+        c.ellipse(cx + ox, cy + oy, rx, ry, rot, 0, Math.PI * 2);
+        c.fillStyle = g > 0.66 ? '#a29a8c' : g > 0.33 ? '#918a7e' : '#847d72';
+        c.fill();
+        c.strokeStyle = 'rgba(78,72,64,0.75)';
+        c.lineWidth = M(0.008);
+        c.stroke();
+      }
+    }
+  }
+  // 石の表面の ざらつき
+  for (let i = 0; i < 1800; i++) {
+    c.fillStyle = rnd(i * 3 + 11) > 0.5 ? 'rgba(214,208,196,0.3)' : 'rgba(88,82,74,0.26)';
+    c.fillRect(rnd(i * 3 + 13) * TEX, rnd(i * 3 + 17) * TEX, M(0.008), M(0.008));
+  }
+}
+
+/** ゆかいた「ゴザのゆか」。かわいた草を あんだ ござ目(たてよこの あみ) */
+function drawFloorMat(c: Ctx): void {
+  c.fillStyle = '#c9b98c';
+  c.fillRect(0, 0, TEX, TEX);
+  // あみ目: 8cm角の ます目で、たて糸・よこ糸を 交ごに 上に出す
+  const cell = TEX / 12;
+  for (let gy = 0; gy < 12; gy++) {
+    for (let gx = 0; gx < 12; gx++) {
+      const x = gx * cell;
+      const y = gy * cell;
+      const over = (gx + gy) % 2 === 0;
+      const tone = rnd(gy * 13 + gx * 7);
+      c.fillStyle = over
+        ? tone > 0.5 ? '#d8c99c' : '#cdbd8f'
+        : tone > 0.5 ? '#b8a87c' : '#ae9e73';
+      // 糸のたばは かどを すこし あけて 織り目に見せる
+      if (over) c.fillRect(x + M(0.006), y, cell - M(0.012), cell);
+      else c.fillRect(x, y + M(0.006), cell, cell - M(0.012));
+      // 糸の すじ(3本)
+      c.strokeStyle = 'rgba(140,124,86,0.35)';
+      c.lineWidth = M(0.004);
+      for (let k = 1; k <= 3; k++) {
+        c.beginPath();
+        if (over) {
+          c.moveTo(x + (cell * k) / 4, y);
+          c.lineTo(x + (cell * k) / 4, y + cell);
+        } else {
+          c.moveTo(x, y + (cell * k) / 4);
+          c.lineTo(x + cell, y + (cell * k) / 4);
+        }
+        c.stroke();
+      }
+    }
+  }
+  // かわいた草の むら
+  for (let i = 0; i < 1400; i++) {
+    c.fillStyle = rnd(i * 5 + 23) > 0.5 ? 'rgba(240,226,190,0.34)' : 'rgba(150,132,92,0.26)';
+    c.fillRect(rnd(i * 5 + 27) * TEX, rnd(i * 5 + 29) * TEX, M(0.01), M(0.006));
+  }
+}
+
 const PAINTERS: Record<DecorId, (c: Ctx) => void> = {
   wall_cream: drawWallCream,
   wall_sky: drawWallSky,
   wall_bottle: drawWallBottle,
+  wall_lantern: drawWallLantern,
+  wall_market: drawWallMarket,
+  floor_stone: drawFloorStone,
+  floor_mat: drawFloorMat,
   wall_leaf: drawWallLeaf,
   wall_rose: drawWallRose,
   wall_night: drawWallNight,

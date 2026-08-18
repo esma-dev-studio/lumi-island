@@ -11,6 +11,8 @@ import {
   npcHomeSpawnWorld, npcHomeVisitStat, type NpcHomeDef,
 } from './NpcInteriors';
 import { COVE_DOOR, COVE_RETURN, COVE_SPAWN, ISLAND_BOAT_POINT } from './CoveArea';
+import { MARKET_SPAWN, MARKET_TRAIN_POINT } from '../entities/marketTerrain';
+import { STATION_POINT, STATION_SPAWN } from '../entities/station';
 import { WorldMarkerController, type MarkerNpc } from './WorldMarkerController';
 import { QuestDialogueController } from './QuestDialogueController';
 import { DialogueCameraPlanner, leanToward } from './DialogueCameraPlanner';
@@ -29,7 +31,9 @@ import { InteractionSystem } from '../systems/InteractionSystem';
 import { FishingSystem } from '../systems/FishingSystem';
 import { PlacementSystem, type PlacedRuntime } from '../systems/PlacementSystem';
 import { NPCSystem, visitPraiseFacts, visitProbeOf } from '../systems/NPCSystem';
-import { NPC_BY_ID, greetingTier, homeGiftFor, homeTalkLine, visitPraiseLines } from '../data/npcs';
+import {
+  NPC_BY_ID, greetingTier, homeGiftFor, homeTalkLine, visitPraiseLines, type NpcArea,
+} from '../data/npcs';
 import { TutorialSystem } from '../systems/TutorialSystem';
 import {
   LIGHTHOUSE_LIT_KEY, evaluate as evaluateAchievements, statCount,
@@ -54,13 +58,18 @@ import {
   isFestivalTime, takeLantern, validateFestivalData,
 } from '../systems/FestivalSystem';
 import {
-  COVE_LIGHTHOUSE_POI, COVE_RETURN_POI, ISLAND_BOAT_POI, currentObjective, withAreaTravel, type Objective,
+  COVE_LIGHTHOUSE_POI, COVE_RETURN_POI, ISLAND_BOAT_POI, ISLAND_STATION_POI, MARKET_STATION_POI,
+  currentObjective, withAreaTravel, type Objective,
 } from '../systems/ObjectiveSystem';
 import { completeQuest, questFor, syncQuestUnlocks } from '../systems/QuestSystem';
 import { QUEST_BY_ID } from '../data/quests';
 import { NpcAvailabilityService } from '../systems/NpcAvailabilityService';
 import { sharedWeather, type Weather } from '../systems/WeatherSystem';
 import { finishHomeExpansion, homeExpandStage, shouldFinishConstruction } from '../systems/HomeExpansion';
+import {
+  STATION_DONE_TOAST, finishStation, isStationBuilt, orderStation, shouldFinishStation,
+} from '../systems/StationBuild';
+import { FLAG_IN_MARKET, MARKET_VISIT_KEY, isTrainAtStation } from '../systems/TrainRideSystem';
 import { GARDEN_PLOTS, HARVEST_YIELD, harvestPlot, plantFlower } from '../systems/GardenSystem';
 import { Hud } from '../ui/Hud';
 import { ObjectiveHud } from '../ui/ObjectiveHud';
@@ -69,6 +78,7 @@ import { CraftUI } from '../ui/CraftUI';
 import { DisplayUI } from '../ui/DisplayUI';
 import { PaintUI } from '../ui/PaintUI';
 import { ShopUI } from '../ui/ShopUI';
+import { MarketUI } from '../ui/MarketUI';
 import { DialogueUI } from '../ui/DialogueUI';
 import { QuestLogUI } from '../ui/QuestLogUI';
 import { BulletinUI } from '../ui/BulletinUI';
@@ -143,6 +153,7 @@ export class GameScene {
   /** v12 おいてある家具に いろみずを ぬる選択パネル */
   paintUI!: PaintUI;
   shopUI!: ShopUI;
+  marketUI!: MarketUI; // v20 テンの店(週がわり)
   dialogue!: DialogueUI;
   questLog!: QuestLogUI;
   /** v15 でんごんばん(きょうの おてつだいを 読むパネル) */
@@ -164,6 +175,11 @@ export class GameScene {
    * 両方が同時に true になることはない(入り江へは島の桟橋からしか行けない)。
    */
   inCove = false;
+  /**
+   * v20 いま「いちば島」にいるか(セーブは state.flags.in_market)。
+   * indoor / inCove / npcHome とは同時に立たない——applyMarket が かならず1つにする。
+   */
+  inMarket = false;
   /**
    * v12 いま だれの家に おじゃましているか(島にいるなら null)。
    * セーブは flags.npchome_◯◯(flagsはbooleanしか通さないので1軒1キー)。
@@ -215,10 +231,21 @@ export class GameScene {
   /** 何かモーダルUIが開いているか(演出の自動開始を遅らせる判定にも使う) */
   get modalOpen(): boolean {
     return (
-      this.invUI.open || this.craftUI.open || this.shopUI.open ||
+      this.invUI.open || this.craftUI.open || this.shopUI.open || this.marketUI.open ||
       this.questLog.open || this.codexUI.open || this.dialogue.open || this.questComplete.open ||
       this.displayUI.open || this.paintUI.open || this.letterUI.open || this.bulletinUI.open
     );
+  }
+
+  /**
+   * いまいる場所(「いまやること」の またぎ判断・住人の出し分けが 読む)。
+   * 返すのは NpcArea(島・入り江・いちば島)。ObjectiveArea は これに 'any' を足したものなので、
+   * withAreaTravel には そのまま わたせる。
+   */
+  get area(): NpcArea {
+    if (this.inCove) return 'cove';
+    if (this.inMarket) return 'market';
+    return 'island';
   }
 
   async init(): Promise<void> {
@@ -253,6 +280,7 @@ export class GameScene {
     setBugFleeScale(1);
     setCookGlow(false);
     this.shopUI = new ShopUI(() => this.state);
+    this.marketUI = new MarketUI(() => this.state, () => this.island.time.day);
     this.dialogue = new DialogueUI();
     this.questLog = new QuestLogUI(() => this.state, () => this.island.time.day);
     // v15 でんごんばん(広場の板を Eで見る)と、朝の「きょうの島」カード
@@ -316,6 +344,7 @@ export class GameScene {
       onIslandLevel: (lv) => this.island.applyIslandLevel(lv),
       onCelebrate: () => this.seq.start('bloom'),
       onBoatRepaired: () => this.island.applyBoatRepaired(true),
+      onStationOrdered: () => orderStation(this.state, this.island.time.day),
     });
 
     // イベント連携
@@ -359,6 +388,10 @@ export class GameScene {
       sfx('coin');
       save(this.state);
     };
+    this.marketUI.onTrade = () => {
+      this.hud.setLumina(this.state.lumina);
+      save(this.state);
+    };
     this.inter.onHit = () => {
       this.camCtl.shake(0.09);
       this.hitstop = 0.055;
@@ -391,13 +424,24 @@ export class GameScene {
     // 室内フラグとぶつかったら室内を優先する(両方立つことはないが、壊れたセーブで海に立たせない)
     this.inCove = !this.indoor && !this.npcHome && this.state.flags.in_cove === true;
     this.island.cove.setActive(this.inCove);
-    this.npcs.setArea(this.inCove ? 'cove' : 'island'); // 別の場所の住人は出さない
+    // v20 いちば島で保存したセーブは いちば島から始める(in_market が無い旧セーブは島あつかい)
+    this.inMarket = !this.indoor && !this.npcHome && !this.inCove && this.state.flags[FLAG_IN_MARKET] === true;
+    this.island.setStationBuilt(isStationBuilt(this.state));
+    this.island.market.setActive(this.inMarket);
+    this.npcs.setArea(this.area); // 別の場所の住人は出さない
     this.island.applyBoatRepaired(this.state.flags.boat_repaired === true);
     this.island.applyLighthouseLit(this.state.flags.lighthouse_lit === true);
     // 第1章を終えているセーブ・入り江へ行ったことのあるセーブは、ここで第2章が開く
     syncQuestUnlocks(this.state);
     if (this.inCove && !this.island.cove.walkable(this.player.x, this.player.z)) {
       this.player.teleport(COVE_SPAWN.x, COVE_SPAWN.z); // 保存位置が入り江の外なら桟橋へ戻す
+    }
+    if (this.inMarket) {
+      // v20 テンは 出会ったことのあるセーブでだけ 出す(ロカと同じ)
+      if (this.state.flags.market_arrived === true) void this.npcs.addNpc('ten').then(() => this.npcs.setArea(this.area));
+      if (!this.island.market.walkable(this.player.x, this.player.z)) {
+        this.player.teleport(MARKET_SPAWN.x, MARKET_SPAWN.z); // 保存位置が外なら 駅のホームへ戻す
+      }
     }
     if (this.indoor) {
       if (!insideHomeFloor(this.player.x, this.player.z)) {
@@ -480,6 +524,9 @@ export class GameScene {
       if (o.target.id === COVE_RETURN_POI) return { x: COVE_RETURN.x, z: COVE_RETURN.z, isNpc: false };
       if (o.target.id === ISLAND_BOAT_POI) return { x: ISLAND_BOAT_POINT.x, z: ISLAND_BOAT_POINT.z, isNpc: false };
       if (o.target.id === COVE_LIGHTHOUSE_POI) return { x: COVE_DOOR.x, z: COVE_DOOR.z, isNpc: false };
+      // v20第3章 でんしゃの のりば(島がわ・いちば島がわ)
+      if (o.target.id === ISLAND_STATION_POI) return { x: STATION_POINT.x, z: STATION_POINT.z, isNpc: false };
+      if (o.target.id === MARKET_STATION_POI) return { x: MARKET_TRAIN_POINT.x, z: MARKET_TRAIN_POINT.z, isNpc: false };
       const poi = POIS[o.target.id];
       if (poi) return { x: poi.x, z: poi.z, isNpc: false };
     }
@@ -495,7 +542,7 @@ export class GameScene {
     const obj = withAreaTravel(
       this.tutorial.overrideObjective() ??
         currentObjective(this.state, nearestNpc?.def.id ?? 'tsumugi', this.npcAvail.compute()),
-      this.inCove
+      this.area
     );
     this.lastObjective = obj;
     const tp = this.targetPosOf(obj);
@@ -921,7 +968,7 @@ export class GameScene {
    */
   private updateNightTrain(): void {
     const running = this.island.nightTrainRunning;
-    const visible = running && !this.indoor && !this.inCove && this.npcHome === null;
+    const visible = running && !this.indoor && !this.inCove && !this.inMarket && this.npcHome === null;
     if (visible && !this.trainSeenThisRun) {
       this.trainSeenThisRun = true;
       if (statCount(this.state, NIGHT_TRAIN_KEY) < 1) {
@@ -1073,7 +1120,7 @@ export class GameScene {
     this.state.flags.in_cove = inCove;
     if (inCove) statAdd(this.state, COVE_VISIT_KEY); // v14 バッジ用(入り江へ わたった回数)
     this.island.cove.setActive(inCove);
-    this.npcs.setArea(inCove ? 'cove' : 'island'); // 島の人は入り江に、ロカは島に出てこない
+    this.npcs.setArea(this.area); // 島の人は入り江に、ロカは島に出てこない
     this.restoreAllOcclusionImmediately(); // 半透明のまま画がすり替わらないように
     const p = inCove ? COVE_SPAWN : ISLAND_BOAT_POINT;
     this.player.teleport(p.x, p.z);
@@ -1082,6 +1129,66 @@ export class GameScene {
     this.state.player = { x: this.player.x, z: this.player.z, rotY: this.player.rotY };
     if (inCove) void this.meetRokaOnFirstLanding();
     save(this.state);
+  }
+
+  // ---------- v20第3章 いちば島の出入り ----------
+  /**
+   * いちば島/島を入れかえる。車内の見せ場(SequenceDirector)が 暗転しきった一瞬に1回だけ呼ぶ。
+   * 位置・表示・セーブをここでまとめて そろえる(applyCove と まったく同じ考え方)。
+   */
+  applyMarket(inMarket: boolean): void {
+    this.inMarket = inMarket;
+    this.state.flags[FLAG_IN_MARKET] = inMarket;
+    if (inMarket) statAdd(this.state, MARKET_VISIT_KEY); // バッジ用(いちば島へ わたった回数)
+    this.island.market.setActive(inMarket);
+    this.npcs.setArea(this.area); // 島の人は いちば島に、テンは 島に出てこない
+    this.restoreAllOcclusionImmediately(); // 半透明のまま画がすり替わらないように
+    const p = inMarket ? MARKET_SPAWN : STATION_SPAWN;
+    this.player.teleport(p.x, p.z);
+    // いちば島では 市場のほう(+Z)、島では 浜のほう(-Z)を向いて 降りる
+    this.player.face(p.x, p.z + (inMarket ? 4 : -4));
+    this.island.dayNight.update(this.island.time.hour, this.player.x, this.player.z);
+    this.state.player = { x: this.player.x, z: this.player.z, rotY: this.player.rotY };
+    if (inMarket) void this.meetTenOnFirstLanding();
+    save(this.state);
+  }
+
+  /**
+   * はじめて いちば島へ ついた瞬間に、テンを 店へ出す(第3章のはじまり)。
+   * 2回目からは 何もしない(ロカの meetRokaOnFirstLanding と まったく同じ流儀)。
+   */
+  private async meetTenOnFirstLanding(): Promise<void> {
+    const first = this.state.flags.market_arrived !== true;
+    this.state.flags.market_arrived = true;
+    if (!this.state.npcs.ten) {
+      this.state.npcs.ten = { friendship: 0, talkedToday: false, giftedToday: false };
+    }
+    await this.npcs.addNpc('ten');
+    this.npcs.setArea(this.area);
+    if (first) save(this.state);
+  }
+
+  /**
+   * えきの こうじの完成(翌朝6時)。マイホームの拡張こうじと まったく同じ流儀で、
+   * 室内・別空間にいるあいだは 保留する(出てきた瞬間に かならず 反映される)。
+   */
+  private tryFinishStation(): void {
+    if (this.indoor || this.npcHome !== null || this.inCove || this.inMarket) return;
+    if (!shouldFinishStation(this.state, this.island.time.day, this.island.time.hour)) return;
+    if (!finishStation(this.state)) return;
+    this.island.setStationBuilt(true);
+    toast(STATION_DONE_TOAST, 'station');
+    sfx('quest');
+    save(this.state);
+  }
+
+  /**
+   * ホームに でんしゃが とまっているかを、毎フレーム 見た目へ反映する。
+   * 判定は TrainRideSystem の純関数 ひとつ(Eの案内も 同じ関数を見るので、
+   * 「見えているのに のれない」「のれるのに 見えない」が 構造的に起きない)。
+   */
+  private updateStationTrain(): void {
+    this.island.setStationTrain(isTrainAtStation(this.state, this.island.time.day, this.island.time.hour));
   }
 
   /**
@@ -1100,7 +1207,7 @@ export class GameScene {
       this.state.npcs.roka = { friendship: 0, talkedToday: false, giftedToday: false };
     }
     await this.npcs.addNpc('roka');
-    this.npcs.setArea(this.inCove ? 'cove' : 'island');
+    this.npcs.setArea(this.area);
     if (first) save(this.state);
   }
 
@@ -1284,7 +1391,7 @@ export class GameScene {
         // 別空間(室内・よるの入り江)では出さない。屋根のない入り江でも同じあつかいにして、
         // 「島の水たまりが海の上に浮かぶ」ような絵が出ないようにする
         // v12 NPCの家の中も「島の天気の見た目を出さない場所」(部屋は島の外にある)
-        const sheltered = this.indoor || this.inCove || this.npcHome !== null;
+        const sheltered = this.indoor || this.inCove || this.inMarket || this.npcHome !== null;
         updateWeatherFx(wx, this.player.x, this.player.y, this.player.z, !sheltered);
         // 虹は見おろしカメラだと画面に入らないので、出た瞬間に1回だけ「見上げるあそび」へ誘う
         if (wx.rainbow > 0.05 && !this.rainbowToldToday && !sheltered) {
@@ -1310,6 +1417,8 @@ export class GameScene {
         this.island.setFestivalDecor(isFestivalDay(this.island.time.day));
         // 家の拡張こうじ(たのんだ翌朝6時に完成。就寝で朝へ飛んだ場合もここで拾う)
         this.tryFinishConstruction();
+        this.tryFinishStation(); // v20 えきの こうじ(翌朝6時)
+        this.updateStationTrain(); // v20 ホームに でんしゃが とまっているか
         if (Object.keys(this.state.inventory).length > 0) {
           this.tutorial.onFirstItem();
           // かざる遊びの入口(すいそう・むしかご)。1種につき1回だけ出る
@@ -1326,7 +1435,8 @@ export class GameScene {
         // 中身が入れかわる。合計の音量は どこでも同じなので「歩くと音が大きくなる」は起きない。
         // 雨音もここ1本にまとまっている(屋根の下では 0.4倍にして こもらせる)。
         setAmbient({
-          weights: this.zones.update(this.player.x, this.player.z, this.inCove, performance.now() / 1000),
+          // いちば島も「島の外の 海べの空間」なので、入り江と同じ ざわめきの表を使う
+          weights: this.zones.update(this.player.x, this.player.z, this.inCove || this.inMarket, performance.now() / 1000),
           night: this.island.time.isNight,
           sheltered,
           // まつりの ざわめきは「まつりの時間に 広場のちかく(24m)で 外にいる」ときだけ
@@ -1365,7 +1475,7 @@ export class GameScene {
       questCompleteOpen: this.questComplete.open,
       sequenceActive: this.seq.active,
       panelOpen:
-        this.invUI.open || this.craftUI.open || this.shopUI.open ||
+        this.invUI.open || this.craftUI.open || this.shopUI.open || this.marketUI.open ||
         this.questLog.open || this.codexUI.open || this.pauseMenu.open || this.displayUI.open ||
         this.paintUI.open || this.letterUI.open || this.bulletinUI.open,
     });

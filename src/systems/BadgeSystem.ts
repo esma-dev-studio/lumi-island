@@ -18,6 +18,7 @@ import { BUG_IDS } from './BugSystem';
 import { BOTTLE_TOTAL_KEY, readLetterCount } from './BottleSystem';
 import { COMBO_FOUND_KEY } from './ComboSystem';
 import { festivalFlyCount } from './FestivalSystem';
+import { MARKET_VISIT_KEY } from './TrainRideSystem';
 import { GIFT_TOTAL_KEY } from './GiftSystem';
 import { insideGardenZone } from './GardenSystem';
 import { homeExpandStage } from './HomeExpansion';
@@ -154,6 +155,7 @@ export const BADGE_SOURCES: Record<string, BadgeSource> = {
   friend_nokto: { label: 'ノクトとのなかよし度', read: (s) => friendOf(s, 'nokto') },
   friend_tsumugi: { label: 'ツムギとのなかよし度', read: (s) => friendOf(s, 'tsumugi') },
   friend_roka: { label: 'ロカとのなかよし度', read: (s) => friendOf(s, 'roka') },
+  friend_ten: { label: 'テンとのなかよし度', read: (s) => friendOf(s, 'ten') },
   // ---- たんけん ----
   // 「はじめての こうかい」だけ cove_visit ではなく roka_arrived を見る:
   // cove_visit は v14で足したカウンタなので、前のセーブでは0のまま。
@@ -161,6 +163,7 @@ export const BADGE_SOURCES: Record<string, BadgeSource> = {
   // すでに わたったことのある子にも さかのぼって バッジが付く
   cove_first: { label: '入り江へわたったか', read: (s) => (s.flags?.roka_arrived === true ? 1 : 0) },
   cove_visit: { label: '入り江へわたった回数', read: (s) => statCount(s, COVE_VISIT_KEY) },
+  market_visit: { label: 'いちば島へわたった回数', read: (s) => statCount(s, MARKET_VISIT_KEY) },
   bottle_total: { label: 'ひろったボトルの数', read: (s) => statCount(s, BOTTLE_TOTAL_KEY) },
   letter_read: { label: 'よんだてがみの数', read: readLetterCount },
   rainbow_seen: { label: 'にじを見た回数', read: (s) => statCount(s, RAINBOW_SEEN_KEY) },

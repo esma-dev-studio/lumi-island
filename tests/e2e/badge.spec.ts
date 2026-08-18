@@ -1,7 +1,7 @@
-// v14「バッジ(v16で106個)」の実ブラウザ通し。
+// v14「バッジ(v16で106個 / v20で108個)」の実ブラウザ通し。
 //
 // 断言する中身:
-//   1. ずかん(Z)に「バッジ」タブが あり、106マスが シルエット+進捗で ならぶこと
+//   1. ずかん(Z)に「バッジ」タブが あり、108マスが シルエット+進捗で ならぶこと
 //   2. あそんで 条件を みたすと、その場で バッジが つき、小さなトーストが出ること
 //   3. とったバッジが ずかんで 色つき+取った日に かわること
 //   4. すでに あそんであるセーブを 読むと、さかのぼって 一括で つき、
@@ -13,7 +13,7 @@ const GAME = '/?scene=game&debug=1';
 const GAME_LOAD = '/?scene=game&debug=1&load=1';
 
 /** src/data/badges.ts の BADGES.length。データ側を増やしたら ここも合わせる */
-const BADGE_TOTAL = 106; // v16 ほしまつり3つを足した
+const BADGE_TOTAL = 108; // v16 ほしまつり3つ / v20 いちば島・テンの2つを足した
 
 const errors: string[] = [];
 function watchErrors(page: Page): void {
@@ -82,7 +82,7 @@ async function openBadgeTab(page: Page): Promise<void> {
 const cell = (page: Page, name: string) =>
   page.locator('.codex-panel .badge-cell').filter({ hasText: name }).first();
 
-test('バッジタブ: 106マスが シルエット+進捗で ならぶ → 初つりで色つきに かわる', async ({ page }) => {
+test('バッジタブ: 108マスが シルエット+進捗で ならぶ → 初つりで色つきに かわる', async ({ page }) => {
   watchErrors(page);
   await page.goto(GAME);
   await waitReady(page);
@@ -152,6 +152,15 @@ test('さかのぼり一括: あそんであるセーブを読むと まとめ�
     40
   );
 
+  // --- トーストは まとめて1枚 ---
+  // **数を数えるより先に 見る**: トーストは 2.1秒で 消えるので、
+  // さきに 状態を 待っていると 起動の重さしだいで 取りこぼす
+  // (v20で 別空間が1つ増え、実際に 取りこぼして 落ちた)
+  const badgeToasts = page.locator('.toast', { hasText: 'バッジ' });
+  await expect(badgeToasts).toHaveCount(1);
+  const toastText = (await badgeToasts.first().textContent()) ?? '';
+  expect(toastText).toContain('ずかんで 見てみよう');
+
   // --- 一括で つく ---
   await waitFor(page, '__lumiDebug.state().stats.bdg_ga_wood2 === 40');
   const earned = (await ev(
@@ -159,12 +168,7 @@ test('さかのぼり一括: あそんであるセーブを読むと まとめ�
     'Object.keys(__lumiDebug.state().stats).filter(k=>k.indexOf("bdg_")===0).length'
   )) as number;
   expect(earned, 'まとめて たくさん つく').toBeGreaterThan(10);
-
-  // --- トーストは まとめて1枚 ---
-  const badgeToasts = page.locator('.toast', { hasText: 'バッジ' });
-  await expect(badgeToasts).toHaveCount(1);
-  await expect(badgeToasts.first()).toContainText(`バッジを ${earned}こ ゲット!`);
-  await expect(badgeToasts.first()).toContainText('ずかんで 見てみよう');
+  expect(toastText).toContain(`バッジを ${earned}こ ゲット!`);
 
   // --- ずかんの数と 記録の数が 合う ---
   await openBadgeTab(page);

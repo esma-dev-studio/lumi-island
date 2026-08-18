@@ -33,6 +33,7 @@ export interface QuestDialogueDeps {
   onIslandLevel: (level: number) => void;
   onCelebrate: () => void; // ルミの木開花
   onBoatRepaired: () => void; // v11第2章 ふねの修理がおわった
+  onStationOrdered: () => void; // v20第3章 えきの こうじを たのんだ(翌朝できあがる)
 }
 
 /** 家の拡張こうじを たのめる相手(島の大工=ツムギ) */
@@ -202,6 +203,10 @@ export class QuestDialogueController {
       d.onIslandLevel(Math.max(1, d.state.islandLevel));
     } else if (def.id === 'q2_boat') {
       d.onBoatRepaired(); // 桟橋の小舟の見た目を「なおったあと」へ入れかえる
+    } else if (def.id === 'q3_station') {
+      // えきは その場では できない。たのんだ日を記録して 翌朝の6時に できあがる
+      // (マイホームの拡張こうじと まったく同じ流儀。src/systems/StationBuild.ts)
+      d.onStationOrdered();
     }
     save(d.state);
   }

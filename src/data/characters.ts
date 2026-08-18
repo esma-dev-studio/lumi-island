@@ -40,4 +40,9 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     id: 'roka', name: 'ロカ', species: 'ペンギン', path: 'assets/characters/roka.glb',
     scale: 1, yOffset: 0, walkSpeed: 1.2, runSpeed: 2.4, animNames: ANIMS,
   },
+  // テン(ニホンテン)。島をめぐる行商人。おとなの旅人なので すこし足が速い
+  ten: {
+    id: 'ten', name: 'テン', species: 'テン(イタチ)', path: 'assets/characters/ten.glb',
+    scale: 1, yOffset: 0, walkSpeed: 1.5, runSpeed: 3.1, animNames: ANIMS,
+  },
 };

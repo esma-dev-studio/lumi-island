@@ -7,7 +7,7 @@ const OUT = 'public/assets/characters';
 mkdirSync(OUT, { recursive: true });
 mkdirSync('.logs', { recursive: true });
 
-const ids = process.argv.slice(2).length ? process.argv.slice(2) : ['mio', 'minamo', 'nokto', 'tsumugi', 'roka'];
+const ids = process.argv.slice(2).length ? process.argv.slice(2) : ['mio', 'minamo', 'nokto', 'tsumugi', 'roka', 'ten'];
 for (const id of ids) {
   const t0 = Date.now();
   const ch = buildCharacter(id);

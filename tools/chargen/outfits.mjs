@@ -1,5 +1,5 @@
 // 服・小物: 体に塗るのではなく、立体シェル(裾・袖・襟・ひも・ポケット)として生成する。
-import { lathe, tube, patch, mirrorX, norm, add, mul } from './geo.mjs';
+import { lathe, tube, patch, mirrorX, norm, add, mul, cross } from './geo.mjs';
 import { solo, duo, torsoWeight } from './rig.mjs';
 import { keys } from './anim.mjs';
 import { REG, TEXSIZE } from './uvmap.mjs';
@@ -297,6 +297,121 @@ export function buildBackpack(rig, _spec) {
     capStart: false, capEnd: false,
   });
   return [pouch, flap, strap, mirrorX(strap, makeMirrorRemap(rig))];
+}
+
+// ---------- 背負い風呂敷(テン・行商人) ----------
+// リュック(buildBackpack)と同じ流儀で作る:
+//   lathe の まるい包み + patch の むすび目の かど2枚 + tube の たすきがけ肩ひも(mirrorXで左右)。
+// シルエットだけで「行商人」と読めるよう、包みは 体の はばより すこし はみ出す大きさにする。
+// spec.furoshiki = { r, y, z, sz, earLen } ぜんぶ省略できる(省略時は下の既定値)。
+export function buildFuroshiki(rig, spec) {
+  const H = rig.prop.height;
+  const chest = rig.index.chest;
+  const tp = torsoProfile(spec);
+  const f = spec.furoshiki ?? {};
+  const R = (f.r ?? 0.128) * H;   // 包みの半径(胴の はばより 少し大きく)
+  const cy = (f.y ?? 0.475) * H;  // 包みの中心の高さ
+  const cz = (f.z ?? -0.168) * H; // 背中より うしろ
+  const parts = [];
+
+  // はおりの外がわの目安(たすきが 服に うもれないように すこし外へ出す)
+  const o = spec.outfit ?? {};
+  const hemY = o.hemY ?? tp.y0, topY = o.topY ?? tp.y1;
+  const clothR = (y) => {
+    const t = Math.min(1, Math.max(0, (y - hemY) / (topY - hemY)));
+    return tp.rAtY(y) * 1.1 + (1 - t) ** 1.6 * (o.flare ?? 0) + 0.004;
+  };
+  const frontZ = (y) => clothR(y) * tp.sz * 1.03 + 0.014 * H;
+
+  // 1) 布の包み(下が ふっくら、上は むすび目へ すぼまる)
+  const prof = keys([[0, 0.26], [0.14, 0.68], [0.34, 0.95], [0.54, 1], [0.74, 0.92], [0.9, 0.6], [1, 0.24]]);
+  const rings = [];
+  const NR = 11;
+  for (let i = 0; i <= NR; i++) {
+    const t = i / NR;
+    rings.push({
+      y: cy - R * 0.98 + t * R * 1.96,
+      r: prof(t) * R,
+      cz: cz - Math.sin(Math.PI * t) * 0.014 * H, // 中ほどが いちばん うしろへ ふくらむ
+      sz: f.sz ?? 0.82, sx: f.sx ?? 1.0,
+    });
+  }
+  parts.push(lathe({ rings, seg: 16, uvRegion: REG.accessory.bt, weightFn: () => solo(chest) }));
+
+  // 2) むすび目の玉(かどの ねもと)
+  const knotY = cy + R * 0.99;
+  const knotRings = [];
+  for (let i = 0; i <= 6; i++) {
+    const t = i / 6;
+    knotRings.push({
+      y: knotY - 0.020 * H + t * 0.042 * H,
+      r: (0.032 * Math.sin(Math.PI * Math.max(0.1, Math.min(0.9, t))) + 0.010) * H,
+      cz, sz: 0.86,
+    });
+  }
+  parts.push(lathe({ rings: knotRings, seg: 12, uvRegion: REG.accent.bt, weightFn: () => solo(chest) }));
+
+  // 3) むすび目の かど(布の耳)2枚。外へ ひらいて 上へ立てる+たわみを付けて 板に見せない
+  const earBase = [0, knotY + 0.014 * H, cz];
+  const earLen = (f.earLen ?? 0.118) * H;
+  // かどの ひらいた面が うしろ(見る側)を向くように lean を選ぶ:
+  // side は dir と直交する水平ベクトルなので、lean を「上+うしろ」に取ると side が 左右(X)になり、
+  // 背中から見て 布のはばが 広く見える(lean を横へ ふると 板を 真横から見ることになり 葉っぱに見える)。
+  const mkEar = (lean) => {
+    const dir = norm(lean);
+    const side = norm([-dir[2], 0, dir[0]]); // 水平で dir に直交(布のはば方向)
+    const up = norm(cross(dir, side));       // シートの面の向き(たわみ方向)
+    return patch({
+      cols: 4, rows: 5, thickness: 0.008,
+      uvRegion: REG.accessory.tb,
+      surfaceFn: (u, v) => {
+        const w = (0.105 - 0.086 * v) * H; // 付け根は はば広く、先へ すぼまる 布のかど
+        const p = add(earBase, mul(dir, v * earLen));
+        const fold = (0.25 - (u - 0.5) ** 2) * 0.09 * H * (1 - v * 0.5); // 布の たわみ
+        return add(add(p, mul(side, (u - 0.5) * w)), mul(up, fold - v * v * 0.03 * H));
+      },
+      weightFn: () => solo(chest),
+    });
+  };
+  const earL = mkEar([0.34, 1, -0.72]);
+  parts.push(earL, mirrorX(earL, makeMirrorRemap(rig)));
+
+  // 4) たすきがけの肩ひも: 包みの上 → 肩 → 胸を ななめに横切って 反対の こしへ。
+  //    左右をミラーすると 胸の前で ×(たすき)になり、正面からも 行商人と分かる。
+  const shY = rig.world.shoulderL[1];
+  const waistY = rig.world.hips[1] + 0.05 * H;
+  const midY = (shY + waistY) / 2;
+  const strap = tube({
+    path: [
+      [0.052 * H, cy + R * 0.66, cz + R * 0.42],
+      [0.056 * H, shY + 0.026 * H, -frontZ(shY) * 0.5],
+      [0.054 * H, shY + 0.014 * H, frontZ(shY) * 0.5],
+      [0, midY, frontZ(midY)], // 胸のまん中(左右のひもが ここで 交わる)
+      [-0.062 * H, waistY, frontZ(waistY) * 0.86],
+    ],
+    steps: 12, seg: 6,
+    radiusFn: () => 0.0135 * H,
+    ellipseFn: () => [1, 0.42],
+    uvRegion: REG.accent.tb,
+    weightFn: () => solo(chest),
+    capStart: false, capEnd: false,
+  });
+  parts.push(strap, mirrorX(strap, makeMirrorRemap(rig)));
+
+  // 5) 胸の むすび目: たすきが 交わる所を おおう(2本が 同じ面で ぶつかって ちらつくのを防ぐ)
+  const xY = midY;
+  const xZ = frontZ(xY);
+  const chestKnot = [];
+  for (let i = 0; i <= 6; i++) {
+    const t = i / 6;
+    chestKnot.push({
+      y: xY - 0.021 * H + t * 0.042 * H,
+      r: (0.024 * Math.sin(Math.PI * Math.max(0.12, Math.min(0.88, t))) + 0.008) * H,
+      cz: xZ, sz: 0.6,
+    });
+  }
+  parts.push(lathe({ rings: chestKnot, seg: 10, uvRegion: REG.accent.bt, weightFn: () => solo(chest) }));
+  return parts;
 }
 
 // ---------- 首のタオル(ミナモ) ----------

@@ -67,7 +67,8 @@ export function buildHair(rig, spec) {
 export function buildRoundEars(rig, spec) {
   const H = rig.prop.height;
   const e = spec.ears; // {thetaDeg, phiDeg, r, tilt}
-  const s = headSurface(spec, e.thetaDeg, e.phiDeg, 1.0);
+  // scale: 頭のプロファイルで ふくらんだぶん 耳を外へ出すための倍率(省略時は従来どおり 1.0)
+  const s = headSurface(spec, e.thetaDeg, e.phiDeg, e.scale ?? 1.0);
   const prof = keys([[0, 0.55], [0.3, 0.95], [0.55, 1.0], [0.8, 0.85], [1, 0.3]]);
   const rings = [];
   const N = 6;
@@ -173,6 +174,30 @@ export function applyMuzzle(headMesh, rig, spec) {
     bump(headMesh, [0, mouthY + 0.010, front * 0.86], 0.085 * H, 0.017 * H, [0, -0.35, 1]); // のど
     // 頭のうしろを少しだけ後ろへ(まるい風船頭にしない)
     bump(headMesh, [0, c[1] + (hs.yTop - hs.yBottom) * 0.14, c[2] - hs.rz * 0.98], 0.09 * H, 0.012 * H, [0, 0.1, -1]);
+  } else if (kind === 'weasel') {
+    // ニホンテン(イタチのなかま): 細くとがった鼻先。
+    // カワウソ(otter)は 横に5つならべた 幅びろのマズルだが、こちらは 横に広げず
+    // +Z へ 3段かさねて 前へ出す。半径を だんだん小さく・押し出しを だんだん強くすると、
+    // 「ただの円すい」ではなく 付け根から先へ しぼる鼻すじになる。
+    // bump は そのときの頂点位置を見るので、段が進むほど 先が引きのばされて とがる。
+    const mouthY = hs.yBottom + (hs.yTop - hs.yBottom) * (spec.face?.mouthT ?? 0.22);
+    const reach = spec.muzzle?.reach ?? 1;
+    const cones = [
+      { y: 0.058, z: 0.84, rad: 0.075, amt: 0.036, dir: [0, 0.1, 1] },
+      { y: 0.044, z: 0.98, rad: 0.057, amt: 0.042, dir: [0, -0.06, 1] },
+      { y: 0.032, z: 1.12, rad: 0.041, amt: 0.038, dir: [0, -0.22, 1] },
+    ];
+    for (const b of cones) bump(headMesh, [0, mouthY + b.y, front * b.z], b.rad * H, b.amt * H * reach, b.dir);
+    // ひたいと 鼻すじの あいだを すこし へこませる(いわゆるストップ)。
+    // これが無いと ひたいから 鼻先まで 一直線の円すいになり、けものの顔に見えない。
+    bump(headMesh, [0, mouthY + 0.105, front * 0.9], 0.05 * H, -0.009 * H, [0, 0.2, 1]);
+    // 下あご: 鼻先の下が えぐれて見えないよう、下の段も 前へ出して なだらかに つなぐ
+    bump(headMesh, [0, mouthY + 0.004, front * 0.95], 0.058 * H, 0.028 * H * reach, [0, -0.18, 1]);
+    bump(headMesh, [0, mouthY - 0.03, front * 0.78], 0.072 * H, 0.015 * H, [0, -0.4, 0.9]);
+    // ほおの毛: 顔の横はばを 少しだけ残して、骨ばった三角形にしない
+    for (const s of [-1, 1]) {
+      bump(headMesh, [s * hs.rx * 0.74, mouthY + 0.086, front * 0.46], 0.078 * H, 0.016 * H, [s * 0.95, 0.05, 0.3]);
+    }
   }
   return headMesh;
 }
@@ -286,10 +311,15 @@ export function buildTailThick(rig, spec) {
     [t1[0] + sw * 0.84, t1[1] - 0.012, t1[2] - p.len * 0.98],
   ];
   const t1i = rig.index.tail1, t2i = rig.index.tail2, hipsI = rig.index.hips;
+  // bushy: 先の方まで 太さを保つ ふさふさの尾(テン)。既定は 従来どおり 先へ細る形。
+  //        else 側の式は 1文字も変えない(浮動小数の丸めが変わると 既存GLBが差分になる)
+  const bushy = p.bushy;
   return tube({
     path, steps: 10, seg: 10,
     // 根元を太いまま保ち、先へ向かってゆるく細る(カワウソの太い尾)
-    radiusFn: (t) => p.r * keys([[0, 1], [0.24, 1], [0.5, 0.88], [0.76, 0.64], [1, 0.32]])(t),
+    radiusFn: (t) => p.r * (bushy
+      ? keys([[0, 0.82], [0.18, 1], [0.5, 1.04], [0.78, 0.94], [0.92, 0.72], [1, 0.4]])(t)
+      : keys([[0, 1], [0.24, 1], [0.5, 0.88], [0.76, 0.64], [1, 0.32]])(t)),
     ellipseFn: (t) => [1, 0.8 + 0.15 * (1 - t)], // 少し平たいカワウソ尾
     uvRegion: REG.tail.tb,
     weightFn: (pp, t) => {

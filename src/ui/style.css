@@ -331,6 +331,13 @@ body { font-family: var(--font); color: var(--ink); }
   background: #fff; color: var(--ink); border: 1px solid var(--line); border-radius: 4px; cursor: pointer;
 }
 .shop-tab.on { background: var(--amber); border-color: var(--amber); color: #fff; }
+/* v20 テンの店(週がわり)。しなものの 見出しと 入れかわりの お知らせ */
+.market-note { font-size: 0.8rem; color: var(--amber); margin-bottom: 8px; }
+.market-group {
+  font-size: 0.8rem; font-weight: 700; color: var(--ink); opacity: 0.72;
+  margin: 8px 0 2px; padding-bottom: 2px; border-bottom: 1px solid var(--line);
+}
+.market-group:first-child { margin-top: 0; }
 .bite { color: #cf4f2e; font-size: 1.1rem; }
 
 /* ---- v12 くみあわせタブ ---- */

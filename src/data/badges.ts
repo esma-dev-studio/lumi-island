@@ -1,4 +1,4 @@
-// v14 バッジ(v16で106個)の データ表。**ロジックはここに書かない**(純データ)。
+// v14 バッジ(v16で106個 / v20で108個)の データ表。**ロジックはここに書かない**(純データ)。
 //
 // 考え方:
 //   - じっせき(AchievementSystem)は「ゲームの節目」を24個だけ ならべたもの。
@@ -80,7 +80,7 @@ export function achSource(achievementId: string): string {
 }
 
 /**
- * バッジ106個。
+ * バッジ108個。
  *
  * 数え方の出どころは3つだけ:
  *   codex … 種類ごとの累計入手数(売っても かざっても 減らない)
@@ -188,6 +188,7 @@ export const BADGES: BadgeDef[] = [
   { id: 'fr_minamo', name: 'ミナモと なかよし10', desc: 'ミナモとの なかよし度を 10に しよう', cat: 'friend', tier: 'gold', src: 'friend_minamo', target: 10, pict: 'f_fishtrophy' },
   { id: 'fr_nokto', name: 'ノクトと なかよし10', desc: 'ノクトとの なかよし度を 10に しよう', cat: 'friend', tier: 'gold', src: 'friend_nokto', target: 10, pict: 'f_starmap' },
   { id: 'fr_tsumugi', name: 'ツムギと なかよし10', desc: 'ツムギとの なかよし度を 10に しよう', cat: 'friend', tier: 'gold', src: 'friend_tsumugi', target: 10, pict: 'f_finetable' },
+  { id: 'fr_ten', name: 'テンと なかよし', desc: 'テンとの なかよし度を 5に しよう', cat: 'friend', tier: 'silver', src: 'friend_ten', target: 5, pict: 'gift_parcel' },
   { id: 'fr_roka', name: 'ロカと なかよし10', desc: 'ロカとの なかよし度を 10に しよう', cat: 'friend', tier: 'gold', src: 'friend_roka', target: 10, pict: 'f_lighthouse_lantern' },
 
   // ============================================================
@@ -202,6 +203,10 @@ export const BADGES: BadgeDef[] = [
   { id: 'ex_rainbow', name: 'にじを みた', desc: 'あめが あがった あとの そらを 見あげてみよう', cat: 'explore', tier: 'silver', src: 'rainbow_seen', target: 1, pict: 'lumina' },
   { id: 'ex_snail', name: 'あめの ひの カタツムリ', desc: 'あめの日に 草の上の カタツムリを ひろおう', cat: 'explore', tier: 'bronze', src: 'snail', target: 1, pict: 'snail' },
   { id: 'ex_cove_mat', name: 'いりえの めぐみ', desc: 'ほしくさと ひかりの貝を あわせて 20こ あつめよう', cat: 'explore', tier: 'silver', src: 'cove_material', target: 20, pict: 'starweed' },
+  // v20第3章 いちば島(でんしゃで わたる)。
+  // BADGE_COUNT_MAX(108)に とどいたので、ここは1段だけにしてある
+  // ——「いちばへ 10かい」を足すと 上限を こえる(上限は データの約束なので 動かさない)
+  { id: 'ex_market1', name: 'いちばへ 3かい', desc: 'よるの でんしゃで いちば島へ 3かい わたろう', cat: 'explore', tier: 'bronze', src: 'market_visit', target: 3, pict: 'train' },
 
   // ============================================================
   // まいにち(9+1)…… ねた回数・あるいた ながさ は v14で ふえた新しいカウンタ。

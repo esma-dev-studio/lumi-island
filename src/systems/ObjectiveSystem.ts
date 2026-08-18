@@ -3,11 +3,13 @@
 // 素材の案内は依頼ごとにハードコードせず、レシピデータから不足分を計算する。
 import type { GameState } from '../game/GameState';
 import { invCount, hasTool } from '../game/GameState';
-import { QUESTS, type QuestDef } from '../data/quests';
+import { QUESTS, questCosts, questReportNpc, type QuestDef } from '../data/quests';
 import { questRemaining } from './QuestSystem';
 import { missingIngredients } from './CraftingSystem';
 import { RECIPES, ITEMS, type ItemId, type ToolId, type RecipeDef } from '../data/items';
 import { NPC_BY_ID } from '../data/npcs';
+import { hasKitchen } from './ComboSystem';
+import { isStationBuilt } from './StationBuild';
 import { byInput } from '../ui/inputMode';
 import type { InteractionKind } from './InteractionResolver';
 
@@ -24,6 +26,13 @@ export const COVE_RETURN_POI = 'coveReturn';
 export const ISLAND_BOAT_POI = 'islandBoat';
 /** こわれた灯台のとびらの前 */
 export const COVE_LIGHTHOUSE_POI = 'coveLighthouse';
+// ---------------------------------------------------------------------------
+// v20第3章で増えた目的地。座標への読みかえは GameScene.targetPosOf が1か所でやる。
+// ---------------------------------------------------------------------------
+/** 島がわの「よるの えき」のホーム(ここでEを押すと いちば島へ わたる) */
+export const ISLAND_STATION_POI = 'islandStation';
+/** いちば島の駅ホーム(ここでEを押すと 島へ かえる) */
+export const MARKET_STATION_POI = 'marketStation';
 
 export interface ObjectiveTarget {
   kind: 'npc' | 'poi' | 'none';
@@ -34,10 +43,15 @@ export interface ObjectiveTarget {
  * その目的を進められる場所。
  *   island : 島(第1章のすべて)
  *   cove   : よるの入り江(第2章の採取・ロカ・灯台)
+ *   market : いちば島(第3章のテン・市場)
  *   any    : どこでもよい(クラフト・自由行動・チュートリアル)
- * ちがう場所にいるときは withAreaTravel が「ふねで もどろう」に差しかえる。
+ * ちがう場所にいるときは withAreaTravel が「ふねで もどろう」「でんしゃに のろう」に差しかえる。
+ *
+ * 3つの場所は **島を まん中にした Y字** でつながっている(入り江 ⇄ 島 ⇄ いちば島)。
+ * 入り江と いちば島は 直通していないので、travelObjective は
+ * 「いまいる場所から出る 1歩め」だけを返す(2歩めは 島に着いてから 出しなおす)。
  */
-export type ObjectiveArea = 'island' | 'cove' | 'any';
+export type ObjectiveArea = 'island' | 'cove' | 'market' | 'any';
 
 export interface Objective {
   id: string; // 変化検知・ヒント抑制用の一意キー
@@ -133,6 +147,7 @@ const R_LANTERN = RECIPES.find((r) => r.id === 'r_lantern')!;
 const R_STONELAMP = RECIPES.find((r) => r.id === 'r_stonelamp')!;
 const R_ROD = RECIPES.find((r) => r.id === 'r_rod')!;
 const R_LENS = RECIPES.find((r) => r.id === 'r_lens')!;
+const R_KITCHEN = RECIPES.find((r) => r.id === 'r_kitchen')!;
 
 // 素材→採取エリア(目的地表示用)
 const GATHER_POI: Partial<Record<ItemId, string>> = {
@@ -298,6 +313,66 @@ function inProgressObjective(state: GameState, q: QuestDef): Objective {
         target: { kind: 'poi', id: COVE_LIGHTHOUSE_POI },
         area: 'cove',
       };
+    // ---- 第3章 ----
+    case 'q3_station': {
+      // 材料 → ルミナ の順に、足りないものだけを1つずつ案内する(q2_boat と同じ流儀)。
+      // 材料の表は quests.ts の questCosts ひとつ = 数を ここに写経しない
+      for (const [item, need] of questCosts(q)) {
+        const have = invCount(state, item);
+        if (have >= need) continue;
+        return {
+          ...base, id: `q3_station_${item}`, headline: 'いまやること',
+          label: `${ITEMS[item].name}を あつめよう`,
+          target: { kind: 'poi', id: GATHER_POI[item] ?? 'meadow' },
+          progress: { cur: have, max: need },
+          gatherItem: item, area: 'island',
+        };
+      }
+      const price = q.price ?? 0;
+      return {
+        ...base, id: 'q3_station_lumina', headline: 'いまやること',
+        label: `こうじ代の ${price}ルミナを ためよう(ツムギ工房で もちものを うろう)`,
+        target: { kind: 'poi', id: 'shop' },
+        progress: { cur: Math.min(state.lumina, price), max: price },
+        area: 'island', money: true,
+      };
+    }
+    case 'q3_lantern': {
+      const item = q.item!;
+      return {
+        ...base, id: 'q3_lantern_gather', headline: 'いまやること',
+        label: `${ITEMS[item].name}を あつめよう`,
+        target: { kind: 'none' },
+        progress: { cur: q.count - rem, max: q.count },
+        gatherItem: item, area: 'cove',
+      };
+    }
+    case 'q3_taste': {
+      // りょうりは キッチンだいが 家の中にないと つくれない。
+      // 「作れないのに 作れと言う」を出さないよう、足りないものから1歩ずつ案内する
+      if (!hasKitchen(state)) {
+        if (invCount(state, 'f_kitchen') >= 1) {
+          return {
+            ...base, id: 'q3_taste_place_kitchen', headline: 'いまやること',
+            label: 'キッチンだいを 家の中に おこう(もちもの→おく)',
+            target: { kind: 'poi', id: 'bed' },
+            area: 'island', placeFurniture: true,
+          };
+        }
+        return craftStep(state, R_KITCHEN, 'q3_taste', base);
+      }
+      return {
+        ...base, id: 'q3_taste_cook', headline: 'いまやること',
+        label: byInput(
+          '<kbd>C</kbd>の「くみあわせ」で りょうりを 1つ つくろう',
+          '右上の「クラフト」ボタンの「くみあわせ」で りょうりを 1つ つくろう'
+        ),
+        // くみあわせは Cキー/クラフトボタンでする作業なので、Eの候補は絞らない
+        // (絞ると「りょうりの材料を とりに行く」道すがら 何も拾えなくなる)
+        target: { kind: 'none' },
+        area: 'any',
+      };
+    }
     default:
       return { ...base, id: `${q.id}_progress`, headline: 'いまやること', label: q.progress, target: { kind: 'none' } };
   }
@@ -333,10 +408,15 @@ export function currentObjective(
     if (state.quests[q.id] !== 'open') continue;
     if (state.flags[`${q.id}_accepted`] !== true) continue;
     if (questRemaining(state, q) === 0) {
-      const npc = q.npc === 'any' ? anyNpcFallback : q.npc;
+      const to = questReportNpc(q);
+      const npc = to === 'any' ? anyNpcFallback : to;
+      // v20 おつかい(たのむ人と とどける人がちがう依頼)は「できた!」ではなく
+      // 「◯◯に とどけよう」。あずかった瞬間から 条件はそろっているので、
+      // 「できた!」と出すと 何も してないのに 完了したように 見えてしまう
+      const delivery = q.reportNpc !== undefined;
       return withAvailability({
-        id: `${q.id}_report`, headline: REPORT_HEADLINE,
-        label: `${npcName(npc)}に ほうこくしよう`,
+        id: `${q.id}_report`, headline: delivery ? 'いまやること' : REPORT_HEADLINE,
+        label: delivery ? `${npcName(npc)}に とどけよう` : `${npcName(npc)}に ほうこくしよう`,
         target: { kind: 'npc', id: npc },
         area: areaOfNpc(npc),
         lostHint: `${npcName(npc)}を さがして 話しかけよう。矢印を追ってね。`,
@@ -399,6 +479,12 @@ function chapterBridge(state: GameState): Objective | null {
   if (state.flags.boat_repaired === true && state.flags.roka_arrived !== true) {
     return sailObjective('ch2_first_sail', 'cove');
   }
+  // v20第3章: えきは できた(station_built)けれど、まだ いちば島へ 行っていない。
+  // 第2章と まったく同じ理由(次の依頼 q3_lantern の解放条件が「初上陸」なので、
+  // そこを素通りすると「クリア!」に落ちて 章の続きへの誘導が消える)。
+  if (isStationBuilt(state) && state.flags.market_arrived !== true) {
+    return trainObjective('ch3_first_ride', 'market');
+  }
   return null;
 }
 
@@ -439,24 +525,72 @@ function sailObjective(id: string, to: 'island' | 'cove'): Objective {
       };
 }
 
+// ---------------------------------------------------------------------------
+// v20第3章 島 ⇄ いちば島 のまたぎ(よるの でんしゃ)
+// ---------------------------------------------------------------------------
+/** 島にいるのに、目的が いちば島にあるとき */
+export const TRAIN_TO_MARKET_LABEL = 'よるの えきから でんしゃに のろう';
+/** いちば島にいるのに、目的が よそにあるとき */
+export const TRAIN_TO_ISLAND_LABEL = 'でんしゃで しまへ かえろう';
+
 /**
- * いる場所と目的の場所がちがうときに、「ふねの のりば」へ案内しなおす。
+ * 「でんしゃの のりばへ行こう」の目的。ふねの sailObjective と まったく同じ形。
+ * 行きだけ 時間の しばりがある(2日に1度の よる)ので、lostHint に **いつ来るか** を書く
+ * ——「まだ」だけだと 何を待てばよいか 分からない(教訓3のロック理由の具体化)。
+ */
+function trainObjective(id: string, to: 'island' | 'market'): Objective {
+  return to === 'island'
+    ? {
+        id, headline: 'いまやること',
+        label: TRAIN_TO_ISLAND_LABEL,
+        target: { kind: 'poi', id: MARKET_STATION_POI },
+        area: 'market', sail: true,
+        lostHint: byInput(
+          '駅の ホームで <kbd>E</kbd>を おすと しまへ もどれるよ。かえりの でんしゃは いつでも いる。',
+          '駅の ホームで 右下の 大きいボタンを おすと しまへ もどれるよ。かえりの でんしゃは いつでも いる。'
+        ),
+      }
+    : {
+        id, headline: 'いまやること',
+        label: TRAIN_TO_MARKET_LABEL,
+        target: { kind: 'poi', id: ISLAND_STATION_POI },
+        area: 'island', sail: true,
+        lostHint: byInput(
+          'でんしゃは 2日に1どの よる、9じごろ さんばしの よこの えきに くるよ。ベッドで ねて よるを まとう。',
+          'でんしゃは 2日に1どの よる、9じごろ さんばしの よこの えきに くるよ。ベッドで ねて よるを まとう。'
+        ),
+      };
+}
+
+/**
+ * いる場所と目的の場所がちがうときに、「のりば」へ案内しなおす。
  *
  * こうしないと、入り江にいるあいだ 左上の目標が島の目的地までの距離を出しつづけ、
  * 矢印は海のむこうを指したままになる(第1章の申し送り事項)。
  * 逆に、島にいるのに入り江の素材を案内されても どこへ行けばよいか分からない。
  *
- * どちらの向きでも「行動は絞らない」(guided:false)。船着き場までの道すがら
+ * v20 で場所が3つ(島・入り江・いちば島)になった。3つは **島を まん中にしたY字** で、
+ * 入り江と いちば島は 直通していない。だから ここが返すのは かならず
+ * **「いまいる場所から出る 1歩め」だけ**にする:
+ *   入り江で いちば島の目的 → まず「ふねで しまへ もどろう」
+ *   島に着いたら 出しなおされて → 「よるの えきから でんしゃに のろう」
+ * 2歩ぶんを1つの文に押しこむと、子どもが どっちへ行けばよいか 読めなくなる。
+ *
+ * どの向きでも「行動は絞らない」(guided:false)。のりばまでの道すがら
  * 採取や釣りをするのは寄り道ではなく ふつうの遊びかたなので、
  * objectiveActionContext は sail をそのまま自由あつかいにする。
+ *
+ * @param at いまいる場所。boolean は v11からの呼び出し口(true=入り江)をそのまま通すため
  */
-export function withAreaTravel(o: Objective, inCove: boolean): Objective {
+export function withAreaTravel(o: Objective, at: boolean | ObjectiveArea): Objective {
   const want = o.area ?? 'island';
   if (want === 'any') return o;
-  const here: ObjectiveArea = inCove ? 'cove' : 'island';
+  const here: ObjectiveArea = typeof at === 'boolean' ? (at ? 'cove' : 'island') : at;
   if (want === here) return o;
-  return inCove
-    ? sailObjective(`${o.id}_sail_island`, 'island')
+  if (here === 'cove') return sailObjective(`${o.id}_sail_island`, 'island');
+  if (here === 'market') return trainObjective(`${o.id}_train_island`, 'island');
+  return want === 'market'
+    ? trainObjective(`${o.id}_train_market`, 'market')
     : sailObjective(`${o.id}_sail_cove`, 'cove');
 }
 

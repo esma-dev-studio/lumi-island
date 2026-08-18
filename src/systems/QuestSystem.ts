@@ -1,7 +1,10 @@
 // 依頼の進行(純ロジック)
 import type { GameState } from '../game/GameState';
-import { invCount, invRemove, giveTool, learnRecipe } from '../game/GameState';
-import { QUESTS, QUEST_BY_ID, OFFER_RECIPES, type QuestDef } from '../data/quests';
+import { invAddRecorded, invCount, invRemove, giveTool, learnRecipe } from '../game/GameState';
+import type { ItemId } from '../data/items';
+import {
+  QUESTS, QUEST_BY_ID, OFFER_RECIPES, questCosts, questReportNpc, type QuestDef,
+} from '../data/quests';
 import { ITEMS, TOOLS } from '../data/items';
 
 export type QuestMode = 'offer' | 'progress' | 'done';
@@ -30,12 +33,13 @@ export function questRemaining(state: GameState, def: QuestDef): number {
       return Math.max(0, def.count - placedItemCount(state, def.item));
     case 'placeGlow':
       return Math.max(0, def.count - glowPlacedCount(state));
-    case 'collectPay':
-      // 素材とお金の両方がそろって はじめて0。どちらか足りなければ「まだ」
-      return (
-        Math.max(0, def.count - invCount(state, def.item!)) +
-        (state.lumina >= (def.price ?? 0) ? 0 : 1)
-      );
+    case 'collectPay': {
+      // 素材(1種類とはかぎらない)とお金の両方がそろって はじめて0。
+      // どれか足りなければ「まだ」。数の情報源は quests.ts の questCosts ひとつ
+      let lack = 0;
+      for (const [item, n] of questCosts(def)) lack += Math.max(0, n - invCount(state, item));
+      return lack + (state.lumina >= (def.price ?? 0) ? 0 : 1);
+    }
     case 'talk':
       return 0; // 話しかけた時点で条件はそろっている
     case 'flag':
@@ -49,10 +53,12 @@ export function questRemaining(state: GameState, def: QuestDef): number {
  */
 export function questShortfall(state: GameState, def: QuestDef): string | null {
   if (def.type !== 'collectPay') return null;
-  const lackItem = Math.max(0, def.count - invCount(state, def.item!));
-  const lackMoney = Math.max(0, (def.price ?? 0) - state.lumina);
   const parts: string[] = [];
-  if (lackItem > 0) parts.push(`${ITEMS[def.item!].name}が あと${lackItem}こ`);
+  for (const [item, n] of questCosts(def)) {
+    const lack = Math.max(0, n - invCount(state, item));
+    if (lack > 0) parts.push(`${ITEMS[item].name}が あと${lack}こ`);
+  }
+  const lackMoney = Math.max(0, (def.price ?? 0) - state.lumina);
   if (lackMoney > 0) parts.push(`ルミナが あと${lackMoney}`);
   if (parts.length === 0) return null;
   return `${parts.join('、')} だね。まってるよ!`;
@@ -76,19 +82,31 @@ export function syncQuestUnlocks(state: GameState): boolean {
     if (cur === 'open' || cur === 'done') continue;
     if (def.requires.quest && state.quests[def.requires.quest] !== 'done') continue;
     if (def.requires.flag && state.flags[def.requires.flag] !== true) continue;
+    // v20第3章: 数の条件(よるの でんしゃを 何回 見たか など)
+    if (def.requires.stat && (state.stats?.[def.requires.stat] ?? 0) < (def.requires.statMin ?? 1)) continue;
     state.quests[def.id] = 'open';
     changed = true;
   }
   return changed;
 }
 
-/** そのNPCに話しかけたときに扱う依頼と状態 */
+/**
+ * そのNPCに話しかけたときに扱う依頼と状態。
+ *
+ * v20 から **たのむ人と とどける人が ちがう** 依頼(q3_gift)があるので、
+ * 受注は def.npc、報告は questReportNpc(def) で見る。
+ * reportNpc を持たない依頼は どちらも同じ人なので、これまでと ふるまいが変わらない。
+ */
 export function questFor(state: GameState, npcId: string): { def: QuestDef; mode: QuestMode } | null {
   for (const def of QUESTS) {
     if (state.quests[def.id] !== 'open') continue;
-    if (def.npc !== npcId && def.npc !== 'any') continue;
     const accepted = state.flags[`${def.id}_accepted`] === true;
-    if (!accepted) return { def, mode: 'offer' };
+    if (!accepted) {
+      if (def.npc !== npcId && def.npc !== 'any') continue;
+      return { def, mode: 'offer' };
+    }
+    const to = questReportNpc(def);
+    if (to !== npcId && to !== 'any') continue;
     return { def, mode: questRemaining(state, def) === 0 ? 'done' : 'progress' };
   }
   return null;
@@ -97,6 +115,11 @@ export function questFor(state: GameState, npcId: string): { def: QuestDef; mode
 export function acceptQuest(state: GameState, def: QuestDef): void {
   state.flags[`${def.id}_accepted`] = true;
   for (const r of OFFER_RECIPES[def.id] ?? []) learnRecipe(state, r);
+  // v20 引き受けた その場で わたされる もの(あずかりもの)。
+  // ずかんにも のせる: もらった ことが 記録に のこるほうが 子どもには自然
+  for (const [item, n] of Object.entries(def.offerItems ?? {})) {
+    if (n && n > 0) invAddRecorded(state, item as ItemId, n);
+  }
 }
 
 export interface QuestRewardSummary {
@@ -107,9 +130,9 @@ export function completeQuest(state: GameState, def: QuestDef): QuestRewardSumma
   // 配置型の依頼は配置物を消費しない(インベントリからも取らない)。
   // hold(見せるだけ)・talk・flag も同じで、持ちものには手をつけない
   if (def.type === 'collect') invRemove(state, def.item!, def.count);
-  // ふねの修理: もくざいと しゅうり代を いっしょに わたす
+  // ふねの修理・えきのこうじ: 材料(1〜2種)と 代金を いっしょに わたす
   if (def.type === 'collectPay') {
-    invRemove(state, def.item!, def.count);
+    for (const [item, n] of questCosts(def)) invRemove(state, item, n);
     state.lumina = Math.max(0, state.lumina - (def.price ?? 0));
   }
   if (def.type === 'collectAny') {

@@ -46,6 +46,7 @@ export class InputRouter {
     gs.bulletinUI.close();
     gs.craftUI.close();
     gs.shopUI.close();
+    gs.marketUI.close(); // v20 テンの店(ツムギ工房と まったく同じ あつかい)
     gs.codexUI.close();
     gs.displayUI.close();
     gs.paintUI.close();
@@ -60,6 +61,7 @@ export class InputRouter {
     gs.bulletinUI.close();
     gs.invUI.close();
     gs.shopUI.close();
+    gs.marketUI.close(); // v20 テンの店(ツムギ工房と まったく同じ あつかい)
     gs.questLog.close();
     gs.codexUI.close();
     gs.displayUI.close();
@@ -76,6 +78,7 @@ export class InputRouter {
     gs.invUI.close();
     gs.craftUI.close();
     gs.shopUI.close();
+    gs.marketUI.close(); // v20 テンの店(ツムギ工房と まったく同じ あつかい)
     gs.codexUI.close();
     gs.displayUI.close();
     gs.paintUI.close();
@@ -91,6 +94,7 @@ export class InputRouter {
     gs.invUI.close();
     gs.craftUI.close();
     gs.shopUI.close();
+    gs.marketUI.close(); // v20 テンの店(ツムギ工房と まったく同じ あつかい)
     gs.questLog.close();
     gs.displayUI.close();
     gs.paintUI.close();
@@ -130,7 +134,7 @@ export class InputRouter {
       return;
     }
     const wasOpen =
-      gs.invUI.open || gs.craftUI.open || gs.shopUI.open || gs.questLog.open ||
+      gs.invUI.open || gs.craftUI.open || gs.shopUI.open || gs.marketUI.open || gs.questLog.open ||
       gs.codexUI.open || gs.dialogue.open || gs.pauseMenu.open || gs.questComplete.open ||
       gs.displayUI.open || gs.paintUI.open || gs.bulletinUI.open ||
       gs.placement.active || gs.fishing.state !== 'idle';
@@ -140,6 +144,7 @@ export class InputRouter {
     gs.displayUI.close(); // 展示家具の選択パネル(何も入れずに閉じるだけ)
     gs.paintUI.close(); // v12 いろみずの選択パネル(何も ぬらずに閉じるだけ)
     gs.shopUI.close();
+    gs.marketUI.close(); // v20 テンの店(ツムギ工房と まったく同じ あつかい)
     gs.questLog.close();
     gs.codexUI.close();
     gs.questDlg?.giftUI.close(); // 念のため(上のearly returnで通常は閉じている)

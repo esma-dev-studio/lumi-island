@@ -99,11 +99,12 @@ describe('新レシピ4種', () => {
     // v7-P2で「はなかざり」(室内向け・弱い光)、v8で「うみのモビール」(弱い光)、
     // v11第2章で「とうだいのランタン」(ロカのお礼レシピ)、
     // v12のくみあわせで「うみのランプ」「ほしのモビール」「こけのびん」、
-    // v14で じっせきの ごほうび限定の2種(きんのランタン・よるのとうだい)が加わった。
+    // v14で じっせきの ごほうび限定の2種(きんのランタン・よるのとうだい)、
+    // v20第3章で いちば島の2種(いちばのちょうちん・かおりのランプ)が加わった。
     // 数え方(ITEMSのglowフラグ)は変えていない
     expect(glowing.sort()).toEqual([
-      'f_flowervase', 'f_lantern', 'f_lighthouse_lantern', 'f_lighthouse_lantern_night',
-      'f_mushlamp', 'f_sealamp', 'f_seamobile',
+      'f_aroma_lamp', 'f_flowervase', 'f_lantern', 'f_lighthouse_lantern', 'f_lighthouse_lantern_night',
+      'f_market_lantern', 'f_mushlamp', 'f_sealamp', 'f_seamobile',
       'f_starlantern', 'f_starlantern_gold', 'f_starmobile', 'f_stonelamp', 'f_terrarium',
     ]);
   });

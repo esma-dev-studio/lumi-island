@@ -27,6 +27,12 @@ import {
   BOAT_ACT_R, COVE_ACT_R, COVE_DOOR, COVE_RETURN, ISLAND_BOAT_POINT,
   boatPrompt, canBoardReturn, lighthousePrompt,
 } from './CoveArea';
+import { STATION_BENCH, STATION_POINT, canBoardStation } from '../entities/station';
+import {
+  MARKET_BENCH, MARKET_SHOP_POINT, MARKET_SHOP_R, MARKET_TRAIN_POINT, canBoardMarketTrain,
+} from '../entities/marketTerrain';
+import { MARKET_RIDE_HINT, isTrainAtStation, stationPrompt } from '../systems/TrainRideSystem';
+import { isStationBuilt } from '../systems/StationBuild';
 import type { GameScene } from './GameScene';
 
 export const SHOP_POINT = { x: POIS.shop.x + 4.6, z: POIS.shop.z }; // 店カウンター(工房の正面)
@@ -128,11 +134,26 @@ function pushSitCandidates(
   gs: GameScene, cands: InteractionCandidate[], px: number, pz: number
 ): void {
   const seats: Seat[] = [];
-  // ひろばのベンチは島の上だけ(室内・よその家・入り江には無い)
-  if (!gs.indoor && !gs.inCove && gs.npcHome === null) {
+  // ひろばのベンチは島の上だけ(室内・よその家・入り江・いちば島には無い)
+  if (!gs.indoor && !gs.inCove && !gs.inMarket && gs.npcHome === null) {
     for (let i = 0; i < PLAZA_BENCHES.length; i++) {
       const [bx, bz, rot] = PLAZA_BENCHES[i];
       if (Math.hypot(px - bx, pz - bz) < SIT_REACH) seats.push(seatOfPlazaBench(i, bx, bz, rot));
+    }
+    // v20 よるの えきの ホームのベンチ(えきが できてから)。
+    // ならぶ番号は ひろばのベンチの つづきにして、id が かぶらないようにする
+    if (isStationBuilt(gs.state)) {
+      const [sx, sz, srot] = STATION_BENCH;
+      if (Math.hypot(px - sx, pz - sz) < SIT_REACH) {
+        seats.push(seatOfPlazaBench(PLAZA_BENCHES.length, sx, sz, srot));
+      }
+    }
+  }
+  // v20 いちば島の 見はらしの丘のベンチ
+  if (gs.inMarket) {
+    const [mx, mz, mrot] = MARKET_BENCH;
+    if (Math.hypot(px - mx, pz - mz) < SIT_REACH) {
+      seats.push(seatOfPlazaBench(PLAZA_BENCHES.length + 1, mx, mz, mrot));
     }
   }
   // 自分で置いた家具(よその家の中では配置そのものができないので、ここには出ない)
@@ -468,6 +489,45 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     return coveBest.hint;
   }
 
+  // ---- v20第3章 いちば島にいるときは、いちば島のことだけ ----
+  // 入り江のブロックと まったく同じ組み立て(候補の絞りこみも 同じ規則)。
+  // いちば島には 採取ノードが1つも無いので、あるのは
+  //   テンとの会話 / テンの店 / すわる / かえりの でんしゃ の4つだけ。
+  if (gs.inMarket) {
+    pushNpcCandidate(gs, cands, px, pz);
+    pushSitCandidates(gs, cands, px, pz);
+    // かえりの でんしゃ。**いつでも のれる**(時間の しばりは 行きだけ)。
+    // のれる場所は canBoardMarketTrain(marketTerrain.ts)が1か所で決める——
+    // 「ホームの板の上なら どこでも」+「のりしろの輪」。
+    // kind='exit' は ObjectiveSystem の ALWAYS_ALLOWED なので どの誘導中でも隠れない
+    // ——島へ帰る唯一の手段なので、ここを絞ると 第3章のとちゅうで詰む。
+    if (canBoardMarketTrain(px, pz)) {
+      cands.push({
+        id: 'market_return', kind: 'exit', targetId: 'market',
+        priority: PRIORITY.door,
+        distance: Math.hypot(px - MARKET_TRAIN_POINT.x, pz - MARKET_TRAIN_POINT.z),
+        enabled: true,
+        hint: MARKET_RIDE_HINT,
+        run: () => gs.seq.rideTrain('island'),
+      });
+    }
+    // テンの店(週がわり)。ツムギ工房と同じ kind='shop' なので、
+    // 依頼の誘導中(guided)は 自動で隠れる=買いものが 進行を横取りしない
+    const shopD = Math.hypot(px - MARKET_SHOP_POINT.x, pz - MARKET_SHOP_POINT.z);
+    if (shopD < MARKET_SHOP_R) {
+      cands.push({
+        id: 'market_shop', kind: 'shop', targetId: 'market_shop',
+        priority: PRIORITY.shop, distance: shopD, enabled: true,
+        hint: '<kbd>E</kbd>テンの店を みる(しゅうがわり)',
+        run: () => gs.marketUI.show(),
+      });
+    }
+    const marketBest = selectInteraction(cands, objectiveActionContext(gs.lastObjective));
+    if (!marketBest) return '';
+    if (want) marketBest.run();
+    return marketBest.hint;
+  }
+
   // NPC(島の3人)
   pushNpcCandidate(gs, cands, px, pz);
   // 採取ノード
@@ -578,6 +638,27 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
       hint: prompt.hint,
       run: () => {
         if (prompt.ride) gs.seq.sail('cove');
+      },
+    });
+  }
+  // v20第3章 さんばしのよこの「よるの えき」。
+  //   えきが できていない あいだは 候補そのものを 作らない(ホームが 存在しない)。
+  //   でんしゃが 来ている夜だけ kind='enter' で のれる。それ以外は **いつ来るかを言う**
+  //   表示だけの候補(しゅうりちゅうの船・るすの家と まったく同じ流儀)。
+  //   のれる場所は canBoardStation(entities/station.ts)が1か所で決める。
+  if (isStationBuilt(gs.state) && canBoardStation(px, pz)) {
+    const here = isTrainAtStation(gs.state, gs.island.time.day, gs.island.time.hour);
+    const prompt = stationPrompt(gs.island.time.day, gs.island.time.hour, true);
+    cands.push({
+      id: prompt.ride ? 'station_ride' : 'station_wait',
+      kind: prompt.ride ? 'enter' : 'place',
+      targetId: prompt.ride ? 'market' : 'station',
+      priority: prompt.ride ? PRIORITY.door : PRIORITY.door + 2,
+      distance: Math.hypot(px - STATION_POINT.x, pz - STATION_POINT.z),
+      enabled: true,
+      hint: prompt.hint,
+      run: () => {
+        if (prompt.ride && here) gs.seq.rideTrain('market');
       },
     });
   }

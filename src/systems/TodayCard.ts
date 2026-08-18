@@ -26,6 +26,7 @@ import {
   FESTIVAL_DAY_TEXT, FESTIVAL_EVE_TEXT, isFestivalDay, isFestivalEve,
 } from './FestivalSystem';
 import { discoveredCount, hasKitchen } from './ComboSystem';
+import { trainCardText } from './TrainRideSystem';
 import { GIFT_TOTAL_KEY } from './GiftSystem';
 import { STYLE_CHANGE_KEY } from './BadgeSystem';
 
@@ -106,6 +107,16 @@ function eventsOf(s: GameState, day: number): TodayEvent[] {
   // 週の山場なので、ほかの出来事より かならず強い = unshift(先頭)にする。
   // 日づけの計算は 1つも写経せず、FestivalSystem に聞く(上の約束2のとおり)。
   // ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // v20第3章 でんしゃが 来る夜の予告。
+  // えきが できてからだけ 出す(まだ 乗れないものを 予告しない)。
+  // 日づけの計算は1つも写経せず、TrainRideSystem に聞く(上の約束2のとおり)。
+  // まつりより 弱く・ほかの出来事より 強い = まつりの unshift の 前に unshift する
+  // (あとから unshift したものが 先頭に来る)。
+  // ---------------------------------------------------------------------------
+  const train = trainCardText(s, day);
+  if (train) out.unshift({ id: 'train', text: train, icon: 'train' });
+
   if (isFestivalDay(day)) {
     out.unshift({ id: 'festival', text: FESTIVAL_DAY_TEXT, icon: 'festival' });
   } else if (isFestivalEve(day)) {
@@ -146,6 +157,11 @@ export const SUGGESTIONS: SuggestionSeed[] = [
     id: 'cove_night', icon: 'starweed',
     text: 'よるの入り江で ほしくさが きらきら するよ。見にいってみる?',
     when: (s) => s.flags?.roka_arrived === true,
+  },
+  {
+    id: 'market', icon: 'train',
+    text: 'いちば島の テンの店を のぞいてみよう。しなものは 週ごとに 入れかわるよ',
+    when: (s) => s.flags?.market_arrived === true,
   },
   {
     id: 'display', icon: 'f_aquarium',

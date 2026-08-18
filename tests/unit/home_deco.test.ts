@@ -21,8 +21,12 @@ const DECORS = Object.keys(DECOR_SLOT) as ItemId[];
 const COMBO_DECORS: ItemId[] = ['wall_rose', 'wall_night'];
 /** v14 じっせきの ごほうびでしか手に入らない模様替え(お店にもクラフトにも出ない) */
 const REWARD_DECORS: ItemId[] = ['wall_bottle'];
-/** お店で買える模様替え(v7-P2の6種)。v12で増えた2枚・v14の1枚は ここに入れない */
-const SHOP_DECORS = DECORS.filter((id) => !COMBO_DECORS.includes(id) && !REWARD_DECORS.includes(id));
+/** v20 テンの店(いちば島)の週がわりでしか手に入らない模様替え(ツムギ工房には出ない) */
+const MARKET_DECORS: ItemId[] = ['wall_lantern', 'wall_market', 'floor_stone', 'floor_mat'];
+/** お店で買える模様替え(v7-P2の6種)。v12で増えた2枚・v14の1枚・v20の4枚は ここに入れない */
+const SHOP_DECORS = DECORS.filter(
+  (id) => !COMBO_DECORS.includes(id) && !REWARD_DECORS.includes(id) && !MARKET_DECORS.includes(id)
+);
 /** 実際の家具の当たり判定の半径(src/entities/furniture.ts と同じ値。ここを変えたら両方直す) */
 const RADII = [0.42, 0.4, 0.22, 0.6, 0.5];
 
@@ -53,8 +57,12 @@ describe('模様替えアイテム(かべがみ・ゆかいた)', () => {
   it('かべがみ6種・ゆかいた3種があり、kindはdecor', () => {
     // v12: くみあわせで見つかる「ももいろかべ」「ほしぞらかべ」が加わった(お店には置かない)
     // v14: じっせきの ごほうび限定の「ボトルかべ」が加わった(お店にもクラフトにも出ない)
-    expect(WALL_STYLE_IDS).toEqual(['wall_cream', 'wall_sky', 'wall_leaf', 'wall_rose', 'wall_night', 'wall_bottle']);
-    expect(FLOOR_STYLE_IDS).toEqual(['floor_wood', 'floor_tile', 'floor_rug']);
+    // v20: テンの店(いちば島)の週がわり限定が かべ2・ゆか2 加わった(ツムギ工房には出ない)
+    expect(WALL_STYLE_IDS).toEqual([
+      'wall_cream', 'wall_sky', 'wall_leaf', 'wall_rose', 'wall_night', 'wall_bottle',
+      'wall_lantern', 'wall_market',
+    ]);
+    expect(FLOOR_STYLE_IDS).toEqual(['floor_wood', 'floor_tile', 'floor_rug', 'floor_stone', 'floor_mat']);
     for (const id of DECORS) {
       expect(ITEMS[id].kind, id).toBe('decor');
       expect(ITEMS[id].name.length, id).toBeGreaterThan(2);
@@ -73,7 +81,7 @@ describe('模様替えアイテム(かべがみ・ゆかいた)', () => {
     }
     // くみあわせでしか手に入らない2枚は「見つける楽しみ」なので お店には置かない。
     // v14のごほうび限定の1枚も同じ(もっている=そのじっせきを たっせいした しるし)
-    for (const id of [...COMBO_DECORS, ...REWARD_DECORS]) {
+    for (const id of [...COMBO_DECORS, ...REWARD_DECORS, ...MARKET_DECORS]) {
       expect(SHOP_STOCK.some((s) => s.item === id), id).toBe(false);
     }
   });

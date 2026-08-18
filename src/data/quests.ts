@@ -31,6 +31,13 @@ export interface QuestRequires {
   quest?: string;
   /** このセーブフラグが true になっていること */
   flag?: string;
+  /**
+   * この実績カウンタ(GameState.stats)が statMin 以上であること(v20第3章)。
+   * えきの依頼は「よるの でんしゃを 1回でも 見たこと」がはじまりなので、
+   * boolean のフラグでは表せない。数の条件を データ側に持たせるための枠。
+   */
+  stat?: string;
+  statMin?: number;
 }
 
 export interface QuestDef {
@@ -43,6 +50,19 @@ export interface QuestDef {
   count: number;
   /** collectPay: いっしょに わたすルミナ */
   price?: number;
+  /**
+   * collectPay: item/count だけでは足りないときの **追加の材料**(v20第3章 えきのこうじ)。
+   * item/count は これまでどおり「1つめの材料」を表し、ここに2つめ以降を書く。
+   * こうしておくと 第2章の q2_boat(もくざい6+500ルミナ)は 1文字も変わらない。
+   */
+  costs?: Partial<Record<ItemId, number>>;
+  /**
+   * 達成の報告先(省略=依頼主 npc と同じ)。v20第3章の「おつかい」だけが使う:
+   * テンから あずかって ノクトへ とどける、のように **たのむ人と とどける人が ちがう** 依頼。
+   */
+  reportNpc?: string;
+  /** 引き受けたときに その場で わたされる もの(v20 あずかりもの) */
+  offerItems?: Partial<Record<ItemId, number>>;
   /** flag: 達成の目じるしになるセーブフラグ */
   flagId?: string;
   /** 達成したときに立てるセーブフラグ(v11: ふねの修理→boat_repaired) */
@@ -313,12 +333,151 @@ export const QUESTS: QuestDef[] = [
     objective: { kind: 'poi', targetId: 'coveLighthouse' },
     lostHint: 'とうだいの とびらの前で <kbd>E</kbd>を おすと、レンズを つけられるよ。',
   },
+  // ===========================================================================
+  // 第3章「よるの えき」
+  //
+  // 章のはじまりは requires で決める(第1・2章のデータには ふれない)。
+  //   q3_station : とうだいが ともり(lighthouse_lit)、よるの でんしゃを 1回でも見た
+  //                (stats.night_train_seen >= 1)ら ツムギが たのんでくる
+  //   q3_lantern : はじめて いちば島へ ついた(flags.market_arrived)ら テンと出会える
+  // そこから先は これまでどおり unlocks の一本道(q3_lantern → q3_gift → q3_taste)。
+  //
+  // 3本の ミニ依頼は 第2章より軽い日常譚にしてある。かわりに **島・いちば島・入り江の
+  // 3つを またぐ**ようにしてあり、「いまやること」が 乗りものを1歩ずつ案内できるかを
+  // ここで確かめられる(ObjectiveSystem.withAreaTravel)。
+  // ===========================================================================
+  {
+    id: 'q3_station',
+    npc: 'tsumugi',
+    title: 'でんしゃの えきを つくろう',
+    type: 'collectPay',
+    item: 'wood',
+    count: 8,
+    costs: { stone: 6 },
+    price: 1000,
+    requires: { flag: 'lighthouse_lit', stat: 'night_train_seen', statMin: 1 },
+    // 立つのは「たのんだ」の印。えきが できあがるのは 翌朝(src/systems/StationBuild.ts)
+    completeFlag: 'station_order',
+    reward: {}, // ごほうびは「えきが できる」こと そのもの
+    unlocks: [],
+    offer: [
+      'ねえ、見た? よるの うみを、あかりが すーっと とおっていくの。',
+      'あれね、うみの上を はしる でんしゃなんですって。ノクトの ノートに かいてあったの。',
+      'むかしは この島にも えきが あって、みんな あれに のって よその島へ 行ったのよ。',
+      '……もういちど、つくってみない? さんばしの よこなら 板が しけるわ。',
+      'もくざい8つと いし6つ、それと こうじ代の 1000ルミナ。ぜんぶ そろったら わたしが くみ上げる。',
+    ],
+    progress: 'もくざい8つと いし6つと 1000ルミナを あつめよう',
+    done: [
+      'わあ、ぜんぶ そろったね! ありがとう。じゃあ、はじめるわ。',
+      'よるじゅうで くみ上げる。ホームと、駅灯と、ベンチと……そうだ、時計も つけましょう。',
+      'あしたの あさ、さんばしの よこを 見にきてね。',
+    ],
+    objective: { kind: 'gather', item: 'wood', targetId: 'forest' },
+    lostHint: 'もくざいは 北の林の 木から、いしは 岩から とれるよ。ルミナは ツムギ工房で もちものを うると たまる。',
+  },
+  {
+    id: 'q3_lantern',
+    npc: 'ten',
+    title: 'きえた ちょうちん',
+    type: 'collect',
+    item: 'lightshell',
+    count: 2,
+    requires: { flag: 'market_arrived' },
+    reward: { lumina: 180 },
+    unlocks: ['q3_gift'],
+    offerLabel: 'テンと はなそう',
+    offer: [
+      'おや、はじめての お顔だ。ようこそ、いちば島へ。ぼくは テン。ここで 店を やってる。',
+      'せっかく 来てくれたのに、うちの 通りの ちょうちんが ひとつ きえててね。',
+      'あかりの もとが 切れちゃったんだ。「ひかりの貝」があれば なおるんだけど……',
+      'ぼくは 店を はなれられない。2つ、もってきて くれないかい?',
+    ],
+    progress: 'ひかりの貝を 2つ あつめよう',
+    done: [
+      'おお、これだ これ! ……ほら、ついた。通りが そろった。',
+      'ありがとう。きえた あかりが ひとつ あるだけで、いちばは さびしく 見えるんだ。',
+    ],
+    objective: { kind: 'gather', item: 'lightshell', targetId: 'cove' },
+    lostHint: 'ひかりの貝は よるの入り江の すなはまに おちているよ。しまへ もどって ふねに のろう。',
+  },
+  {
+    id: 'q3_gift',
+    npc: 'ten',
+    reportNpc: 'nokto', // たのむのは テン、とどけるのは ノクト
+    title: 'テンの あずかりもの',
+    type: 'collect',
+    item: 'gift_parcel',
+    count: 1,
+    offerItems: { gift_parcel: 1 }, // 引き受けた その場で わたされる
+    reward: { lumina: 150 },
+    unlocks: ['q3_taste'],
+    offer: [
+      'ちょうど よかった。きみ、あの島から 来たんだよね。……これ、たのめないかな。',
+      'ずっと むかし、ほしの ことを 聞きに 来た おじいさんが いてね。',
+      'たのまれた ものが やっと とどいたんだけど、ぼくは 島へ わたれないんだ。',
+      'ノクトさんに とどけて くれる? ……たぶん、まだ 星を 見てると おもうよ。',
+    ],
+    progress: 'あずかりものを ノクトに とどけよう',
+    done: [
+      'ほう……これは。あの 行商の子が、まだ おぼえておったのか。',
+      'ふむ、たしかに うけとった。……ずっと まえに たのんだ、遠い島の 星の ならびの ひかえじゃ。',
+      'ワシは もう 待つのを やめておったのに。……ありがとう、と つたえておくれ。',
+    ],
+    objective: { kind: 'npc', targetId: 'nokto' },
+    lostHint: 'ノクトは ひるは 家、よるは 高台で 星を見ているよ。しまへ もどって さがそう。',
+  },
+  {
+    id: 'q3_taste',
+    npc: 'ten',
+    title: 'よその島の あじ',
+    type: 'collectAny', // りょうりなら どれでもよい(6種のどれか1つ)
+    acceptedItems: ['d_grillfish', 'd_mushsoup', 'd_berrypie', 'd_starmochi', 'd_shellsoup', 'd_nightgrill'],
+    count: 1,
+    reward: { lumina: 120, recipes: ['r_aroma_lamp'] },
+    unlocks: [],
+    offer: [
+      'ねえ、ひとつ ずうずうしい おねがいを しても いい?',
+      'ぼく、いろんな 島の ものを あつめて うってるけど、じぶんじゃ 何も つくれないんだ。',
+      'きみの島の りょうりを、ひとつ 食べてみたい。なんでも いいんだ。',
+      'キッチンだいが あれば つくれるって 聞いたよ。まってるね。',
+    ],
+    progress: 'りょうりを 1つ つくって テンに とどけよう',
+    done: [
+      '……いただきます。……ん。',
+      'あったかい。ぼくの ごはんは、いつも かばんの中で つめたく なってるから。',
+      'お礼に、うちの レシピを ひとつ。「かおりのランプ」——かおりのはを 2まいと もくざい1つ。',
+      'よるに ともすと、たびの においが するんだ。……また 来てね。まってるよ。',
+    ],
+    objective: { kind: 'craft' },
+    lostHint: 'キッチンだい(もくざい4・いし2・ねんど1)を 家の中に おくと、くみあわせで りょうりが つくれるよ。',
+  },
 ];
 
 export const QUEST_BY_ID = Object.fromEntries(QUESTS.map((q) => [q.id, q]));
 
 /** 第2章の依頼ID(セーブの初期値・テストがここを唯一の情報源にする) */
 export const CHAPTER2_QUEST_IDS = QUESTS.filter((q) => q.id.startsWith('q2_')).map((q) => q.id);
+/** 第3章の依頼ID(同上) */
+export const CHAPTER3_QUEST_IDS = QUESTS.filter((q) => q.id.startsWith('q3_')).map((q) => q.id);
+
+/** その依頼の報告先(reportNpc が無ければ 依頼主。会話・目標・テストが ここを唯一の情報源にする) */
+export function questReportNpc(q: QuestDef): string {
+  return q.reportNpc ?? q.npc;
+}
+
+/**
+ * collectPay の材料ぜんぶ(item/count と costs をまとめた表)。
+ * ここを通しておくと、材料が1種類の第2章と 2種類の第3章を 同じコードであつかえる。
+ */
+export function questCosts(q: QuestDef): [ItemId, number][] {
+  const out: [ItemId, number][] = [];
+  if (q.item) out.push([q.item, q.count]);
+  for (const [id, n] of Object.entries(q.costs ?? {})) {
+    if (n && n > 0) out.push([id as ItemId, n]);
+  }
+  return out;
+}
 
 // レシピを教える依頼のオファー時に先に開放するもの(q_lanternはオファーでレシピを渡す)
 export const OFFER_RECIPES: Record<string, string[]> = {

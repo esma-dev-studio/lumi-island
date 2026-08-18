@@ -6,6 +6,10 @@ import { NPC_HOME_BY_ID, npcHomeShot } from './NpcInteriors';
 import {
   COVE_BOAT, COVE_BOAT_OFFSHORE, ISLAND_BOAT, ISLAND_BOAT_OFFSHORE, coveNightLevel, type BoatPose,
 } from './CoveArea';
+import { carCameraShot } from './TrainCarArea';
+import {
+  RIDE_FADE_OUT, RIDE_SWAP_IN, RIDE_SWAP_OUT, RIDE_TOTAL_SEC,
+} from '../systems/TrainRideSystem';
 import { wrapAngle } from './CameraController';
 import { terrainHeight } from '../entities/terrain';
 import {
@@ -21,7 +25,7 @@ import { SLEEP_TOTAL_KEY } from '../systems/BadgeSystem';
 import type { GameScene } from './GameScene';
 
 export type SequenceState =
-  | 'idle' | 'sleeping' | 'intro' | 'bloom' | 'travel' | 'voyage' | 'lighthouse' | 'festival';
+  | 'idle' | 'sleeping' | 'intro' | 'bloom' | 'travel' | 'voyage' | 'lighthouse' | 'festival' | 'train';
 
 const SLEEP_FADE_IN = 0.45; // 暗転までの秒
 const SLEEP_TOTAL = 1.05; // 起床までの秒
@@ -117,6 +121,11 @@ export class SequenceDirector {
   // ---- v11第2章 とうだいの点灯 ----
   private lightSparkT = 0;
   private lightDone = false;
+  // ---- v20第3章 でんしゃの車内 ----
+  private trainTo: 'market' | 'island' = 'market';
+  private trainFade: HTMLElement | null = null;
+  private trainIn = false;
+  private trainOut = false;
   // ---- v16 ほしまつり ランタンとばし ----
   private fesSparkT = 0;
   private fesCheered = false;
@@ -317,6 +326,93 @@ export class SequenceDirector {
         burst(bx + s * 2.6, by + 2.2 + s * 0.6, bz - 2.2 - s, 'ore', 4);
       }
     }
+  }
+
+  // ---------- v20第3章 でんしゃの車内(島 ⇄ いちば島) ----------
+  /**
+   * でんしゃに のる。連打しても1回ぶん(ほかの演出中は動かさない)。
+   *
+   * 航海(sail)と ちがって、**とちゅうの絵は「車内」ひとつだけ**にしてある:
+   * 島も いちば島も 消して、まどの外だけが ゆっくり ながれる。
+   * 「どこを どう走っているか」を見せない ほうが、
+   * 夜の海を わたる 12秒が 長く・しずかに 感じられる(灯台の点灯と同じ考え方)。
+   *
+   * @param to 行き先。'market'=いちば島へ / 'island'=島へ かえる
+   */
+  rideTrain(to: 'market' | 'island'): void {
+    if (this.state !== 'idle') return;
+    this.state = 'train';
+    this.t = 0;
+    this.trainTo = to;
+    this.trainIn = false;
+    this.trainOut = false;
+    const gs = this.gs;
+    gs.restoreAllOcclusionImmediately();
+    gs.player.locked = true;
+    sfx('door_open'); // とびらが ひらいて 乗りこむ音
+    if (!this.trainFade) {
+      const el = document.createElement('div');
+      // CSS(src/ui/style.css)は触らずに、この演出ぶんだけ要素へ直接書く
+      el.style.cssText =
+        'position:absolute;inset:0;background:#0b1524;opacity:0;pointer-events:none;' +
+        'transition:opacity 0.5s ease;z-index:20';
+      document.getElementById('ui-root')!.appendChild(el);
+      this.trainFade = el;
+    }
+    this.trainFade.style.opacity = '1'; // まず 暗転する(乗りこむ ところは 見せない)
+  }
+
+  /** いま でんしゃに 乗っている最中か(検証・ボット用) */
+  get riding(): boolean {
+    return this.state === 'train';
+  }
+
+  /** 車内の1フレーム: カメラ・まどの外の ながれ・車りょうの ゆれ */
+  private updateTrainRide(dt: number): void {
+    const gs = this.gs;
+    const car = gs.island.trainCar;
+    // 暗転しきったところで 車内へ 入れかえる(明るいまま 世界が すり替わるのを 見せない)
+    if (!this.trainIn && this.t >= RIDE_SWAP_IN) {
+      this.trainIn = true;
+      gs.island.setTrainCar(true);
+      // ミオは「見た目だけ」車内の いすへ。あしもと(GameState.player)は うごかさない
+      const seat = car.seatWorld();
+      gs.playerView.root.position.set(seat.x, seat.y, seat.z);
+      gs.playerView.root.rotation.y = Math.PI / 2; // 東(+X)の まどを 見る
+      gs.playerView.play('sit');
+      this.applyTrainCamera(0);
+      gs.camCtl.snapDialogue(); // 120m先へ 飛ぶので 補間しない
+      if (this.trainFade) this.trainFade.style.opacity = '0';
+    }
+    if (this.trainIn && !this.trainOut) {
+      car.update(dt);
+      const k = Math.min(1, Math.max(0, (this.t - RIDE_SWAP_IN) / (RIDE_FADE_OUT - RIDE_SWAP_IN)));
+      this.applyTrainCamera(k);
+    }
+    if (!this.trainOut && this.t >= RIDE_FADE_OUT && this.trainFade) {
+      this.trainFade.style.opacity = '1'; // また 暗転してから 降りる
+    }
+    // 暗転しきったところで 行き先へ 入れかえる
+    if (!this.trainOut && this.t >= RIDE_SWAP_OUT) {
+      this.trainOut = true;
+      gs.island.setTrainCar(false);
+      gs.applyMarket(this.trainTo === 'market');
+      gs.playerView.play('idle');
+      gs.camCtl.endDialogue();
+      gs.camCtl.snapTo(gs.player.x, gs.player.y, gs.player.z);
+      if (this.trainFade) this.trainFade.style.opacity = '0';
+    }
+  }
+
+  /** 車内カメラ(自由配置)。k=0→1 で 通路を ゆっくり 前へ 寄る */
+  private applyTrainCamera(k: number): void {
+    const car = this.gs.island.trainCar;
+    const shot = carCameraShot(k);
+    // 車りょうの たてゆれ(ごく小さく)。見せ場ぜんたいの「走っている感じ」はこれ1つで足りる
+    const bob = Math.sin(this.t * 3.1) * 0.014;
+    const pos = car.world(shot.pos[0], shot.pos[1] + bob, shot.pos[2]);
+    const tgt = car.world(shot.tgt[0], shot.tgt[1] + bob * 0.5, shot.tgt[2]);
+    this.gs.camCtl.beginDialogue(pos, tgt);
   }
 
   // ---------- v11第2章 とうだいの点灯 ----------
@@ -549,6 +645,17 @@ export class SequenceDirector {
         gs.camCtl.endEvent();
         gs.camCtl.snapTo(gs.player.x, gs.player.y, gs.player.z);
         sfx('step_wood');
+      }
+      return;
+    }
+
+    if (this.state === 'train') {
+      this.updateTrainRide(dt);
+      if (this.t >= RIDE_TOTAL_SEC) {
+        this.state = 'idle';
+        gs.camCtl.endDialogue();
+        gs.camCtl.snapTo(gs.player.x, gs.player.y, gs.player.z);
+        sfx('step_wood'); // ホームの板に 降り立つ音
       }
       return;
     }

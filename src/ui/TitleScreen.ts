@@ -78,7 +78,7 @@ export class TitleScreen {
           <div class="help-grid">${byInput(HELP_KEYBOARD, HELP_TOUCH)}
           </div>
         </div>
-        <div class="title-credit">オリジナル作品 / 3Dモデル・音はすべてプログラム生成 <span class="title-ver">v13.2</span></div>
+        <div class="title-credit">オリジナル作品 / 3Dモデル・音はすべてプログラム生成 <span class="title-ver">v14.0</span></div>
       </div>
     `;
     const file = this.el.querySelector<HTMLInputElement>('.tx-file')!;

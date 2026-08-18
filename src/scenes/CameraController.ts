@@ -413,6 +413,19 @@ export class CameraController {
     this.dlgPos.set(pos[0], pos[1], pos[2]);
     this.dlgTgt.set(tgt[0], tgt[1], tgt[2]);
   }
+  /**
+   * 会話カメラを 理想位置へ 即座に置く(補間しない)。snapEvent と まったく同じ役わり。
+   * v20 でんしゃの車内(島から120mはなれた別空間)へ 場面が飛ぶときに使う:
+   * 補間のままだと、暗転が あけたあとも カメラが 空中を 追いかけている数フレームが写る。
+   */
+  snapDialogue(): void {
+    if (this.mode !== 'dialogue') return;
+    this.desiredPos.copyFrom(this.dlgPos);
+    this.desiredTgt.copyFrom(this.dlgTgt);
+    this.cam.position.copyFrom(this.desiredPos);
+    this.lookAt.copyFrom(this.desiredTgt);
+    this.cam.setTarget(this.lookAt);
+  }
   endDialogue(): void {
     if (this.mode === 'dialogue') this.mode = 'follow';
   }

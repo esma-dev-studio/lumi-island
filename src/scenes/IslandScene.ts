@@ -41,7 +41,16 @@ import {
   npcHomeCircles, npcHomeFloorY, npcHomeRects,
 } from './NpcInteriors';
 import { CoveArea, COVE_CIRCLES, COVE_NODES, ISLAND_BOAT, coveNightLevel } from './CoveArea';
+import { MarketArea } from './MarketArea';
+import { TrainCarArea } from './TrainCarArea';
 import { makeBoat, makeHorizonSpark, makeHorizonTrain, type BoatMesh } from '../entities/cove';
+import {
+  MARKET_CIRCLES, insideMarketArea, marketGroundY, marketWalkable,
+} from '../entities/marketTerrain';
+import {
+  STATION_CIRCLES, STATION_LAMP, STATION_POINT, STATION_TRAIN_LENGTH, STATION_Y,
+  makeStationPlatform, makeStationTrain, makeTrainReflection, onIslandStation, type StationTrainMesh,
+} from '../entities/station';
 import { buildGarden, type GardenView } from '../entities/garden';
 import { gardenFenceColliders } from '../systems/GardenSystem';
 import type { GardenPlot } from '../game/GameState';
@@ -118,6 +127,17 @@ export class IslandScene {
    */
   readonly npcHomeExits = new Map<string, { x: number; z: number }>();
   cove!: CoveArea; // v11 よるの入り江(島にいるあいだは消えている)
+  market!: MarketArea; // v20 いちば島(島にいるあいだは消えている)
+  trainCar!: TrainCarArea; // v20 でんしゃの車内(乗っているあいだだけ出る)
+  /** v20 さんばしのよこの「よるの えき」。こうじが おわるまで 出さない */
+  private stationMesh!: Mesh;
+  private stationLamp!: Mesh;
+  private stationOn = false;
+  /** v20 ホームに とまっている でんしゃ(来る夜だけ 出す) */
+  private stationTrain!: StationTrainMesh;
+  private stationRefl!: { mesh: Mesh; mat: StandardMaterial };
+  private stationTrainOn = false;
+  private stationT = 0;
   islandBoat!: BoatMesh; // 島の桟橋によこづけしてある小舟(しゅうり前は こわれた部品つき)
   /** v11第2章 島から見える 水平線のきらめき(とうだいが ともってからの夜だけ出る) */
   horizonSpark!: Mesh;
@@ -543,6 +563,26 @@ export class IslandScene {
     // 走る道は「島から半径TRAIN_RADIUSの円の、南がわの弧」。位置も向きも updateNightTrain が毎フレーム入れる
     this.trainMesh.setEnabled(false);
 
+    // ---- v20第3章 さんばしのよこの「よるの えき」(こうじが おわるまで 出さない) ----
+    // 島の見た目に入れて、入り江・いちば島にいるあいだ 自動で消えるようにする。
+    // 当たり判定(柱・時計柱)は えきが 出ているあいだだけ effective(resolveCollision)。
+    this.stationMesh = makeStationPlatform(s);
+    caster(this.stationMesh);
+    this.stationMesh.setEnabled(false);
+    const stLamp = makeLamp(s);
+    stLamp.mesh.position.set(STATION_LAMP[0], STATION_Y - 0.02, STATION_LAMP[1]);
+    stLamp.mesh.rotation.y = Math.PI / 2;
+    caster(stLamp.mesh);
+    this.stationLamp = stLamp.mesh;
+    this.stationLamp.setEnabled(false);
+    // ホームに とまる でんしゃ(来る夜だけ 出す)。ホームの西どなりの海の上
+    this.stationTrain = makeStationTrain(s);
+    this.stationTrain.root.position.set(STATION_POINT.x - 4.2, 0.3, STATION_POINT.z);
+    this.stationTrain.root.setEnabled(false);
+    this.stationRefl = makeTrainReflection(s);
+    this.stationRefl.mesh.position.set(STATION_POINT.x - 3.1, 0.32, STATION_POINT.z);
+    this.stationRefl.mesh.setEnabled(false);
+
     // ---- v11 よるの入り江(別空間。島にいるあいだは消えている) ----
     // ここまでに作ったメッシュ=島の見た目ぜんぶ。入り江にいるあいだはこれを丸ごと消す
     // (逆に、島にいるあいだは入り江のrootを消す)。この1行より下で作るものは入り江のもの。
@@ -561,7 +601,12 @@ export class IslandScene {
     this.dayNight.glow.addExcludedMesh(this.cove.light.beam);
     this.dayNight.glow.addExcludedMesh(this.horizonSpark);
     this.dayNight.glow.addExcludedMesh(this.trainMesh); // 遠景の帯を発光レイヤーに焼かない(にじみと負荷を足さない)
+    // v20 いちば島と でんしゃの車内。どちらも 入り江と同じ「別空間」で、
+    // 島の見た目(islandMeshes)を 丸ごと消して 入れかわる
+    this.market = new MarketArea(s, this.water.seaMat, islandMeshes);
+    this.trainCar = new TrainCarArea(s, islandMeshes);
     for (const c of COVE_CIRCLES) this.circles.push(c);
+    for (const c of MARKET_CIRCLES) this.circles.push(c);
     // 入り江の採取ノードも島と同じ nodes に入れる(InteractionSystemの道すじを1本にする)
     for (const def of COVE_NODES) {
       const root = this.cove.nodeMeshes.get(def.id);
@@ -723,6 +768,14 @@ export class IslandScene {
    * どこを走っていても 見かけの大きさが 変わらない(まっすぐの線だと はしで小さくなる)。
    */
   private updateNightTrain(dt: number): void {
+    // v20 えきが できたら、でんしゃは「とおりすぎる」のを やめて **ホームに とまる**。
+    // 遠くの水平線を よこぎる 同じ でんしゃが 同時に見えるのは おかしいので、
+    // ここで 止める(えきが できるまでは v13 のまま 1ミリも 変わらない)。
+    if (this.stationOn) {
+      if (this.train.isRunning) this.train.stop();
+      if (this.trainMesh.isEnabled(false)) this.trainMesh.setEnabled(false);
+      return;
+    }
     if (this.cove.isActive) {
       // 入り江にいるあいだ 島の見た目は丸ごと消えているが、スケジュールも止めておく
       // (帰ってきた瞬間に 半分だけ走った列車が 出てこないようにする)
@@ -746,6 +799,70 @@ export class IslandScene {
     this.trainMat.alpha = coveNightLevel(this.time.hour) * 0.9 * fade;
   }
 
+  // ---------- v20第3章 よるの えき ----------
+  /**
+   * えきの こうじが おわったかを 見た目と判定へ 反映する。
+   * これが true のあいだだけ ホームの板が 歩けるようになり、柱の当たり判定が effective になる
+   * (= 見た目と判定が かならず そろう)。
+   */
+  setStationBuilt(built: boolean): void {
+    if (this.stationOn === built) return;
+    this.stationOn = built;
+    this.stationMesh.setEnabled(built);
+    this.stationLamp.setEnabled(built);
+    if (built) registerGlowSource(STATION_LAMP[0], STATION_Y + 1.77, STATION_LAMP[1]);
+    else unregisterGlowSource(STATION_LAMP[0], STATION_LAMP[1]);
+    if (!built) this.setStationTrain(false);
+  }
+
+  /** えきが できているか(Eの案内・撮影・検証が読む) */
+  get isStationBuilt(): boolean {
+    return this.stationOn;
+  }
+
+  /** ホームに でんしゃを 出す/しまう(GameSceneが 時刻から決めて 毎フレーム呼ぶ) */
+  setStationTrain(present: boolean): void {
+    const want = present && this.stationOn;
+    if (this.stationTrainOn === want) return;
+    this.stationTrainOn = want;
+    this.stationTrain.root.setEnabled(want);
+    this.stationRefl.mesh.setEnabled(want);
+    if (!want) this.stationRefl.mat.alpha = 0;
+  }
+
+  /** ホームに でんしゃが とまっているか(Eの案内・撮影・検証が読む) */
+  get isStationTrainHere(): boolean {
+    return this.stationTrainOn;
+  }
+
+  /** ホームの でんしゃの まどあかりと 水面のうつりこみ(出ていないときは 何もしない) */
+  private updateStationTrain(dt: number): void {
+    if (!this.stationTrainOn) return;
+    this.stationT += dt;
+    const night = coveNightLevel(this.time.hour);
+    this.stationTrain.windowMat.alpha = 0.45 + 0.55 * night;
+    this.stationRefl.mat.alpha = night * 0.55 * (0.8 + 0.2 * Math.sin(this.stationT * 0.9));
+    this.stationTrain.root.position.y = 0.3 + Math.sin(this.stationT * 0.6) * 0.012;
+  }
+
+  /** でんしゃの長さ(見せ場のカメラが 使う) */
+  get stationTrainLength(): number {
+    return STATION_TRAIN_LENGTH;
+  }
+
+  /**
+   * v20 でんしゃの車内へ 入る/出る。
+   * 入るときは **先に いちば島・入り江を しまってから** 車内を出す
+   * (順を まちがえると、いちば島から 乗ったときに 市場が 車内ごしに 見えてしまう)。
+   */
+  setTrainCar(on: boolean): void {
+    if (on) {
+      this.market.setActive(false);
+      this.cove.setActive(false);
+    }
+    this.trainCar.setActive(on);
+  }
+
   /** 航海の演出用: 島がわ/入り江がわの船を世界座標へ置く(SequenceDirectorが毎フレーム呼ぶ) */
   placeBoat(side: 'island' | 'cove', x: number, y: number, z: number, rotY: number): void {
     if (side === 'cove') {
@@ -762,10 +879,14 @@ export class IslandScene {
     // こうしておくと、スタック自動脱出の近傍探索が原理的に別空間から島へ飛べない(教訓4)
     const cove = coveGroundY(x, z);
     if (cove !== null) return cove;
+    const market = marketGroundY(x, z);
+    if (market !== null) return market;
     const home = homeFloorY(x, z);
     if (home !== null) return home;
     const npcHome = npcHomeFloorY(x, z);
     if (npcHome !== null) return npcHome;
+    // v20 よるの えきの ホーム(できあがってから)。さんばしと同じ高さ
+    if (this.stationOn && onIslandStation(x, z)) return STATION_Y;
     if (onPier(x, z)) return PIER.y;
     const deck = deckGroundY(x, z);
     if (deck !== null) return deck;
@@ -776,10 +897,14 @@ export class IslandScene {
   walkable(x: number, z: number): boolean {
     // よるの入り江。まわりは自然な下りで海に沈むので、見えない壁なしに岸で止まる
     if (insideCoveArea(x, z)) return coveWalkable(x, z);
+    // v20 いちば島。入り江と まったく同じ考え方(まわりは自然な下りで海に沈む)
+    if (insideMarketArea(x, z)) return marketWalkable(x, z);
     // マイホームの室内。部屋のまわりは島の規則どおり「海の中」なので外へは抜けられない
     if (insideHomeFloor(x, z)) return true;
     // v12 NPCの家の中。まわりが「海の中」なのはマイホームと同じ
     if (insideNpcHomeFloor(x, z)) return true;
+    // v20 よるの えきの ホーム(できあがってから)
+    if (this.stationOn && onIslandStation(x, z)) return true;
     if (onPier(x, z)) return true;
     return walkableGround(x, z); // 高さの規則はterrain.tsに1本化(釣りの水面判定と同じ情報源)
   }
@@ -790,6 +915,17 @@ export class IslandScene {
    * ——ふだんの浜べに 見えない壁を のこさないため。
    */
   resolveCollision(x: number, z: number, radius: number): [number, number] {
+    if (this.stationOn) {
+      for (const c of STATION_CIRCLES) {
+        const dx = x - c.x, dz = z - c.z;
+        const d = Math.hypot(dx, dz);
+        const min = c.r + radius;
+        if (d < min && d > 1e-4) {
+          x = c.x + (dx / d) * min;
+          z = c.z + (dz / d) * min;
+        }
+      }
+    }
     if (this.festivalOn) {
       for (const c of this.festivalCircles) {
         const dx = x - c.x, dz = z - c.z;
@@ -915,6 +1051,8 @@ export class IslandScene {
     this.home.update(this.time.hour); // 室内灯(室内にいるときだけ効く)
     this.npcHomes.update(this.time.hour); // NPCの家のあかり(その家にいるときだけ効く)
     this.cove.update(dtSec, this.time.hour); // 波うちぎわの燐光・草のゆれ(入り江にいるときだけ効く)
+    this.market.update(dtSec, this.time.hour); // v20 いちばの ちょうちん(いちば島にいるときだけ効く)
+    this.updateStationTrain(dtSec); // v20 ホームに とまる でんしゃ(来ていなければ 即return)
     this.updateHorizonSpark(dtSec); // 島から見える とうだいの あかり(点いていなければ即return)
     // ほしのかけら: この関数はWorldPauseControllerが「凍っていないフレーム」だけ呼ぶので、
     // ポーズ・会話・見せ場のあいだは進まない。睡眠で朝6時へ飛んだ場合も「夜が終わった」として消える
