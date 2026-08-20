@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- viewport-fit=cover: iPadのホームインジケータ・角丸の下までゲーム画面を広げ、UIは safe-area で内側に寄せる -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#1c2a4a" />
+    <!-- ホーム画面に追加したときに全画面(ブラウザのバーなし)で起動する -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Lumi Island" />
+    <meta name="format-detection" content="telephone=no" />
+    <title>Lumi Island</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%231c2a4a'/%3E%3Ccircle cx='16' cy='18' r='7' fill='%239fe8c8'/%3E%3Ccircle cx='16' cy='11' r='3' fill='%23ffd9a0'/%3E%3C/svg%3E"
+    />
+    <!-- iOSのホーム画面アイコン(SVG不可のため同じ意匠の180pxPNG) -->
+    <link
+      rel="apple-touch-icon"
+      href="data:image/png;base64,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"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <script type="module" crossorigin src="./assets/index-f2acnGIR.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-D2YauwLV.css">
+  </head>
+  <body>
+    <canvas id="game-canvas" tabindex="0"></canvas>
+    <div id="ui-root"></div>
+    <div id="boot-screen"><div class="boot-inner"><div class="boot-title">Lumi Island</div><div class="boot-msg">よみこみ中…</div></div></div>
+  </body>
+</html>
