@@ -1,26 +1,39 @@
 {
   "result": "PASS",
   "phase": "night",
+  "area": "island",
   "need": 3,
   "limitSec": 120,
-  "elapsedSec": 19.7,
+  "elapsedSec": 28.7,
   "total": 3,
   "catches": [
     {
-      "sec": 5.9,
+      "sec": 4.3,
       "total": 1,
+      "got": [
+        "b_suzu"
+      ],
       "hintSeen": true
     },
     {
-      "sec": 14.1,
+      "sec": 23.6,
       "total": 2,
+      "got": [
+        "b_suzu"
+      ],
       "hintSeen": true
     },
     {
-      "sec": 19.7,
+      "sec": 28.7,
       "total": 3,
+      "got": [
+        "b_suzu"
+      ],
       "hintSeen": true
     }
+  ],
+  "kinds": [
+    "b_suzu"
   ],
   "hints": [
     "むしが いる! ちかづいて つかまえよう",
@@ -31,44 +44,44 @@
   "errors": [],
   "log": [
     {
-      "sec": 8.9,
+      "sec": 8.3,
       "label": "ゲーム開始(新規)"
     },
     {
-      "sec": 10.1,
-      "label": "支度おわり: 夜 hour=21.0 虫=0匹 いち=(-3.0,6.0)"
+      "sec": 9.7,
+      "label": "支度おわり: island 夜 hour=21.0 虫=0匹 いち=(-3.0,6.0)"
     },
     {
-      "sec": 10.1,
+      "sec": 9.7,
       "label": "いまやること: q_wood_offer 「ツムギの はなしを聞こう」"
     },
     {
-      "sec": 10.5,
+      "sec": 10.2,
       "label": "ねらう: b_suzu (-3.7,19.0) 13.0m"
     },
     {
-      "sec": 16,
-      "label": "つかまえた! (1匹目) ヒントを見てから=true"
+      "sec": 14,
+      "label": "つかまえた! (1匹目 b_suzu) ヒントを見てから=true"
     },
     {
-      "sec": 16.1,
-      "label": "ねらう: b_suzu (10.1,0.4) 21.0m"
+      "sec": 14.1,
+      "label": "ねらう: b_suzu (26.3,0.0) 34.1m"
     },
     {
-      "sec": 24.2,
-      "label": "つかまえた! (2匹目) ヒントを見てから=true"
+      "sec": 33.4,
+      "label": "つかまえた! (2匹目 b_suzu) ヒントを見てから=true"
     },
     {
-      "sec": 24.3,
-      "label": "ねらう: b_suzu (26.6,0.1) 16.3m"
+      "sec": 33.4,
+      "label": "ねらう: b_suzu (10.0,0.6) 15.2m"
     },
     {
-      "sec": 29.8,
-      "label": "つかまえた! (3匹目) ヒントを見てから=true"
+      "sec": 38.4,
+      "label": "つかまえた! (3匹目 b_suzu) ヒントを見てから=true"
     },
     {
-      "sec": 29.9,
-      "label": "PASS: 19.7秒で 3匹(合格は120秒で3匹)"
+      "sec": 38.4,
+      "label": "PASS: 28.7秒で 3匹(合格は120秒で3匹)"
     }
   ]
 }

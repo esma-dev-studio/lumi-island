@@ -5,6 +5,8 @@
 //     種類は時間帯で入れかわる(昼=チョウ・テントウ・バッタ・カブト・クワガタ・カマキリ・セミ /
 //     夕方16〜18時の池だけ=トンボ / 夜=ホタル・スズムシ・オオクワガタ)。
 //   - v17: 毎日ぜんぶの種類は出ない。「きょうの顔ぶれ」を日付ハッシュで えらぶ(todaysBugs)。
+//   - v23: 出る場所が3つになった(BugArea)。島のほかに、よるの入り江(ミヤマ・コーカサス)と
+//     いちば島(ニジイロ・ヘラクレス)。スケジューラは場所ごとに1つずつ作る。
 //   - 虫はスポット(花・草むら・木・池)のまわりを ただよう / とまる。
 //   - プレイヤーが近づくと警戒し(BUG_WARY_R)、近すぎる状態が BUG_SPOOK_SEC つづくと にげる。
 //       走って近づかれた → その虫の runFlee でそわそわしはじめる(チョウはとくに敏感)
@@ -36,7 +38,35 @@ import { sfx } from '../audio/AudioSystem';
 export type BugId =
   | 'b_shiro' | 'b_ageha' | 'b_tento' | 'b_kabuto' | 'b_hotaru' | 'b_suzu'
   // v17 「有名な虫」を6種たす(クワガタ・オオクワガタ・カマキリ・トンボ・セミ・バッタ)
-  | 'b_kuwa' | 'b_ookuwa' | 'b_kama' | 'b_tonbo' | 'b_semi' | 'b_batta';
+  | 'b_kuwa' | 'b_ookuwa' | 'b_kama' | 'b_tonbo' | 'b_semi' | 'b_batta'
+  // v23 カブト・クワガタ族を7種たして「カブクワ10しゅるい」にする。
+  // 島に3種(ノコギリ=昼 / ヒラタ=夜 / ギラファ=夜のレア)、
+  // よるの入り江に2種(ミヤマ=昼 / コーカサス=夜)、いちば島に2種(ニジイロ / ヘラクレス)。
+  | 'b_nokogiri' | 'b_hirata' | 'b_giraffa'
+  | 'b_miyama' | 'b_caucasus' | 'b_niji' | 'b_hercules';
+
+/**
+ * v23 虫が出る「場所」。島・よるの入り江・いちば島の3つ。
+ *
+ * 別空間(入り江・いちば島)にも虫を出すために、スポットの表と スケジューラを
+ * 場所ごとに持つ。BugSystem 自身は座標を1つも知らない——スポットの配列は
+ * 呼ぶ側(IslandScene)が わたす(島=data/island.ts / 入り江=scenes/CoveArea.ts /
+ * いちば島=scenes/MarketArea.ts)。ここを場所ごとに分けたので、
+ * 「入り江へ行っても島の虫が出る」「島に入り江の虫が出る」が構造的に起きない。
+ */
+export type BugArea = 'island' | 'cove' | 'market';
+
+/**
+ * 場所ごとの「同時に出す数」。島は これまでどおり 昼6〜7・夜4〜5。
+ * 入り江・いちば島は せまいので少なめにし、日づけのゆらぎ(+0/+1)も付けない
+ * (スポット数 ≥ 目標数 を いつでも満たすため。下のテストが機械検査する)。
+ * market の昼が0なのは「いちば島は よるの でんしゃでしか 行けない=昼の顔ぶれが無い」ため。
+ */
+export const BUG_AREA_TARGET: Record<BugArea, { day: number; night: number }> = {
+  island: { day: 6, night: 4 },
+  cove: { day: 2, night: 2 },
+  market: { day: 0, night: 2 },
+};
 
 /** 捕獲できる距離(m)。むしあみを ふる範囲。すべての虫の runFlee より大きい */
 export const BUG_CATCH_R = 2.6;
@@ -108,6 +138,11 @@ export function bugPhaseKey(day: number, hour: number): string {
 
 export interface BugDef {
   id: BugId;
+  /**
+   * v23 どこに出るか。省略できない印にしてあるのは、
+   * 「足したのに どこにも出ない虫」を型で防ぐため。
+   */
+  area: BugArea;
   /** 出てくるスポットの種類 */
   spots: BugSpotKind[];
   /** 夜だけ出るか(falseは昼だけ) */
@@ -140,7 +175,7 @@ export interface BugDef {
 }
 
 /**
- * 虫12種(v9の6種 + v17の6種)。runFlee はどれも BUG_CATCH_R(2.6m)より小さいので、
+ * 虫19種(v9の6種 + v17の6種 + v23の7種)。runFlee はどれも BUG_CATCH_R(2.6m)より小さいので、
  * 「走って近づいても、にげる前に必ず捕獲圏へ入れる」ことが構造で保証される(テストで固定)。
  * 種類ごとの差は「どこまで近づくと そわそわしはじめるか」だけになり、
  * チョウ=敏感 / カブトムシ=どんかん という手ざわりは残る。
@@ -151,59 +186,106 @@ export interface BugDef {
  */
 export const BUG_DEFS: BugDef[] = [
   {
-    id: 'b_shiro', spots: ['flower'], night: false, daily: true, weight: 4,
+    id: 'b_shiro', area: 'island', spots: ['flower'], night: false, daily: true, weight: 4,
     runFlee: 1.5, walkFlee: 0.55, hoverY: 0.78, hoverR: 0.42, speed: 0.85, glow: false,
   },
   {
-    id: 'b_ageha', spots: ['flower'], night: false, daily: false, weight: 1.6,
+    id: 'b_ageha', area: 'island', spots: ['flower'], night: false, daily: false, weight: 1.6,
     runFlee: 1.6, walkFlee: 0.6, hoverY: 0.95, hoverR: 0.52, speed: 0.62, glow: false,
   },
   {
-    id: 'b_tento', spots: ['grass'], night: false, daily: true, weight: 3,
+    id: 'b_tento', area: 'island', spots: ['grass'], night: false, daily: true, weight: 3,
     runFlee: 1.1, walkFlee: 0.4, hoverY: 0.12, hoverR: 0.24, speed: 0.4, glow: false,
   },
   {
-    id: 'b_kabuto', spots: ['tree'], night: false, daily: false, weight: 0.8,
+    id: 'b_kabuto', area: 'island', spots: ['tree'], night: false, daily: false, weight: 0.8,
     runFlee: 0.8, walkFlee: 0.25, hoverY: 0.55, hoverR: 0, speed: 0.2, glow: false,
   },
   {
-    id: 'b_hotaru', spots: ['pond'], night: true, daily: true, weight: 3,
+    id: 'b_hotaru', area: 'island', spots: ['pond'], night: true, daily: true, weight: 3,
     runFlee: 1.3, walkFlee: 0.5, hoverY: 0.72, hoverR: 0.6, speed: 0.5, glow: true,
   },
   {
-    id: 'b_suzu', spots: ['grass'], night: true, daily: false, weight: 2.5,
+    id: 'b_suzu', area: 'island', spots: ['grass'], night: true, daily: false, weight: 2.5,
     runFlee: 1.2, walkFlee: 0.4, hoverY: 0.11, hoverR: 0.2, speed: 0.28, glow: false,
   },
   // ---- v17 ここから6種 ----
   // バッタ: いちばん よく見かける草の虫。毎日出る「入門の虫」にしてある
   {
-    id: 'b_batta', spots: ['grass'], night: false, daily: true, weight: 2.6,
+    id: 'b_batta', area: 'island', spots: ['grass'], night: false, daily: true, weight: 2.6,
     runFlee: 1.2, walkFlee: 0.45, hoverY: 0.14, hoverR: 0.22, speed: 0.32, glow: false,
   },
   // クワガタ: 昼の 木のみき。カブトムシと同じく とまったまま動かない
   {
-    id: 'b_kuwa', spots: ['tree'], night: false, daily: false, weight: 1.0,
+    id: 'b_kuwa', area: 'island', spots: ['tree'], night: false, daily: false, weight: 1.0,
     runFlee: 0.85, walkFlee: 0.28, hoverY: 0.52, hoverR: 0, speed: 0.2, glow: false,
   },
   // カマキリ: 草むらで じっと待ちぶせ。ほとんど動かない
   {
-    id: 'b_kama', spots: ['grass'], night: false, daily: false, weight: 1.3,
+    id: 'b_kama', area: 'island', spots: ['grass'], night: false, daily: false, weight: 1.3,
     runFlee: 1.0, walkFlee: 0.35, hoverY: 0.17, hoverR: 0.16, speed: 0.2, glow: false,
   },
   // セミ: 昼の 木のみき。数が多いので いちばん つかまえやすい木の虫
   {
-    id: 'b_semi', spots: ['tree'], night: false, daily: false, weight: 1.6,
+    id: 'b_semi', area: 'island', spots: ['tree'], night: false, daily: false, weight: 1.6,
     runFlee: 0.95, walkFlee: 0.3, hoverY: 0.95, hoverR: 0, speed: 0.2, glow: false,
   },
   // トンボ: 夕方(16〜18時)の池のそばだけ。すいすい 速く とびまわる
   {
-    id: 'b_tonbo', spots: ['pond'], night: false, daily: true, hours: BUG_EVENING, weight: 2.2,
+    id: 'b_tonbo', area: 'island', spots: ['pond'], night: false, daily: true, hours: BUG_EVENING, weight: 2.2,
     runFlee: 1.45, walkFlee: 0.55, hoverY: 0.85, hoverR: 0.58, speed: 0.9, glow: false,
   },
   // オオクワガタ: よるの 木のみき。いちばん めずらしい(出る夜が かぎられ、重みも小さい)
   {
-    id: 'b_ookuwa', spots: ['tree'], night: true, daily: false, weight: 0.6,
+    id: 'b_ookuwa', area: 'island', spots: ['tree'], night: true, daily: false, weight: 0.6,
     runFlee: 0.8, walkFlee: 0.24, hoverY: 0.55, hoverR: 0, speed: 0.18, glow: false,
+  },
+  // ---- v23 ここから7種(カブト・クワガタ族を10しゅるいにする) ----
+  //
+  // どこに いるかで「めずらしさ」を作る:
+  //   島 …… いつでも 行ける。ノコギリ(昼)・ヒラタ(夜)・ギラファ(夜のレア)
+  //   入り江 … ふねを なおしてから、わざわざ わたる。ミヤマ(昼)・コーカサス(夜)
+  //   いちば島 … よるの でんしゃが 来る日だけ。ニジイロ・ヘラクレス
+  //
+  // 別空間の2種は どちらも daily:true(行ったら かならず 顔ぶれに いる)。
+  // 「せっかく わたったのに 1ぴきも いない」は 子どもには ただの がっかりで、
+  // レアさの演出にならない——めずらしさは「そこへ 行くまでの てまひま」と
+  // 抽選の重み(ヘラクレスは いちばん軽い)で 出す。
+  //
+  // ノコギリクワガタ: 昼の 木のみき。赤茶色の 内へ まがる 大あご
+  {
+    id: 'b_nokogiri', area: 'island', spots: ['tree'], night: false, daily: false, weight: 1.1,
+    runFlee: 0.9, walkFlee: 0.3, hoverY: 0.5, hoverR: 0, speed: 0.2, glow: false,
+  },
+  // ヒラタクワガタ: よるの 木のみき。平たく はばの広い からだ
+  {
+    id: 'b_hirata', area: 'island', spots: ['tree'], night: true, daily: false, weight: 1.0,
+    runFlee: 0.85, walkFlee: 0.28, hoverY: 0.5, hoverR: 0, speed: 0.2, glow: false,
+  },
+  // ギラファノコギリクワガタ: よるの 木のみき。体長ぐらい長い 大あご(島の夜のレア)
+  {
+    id: 'b_giraffa', area: 'island', spots: ['tree'], night: true, daily: false, weight: 0.5,
+    runFlee: 0.8, walkFlee: 0.24, hoverY: 0.58, hoverR: 0, speed: 0.18, glow: false,
+  },
+  // ミヤマクワガタ: よるの入り江の 昼。ほしくさの野原の きわに とまっている
+  {
+    id: 'b_miyama', area: 'cove', spots: ['grass'], night: false, daily: true, weight: 2,
+    runFlee: 0.9, walkFlee: 0.3, hoverY: 0.12, hoverR: 0, speed: 0.2, glow: false,
+  },
+  // コーカサスオオカブト: よるの入り江の 夜。3本の つのの 大きなカブト
+  {
+    id: 'b_caucasus', area: 'cove', spots: ['grass'], night: true, daily: true, weight: 1,
+    runFlee: 0.85, walkFlee: 0.28, hoverY: 0.14, hoverR: 0, speed: 0.18, glow: false,
+  },
+  // ニジイロクワガタ: いちば島の 夜。ちょうちんの あかりで にじ色に ひかる せなか
+  {
+    id: 'b_niji', area: 'market', spots: ['grass'], night: true, daily: true, weight: 2.4,
+    runFlee: 0.95, walkFlee: 0.32, hoverY: 0.12, hoverR: 0, speed: 0.2, glow: false,
+  },
+  // ヘラクレスオオカブト: いちば島の 夜。ぜんぶの虫で いちばん めずらしい(重みが いちばん軽い)
+  {
+    id: 'b_hercules', area: 'market', spots: ['grass'], night: true, daily: true, weight: 0.7,
+    runFlee: 0.9, walkFlee: 0.3, hoverY: 0.16, hoverR: 0, speed: 0.18, glow: false,
   },
 ];
 
@@ -294,17 +376,28 @@ function hash3(a: number, b: number, c: number): number {
 // そこで、種類を2つに分ける:
 //   daily=true  … 毎日かならず出る(モンシロチョウ・テントウムシ・バッタ・トンボ・ホタル)
 //   daily=false … 日付ハッシュで えらばれた日だけ出る(アゲハ・カブト・クワガタ・カマキリ・
-//                 セミ / よるは スズムシ・オオクワガタ)
+//                 セミ・ノコギリ / よるは スズムシ・オオクワガタ・ヒラタ・ギラファ)
 // えらび方は日付だけで決まるので、Math.random は使わない(走行ごとに同じ=自動テストできる)。
+//
+// v23 ローテを回すのは **島だけ**。よるの入り江(ミヤマ・コーカサス)と
+// いちば島(ニジイロ・ヘラクレス)は 4種とも daily=true にしてある——
+// わざわざ ふねや でんしゃで わたった先で「きょうは 1ぴきも いない」は
+// 子どもには ただの がっかりで、めずらしさの演出にならない。
+// あちらの めずらしさは「そこまで 行く てまひま」と 抽選の重みで 出す。
 //
 // 「捕獲不能の種」を作らないための約束:
 //   - どの種も、10日のあいだに かならず1回は えらばれる(下のテストで機械検査する)
 //   - えらばれた顔ぶれの スポット数の合計は、その時間帯の目標数(昼7・夜5)より必ず多い
 // ---------------------------------------------------------------------------
-/** 昼に「きょうだけ出る」種を いくつ えらぶか(daily=false の5種から) */
+/** 昼に「きょうだけ出る」種を いくつ えらぶか(島の daily=false の6種から) */
 export const BUG_ROTATE_DAY = 3;
-/** 夜に「きょうだけ出る」種を いくつ えらぶか(daily=false の2種から) */
-export const BUG_ROTATE_NIGHT = 1;
+/**
+ * 夜に「きょうだけ出る」種を いくつ えらぶか(島の daily=false の4種から)。
+ * v23で 夜の木の虫が 1種(オオクワガタ)から 3種(+ヒラタ・ギラファ)に ふえたので、
+ * 1 のままだと どの種も 10日のうちに 出そろわない。2 にして
+ * 「夜は ホタル+2種」= スポット数(池3+木3=6)が 目標(4〜5)を いつでも うわまわる。
+ */
+export const BUG_ROTATE_NIGHT = 2;
 
 /** その時こくに出る種か(hours を持たない種は いつでもtrue) */
 export function bugHourOk(def: BugDef, hour: number): boolean {
@@ -313,12 +406,13 @@ export function bugHourOk(def: BugDef, hour: number): boolean {
 }
 
 /**
- * その日・その時間帯に出る種類(決定論)。
+ * その日・その時間帯・その場所に出る種類(決定論)。
  * hour を わたすと、時こくで しぼる種(トンボ)も あわせて はじく。
+ * area を わたすと その場所の種だけ(既定は島)。
  */
-export function todaysBugs(day: number, night: boolean, hour?: number): BugDef[] {
+export function todaysBugs(day: number, night: boolean, hour?: number, area: BugArea = 'island'): BugDef[] {
   const phase = night ? 1 : 0;
-  const all = BUG_DEFS.filter((b) => b.night === night);
+  const all = BUG_DEFS.filter((b) => b.night === night && b.area === area);
   const rot = all.filter((b) => !b.daily);
   const pick = night ? BUG_ROTATE_NIGHT : BUG_ROTATE_DAY;
   // 日付ハッシュの小さい順に pick 種だけ。同点は id 順にして、ならびを完全に決めきる
@@ -351,7 +445,14 @@ export class BugScheduler {
   /** スポット番号 → まだ使えない残り秒 */
   private cooldown = new Map<number, number>();
 
-  constructor(private spots: { x: number; z: number; kind: BugSpotKind }[]) {}
+  /**
+   * @param spots その場所のとまり場(世界座標)。BugSystem は座標の意味を知らない
+   * @param area  どの場所ぶんのスケジューラか(既定は島。顔ぶれと目標数がここで決まる)
+   */
+  constructor(
+    private spots: { x: number; z: number; kind: BugSpotKind }[],
+    readonly area: BugArea = 'island'
+  ) {}
 
   get active(): ActiveBug[] {
     return this.bugs;
@@ -528,18 +629,25 @@ export class BugScheduler {
     return b.spot;
   }
 
-  /** その時間帯に出す数(昼6〜7・夜4〜5)。日付で決まるので走行ごとに同じ */
+  /**
+   * その時間帯に出す数。日付で決まるので走行ごとに同じ。
+   * 島は これまでどおり 昼6〜7・夜4〜5(日づけで +0/+1)。
+   * 入り江・いちば島は スポットが少ないので ゆらぎ無しの固定数にする。
+   */
   private pickTarget(day: number, key: string): number {
     const night = key.startsWith('n');
-    const base = night ? 4 : 6;
+    const t = BUG_AREA_TARGET[this.area];
+    const base = night ? t.night : t.day;
+    if (base === 0) return 0;
+    if (this.area !== 'island') return base;
     return base + (hash3(day, night ? 1 : 0, 977) < 0.5 ? 0 : 1);
   }
 
   /** 1匹ぶんの種類とスポットを決める(空きが無ければnull) */
   private spawn(day: number, hour: number): ActiveBug | null {
     const night = isBugNight(hour);
-    // v17 「きょうの顔ぶれ」+「その時こくに出る種」だけを候補にする
-    const pool = todaysBugs(day, night, hour);
+    // v17 「きょうの顔ぶれ」+「その時こくに出る種」だけを候補にする(v23: 場所も)
+    const pool = todaysBugs(day, night, hour, this.area);
     if (pool.length === 0 || this.spots.length === 0) return null;
     const n = this.seq++;
     const used = new Set(this.bugs.map((b) => b.spot));

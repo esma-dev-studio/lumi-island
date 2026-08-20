@@ -1,4 +1,4 @@
-// v14 バッジ(v16で106個 / v20で108個)の データ表。**ロジックはここに書かない**(純データ)。
+// v14 バッジ(v16で106個 / v20で108個 / v21で111個 / v23で112個)の データ表。**ロジックはここに書かない**(純データ)。
 //
 // 考え方:
 //   - じっせき(AchievementSystem)は「ゲームの節目」を24個だけ ならべたもの。
@@ -80,7 +80,7 @@ export function achSource(achievementId: string): string {
 }
 
 /**
- * バッジ108個。
+ * バッジ112個。
  *
  * 数え方の出どころは3つだけ:
  *   codex … 種類ごとの累計入手数(売っても かざっても 減らない)
@@ -122,7 +122,7 @@ export const BADGES: BadgeDef[] = [
   { id: 'fi_nushi', name: 'ぬしを ぜんぶ', desc: '池・さんばし・入り江の ぬしを ぜんぶ つりあげよう', cat: 'fish', tier: 'gold', src: 'nushi_total', target: 3, pict: 'f_trophy_yoru' },
 
   // ============================================================
-  // むしとり(9)…… 累計3段+種類コンプ+めずらしい虫+むしかご
+  // むしとり(10)…… 累計3段+種類コンプ+めずらしい虫+むしかご+カブクワ10しゅるい
   // ============================================================
   { id: 'bu_c1', name: 'むし 3びき', desc: '虫を ぜんぶで 3びき つかまえよう', cat: 'bug', tier: 'bronze', src: 'bug_total', target: 3, pict: 'b_shiro' },
   { id: 'bu_c2', name: 'むし 15ひき', desc: '虫を ぜんぶで 15ひき つかまえよう', cat: 'bug', tier: 'silver', src: 'bug_total', target: 15, pict: 'b_tento' },
@@ -133,6 +133,10 @@ export const BADGES: BadgeDef[] = [
   { id: 'bu_hotaru', name: 'ホタル 3びき', desc: 'よるの 池のまわりで ホタルを 3びき つかまえよう', cat: 'bug', tier: 'bronze', src: 'bug_hotaru', target: 3, pict: 'b_hotaru' },
   { id: 'bu_suzu', name: 'スズムシ 3びき', desc: 'よるの 草むらで スズムシを 3びき つかまえよう', cat: 'bug', tier: 'bronze', src: 'bug_suzu', target: 3, pict: 'b_suzu' },
   { id: 'bu_cage', name: 'むしかごに 10ぴき', desc: 'むしかごに 虫を ぜんぶで 10ぴき いれよう', cat: 'bug', tier: 'silver', src: 'display_bug', target: 10, pict: 'f_bugcage' },
+  // v23 カブト・クワガタ族10しゅるい。ふつうの虫の しきい値(bug_total / bug_kinds)は
+  // 1つも 動かさない——別の source(bug_beetle_kinds)で 数えるので、
+  // 前のセーブの バッジの進みぐあいは そのまま
+  { id: 'bu_beetle', name: 'カブトとクワガタ 10しゅるい', desc: '島・よるの入り江・いちば島で カブトとクワガタを 10しゅるい あつめよう', cat: 'bug', tier: 'gold', src: 'bug_beetle_kinds', target: 10, pict: 'b_hercules' },
 
   // ============================================================
   // さいしゅ(12)…… 木・石・草・コケ の4種を それぞれ3段
@@ -265,7 +269,8 @@ export const BADGE_COUNT_MIN = 98;
 // v16 ほしまつり3つを足して106個。上限は「うっかり増えすぎた」を見つけるための帯なので、
 // 足したぶんだけ 上へずらす(減らす側の下限は そのまま)。
 // v21 生命感パック(ぬし・立ち話・ふたりのじかん)で3つ足して111個
-export const BADGE_COUNT_MAX = 111;
+// v23 カブト・クワガタ10しゅるいを1つ足して112個
+export const BADGE_COUNT_MAX = 112;
 
 /** ならび順つきの カテゴリ一覧(ずかんの見出しの順) */
 export const BADGE_CATEGORY_ORDER: BadgeCategory[] = (

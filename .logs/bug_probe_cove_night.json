@@ -1,0 +1,56 @@
+{
+  "result": "PASS",
+  "phase": "cove_night",
+  "area": "cove",
+  "need": 1,
+  "limitSec": 90,
+  "elapsedSec": 5.4,
+  "total": 1,
+  "catches": [
+    {
+      "sec": 5.3,
+      "total": 1,
+      "got": [
+        "b_caucasus"
+      ],
+      "hintSeen": true
+    }
+  ],
+  "kinds": [
+    "b_caucasus"
+  ],
+  "hints": [
+    "Eふねで しまへ かえる",
+    "Eほしくさをつむ",
+    "とびらは しまっている",
+    "むしが いる! ちかづいて つかまえよう",
+    "Eむしあみでつかまえる"
+  ],
+  "errors": [],
+  "log": [
+    {
+      "sec": 8,
+      "label": "ゲーム開始(新規)"
+    },
+    {
+      "sec": 9.8,
+      "label": "支度おわり: cove 夜 hour=21.1 虫=1匹 いち=(-51.2,63.3)"
+    },
+    {
+      "sec": 9.8,
+      "label": "いまやること: q_wood_offer_sail_island 「ふねで しまへ もどろう」"
+    },
+    {
+      "sec": 9.8,
+      "label": "ねらう: b_caucasus (-60.0,50.5) 15.5m"
+    },
+    {
+      "sec": 15.1,
+      "label": "つかまえた! (1匹目 b_caucasus) ヒントを見てから=true"
+    },
+    {
+      "sec": 15.1,
+      "label": "PASS: 5.4秒で 1匹(合格は90秒で1匹)"
+    }
+  ]
+}

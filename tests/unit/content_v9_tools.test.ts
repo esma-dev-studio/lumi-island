@@ -289,10 +289,10 @@ describe('v9 虫あみ→虫6種(データ)', () => {
       expect(ITEMS[id].kind).toBe('material');
       expect(ITEMS[id].desc.length).toBeGreaterThan(3);
     }
-    // v9の6種は そのまま残っていること(v17で6種たして12種になった。
-    // あたらしい6種は tests/unit/creatures_v17.test.ts が受けもつ)
-    expect(BUG_IDS.length).toBe(12);
-    expect(new Set(BUG_IDS).size).toBe(12);
+    // v9の6種は そのまま残っていること(v17で6種たして12種、v23で7種たして19種になった。
+    // あたらしい種は tests/unit/creatures_v17.test.ts と beetles_v23.test.ts が受けもつ)
+    expect(BUG_IDS.length).toBe(19);
+    expect(new Set(BUG_IDS).size).toBe(19);
     for (const [id] of rows) expect(BUG_IDS, id).toContain(id);
   });
 
@@ -372,8 +372,10 @@ describe('v9 虫あみ→虫6種(データ)', () => {
   });
 
   it('スポットの種類は、その虫が出る場所と かみ合っている', () => {
+    // BUG_SPOTS は島のとまり場なので、島の虫だけを見る
+    // (入り江・いちば島の虫は tests/unit/beetles_v23.test.ts が それぞれの表で見る)
     const kinds = new Set(BUG_SPOTS.map((p) => p.kind));
-    for (const def of BUG_DEFS) {
+    for (const def of BUG_DEFS.filter((b) => b.area === 'island')) {
       expect(def.spots.length, def.id).toBeGreaterThan(0);
       for (const k of def.spots) expect(kinds.has(k), `${def.id}: ${k}`).toBe(true);
     }

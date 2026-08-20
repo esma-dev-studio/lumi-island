@@ -13,6 +13,8 @@ export type ItemId =
   | 'b_shiro' | 'b_ageha' | 'b_tento' | 'b_kabuto' | 'b_hotaru' | 'b_suzu'
   // v17 虫を6種たして12種に(昼5・夕方1・夜1)
   | 'b_kuwa' | 'b_kama' | 'b_semi' | 'b_batta' | 'b_tonbo' | 'b_ookuwa'
+  // v23 カブト・クワガタ族を7種たして 10しゅるいに(島3・よるの入り江2・いちば島2)
+  | 'b_nokogiri' | 'b_hirata' | 'b_giraffa' | 'b_miyama' | 'b_caucasus' | 'b_niji' | 'b_hercules'
   // v17 魚を3種たす(コイ=池の昼 / タイ=海の昼のややレア / タツノオトシゴ=第2章のあとの夜の海)
   | 'koi' | 'seabream' | 'seahorse'
   // v9 シャベルで ほりだすもの3種 / カマでかる わら
@@ -121,6 +123,15 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   b_kama: { id: 'b_kama', name: 'カマキリ', sell: 22, kind: 'material', desc: '草むらで じっと まちぶせする 緑の虫。前あしが かまの形' },
   b_kuwa: { id: 'b_kuwa', name: 'クワガタ', sell: 26, kind: 'material', desc: '昼の 木のみきに いる、大きな あごの ある虫' },
   b_ookuwa: { id: 'b_ookuwa', name: 'オオクワガタ', sell: 60, kind: 'material', desc: 'よるの 木のみきに まれに いる、つやのある 黒い大きなクワガタ' },
+  // ---- v23 カブト・クワガタ族7種。売値は「どこまで行かないと 会えないか」の順 ----
+  // 島(30〜70)< よるの入り江(48・100)< いちば島(90・150)
+  b_nokogiri: { id: 'b_nokogiri', name: 'ノコギリクワガタ', sell: 30, kind: 'material', desc: 'ひるの 木のみきに いる 赤茶色のクワガタ。大あごが 内がわへ ぐいと まがる' },
+  b_hirata: { id: 'b_hirata', name: 'ヒラタクワガタ', sell: 34, kind: 'material', desc: 'よるの 木のみきに いる。ひらたくて はばの広い 黒いからだ' },
+  b_giraffa: { id: 'b_giraffa', name: 'ギラファノコギリクワガタ', sell: 70, kind: 'material', desc: 'よるの 木のみきに まれに いる。からだと おなじくらい 長い 大あご' },
+  b_miyama: { id: 'b_miyama', name: 'ミヤマクワガタ', sell: 48, kind: 'material', desc: 'よるの入り江の ほしくさ野原で ひるに 見つかる。頭の うしろに 王冠のような つのが ある' },
+  b_caucasus: { id: 'b_caucasus', name: 'コーカサスオオカブト', sell: 100, kind: 'material', desc: 'よるの入り江の 夜に いる 大きなカブト。つのが 3本 ある' },
+  b_niji: { id: 'b_niji', name: 'ニジイロクワガタ', sell: 90, kind: 'material', desc: 'いちば島の 夜に いる。まるい せなかが にじ色に ひかる' },
+  b_hercules: { id: 'b_hercules', name: 'ヘラクレスオオカブト', sell: 150, kind: 'material', desc: 'いちば島の 夜に まれに いる、いちばん 大きなカブト。黄色い はねと 上下2本の つの' },
   // ---- v17 魚3種 ----
   koi: { id: 'koi', name: 'コイ', sell: 22, kind: 'food', desc: '昼の池に いる 大きな魚。だいだい色と 白の もようが ある' },
   seabream: { id: 'seabream', name: 'タイ', sell: 45, kind: 'food', desc: '昼の海で ときどき つれる、ももいろの めでたい魚' },
@@ -368,6 +379,8 @@ const DISPLAY_FISH = ['fish', 'nightfish', 'seafish', 'rarefish', 'koi', 'seabre
 const DISPLAY_BUGS = [
   'b_shiro', 'b_ageha', 'b_tento', 'b_kabuto', 'b_hotaru', 'b_suzu',
   'b_batta', 'b_kuwa', 'b_kama', 'b_semi', 'b_tonbo', 'b_ookuwa',
+  // v23 カブト・クワガタ族7種
+  'b_nokogiri', 'b_hirata', 'b_giraffa', 'b_miyama', 'b_caucasus', 'b_niji', 'b_hercules',
 ] as const;
 
 export const DISPLAY_FURNITURE = {

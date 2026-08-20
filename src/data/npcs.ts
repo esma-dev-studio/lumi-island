@@ -511,7 +511,9 @@ export const NPCS: NpcDef[] = [
     debutFlag: 'market_arrived',
     // 行商人。よその島では 手に入らない「ミオの島のもの」を いちばん よろこぶ。
     // 自分が うっている かおりのは・あまいみつ は 入れない(自分の品を ほしがる人にしない)
-    giftLoves: ['glassfloat', 'shiny_stone', 'gold_piece'],
+    // v23: いちば島の夜にしか いない ニジイロクワガタも 大好物。
+    // 「よその島じゃ 見ない」が テンの好みの すじなので、自分の島の めずらしい虫が いちばん うれしい
+    giftLoves: ['glassfloat', 'shiny_stone', 'gold_piece', 'b_niji'],
     giftLikes: ['shell', 'starshard', 'jam'],
     giftLines: {
       love: [

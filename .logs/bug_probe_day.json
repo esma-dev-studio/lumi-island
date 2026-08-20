@@ -1,78 +1,93 @@
 {
   "result": "PASS",
   "phase": "day",
+  "area": "island",
   "need": 3,
   "limitSec": 120,
-  "elapsedSec": 56.4,
+  "elapsedSec": 33.8,
   "total": 3,
   "catches": [
     {
-      "sec": 16.5,
+      "sec": 16.7,
       "total": 1,
+      "got": [
+        "b_kabuto"
+      ],
       "hintSeen": true
     },
     {
-      "sec": 29.6,
+      "sec": 26.7,
       "total": 2,
+      "got": [
+        "b_kabuto",
+        "b_nokogiri"
+      ],
       "hintSeen": true
     },
     {
-      "sec": 56.3,
+      "sec": 33.7,
       "total": 3,
+      "got": [
+        "b_kabuto",
+        "b_kuwa",
+        "b_nokogiri"
+      ],
       "hintSeen": true
     }
+  ],
+  "kinds": [
+    "b_kabuto",
+    "b_nokogiri",
+    "b_kuwa"
   ],
   "hints": [
     "E木をきる",
     "Eヒカリゴケをとる",
     "むしが いる! ちかづいて つかまえよう",
     "Eむしあみでつかまえる",
-    "Eきのこをとる",
-    "Eこえだをひろう",
-    "草をかるには カマが ひつよう",
-    "Eかりくさをかる"
+    "Eきのこをとる"
   ],
   "errors": [],
   "log": [
     {
-      "sec": 23.1,
+      "sec": 5.9,
       "label": "ゲーム開始(新規)"
     },
     {
-      "sec": 24.1,
-      "label": "支度おわり: 昼 hour=10.0 虫=0匹 いち=(-3.0,6.0)"
+      "sec": 6.9,
+      "label": "支度おわり: island 昼 hour=10.0 虫=1匹 いち=(-3.0,6.0)"
     },
     {
-      "sec": 24.1,
+      "sec": 6.9,
       "label": "いまやること: q_wood_offer 「ツムギの はなしを聞こう」"
     },
     {
-      "sec": 24.1,
+      "sec": 6.9,
       "label": "ねらう: b_kabuto (8.0,-43.8) 51.0m"
     },
     {
+      "sec": 23.6,
+      "label": "つかまえた! (1匹目 b_kabuto) ヒントを見てから=true"
+    },
+    {
+      "sec": 23.6,
+      "label": "ねらう: b_nokogiri (-14.0,-37.8) 22.6m"
+    },
+    {
+      "sec": 33.6,
+      "label": "つかまえた! (2匹目 b_kabuto,b_nokogiri) ヒントを見てから=true"
+    },
+    {
+      "sec": 33.7,
+      "label": "ねらう: b_kuwa (-28.0,-25.8) 20.0m"
+    },
+    {
       "sec": 40.6,
-      "label": "つかまえた! (1匹目) ヒントを見てから=true"
+      "label": "つかまえた! (3匹目 b_kabuto,b_kuwa,b_nokogiri) ヒントを見てから=true"
     },
     {
       "sec": 40.7,
-      "label": "ねらう: b_kuwa (-28.0,-25.8) 39.6m"
-    },
-    {
-      "sec": 53.7,
-      "label": "つかまえた! (2匹目) ヒントを見てから=true"
-    },
-    {
-      "sec": 53.7,
-      "label": "ねらう: b_shiro (-29.4,15.8) 41.6m"
-    },
-    {
-      "sec": 80.4,
-      "label": "つかまえた! (3匹目) ヒントを見てから=true"
-    },
-    {
-      "sec": 80.5,
-      "label": "PASS: 56.4秒で 3匹(合格は120秒で3匹)"
+      "label": "PASS: 33.8秒で 3匹(合格は120秒で3匹)"
     }
   ]
 }

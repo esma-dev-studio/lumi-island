@@ -66,6 +66,15 @@ const FISH_IDS: ItemId[] = ['fish', 'nightfish', 'seafish', 'rarefish', 'koi', '
 const DIG_IDS: ItemId[] = ['shard_pot', 'shiny_stone', 'gold_piece'];
 /** よるの入り江でとれる2種 */
 const COVE_IDS: ItemId[] = ['starweed', 'lightshell'];
+/**
+ * v23 カブト・クワガタ族10しゅるい(バッジ bu_beetle が これで数える)。
+ * 虫ぜんぶ(BUG_IDS)とは べつの表にしてあるのは、
+ * 「チョウやトンボを 何びき つかまえても このバッジは 進まない」を はっきりさせるため。
+ */
+const BEETLE_IDS: ItemId[] = [
+  'b_kabuto', 'b_kuwa', 'b_ookuwa',
+  'b_nokogiri', 'b_hirata', 'b_giraffa', 'b_miyama', 'b_caucasus', 'b_niji', 'b_hercules',
+];
 /** かべがみ・ゆかいた(items.ts の DECOR_SLOT が唯一の情報源。見た目を増やしても ここは直さない) */
 const DECOR_ENTRIES = Object.entries(DECOR_SLOT) as [ItemId, 'wall' | 'floor'][];
 const WALL_IDS: ItemId[] = DECOR_ENTRIES.filter(([, slot]) => slot === 'wall').map(([id]) => id);
@@ -118,6 +127,10 @@ export const BADGE_SOURCES: Record<string, BadgeSource> = {
   bug_ageha: { label: 'アゲハチョウの数', read: (s) => codexCount(s, 'b_ageha') },
   bug_hotaru: { label: 'ホタルの数', read: (s) => codexCount(s, 'b_hotaru') },
   bug_suzu: { label: 'スズムシの数', read: (s) => codexCount(s, 'b_suzu') },
+  // v23 カブト・クワガタ族(10しゅるい)だけを数える。
+  // ふつうの虫の しきい値(bug_total / bug_kinds)には 1つも さわらない
+  // ——前のセーブの バッジの進みぐあいが ずれないようにするため(v21の ぬしと同じ考え方)
+  bug_beetle_kinds: { label: 'つかまえたカブト・クワガタの種類', read: (s) => kinds(s, BEETLE_IDS) },
   display_bug: { label: 'むしかごに入れた数', read: (s) => statCount(s, 'display_bug') },
   // ---- さいしゅ ----
   wood: { label: 'もくざいの数', read: (s) => codexCount(s, 'wood') },

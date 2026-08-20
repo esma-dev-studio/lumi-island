@@ -24,7 +24,7 @@ import {
 import { makeLamp } from '../entities/buildings';
 import { washEnvelope } from '../entities/water';
 import { attachLightPool, registerGlowSource } from '../entities/effects';
-import type { GatherNodeDef } from '../data/island';
+import type { BugSpotKind, GatherNodeDef } from '../data/island';
 import type { CircleCollider } from './IslandScene';
 
 /** 波うちぎわの燐光の色(島の発光3系統のうちミント) */
@@ -188,6 +188,33 @@ export const COVE_NODES: GatherNodeDef[] = COVE_NODE_SPOTS.map((s, i) => ({
   kind: s.kind,
   ...coveWorld(s.lx, s.lz),
 }));
+
+/**
+ * v23 入り江の虫のとまり場(ローカル座標)。
+ *
+ * 出るのは ミヤマクワガタ(昼)と コーカサスオオカブト(夜)の2種だけ。
+ * どちらも 草に とまったまま 動かないので kind は 'grass'
+ * (島の BUG_SPOTS と同じ種類の名前を つかう。'tree' にすると 表示側が
+ *  「みきに はりつく」姿勢に するが、入り江には 木が1本も無い)。
+ *
+ * 実測ずみ(tests/unit/beetles_v23.test.ts が 機械検査する):
+ *   - 入り江で歩けて、まわり8方向1.8mも歩ける(袋小路に虫を置かない)
+ *   - 採取ノード(ほしくさ・ひかりの貝)・ロカの立ち位置・灯台のとびら・
+ *     帰りの点・着いたときの立ち位置から3m以上
+ *   - 帰りの桟橋のデッキ(動線)からも3m以上
+ *   - たがいに3m以上(むしあみの輪 2.6m が かさならない)
+ */
+const COVE_BUG_LOCAL: [number, number][] = [
+  [-11.0, -1.5], // 西のはし(岩ばたの手前)
+  [-4.0, -6.5], // ほしくさ野原の 北西のきわ
+  [0.0, -7.0], // 野原の 北のきわ
+  [5.0, -6.0], // 野原の 北東のきわ
+  [10.0, -2.5], // 東のはし
+];
+
+/** 入り江の虫のとまり場(世界座標)。IslandScene が BugScheduler へ わたす */
+export const COVE_BUG_SPOTS: { x: number; z: number; kind: BugSpotKind }[] =
+  COVE_BUG_LOCAL.map(([lx, lz]) => ({ ...coveWorld(lx, lz), kind: 'grass' as BugSpotKind }));
 
 /** 入り江の岩・灯台の当たり判定(世界座標)。IslandScene.circles へ足す */
 const ROCK_SPOTS: [number, number, number][] = [

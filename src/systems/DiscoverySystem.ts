@@ -28,6 +28,9 @@ export const RECIPE_DISCOVERY: Partial<Record<ItemId, string[]>> = {
   b_kabuto: ['r_bugcage'], b_hotaru: ['r_bugcage'], b_suzu: ['r_bugcage'],
   b_batta: ['r_bugcage'], b_kuwa: ['r_bugcage'], b_kama: ['r_bugcage'],
   b_semi: ['r_bugcage'], b_tonbo: ['r_bugcage'], b_ookuwa: ['r_bugcage'],
+  // v23 カブト・クワガタ族7種も 同じ(はじめの1ぴきで むしかごを ひらめく)
+  b_nokogiri: ['r_bugcage'], b_hirata: ['r_bugcage'], b_giraffa: ['r_bugcage'],
+  b_miyama: ['r_bugcage'], b_caucasus: ['r_bugcage'], b_niji: ['r_bugcage'], b_hercules: ['r_bugcage'],
   shard_pot: ['r_ancient_pot'],
   straw: ['r_scarecrow'],
 };

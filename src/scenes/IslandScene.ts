@@ -37,7 +37,7 @@ import {
 import {
   GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, STAR_SPOTS, DRIFT_SPOTS, SEABIRD_CIRCLES,
   BUG_SPOTS, DIG_SPOTS, BOTTLE_SPOTS, BULLETIN_BOARD, PLAZA_BENCHES,
-  type GatherNodeDef,
+  type BugSpotKind, type GatherNodeDef,
 } from '../data/island';
 import { DayNight } from './DayNight';
 import { HomeInterior, homeFloorY, insideHomeFloor, HOME_RECTS, HOME_CIRCLES } from './HomeInterior';
@@ -45,8 +45,10 @@ import {
   NpcInteriors, NPC_HOMES, NPC_HOME_BODY_R, NPC_HOME_BY_ID, insideNpcHomeFloor, measureDoorStand,
   npcHomeCircles, npcHomeFloorY, npcHomeRects,
 } from './NpcInteriors';
-import { CoveArea, COVE_CIRCLES, COVE_NODES, ISLAND_BOAT, coveNightLevel } from './CoveArea';
-import { MarketArea } from './MarketArea';
+import {
+  CoveArea, COVE_BUG_SPOTS, COVE_CIRCLES, COVE_NODES, ISLAND_BOAT, coveNightLevel,
+} from './CoveArea';
+import { MarketArea, MARKET_BUG_SPOTS } from './MarketArea';
 import { TrainCarArea } from './TrainCarArea';
 import { makeBoat, makeHorizonSpark, makeHorizonTrain, type BoatMesh } from '../entities/cove';
 import { Sky, moonSkyDir } from '../entities/sky';
@@ -67,7 +69,7 @@ import { BottleScheduler } from '../systems/BottleSystem';
 import { NightTrainScheduler } from '../systems/NightTrainSystem';
 import { seabirdPose } from '../systems/SeabirdSystem';
 import {
-  BugScheduler, bugOffset, BUG_BY_ID, type ActiveBug, type BugId, type BugPlayer,
+  BugScheduler, bugOffset, BUG_BY_ID, type ActiveBug, type BugArea, type BugId, type BugPlayer,
 } from '../systems/BugSystem';
 import { DigScheduler } from '../systems/DigSystem';
 
@@ -169,8 +171,6 @@ export class IslandScene {
   lumiFruits!: Mesh; // 開花後の花びらロゼット
   lumiBuds!: Mesh; // 開花前の閉じた蕾(花と差し替えで切り替える)
   private waterT = 0;
-  /** 虫のとまり場(BUG_SPOTS)の足もとの高さ。座標が動かないので1回だけ求めて使いまわす */
-  private bugSpotY: number[] = [];
   /** 島の見た目ぜんぶ(入り江へ渡るとき・部屋に入るときに丸ごと消す対象。CoveAreaと同じ配列) */
   private islandMeshes: Mesh[] = [];
   private islandHiddenForRoom = false;
@@ -205,9 +205,28 @@ export class IslandScene {
   private birds: Seabird[] = [];
   private birdT = 0;
   // ---- v9 虫(出現・逃走は純ロジック、見た目だけここが持つ) ----
-  private bugs = new BugScheduler(BUG_SPOTS);
-  private bugMeshes = new Map<number, { id: BugId; m: BugMesh }>();
+  //
+  // v23: 場所が3つになった(島 / よるの入り江 / いちば島)。
+  // スケジューラも とまり場の足もとの高さのキャッシュも 場所ごとに1組ずつ持ち、
+  // 「いま いる場所」の1組だけを毎フレーム進める。
+  // ——別空間へ わたっただけで 虫が 出っぱなしにならず、
+  //   島の虫が 入り江に出る/入り江の虫が 島に出る が 構造的に起きない。
+  private bugAreas: {
+    area: BugArea;
+    spots: { x: number; z: number; kind: BugSpotKind }[];
+    sched: BugScheduler;
+    /** とまり場の足もとの高さ。座標が動かないので1回だけ求めて使いまわす */
+    spotY: number[];
+  }[] = [
+    { area: 'island', spots: BUG_SPOTS, sched: new BugScheduler(BUG_SPOTS, 'island'), spotY: [] },
+    { area: 'cove', spots: COVE_BUG_SPOTS, sched: new BugScheduler(COVE_BUG_SPOTS, 'cove'), spotY: [] },
+    { area: 'market', spots: MARKET_BUG_SPOTS, sched: new BugScheduler(MARKET_BUG_SPOTS, 'market'), spotY: [] },
+  ];
+  /** キーは `${area}:${虫の通し番号}`(番号は場所ごとに ふり直されるので ぶつかる) */
+  private bugMeshes = new Map<string, { area: BugArea; id: BugId; m: BugMesh }>();
   private bugPool = new Map<BugId, BugMesh[]>();
+  /** 前のフレームで虫を進めた場所(切りかわったら 前の場所の虫を 見えなくする) */
+  private bugAreaLast: BugArea | null = null;
   // ---- v16 ほしまつりの かざり(まつりの日だけ 出る) ----
   // 見た目も 当たり判定も「出ているあいだだけ」有効にする。ふだんの浜べに
   // 見えない当たり判定が のこると、そこだけ 歩けない砂ができてしまう(教訓5の連結成分)。
@@ -1102,6 +1121,12 @@ export class IslandScene {
     this.updateBottle(dtSec); // v13 ひるすぎの メッセージボトル
     this.updateNightTrain(dtSec); // v13 よるの 海上でんしゃ(点いていなければ即return)
     this.updateDigs(); // ほりあと(日付が変わったら配置しなおす)
+    // v23 虫は 島だけのものではなくなった(入り江=ミヤマ・コーカサス /
+    // いちば島=ニジイロ・ヘラクレス)。「いま いる場所」の1組だけを進めるので、
+    // 下の islandVisible の早期returnより **上**で呼ぶ
+    // ——ここを下に残したままだと、入り江・いちば島で 1ぴきも 出ない(教訓4)。
+    // 部屋・NPCの家では bugAreaNow が null になり、これまでどおり 何もしない。
+    this.updateBugs(dtSec);
 
     // ---- ここから下は「島が画面に出ているときだけ」意味のある見た目の更新 ----
     // 別空間(部屋・NPCの家・入り江)にいるあいだ、島の地形も虫も池も消えている。
@@ -1111,7 +1136,6 @@ export class IslandScene {
     // 上に残してあるので、外に出た瞬間の見た目は今までと変わらない。
     if (!this.islandVisible) return;
     this.updateBirds(dtSec);
-    this.updateBugs(dtSec); // 虫(昼夜で顔ぶれが変わる・走って近づくと逃げる)
     // 池のごく弱い上下動(±1.2cm)。スイレンは子メッシュなので一緒にゆれる
     this.waterT += dtSec;
     this.water.pond.position.y = POND.waterY + Math.sin(this.waterT * 0.9) * 0.012;
@@ -1344,57 +1368,90 @@ export class IslandScene {
     }
   }
 
-  // ---------- v9 虫 ----------
+  // ---------- v9 虫(v23で 島・入り江・いちば島の3か所へ) ----------
+  /**
+   * いま プレイヤーが いる場所の虫。別空間(部屋・NPCの家)では null。
+   *
+   * 島にいるか どうかの判断は islandVisible(地形メッシュ1つ)だけを見る——
+   * 入り江・いちば島は 入るときに 地形メッシュを消すので、
+   * 3つのフラグを覚えなおすより 食いちがいが 起きない(setIslandHiddenForRoom と同じ考え方)。
+   */
+  private get bugAreaNow(): {
+    area: BugArea; spots: { x: number; z: number; kind: BugSpotKind }[]; sched: BugScheduler; spotY: number[];
+  } | null {
+    if (this.cove.isActive) return this.bugAreas[1];
+    if (this.market.isActive) return this.bugAreas[2];
+    return this.islandVisible ? this.bugAreas[0] : null;
+  }
+
   /** いま出ている虫の数(検証・デバッグ用) */
   get bugCount(): number {
-    return this.bugs.activeCount;
+    return this.bugAreaNow?.sched.activeCount ?? 0;
   }
   /** いま出ている虫の種類(検証・デバッグ用) */
   get bugKinds(): string[] {
-    return this.bugs.active.map((b) => b.bug);
+    return this.bugAreaNow?.sched.active.map((b) => b.bug) ?? [];
   }
   /** いま出ている虫の一覧(検証・デバッグ用。位置は毎フレーム変わる) */
   get bugList(): { key: number; bug: string; x: number; z: number; wary: boolean; fleeing: boolean }[] {
-    return this.bugs.active.map((b) => {
-      const p = this.bugs.positionOf(b);
+    const a = this.bugAreaNow;
+    if (!a) return [];
+    return a.sched.active.map((b) => {
+      const p = a.sched.positionOf(b);
       return { key: b.key, bug: b.bug, x: p.x, z: p.z, wary: b.wary, fleeing: b.fleeT > 0 };
     });
+  }
+  /** いま虫が出ている場所(検証・デバッグ用) */
+  get bugArea(): BugArea | null {
+    return this.bugAreaNow?.area ?? null;
   }
   /**
    * いちばん近い虫。無ければnull(InteractionRoutingが使う)。
    * @param r さがす半径(m)。省略すると捕獲圏。予告ヒント用に BUG_HINT_R で呼ぶ
    */
   nearestBug(px: number, pz: number, r?: number): { bug: ActiveBug; distance: number; x: number; z: number } | null {
-    const hit = this.bugs.nearestCatchable(px, pz, r);
+    const a = this.bugAreaNow;
+    if (!a) return null;
+    const hit = a.sched.nearestCatchable(px, pz, r);
     if (!hit) return null;
-    const p = this.bugs.positionOf(hit.bug);
+    const p = a.sched.positionOf(hit.bug);
     return { bug: hit.bug, distance: hit.distance, x: p.x, z: p.z };
   }
   /** つかまえた: その虫を消して、スポットを しばらく使わない */
   catchBug(key: number): void {
-    this.bugs.markCaught(key);
-    this.despawnBug(key);
+    const a = this.bugAreaNow;
+    if (!a) return;
+    a.sched.markCaught(key);
+    this.despawnBug(a.area, key);
   }
 
   private updateBugs(dt: number): void {
-    const plan = this.bugs.update(dt, this.time.day, this.time.hour, this.playerProbe?.() ?? null);
-    for (const key of plan.removed) this.despawnBug(key);
-    for (const b of plan.spawned) this.spawnBug(b);
+    const a = this.bugAreaNow;
+    if (a?.area !== this.bugAreaLast) {
+      // 場所が切りかわった: いま いない場所の虫を まとめて 見えなくする。
+      // スケジューラの中身は のこすので、もどってきたら 続きから 動きはじめる
+      for (const [, e] of this.bugMeshes) e.m.root.setEnabled(e.area === a?.area);
+      this.bugAreaLast = a?.area ?? null;
+    }
+    if (!a) return;
+    const plan = a.sched.update(dt, this.time.day, this.time.hour, this.playerProbe?.() ?? null);
+    for (const key of plan.removed) this.despawnBug(a.area, key);
+    for (const b of plan.spawned) this.spawnBug(a.area, b);
     // 位置・向き・はばたきの反映(メッシュは使い回すので、ここでは作らない)
-    for (const b of this.bugs.active) {
-      const entry = this.bugMeshes.get(b.key);
+    for (const b of a.sched.active) {
+      const entry = this.bugMeshes.get(`${a.area}:${b.key}`);
       if (!entry) continue;
       const m = entry.m;
       const def = BUG_BY_ID[b.bug];
-      const spot = BUG_SPOTS[b.spot];
+      const spot = a.spots[b.spot];
       const o = bugOffset(def, b);
       // 虫のとまり場は動かない座標なので、足もとの高さは1回だけ求めて覚えておく。
       // groundY は入り江→部屋→NPCの家→桟橋→デッキ→地形の6段を毎回たどる関数で、
       // 虫の数ぶん毎フレーム呼ぶと そこそこ効く(CPUプロファイルで pathDist が上位に出ていた)
-      let gy = this.bugSpotY[b.spot];
+      let gy = a.spotY[b.spot];
       if (gy === undefined) {
         gy = this.groundY(spot.x, spot.z);
-        this.bugSpotY[b.spot] = gy;
+        a.spotY[b.spot] = gy;
       }
       m.root.position.set(spot.x + o.dx, gy + o.dy, spot.z + o.dz);
       if (spot.kind === 'tree') {
@@ -1420,18 +1477,18 @@ export class IslandScene {
     }
   }
 
-  private spawnBug(b: ActiveBug): void {
+  private spawnBug(area: BugArea, b: ActiveBug): void {
     const pool = this.bugPool.get(b.bug);
     const m = pool?.pop() ?? makeBugMesh(this.scene, b.bug, b.seed);
     m.root.setEnabled(true);
     m.root.scaling.setAll(1);
-    this.bugMeshes.set(b.key, { id: b.bug, m });
+    this.bugMeshes.set(`${area}:${b.key}`, { area, id: b.bug, m });
   }
 
-  private despawnBug(key: number): void {
-    const entry = this.bugMeshes.get(key);
+  private despawnBug(area: BugArea, key: number): void {
+    const entry = this.bugMeshes.get(`${area}:${key}`);
     if (!entry) return;
-    this.bugMeshes.delete(key);
+    this.bugMeshes.delete(`${area}:${key}`);
     entry.m.root.setEnabled(false);
     // 破棄せずに種類ごとの置き場へ戻す(数秒おきに作りなおすと描画がひっかかる)
     const pool = this.bugPool.get(entry.id);

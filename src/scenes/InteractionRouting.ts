@@ -209,6 +209,52 @@ function pushGatherCandidates(gs: GameScene, cands: InteractionCandidate[], px: 
 }
 
 /**
+ * v9 虫(虫あみが要る)。捕まえられるのは BugSystem の BUG_CATCH_R(2.6m)の内がわ。
+ *
+ * v11: 虫あみを持っているのに とどかないときは、BUG_HINT_R(5m)から
+ * 「むしが いる! ちかづいて つかまえよう」を先に出す。
+ * ——v9は捕獲圏に入らないとヒントが出ず、しかも走って近づくと捕獲圏の手前で
+ *   逃げられたので、「Eで捕れる」ことを知る手がかりが1度も画面に出なかった
+ *   (子どもが「ぜんぜんつかまえられない」と言った直接の原因のひとつ)。
+ * 予告ヒントは PRIORITY.catchNear(いちばん弱い)なので、採取・釣り・店・家具など
+ * ほかにやることがある場面では出ない。
+ *
+ * v23: 島・よるの入り江・いちば島の **3か所ぜんぶ** から呼ぶ関数に切り出した。
+ * IslandScene.nearestBug が「いま いる場所」の虫だけを返すので、ここは場所を知らなくていい
+ * ——別空間の早期returnに 書きうつし忘れると「目の前に虫がいるのに Eが効かない」になる(教訓4)。
+ */
+function pushBugCandidate(gs: GameScene, cands: InteractionCandidate[], px: number, pz: number): void {
+  const bug = gs.island.nearestBug(px, pz, BUG_HINT_R);
+  if (!bug) return;
+  const hasNet = hasTool(gs.state, 'net');
+  const inRange = bug.distance < BUG_CATCH_R;
+  if (inRange) {
+    cands.push({
+      id: `bug_${bug.bug.key}`, kind: 'catch', targetId: String(bug.bug.key), itemId: bug.bug.bug,
+      priority: PRIORITY.catch, distance: bug.distance, enabled: hasNet,
+      hint: hasNet ? '<kbd>E</kbd>むしあみでつかまえる' : `つかまえるには ${toolReason('net')}`,
+      run: () => void gs.inter.tryCatchBug(gs.player, gs.playerView, bug.bug, bug.x, bug.z),
+    });
+    if (!hasNet) {
+      // 道具不足の理由も候補として表示だけする(実行不可)。採取ノードと同じ流儀
+      cands.push({
+        id: 'bug_reason', kind: 'catch', targetId: String(bug.bug.key), itemId: bug.bug.bug,
+        priority: PRIORITY.catch + 5, distance: bug.distance, enabled: true,
+        hint: `つかまえるには ${toolReason('net')}`, run: () => {},
+      });
+    }
+  } else if (hasNet) {
+    // まだ とどかない。表示だけの予告(押しても何も起きない=採取ノードの理由表示と同じ流儀)。
+    // <kbd>E</kbd>を入れないのは、タッチでキー表示が消えても文がそのまま読めるようにするため
+    cands.push({
+      id: 'bug_near', kind: 'catch', targetId: String(bug.bug.key), itemId: bug.bug.bug,
+      priority: PRIORITY.catchNear, distance: bug.distance, enabled: true,
+      hint: 'むしが いる! ちかづいて つかまえよう', run: () => {},
+    });
+  }
+}
+
+/**
  * いちばん近いNPCとの会話候補(島でも入り江でもまったく同じ規則)。
  *
  * 受注できる/報告できるときだけ最優先。進行中(話しても進まない)は採取より下げる。
@@ -443,6 +489,10 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     // ——ここを忘れると「目の前に立っているのに話しかけられない」になる(実機で発生した)。
     // NPCSystem.nearest は場所ちがいのNPCを返さないので、島の3人がここに出てくることはない
     pushNpcCandidate(gs, cands, px, pz);
+    // v23 入り江の虫(ひる=ミヤマクワガタ / よる=コーカサスオオカブト)。
+    // 島とまったく同じ候補づくりを ここにも 写す(教訓4「別空間の早期returnには
+    // 島側で当たり前にやっていることを全部写す」)
+    pushBugCandidate(gs, cands, px, pz);
     // 帰りの桟橋: ふねで島へ帰る。
     // のれる場所は canBoardReturn(CoveArea.ts)が1か所で決める——
     // 「桟橋のデッキの上なら どこでも」+「デッキの外の水ぎわ(2.6mの輪)」。
@@ -507,10 +557,13 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
   // ---- v20第3章 いちば島にいるときは、いちば島のことだけ ----
   // 入り江のブロックと まったく同じ組み立て(候補の絞りこみも 同じ規則)。
   // いちば島には 採取ノードが1つも無いので、あるのは
-  //   テンとの会話 / テンの店 / すわる / かえりの でんしゃ の4つだけ。
+  //   テンとの会話 / テンの店 / すわる / かえりの でんしゃ / むしとり(v23)の5つだけ。
   if (gs.inMarket) {
     pushNpcCandidate(gs, cands, px, pz);
     pushSitCandidates(gs, cands, px, pz);
+    // v23 いちば島の虫(ニジイロクワガタ・ヘラクレスオオカブト。どちらも夜)。
+    // 入り江と同じく、島の候補づくりを そのまま写してある
+    pushBugCandidate(gs, cands, px, pz);
     // かえりの でんしゃ。**いつでも のれる**(時間の しばりは 行きだけ)。
     // のれる場所は canBoardMarketTrain(marketTerrain.ts)が1か所で決める——
     // 「ホームの板の上なら どこでも」+「のりしろの輪」。
@@ -547,44 +600,7 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
   pushNpcCandidate(gs, cands, px, pz);
   // 採取ノード
   pushGatherCandidates(gs, cands, px, pz);
-  // v9 虫(虫あみが要る)。捕まえられるのは BugSystem の BUG_CATCH_R(2.6m)の内がわ。
-  //
-  // v11: 虫あみを持っているのに とどかないときは、BUG_HINT_R(5m)から
-  // 「むしが いる! ちかづいて つかまえよう」を先に出す。
-  // ——v9は捕獲圏に入らないとヒントが出ず、しかも走って近づくと捕獲圏の手前で
-  //   逃げられたので、「Eで捕れる」ことを知る手がかりが1度も画面に出なかった
-  //   (子どもが「ぜんぜんつかまえられない」と言った直接の原因のひとつ)。
-  // 予告ヒントは PRIORITY.catchNear(いちばん弱い)なので、採取・釣り・店・家具など
-  // ほかにやることがある場面では出ない。
-  const bug = gs.island.nearestBug(px, pz, BUG_HINT_R);
-  if (bug) {
-    const hasNet = hasTool(gs.state, 'net');
-    const inRange = bug.distance < BUG_CATCH_R;
-    if (inRange) {
-      cands.push({
-        id: `bug_${bug.bug.key}`, kind: 'catch', targetId: String(bug.bug.key), itemId: bug.bug.bug,
-        priority: PRIORITY.catch, distance: bug.distance, enabled: hasNet,
-        hint: hasNet ? '<kbd>E</kbd>むしあみでつかまえる' : `つかまえるには ${toolReason('net')}`,
-        run: () => void gs.inter.tryCatchBug(gs.player, gs.playerView, bug.bug, bug.x, bug.z),
-      });
-      if (!hasNet) {
-        // 道具不足の理由も候補として表示だけする(実行不可)。採取ノードと同じ流儀
-        cands.push({
-          id: 'bug_reason', kind: 'catch', targetId: String(bug.bug.key), itemId: bug.bug.bug,
-          priority: PRIORITY.catch + 5, distance: bug.distance, enabled: true,
-          hint: `つかまえるには ${toolReason('net')}`, run: () => {},
-        });
-      }
-    } else if (hasNet) {
-      // まだ とどかない。表示だけの予告(押しても何も起きない=採取ノードの理由表示と同じ流儀)。
-      // <kbd>E</kbd>を入れないのは、タッチでキー表示が消えても文がそのまま読めるようにするため
-      cands.push({
-        id: 'bug_near', kind: 'catch', targetId: String(bug.bug.key), itemId: bug.bug.bug,
-        priority: PRIORITY.catchNear, distance: bug.distance, enabled: true,
-        hint: 'むしが いる! ちかづいて つかまえよう', run: () => {},
-      });
-    }
-  }
+  pushBugCandidate(gs, cands, px, pz);
   // v9 ほりあと(シャベルが要る)。
   // v11.1: kind='dig' は ObjectiveSystem の ALWAYS_ALLOWED に入ったので、依頼の誘導中でも出る。
   // ほりあとは日付が変わると別の場所へ移ってしまう「その日かぎり」のものなので、

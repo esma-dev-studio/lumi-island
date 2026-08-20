@@ -27,11 +27,38 @@ import {
 import { attachLightPool, registerGlowSource, unregisterGlowSource } from '../entities/effects';
 import { washEnvelope } from '../entities/water';
 import { coveNightLevel } from './CoveArea';
+import type { BugSpotKind } from '../data/island';
 
 /** ローカル座標(いちば島の中心が原点)を世界座標へ */
 export const marketWorldOf = (lx: number, lz: number): { x: number; z: number } => ({
   x: MARKET.x + lx, z: MARKET.z + lz,
 });
+
+/**
+ * v23 いちば島の虫のとまり場(ローカル座標)。
+ *
+ * 出るのは ニジイロクワガタと ヘラクレスオオカブト(どちらも夜)の2種だけ。
+ * どちらも 地面に とまったまま 動かないので kind は 'grass'。
+ *
+ * いちば島は せまいので **3か所だけ**。しかも 3か所とも
+ * 市場通り(屋台と屋台のあいだ・テンの立ち位置)から はずしてある
+ * ——通りに置くと 虫の予告ヒント(5m)が テンとの会話・店のEを かくしてしまう。
+ *
+ * 実測ずみ(tests/unit/beetles_v23.test.ts が 機械検査する):
+ *   - いちば島で歩けて、まわり8方向1.8mも歩ける
+ *   - 屋台・柱・テンの立ち位置・店のカウンター・ベンチ・
+ *     でんしゃの のりばから3m以上、駅ホームの板(動線)からも3m以上
+ *   - たがいに3m以上
+ */
+const MARKET_BUG_LOCAL: [number, number][] = [
+  [6.5, -6.0], // 北東の岩ばた(駅を おりると 右手に見える)
+  [-8.0, 2.0], // 西のはし(通りの うら)
+  [3.5, 7.0], // 見はらしの丘の 南がわ
+];
+
+/** いちば島の虫のとまり場(世界座標)。IslandScene が BugScheduler へ わたす */
+export const MARKET_BUG_SPOTS: { x: number; z: number; kind: BugSpotKind }[] =
+  MARKET_BUG_LOCAL.map(([lx, lz]) => ({ ...marketWorldOf(lx, lz), kind: 'grass' as BugSpotKind }));
 
 /** ちょうちんの ひもを かける 高さ(柱の てっぺんの すこし下) */
 const STRING_Y = 2.3;

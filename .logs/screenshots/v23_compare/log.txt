@@ -1,0 +1,2 @@
+b_hercules_top.png
+b_hercules_angle.png

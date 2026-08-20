@@ -1,0 +1,54 @@
+{
+  "result": "PASS",
+  "phase": "market_night",
+  "area": "market",
+  "need": 1,
+  "limitSec": 90,
+  "elapsedSec": 3.7,
+  "total": 1,
+  "catches": [
+    {
+      "sec": 3.6,
+      "total": 1,
+      "got": [
+        "b_niji"
+      ],
+      "hintSeen": true
+    }
+  ],
+  "kinds": [
+    "b_niji"
+  ],
+  "hints": [
+    "Eでんしゃで しまへ かえる",
+    "むしが いる! ちかづいて つかまえよう",
+    "Eむしあみでつかまえる"
+  ],
+  "errors": [],
+  "log": [
+    {
+      "sec": 8.3,
+      "label": "ゲーム開始(新規)"
+    },
+    {
+      "sec": 10.1,
+      "label": "支度おわり: market 夜 hour=21.0 虫=1匹 いち=(25.8,50.4)"
+    },
+    {
+      "sec": 10.1,
+      "label": "いまやること: q_wood_offer_train_island 「でんしゃで しまへ かえろう」"
+    },
+    {
+      "sec": 10.2,
+      "label": "ねらう: b_niji (22.0,60.0) 10.3m"
+    },
+    {
+      "sec": 13.8,
+      "label": "つかまえた! (1匹目 b_niji) ヒントを見てから=true"
+    },
+    {
+      "sec": 13.8,
+      "label": "PASS: 3.7秒で 1匹(合格は90秒で1匹)"
+    }
+  ]
+}

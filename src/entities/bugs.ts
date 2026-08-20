@@ -11,6 +11,11 @@
 //  - v17でたした6種は、種の判別記号を「1つだけ」大きく作る(全部を作りこむと どれも同じに見える):
 //    クワガタ/オオクワガタ=開いたあご / カマキリ=前にかまえたかま /
 //    トンボ=細い胴と4まいのうすい羽 / セミ=屋根形の羽 / バッタ=大きな後ろあし。
+//  - v23でたしたカブト・クワガタ族7種も同じ考え方(下の stagVariant / rhinoVariant の
+//    コメントに、実機接写で分かった「こうすると別のものに見えてしまう」を書きのこしてある):
+//    ノコギリ=内へまがる赤茶の大あご / ヒラタ=平たく幅ひろい黒 / ギラファ=体長級の長いあご /
+//    ミヤマ=頭の王冠 / ニジイロ=にじ色のせなか / コーカサス=3本のつの /
+//    ヘラクレス=上下2本の巨大なつのと黄色い上ばね。
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
@@ -41,6 +46,26 @@ const C_SEMI = Color3.FromHexString('#55483a'); // セミ(木のみきに にた
 const C_SEMI_WING = Color3.FromHexString('#b7bfb2'); // 屋根形に たたんだ羽
 const C_BATTA = Color3.FromHexString('#8fb85a'); // バッタ(黄みどり)
 const C_BATTA_WING = Color3.FromHexString('#7a9e4a');
+// ---- v23 カブト・クワガタ族7種ぶんの色 ----
+// どれも にごらせた色で、原色・ネオンは使わない(ART_DIRECTION の「しっとり」)。
+const C_NOKO = Color3.FromHexString('#7a3a1e'); // ノコギリ(赤茶)
+const C_NOKO_SHINE = Color3.FromHexString('#a86236');
+const C_HIRATA = Color3.FromHexString('#2b2724'); // ヒラタ(平たい黒)
+const C_HIRATA_SHINE = Color3.FromHexString('#5a544d');
+const C_GIRAFFA = Color3.FromHexString('#33251a'); // ギラファ(こい茶)
+const C_GIRAFFA_SHINE = Color3.FromHexString('#6b5236');
+const C_MIYAMA = Color3.FromHexString('#6b4a24'); // ミヤマ(金がかった茶)
+const C_MIYAMA_CROWN = Color3.FromHexString('#b09a5f'); // 頭の王冠(耳状突起)
+const C_NIJI_A = Color3.FromHexString('#41904a'); // ニジイロ せなかの前(みどり)
+const C_NIJI_B = Color3.FromHexString('#2c7799'); // まん中(あお)
+const C_NIJI_C = Color3.FromHexString('#63508f'); // うしろ(むらさき)
+const C_NIJI_D = Color3.FromHexString('#a17c33'); // おしり(きん)
+const C_CAUCA = Color3.FromHexString('#1f1b18'); // コーカサス(つやのある黒)
+const C_CAUCA_SHINE = Color3.FromHexString('#544c44');
+const C_HERC_DARK = Color3.FromHexString('#2a2420'); // ヘラクレス つの・むね(黒)
+// 上ばねの黄。#c9b464 は 夜のちょうちんの下で レモン色に とんだので、にごらせた黄土にする
+const C_HERC_WING = Color3.FromHexString('#a89047');
+const C_HERC_DOT = Color3.FromHexString('#2e271f'); // 上ばねの こい斑点
 
 export interface BugMesh {
   root: Mesh;
@@ -456,6 +481,297 @@ function grasshopper(A: Arrays, seed: number, scale = 1): void {
   insectLegs(A, seed, s, C_BATTA, [[0.02, 0.014, 0.038], [0.02, 0.013, 0.012]], 0.02, 0.004);
 }
 
+// ---------------------------------------------------------------------------
+// v23 カブト・クワガタ族を7種たして 10しゅるいにする。
+//
+// v17の stagBeetle / beetle は **1行も さわらない**(クワガタ・オオクワガタ・
+// カブトムシの見た目を 変えないため)。あたらしい5種のクワガタは
+// stagVariant、2種のカブトは rhinoVariant という 別の関数で作る。
+//
+// 判別記号は 種ごとに「1つだけ」大きく作る(教訓1):
+//   ノコギリ = 内へ ぐいと まがる 赤茶の 大あご(内がわに のこぎり歯)
+//   ヒラタ   = よこに はった 平たい 黒いからだ(あごは みじかく ふとい)
+//   ギラファ = 体長ぐらい 長い まっすぐな 大あご
+//   ミヤマ   = 頭の うしろの 王冠(耳状突起)+ 金がかった からだ
+//   ニジイロ = まるい せなかの にじ色(みどり→あお→むらさき→きん)
+//   コーカサス = 3本の つの
+//   ヘラクレス = 上下2本の 巨大な つの + 黄色い上ばね(こい斑点は 左右ふぞろい)
+// ---------------------------------------------------------------------------
+
+/** あたらしいクワガタ5種の作り分け(からだの ずんぐり具合と 大あごの形) */
+interface StagVariant {
+  shell: Color3;
+  shine: Color3;
+  /** はねの よこ幅・高さ・長さの倍率(1=v17のクワガタと同じ) */
+  bodyW?: number;
+  bodyH?: number;
+  bodyL?: number;
+  /** 大あごの形。玉のならびは jawArc が持つ */
+  jaw: 'nokogiri' | 'hirata' | 'giraffa' | 'miyama' | 'niji';
+  /** 頭の うしろの 王冠(ミヤマの耳状突起) */
+  crown?: boolean;
+  /** せなかを にじ色にする(ニジイロ) */
+  rainbow?: boolean;
+}
+
+/**
+ * 大あごの玉のならび [横, 前後, 太さ]。
+ * 玉の間かく(前後の差)は 玉の長さ(rz×2=0.034)より みじかくしてある
+ * ——はなすと「じゅずつなぎ」に見える(教訓1。v17の実機接写で確かめた)。
+ */
+// 【v23の実機接写でわかったこと】
+//   さきを x≈0 まで もっていくと 左右のあごが つながって「輪(なわとび)」に見える。
+//   本物の大あごは さきが 開いているので、どの種も **さきに はっきり すきまを のこす**
+//   (先の玉の中心を 0.012〜0.017 に とめる = 玉の半径ぶんを 引いても 1cm以上あく)。
+//   よこ幅より 長さを かせぐ ほうが「大あご」に見える(まるい輪は「ひも」に見える)。
+const JAW_ARC: Record<StagVariant['jaw'], [number, number, number][]> = {
+  // ノコギリ: 外へ ふくらんでから 内へ ぐいと まがる。長さは からだと 同じくらい
+  nokogiri: [
+    [0.026, 0.108, 0.0115], [0.033, 0.129, 0.0109], [0.036, 0.151, 0.0102], [0.036, 0.174, 0.0094],
+    [0.032, 0.195, 0.0086], [0.026, 0.212, 0.0078], [0.020, 0.224, 0.0071], [0.016, 0.232, 0.0065],
+  ],
+  // ヒラタ: みじかく ふとく、ほとんど まっすぐ
+  hirata: [
+    [0.027, 0.104, 0.0128], [0.029, 0.121, 0.0122], [0.030, 0.138, 0.0116], [0.029, 0.154, 0.0107],
+    [0.024, 0.167, 0.0097], [0.017, 0.176, 0.0087],
+  ],
+  // ギラファ: からだの1.6倍。ほとんど まっすぐな 2本の ほこ(さきだけ 内へ かぎ形)
+  giraffa: [
+    [0.023, 0.106, 0.0122], [0.027, 0.132, 0.0114], [0.030, 0.158, 0.0106], [0.032, 0.184, 0.0099],
+    [0.032, 0.210, 0.0092], [0.031, 0.236, 0.0085], [0.029, 0.262, 0.0079], [0.026, 0.288, 0.0073],
+    [0.022, 0.312, 0.0067], [0.017, 0.331, 0.0062],
+  ],
+  // ミヤマ: 中くらいの 弧(主役は 頭の王冠なので あごは ひかえめ)
+  miyama: [
+    [0.026, 0.104, 0.0122], [0.031, 0.123, 0.0115], [0.034, 0.143, 0.0107], [0.034, 0.163, 0.0099],
+    [0.030, 0.181, 0.0091], [0.023, 0.195, 0.0083], [0.015, 0.204, 0.0077],
+  ],
+  // ニジイロ: あごは 小さい(主役は にじ色の せなか)
+  niji: [
+    [0.022, 0.100, 0.0106], [0.026, 0.113, 0.0099], [0.027, 0.126, 0.0091], [0.023, 0.136, 0.0083],
+    [0.015, 0.143, 0.0076],
+  ],
+};
+
+/** 大あごの 内がわの 歯 [横, 前後, 大きさ]。種ごとに 数と大きさを 変える */
+const JAW_TEETH: Record<StagVariant['jaw'], [number, number, number][]> = {
+  nokogiri: [[0.018, 0.135, 0.0062], [0.024, 0.166, 0.0053], [0.022, 0.196, 0.0044]], // のこぎり歯3つ
+  hirata: [[0.014, 0.119, 0.0098]], // つけねの 大きな歯1つ(ヒラタの見わけどころ)
+  giraffa: [[0.013, 0.130, 0.0074], [0.023, 0.246, 0.0046]],
+  miyama: [[0.017, 0.128, 0.0068], [0.027, 0.164, 0.0048]],
+  niji: [[0.014, 0.114, 0.0052]],
+};
+
+/** あたらしいクワガタ5種。v17の stagBeetle とは別の関数(既存の見た目を こわさない) */
+function stagVariant(A: Arrays, seed: number, scale: number, v: StagVariant): void {
+  const s = scale;
+  const bw = v.bodyW ?? 1;
+  const bh = v.bodyH ?? 1;
+  const bl = v.bodyL ?? 1;
+  if (v.rainbow) {
+    // ニジイロの せなかは **はね そのものを 4つの ふしに分けて** 色を うつり変わらせる。
+    // (v23の1回目は「1つの はねの上に 色玉を のせる」作りにしたが、
+    //  玉が はねの中に うもれて 実機では ただの あお色にしか見えなかった。
+    //  ふしごとに 作れば 色は かならず 表に出る。)
+    // みどり→あお→むらさき→きん。どれも にごらせた色で、ネオンにはしない
+    // ふしの間かくより 前後の半径を ずっと大きくして 深くかさねる
+    // (かさなりが あさいと 輪切りの「だんだん」が シルエットに出る。1回目が それだった)
+    const seg: [number, number, number, number, Color3][] = [
+      // [前後の位置, よこ半径, 高さ半径, 前後半径, 色]
+      // よこ半径を そろえて、うしろの ふしが 前の ふしを のみこまないようにする
+      // (のみこむと 前の色が 見えず、v23の2回目は みどりが 出なかった)
+      [0.028, 0.046, 0.030, 0.036, C_NIJI_A],
+      [-0.004, 0.052, 0.034, 0.036, C_NIJI_B],
+      [-0.036, 0.051, 0.033, 0.036, C_NIJI_C],
+      [-0.068, 0.042, 0.027, 0.034, C_NIJI_D],
+    ];
+    for (let i = 0; i < seg.length; i++) {
+      const [bz, rx, ry, rz, c] = seg[i];
+      appendBlob(A, 0, (0.004 + ry) * s, bz * s, rx * s, ry * s, rz * s,
+        jitterColor(c, seed + i * 4, 0.05),
+        { segs: 9, noise: 0.05, seed: seed + i * 4, flatBottom: true, bottomDark: 0.3 });
+    }
+    // しっとりした つや: 合わせ目にそって ほそい すじを1本だけ
+    // (左右に点を2つ置くと「顔」になる。教訓1)
+    appendBlob(A, 0, 0.064 * s, -0.02 * s, 0.007 * s, 0.007 * s, 0.055 * s,
+      Color3.FromHexString('#dfeee6'), { segs: 5, noise: 0.06, seed: seed + 21, bottomDark: 0 });
+  } else {
+    // はね(平たい だ円)。ヒラタは よこに はって うすい
+    appendBlob(A, 0, 0.034 * bh * s, -0.018 * s, 0.052 * bw * s, 0.03 * bh * s, 0.076 * bl * s,
+      jitterColor(v.shell, seed, 0.07), { segs: 9, noise: 0.05, seed, flatBottom: true, bottomDark: 0.3 });
+    // せなかの つや(合わせ目にそって1本だけ)
+    appendBlob(A, 0, 0.056 * bh * s, -0.03 * s, 0.026 * bw * s, 0.011 * bh * s, 0.052 * bl * s,
+      v.shine, { segs: 6, noise: 0.07, seed: seed + 1, bottomDark: 0 });
+  }
+  // 前胸(よこに はった台形)。にじ色の種だけ みじかくして、みどりの ふしを かくさない
+  appendBlob(A, 0, 0.036 * bh * s, (v.rainbow ? 0.054 : 0.048) * s, 0.045 * bw * s, 0.024 * bh * s,
+    (v.rainbow ? 0.022 : 0.028) * s,
+    jitterColor(v.shell, seed + 2, 0.05), { segs: 7, noise: 0.06, seed: seed + 2, flatBottom: true, bottomDark: 0.24 });
+  // 頭
+  appendBlob(A, 0, 0.031 * bh * s, 0.081 * s, 0.028 * s, 0.019 * bh * s, 0.021 * s,
+    jitterColor(C_BODY_DARK, seed + 3, 0.08), { segs: 6, noise: 0.05, seed: seed + 3, bottomDark: 0.2 });
+  if (v.crown) {
+    // ミヤマの王冠(耳状突起)。頭の うしろの かどから 上へ・外へ はり出す 平たい板。
+    // 左右で 大きさを 1割 変えて、まっすぐな2つの記号にしない
+    for (const [sx, k] of [[1, 1], [-1, 0.9]] as [number, number][]) {
+      appendBlob(A, sx * 0.034 * s, 0.05 * s, 0.07 * s, 0.022 * k * s, 0.007 * s, 0.017 * k * s,
+        jitterColor(C_MIYAMA_CROWN, seed + 6 + sx, 0.08), { segs: 5, noise: 0.07, seed: seed + 6 + sx, bottomDark: 0.1 });
+      appendBlob(A, sx * 0.05 * s, 0.058 * s, 0.056 * s, 0.015 * k * s, 0.006 * s, 0.012 * k * s,
+        C_MIYAMA_CROWN, { segs: 4, noise: 0.09, seed: seed + 9 + sx, bottomDark: 0.1 });
+    }
+  }
+  // 大あご。左右で 長さを1割 ちがえて、まっすぐな2本の記号にしない
+  const arc = JAW_ARC[v.jaw];
+  for (const sx of [-1, 1]) {
+    const k = sx > 0 ? 1 : 0.94;
+    for (let i = 0; i < arc.length; i++) {
+      const [px, pz, pr] = arc[i];
+      appendBlob(A, sx * px * s, 0.036 * bh * s, (0.09 + (pz - 0.09) * k) * s,
+        pr * 1.25 * s, pr * 0.95 * s, 0.017 * s,
+        jitterColor(v.shell, seed + 5 + i + (sx > 0 ? 0 : 9), 0.05),
+        { segs: 5, noise: 0.05, seed: seed + 5 + i, bottomDark: 0.18 });
+    }
+    for (const [tx, tz, tr] of JAW_TEETH[v.jaw]) {
+      appendBlob(A, sx * tx * s, 0.036 * bh * s, (0.09 + (tz - 0.09) * k) * s,
+        tr * s, tr * 0.8 * s, tr * s, v.shell,
+        { segs: 4, noise: 0.08, seed: seed + 16 + Math.round(tz * 100) + sx, bottomDark: 0.18 });
+    }
+  }
+  insectLegs(A, seed, s, C_BODY_DARK,
+    [[0.062 * bw, 0.014, 0.044], [0.066 * bw, 0.013, -0.006], [0.062 * bw, 0.013, -0.056]]);
+}
+
+/**
+ * あたらしいカブト2種(コーカサス・ヘラクレス)。
+ * v17の beetle とは別の関数にして、カブトムシの見た目は そのままにしてある。
+ */
+function rhinoVariant(A: Arrays, seed: number, scale: number, kind: 'caucasus' | 'hercules'): void {
+  const s = scale;
+  const herc = kind === 'hercules';
+  const shell = herc ? C_HERC_DARK : C_CAUCA;
+  const wing = herc ? C_HERC_WING : C_CAUCA;
+  // はね(上ばね)。ヘラクレスだけ 黄色く、ふぞろいな こい斑点を のせる
+  appendBlob(A, 0, 0.04 * s, -0.014 * s, 0.058 * s, 0.038 * s, 0.088 * s, jitterColor(wing, seed, 0.07), {
+    segs: 9, noise: 0.06, seed, flatBottom: true, bottomDark: 0.3,
+  });
+  if (herc) {
+    // 黒い斑点5つ。数・大きさ・位置を ぜんぶ ばらばらにする
+    // (左右対称に2つ置くと「顔」になる。教訓1)。
+    // せなかの丸みに そって 高さを 落とすので、はしの点も 表に出る
+    const dots: [number, number, number][] = [
+      [-0.030, 0.012, 0.0150], [0.024, -0.028, 0.0125], [-0.017, -0.052, 0.0105],
+      [0.037, 0.030, 0.0092], [0.010, 0.048, 0.0080],
+    ];
+    for (let i = 0; i < dots.length; i++) {
+      const [dx, dz, r] = dots[i];
+      const t = 1 - (dx * dx) / (0.058 * 0.058) - (dz * dz) / (0.088 * 0.088);
+      const dy = 0.04 + 0.038 * Math.sqrt(Math.max(0.2, t)) * 0.96;
+      appendBlob(A, dx * s, dy * s, dz * s, r * s, r * 0.45 * s, r * s,
+        jitterColor(C_HERC_DOT, seed + i * 5, 0.1), { segs: 5, noise: 0.1, seed: seed + i * 5, bottomDark: 0 });
+    }
+  } else {
+    // つやのある黒: 合わせ目にそって ほそい てり を1本
+    appendBlob(A, 0, 0.07 * s, -0.026 * s, 0.024 * s, 0.01 * s, 0.056 * s, C_CAUCA_SHINE, {
+      segs: 6, noise: 0.07, seed: seed + 1, bottomDark: 0,
+    });
+  }
+  // 前胸(むね)。つのの つけね。ヘラクレスは ここが 黒くて 大きいので、
+  // 黄色い上ばねとの さかい目が はっきりする(見わけの たすけになる)
+  appendBlob(A, 0, 0.046 * s, 0.068 * s, (herc ? 0.05 : 0.042) * s, 0.032 * s, (herc ? 0.042 : 0.034) * s,
+    jitterColor(shell, seed + 2, 0.06),
+    { segs: 7, noise: 0.07, seed: seed + 2, flatBottom: true, bottomDark: 0.24 });
+  // 頭
+  appendBlob(A, 0, 0.03 * s, 0.104 * s, 0.026 * s, 0.019 * s, 0.021 * s, jitterColor(shell, seed + 3, 0.06), {
+    segs: 5, noise: 0.06, seed: seed + 3, bottomDark: 0.2,
+  });
+  if (herc) {
+    // ---- ヘラクレスの見わけどころ: 上下2本の 巨大なつの ----
+    //
+    // 【v23の実機接写でわかったこと】
+    //   2本とも x=0・高さの差だけで 作ると、見おろしカメラ(仰角およそ40度)では
+    //   2本が かさなって「1本の しっぽ」にしか見えなかった。
+    //   そこで **上のつのを 大きく そらせて 高くもち上げる**。
+    //   まん中(z≈0.19)で 上下の高さの差が 0.12mある = 画面上でも はっきり ひらいて見える。
+    const upper: [number, number, number, number][] = [
+      // [前後, 高さ, 太さ, 長さ]
+      [0.105, 0.098, 0.0145, 0.026], [0.145, 0.128, 0.0135, 0.026], [0.19, 0.148, 0.0124, 0.026],
+      [0.235, 0.150, 0.0113, 0.026], [0.275, 0.134, 0.0101, 0.024], [0.308, 0.106, 0.0089, 0.020],
+      [0.330, 0.076, 0.0077, 0.016], [0.342, 0.052, 0.0066, 0.013],
+    ];
+    for (let i = 0; i < upper.length; i++) {
+      const [pz, py, pr, pl] = upper[i];
+      appendBlob(A, 0, py * s, pz * s, pr * s, pr * s, pl * s, jitterColor(C_HERC_DARK, seed + 30 + i, 0.06),
+        { segs: 5, noise: 0.05, seed: seed + 30 + i, bottomDark: 0.18 });
+    }
+    // 上のつのの 下がわの 歯(ヘラクレスらしさ。1つだけ・下向き)
+    appendBlob(A, 0, 0.108 * s, 0.196 * s, 0.0085 * s, 0.016 * s, 0.011 * s, C_HERC_DARK,
+      { segs: 4, noise: 0.08, seed: seed + 44, bottomDark: 0.18 });
+    // 下のつの(頭から 前へ・先で上へ そる)。上のつのと はさみのように 向きあう
+    // さきを 上のつのに 近づけすぎると「わっか」に見えるので、はさみの口は 広めに あける
+    const lower: [number, number, number][] = [
+      [0.132, 0.028, 0.0115], [0.168, 0.028, 0.0104], [0.202, 0.034, 0.0093],
+      [0.230, 0.045, 0.0082], [0.250, 0.060, 0.0070],
+    ];
+    for (let i = 0; i < lower.length; i++) {
+      const [pz, py, pr] = lower[i];
+      appendBlob(A, 0, py * s, pz * s, pr * s, pr * s, 0.023 * s, jitterColor(C_HERC_DARK, seed + 50 + i, 0.06),
+        { segs: 5, noise: 0.05, seed: seed + 50 + i, bottomDark: 0.18 });
+    }
+    // 先が2つに割れる(上のつのの先)。左右で 大きさを かえて 記号にしない
+    for (const [sx, k] of [[1, 1], [-1, 0.86]] as [number, number][]) {
+      appendBlob(A, sx * 0.012 * k * s, 0.044 * s, 0.353 * s, 0.0062 * s, 0.0062 * s, 0.012 * k * s,
+        C_HERC_DARK, { segs: 4, noise: 0.07, seed: seed + 60 + sx, bottomDark: 0.18 });
+    }
+  } else {
+    // ---- コーカサスの見わけどころ: 3本のつの ----
+    //
+    // 【v23の実機接写でわかったこと】
+    //   むねの2本を 高くもち上げると、見おろしでは「黒いかたまりの ふさ」になった。
+    //   3本が よこに ならんで見えるよう、むねのつのは **高さを おさえて 前へ・外へ**
+    //   まっすぐ のばし、まん中の頭のつのだけを 高く そらせる。
+    // 1本目: 頭のつの(前へ のびて 上へ そる。いちばん 長い)
+    const head: [number, number, number][] = [
+      [0.128, 0.036, 0.0122], [0.166, 0.046, 0.0113], [0.202, 0.066, 0.0103],
+      [0.232, 0.094, 0.0093], [0.252, 0.126, 0.0082], [0.262, 0.156, 0.0072],
+    ];
+    for (let i = 0; i < head.length; i++) {
+      const [pz, py, pr] = head[i];
+      appendBlob(A, 0, py * s, pz * s, pr * s, pr * s, 0.022 * s, jitterColor(C_CAUCA, seed + 30 + i, 0.06),
+        { segs: 5, noise: 0.05, seed: seed + 30 + i, bottomDark: 0.18 });
+    }
+    // 2本目・3本目: むねの つの(前へ・外へ。高さは 背中のすぐ上まで)。左右で 長さを かえる
+    for (const [sx, k] of [[1, 1], [-1, 0.9]] as [number, number][]) {
+      const thorax: [number, number, number][] = [
+        // [横, 高さ, 前後]
+        [0.030, 0.068, 0.100], [0.040, 0.074, 0.132], [0.046, 0.076, 0.164], [0.048, 0.072, 0.196],
+        [0.044, 0.064, 0.222],
+      ];
+      for (let i = 0; i < thorax.length; i++) {
+        const [px, py, pz] = thorax[i];
+        appendBlob(A, sx * px * k * s, py * s, (0.070 + (pz - 0.070) * k) * s,
+          (0.0108 - i * 0.0011) * s, (0.0108 - i * 0.0011) * s, 0.019 * s,
+          jitterColor(C_CAUCA, seed + 40 + i + (sx > 0 ? 0 : 6), 0.06),
+          { segs: 5, noise: 0.05, seed: seed + 40 + i, bottomDark: 0.18 });
+      }
+      // つのの さき(内がわへ 曲がる かぎ)
+      appendBlob(A, sx * 0.034 * k * s, 0.058 * s, (0.070 + 0.174 * k) * s,
+        0.0062 * s, 0.0062 * s, 0.012 * s, C_CAUCA,
+        { segs: 4, noise: 0.08, seed: seed + 55 + sx, bottomDark: 0.18 });
+    }
+  }
+  insectLegs(A, seed, s, C_BODY_DARK,
+    [[0.07, 0.014, 0.05], [0.074, 0.013, -0.004], [0.07, 0.013, -0.062]], 0.034, 0.0055);
+}
+
+/** v23の7種の作り分け表。makeBugMesh と makeCagedBugMesh が これ1つを見る */
+const STAG_VARIANTS: Record<string, StagVariant> = {
+  b_nokogiri: { shell: C_NOKO, shine: C_NOKO_SHINE, jaw: 'nokogiri', bodyL: 1.02 },
+  b_hirata: { shell: C_HIRATA, shine: C_HIRATA_SHINE, jaw: 'hirata', bodyW: 1.36, bodyH: 0.68 },
+  b_giraffa: { shell: C_GIRAFFA, shine: C_GIRAFFA_SHINE, jaw: 'giraffa', bodyW: 0.92, bodyL: 1.0 },
+  b_miyama: { shell: C_MIYAMA, shine: C_MIYAMA_CROWN, jaw: 'miyama', crown: true },
+  b_niji: { shell: C_NIJI_B, shine: C_NIJI_D, jaw: 'niji', bodyW: 1.04, bodyH: 1.16, bodyL: 0.92, rainbow: true },
+};
+
 /** ホタルのからだ(黒っぽい細身+赤い前胸)。光る おしりは別メッシュ */
 function fireflyBody(A: Arrays, seed: number): void {
   appendBlob(A, 0, 0, 0, 0.019, 0.015, 0.05, jitterColor(C_HOTARU, seed, 0.08), {
@@ -505,6 +821,27 @@ export function makeBugMesh(scene: Scene, id: BugId, seed: number): BugMesh {
     case 'b_kuwa':
     case 'b_ookuwa': {
       stagBeetle(A, seed, 1, id === 'b_ookuwa');
+      const root = faceOutward(toMesh(scene, `bug_${id}_${seed}`, A, 'flip'));
+      root.isPickable = false;
+      return { root };
+    }
+    // ---- v23 あたらしいクワガタ5種 ----
+    case 'b_nokogiri':
+    case 'b_hirata':
+    case 'b_giraffa':
+    case 'b_miyama':
+    case 'b_niji': {
+      stagVariant(A, seed, 1, STAG_VARIANTS[id]);
+      const root = faceOutward(toMesh(scene, `bug_${id}_${seed}`, A, 'flip'));
+      root.isPickable = false;
+      return { root };
+    }
+    // ---- v23 あたらしいカブト2種 ----
+    // ヘラクレスだけ ひとまわり大きい(1.3倍)。ぜんぶの虫で いちばん 大きく見せる
+    case 'b_caucasus':
+    case 'b_hercules': {
+      const herc = id === 'b_hercules';
+      rhinoVariant(A, seed, herc ? 1.3 : 1.12, herc ? 'hercules' : 'caucasus');
       const root = faceOutward(toMesh(scene, `bug_${id}_${seed}`, A, 'flip'));
       root.isPickable = false;
       return { root };
@@ -606,6 +943,22 @@ export function makeCagedBugMesh(scene: Scene, id: BugId, seed: number): Mesh {
       break;
     case 'b_ookuwa':
       stagBeetle(A, seed, 0.62, true);
+      break;
+    // ---- v23 ----
+    case 'b_nokogiri':
+    case 'b_hirata':
+    case 'b_giraffa':
+    case 'b_miyama':
+    case 'b_niji':
+      // ギラファは あごが 長いので かごに おさまるよう すこし 小さめにする
+      stagVariant(A, seed, id === 'b_giraffa' ? 0.52 : 0.62, STAG_VARIANTS[id]);
+      break;
+    case 'b_caucasus':
+      rhinoVariant(A, seed, 0.58, 'caucasus');
+      break;
+    case 'b_hercules':
+      // つのが 上下に 長いので、かごの中では いちばん 小さくする
+      rhinoVariant(A, seed, 0.5, 'hercules');
       break;
     case 'b_kama':
       mantis(A, seed, 0.8);

@@ -1,0 +1,56 @@
+{
+  "result": "PASS",
+  "phase": "cove_day",
+  "area": "cove",
+  "need": 1,
+  "limitSec": 90,
+  "elapsedSec": 5.3,
+  "total": 1,
+  "catches": [
+    {
+      "sec": 5.1,
+      "total": 1,
+      "got": [
+        "b_miyama"
+      ],
+      "hintSeen": true
+    }
+  ],
+  "kinds": [
+    "b_miyama"
+  ],
+  "hints": [
+    "Eふねで しまへ かえる",
+    "Eほしくさをつむ",
+    "とびらは しまっている",
+    "むしが いる! ちかづいて つかまえよう",
+    "Eむしあみでつかまえる"
+  ],
+  "errors": [],
+  "log": [
+    {
+      "sec": 6.6,
+      "label": "ゲーム開始(新規)"
+    },
+    {
+      "sec": 8.6,
+      "label": "支度おわり: cove 昼 hour=10.1 虫=1匹 いち=(-51.2,63.3)"
+    },
+    {
+      "sec": 8.6,
+      "label": "いまやること: q_wood_offer_sail_island 「ふねで しまへ もどろう」"
+    },
+    {
+      "sec": 8.6,
+      "label": "ねらう: b_miyama (-60.0,50.5) 15.5m"
+    },
+    {
+      "sec": 13.7,
+      "label": "つかまえた! (1匹目 b_miyama) ヒントを見てから=true"
+    },
+    {
+      "sec": 13.9,
+      "label": "PASS: 5.3秒で 1匹(合格は90秒で1匹)"
+    }
+  ]
+}

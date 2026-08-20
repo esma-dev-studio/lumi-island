@@ -1,0 +1,49 @@
+カメラのズーム: 0.7(最小0.7=約4.6m)
+bugs.ts の実URL: http://localhost:5215/src/entities/bugs.ts
+虫: ノコギリクワガタ(b_nokogiri) island hour=13 立ち位置={"x":-14,"z":-1,"walk":true} 見本={"bx":-14,"bz":-2.9,"y":1.266883477587991}
+  10_bug_1_b_nokogiri.png (460x360 を3倍解像度で切り出し)
+虫: ヒラタクワガタ(b_hirata) island hour=21.5 立ち位置={"x":-14,"z":-1,"walk":true} 見本={"bx":-14,"bz":-2.9,"y":1.266883477587991}
+  10_bug_2_b_hirata.png (460x360 を3倍解像度で切り出し)
+虫: ギラファノコギリクワガタ(b_giraffa) island hour=21.5 立ち位置={"x":-14,"z":-1,"walk":true} 見本={"bx":-14,"bz":-2.9,"y":1.266883477587991}
+  10_bug_3_b_giraffa.png (460x470 を3倍解像度で切り出し)
+--- cove へ移動 ---
+虫: ミヤマクワガタ(b_miyama) cove hour=10 立ち位置={"x":-58.5,"z":57.5,"walk":true} 見本={"bx":-58.5,"bz":55.6,"y":1.6367042177216935}
+  10_bug_4_b_miyama.png (460x360 を3倍解像度で切り出し)
+虫: コーカサスオオカブト(b_caucasus) cove hour=21.5 立ち位置={"x":-58.5,"z":57.5,"walk":true} 見本={"bx":-58.5,"bz":55.6,"y":1.6367042177216935}
+  10_bug_5_b_caucasus.png (460x470 を3倍解像度で切り出し)
+--- market へ移動 ---
+虫: ニジイロクワガタ(b_niji) market hour=21.5 立ち位置={"x":28.35,"z":60.6,"walk":true} 見本={"bx":28.35,"bz":58.7,"y":1.6514334509316022}
+  10_bug_6_b_niji.png (460x360 を3倍解像度で切り出し)
+虫: ヘラクレスオオカブト(b_hercules) market hour=21.5 立ち位置={"x":28.35,"z":60.6,"walk":true} 見本={"bx":28.35,"bz":58.7,"y":1.6514334509316022}
+  10_bug_7_b_hercules.png (460x470 を3倍解像度で切り出し)
+木にとまった姿勢: b_nokogiri
+  13_tree_1_b_nokogiri.png (440x360 を3倍解像度で切り出し)
+木にとまった姿勢: b_hirata
+  13_tree_2_b_hirata.png (440x360 を3倍解像度で切り出し)
+木にとまった姿勢: b_giraffa
+  13_tree_3_b_giraffa.png (440x360 を3倍解像度で切り出し)
+cove day1 hour=10 いま出ている虫: ["b_miyama","b_miyama"]
+  じっさいの ミヤマクワガタ: (-60.0, 50.5)
+  20_real_1_b_miyama.png (460x420 を3倍解像度で切り出し)
+  21_real_wide_1_b_miyama.png(まわりの ようすつき)
+cove day1 hour=21.5 いま出ている虫: ["b_caucasus","b_caucasus"]
+  じっさいの コーカサスオオカブト: (-60.0, 50.5)
+  20_real_2_b_caucasus.png (460x420 を3倍解像度で切り出し)
+  21_real_wide_2_b_caucasus.png(まわりの ようすつき)
+market day1 hour=21.5 いま出ている虫: ["b_niji","b_niji"]
+  じっさいの ニジイロクワガタ: (22.0, 60.0)
+  20_real_3_b_niji.png (460x420 を3倍解像度で切り出し)
+  21_real_wide_3_b_niji.png(まわりの ようすつき)
+market day1 hour=21.5 いま出ている虫: ["b_niji","b_niji"]
+market day2 hour=21.5 いま出ている虫: ["b_hercules","b_hercules"]
+  じっさいの ヘラクレスオオカブト: (22.0, 60.0)
+  20_real_4_b_hercules.png (460x420 を3倍解像度で切り出し)
+  21_real_wide_4_b_hercules.png(まわりの ようすつき)
+  30_caged_all_7.png (700x300 を3倍解像度で切り出し)
+おおきい むしかごに入れた: true,true,true
+  40_bugcage_big_v23.png (560x400 を3倍解像度で切り出し)
+  41_bugcage_big_wide.png
+50_codex.png(ずかん。ヘラクレスだけ「?」のまま)
+  51_codex_zoom.png(ずかんの あたらしい虫のところ)
+  52_badge.png(バッジ「カブトとクワガタ 10しゅるい」)
+consoleエラー: 0件

@@ -41,6 +41,9 @@ const NEW_FISH: [ItemId, string, number][] = [
   ['seahorse', 'タツノオトシゴ', 70],
 ];
 
+/** 島に出る虫だけ(v23で 入り江・いちば島の虫が ふえたので、島のローテはこれで見る) */
+const ISLAND_DEFS = BUG_DEFS.filter((b) => b.area === 'island');
+
 /** 決定論の擬似乱数(content_v8.test.ts と同じもの) */
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
@@ -53,9 +56,9 @@ function mulberry32(seed: number): () => number {
 }
 
 describe('v17 あたらしい虫6種(データ)', () => {
-  it('12種になり、名まえ・売値・種別・出る場所がそろっている', () => {
-    expect(BUG_IDS.length).toBe(12);
-    expect(new Set(BUG_IDS).size).toBe(12);
+  it('名まえ・売値・種別・出る場所がそろっている(v17で12種→v23で19種)', () => {
+    expect(BUG_IDS.length).toBe(19);
+    expect(new Set(BUG_IDS).size).toBe(19);
     for (const [id, name, sell, spot, night] of NEW_BUGS) {
       expect(BUG_IDS, id).toContain(id);
       expect(ITEMS[id], id).toBeDefined();
@@ -93,8 +96,9 @@ describe('v17 あたらしい虫6種(データ)', () => {
   });
 
   it('スポットの種類が実在する(出られない虫を作らない)', () => {
+    // BUG_SPOTS は島のとまり場。別空間の虫は beetles_v23.test.ts が それぞれの表で見る
     const kinds = new Set(BUG_SPOTS.map((p) => p.kind));
-    for (const def of BUG_DEFS) {
+    for (const def of ISLAND_DEFS) {
       expect(def.spots.length, def.id).toBeGreaterThan(0);
       for (const k of def.spots) expect(kinds.has(k), `${def.id}: ${k}`).toBe(true);
     }
@@ -155,22 +159,22 @@ describe('v17 きょうの顔ぶれ(日がわりローテ)', () => {
     for (let day = 1; day <= 30; day++) {
       const dayIds = todaysBugs(day, false).map((b) => b.id);
       const nightIds = todaysBugs(day, true).map((b) => b.id);
-      const allDay = BUG_DEFS.filter((b) => !b.night).length;
-      const allNight = BUG_DEFS.filter((b) => b.night).length;
+      const allDay = ISLAND_DEFS.filter((b) => !b.night).length;
+      const allNight = ISLAND_DEFS.filter((b) => b.night).length;
       expect(dayIds.length, `day${day} 昼`).toBeLessThan(allDay);
       expect(nightIds.length, `day${day} 夜`).toBeLessThan(allNight);
       // 毎日出る種(daily)は かならず入っている
-      for (const def of BUG_DEFS.filter((b) => b.daily)) {
+      for (const def of ISLAND_DEFS.filter((b) => b.daily)) {
         const ids = def.night ? nightIds : dayIds;
         expect(ids, `day${day} ${def.id}`).toContain(def.id);
       }
     }
   });
 
-  it('えらばれる数は 決めた数ちょうど(昼3・夜1)', () => {
+  it('えらばれる数は 決めた数ちょうど(島は 昼3・夜2)', () => {
     for (let day = 1; day <= 20; day++) {
       for (const night of [false, true]) {
-        const daily = BUG_DEFS.filter((b) => b.night === night && b.daily).length;
+        const daily = ISLAND_DEFS.filter((b) => b.night === night && b.daily).length;
         const pick = night ? BUG_ROTATE_NIGHT : BUG_ROTATE_DAY;
         expect(todaysBugs(day, night).length, `day${day} night=${night}`).toBe(daily + pick);
       }
@@ -182,7 +186,7 @@ describe('v17 きょうの顔ぶれ(日がわりローテ)', () => {
       for (let from = 1; from <= 12; from++) {
         let seen = false;
         for (let day = from; day < from + 10 && !seen; day++) {
-          if (todaysBugs(day, def.night).some((b) => b.id === def.id)) seen = true;
+          if (todaysBugs(day, def.night, undefined, def.area).some((b) => b.id === def.id)) seen = true;
         }
         expect(seen, `${def.id}: ${from}日目からの10日で 1回も出ない`).toBe(true);
       }

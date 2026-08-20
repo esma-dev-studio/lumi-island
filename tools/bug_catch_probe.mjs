@@ -11,6 +11,9 @@
 //   node tools/bug_catch_probe.mjs
 //   node tools/bug_catch_probe.mjs --night     (夜=ホタル・スズムシで測る)
 //   node tools/bug_catch_probe.mjs --quest     (依頼を受けた「誘導中」の状態で測る)
+//   node tools/bug_catch_probe.mjs --cove          (v23 よるの入り江の昼=ミヤマクワガタ)
+//   node tools/bug_catch_probe.mjs --cove --night  (v23 入り江の夜=コーカサスオオカブト)
+//   node tools/bug_catch_probe.mjs --market        (v23 いちば島の夜=ニジイロ・ヘラクレス)
 //
 // --quest がいちばん大事な回帰: v10までは誘導中(guided)だと catch が候補から外され、
 // 虫の目の前でEを押しても何も起きなかった(ObjectiveSystem の ALWAYS_ALLOWED に catch が無かった)。
@@ -27,16 +30,25 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { launchEdge } from './launch_browser.mjs';
 
 const BASE = process.env.LUMI_BASE ?? 'http://localhost:5184';
-const NIGHT = process.argv.includes('--night');
 const QUEST = process.argv.includes('--quest');
-const TAG = `${NIGHT ? 'night' : 'day'}${QUEST ? '_quest' : ''}`;
-const LIMIT_MS = 120 * 1000; // 合格判定の持ち時間(2分)
-const NEED = 3; // 合格に必要な捕獲数
+// v23 別空間(よるの入り江・いちば島)の むしとり。
+// いちば島は よるの でんしゃでしか 行けない島なので、指定がなくても 夜に そろえる
+const COVE = process.argv.includes('--cove');
+const MARKET = process.argv.includes('--market');
+const NIGHT = process.argv.includes('--night') || MARKET;
+const AREA = COVE ? 'cove' : MARKET ? 'market' : 'island';
+const TAG = `${AREA === 'island' ? '' : AREA + '_'}${NIGHT ? 'night' : 'day'}${QUEST ? '_quest' : ''}`;
+// 別空間は せまく(とまり場5か所・3か所)、同時に出るのも2匹なので、
+// 合格は「90秒で1ぴき」。島は これまでどおり「2分で3びき」
+const LIMIT_MS = (AREA === 'island' ? 120 : 90) * 1000;
+const NEED = AREA === 'island' ? 3 : 1;
 const CATCH_R = 2.6; // src/systems/BugSystem.ts の BUG_CATCH_R
-// src/systems/BugSystem.ts の BUG_IDS(v17で12種)。ここが古いと「つかまえたのに数えない」になる
+// src/systems/BugSystem.ts の BUG_IDS(v17で12種 → v23で19種)。
+// ここが古いと「つかまえたのに数えない」になる
 const BUG_IDS = [
   'b_shiro', 'b_ageha', 'b_tento', 'b_kabuto', 'b_hotaru', 'b_suzu',
   'b_batta', 'b_kuwa', 'b_kama', 'b_semi', 'b_tonbo', 'b_ookuwa',
+  'b_nokogiri', 'b_hirata', 'b_giraffa', 'b_miyama', 'b_caucasus', 'b_niji', 'b_hercules',
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -100,15 +112,22 @@ async function info() {
     const inv = g.state.inventory;
     const ids = ${JSON.stringify(BUG_IDS)};
     let caught = 0;
-    for (const id of ids) caught += inv[id] ?? 0;
+    const each = {};
+    for (const id of ids) {
+      const n = inv[id] ?? 0;
+      caught += n;
+      if (n > 0) each[id] = n;
+    }
     return JSON.stringify({
       px: g.player.x, pz: g.player.z, speed: g.player.speed, indoor: g.indoor,
+      inCove: g.inCove, inMarket: g.inMarket, area: g.island.bugArea,
       hour: g.state.time.hour, day: g.state.time.day,
       obj: g.lastObjective?.id ?? 'none', objLabel: g.lastObjective?.label ?? '',
       dialogue: g.dialogue.open, qc: g.questComplete.open, seq: g.seq.active, paused: g.pauseMenu.open,
       busy: g.inter.busy,
       hint: (document.querySelector('.hud-hint')?.textContent ?? '').trim(),
       caught,
+      each,
       bugs: g.island.bugList,
     });
   })()`)
@@ -116,6 +135,8 @@ async function info() {
 }
 
 const catches = [];
+/** つかまえた種類(どの虫が とれたかを 報告に のこす) */
+const kinds = new Set();
 let result = 'error: 走行前に落ちた';
 try {
   mkdirSync('.logs', { recursive: true });
@@ -147,9 +168,21 @@ try {
     // これで「いまやること」が もくざい採取の誘導(guided)になる
     await page.evaluate(`__lumiDebug.state().flags['q_wood_accepted'] = true`);
   }
+  // v23 別空間へ「わたる」までは 支度あつかい(時刻・虫あみと同じ)。
+  // ふねの しゅうり・よるの でんしゃの周期は むしとりの検証とは別の話なので、
+  // 島がわの導線は 既存の chapter2 / chapter3 の E2E に まかせる。
+  // ——**わたった先での 移動と E は これまでどおり ぜんぶ 実キー入力**にする。
+  if (COVE) await page.evaluate('window.__lumi.game.applyCove(true)');
+  if (MARKET) await page.evaluate('window.__lumi.game.applyMarket(true)');
+  if (COVE || MARKET) {
+    await sleep(500);
+    const ok = await page.evaluate(`window.__lumi.game.${COVE ? 'inCove' : 'inMarket'} === true`);
+    if (!ok) throw new Error(`${AREA} へ わたれなかった`);
+  }
   await sleep(600);
   const boot = await info();
-  mark(`支度おわり: ${NIGHT ? '夜' : '昼'} hour=${boot.hour.toFixed(1)} 虫=${boot.bugs.length}匹 いち=(${boot.px.toFixed(1)},${boot.pz.toFixed(1)})`);
+  mark(`支度おわり: ${AREA} ${NIGHT ? '夜' : '昼'} hour=${boot.hour.toFixed(1)} 虫=${boot.bugs.length}匹 いち=(${boot.px.toFixed(1)},${boot.pz.toFixed(1)})`);
+  if (boot.area !== AREA) throw new Error(`虫の場所が ${boot.area} になっている(ねらいは ${AREA})`);
   mark(`いまやること: ${boot.obj} 「${boot.objLabel}」`);
   if (QUEST && boot.obj !== 'q_wood_gather') throw new Error(`誘導中の状態にならなかった: ${boot.obj}`);
 
@@ -179,8 +212,11 @@ try {
       }
       if (s.caught > caught) {
         caught = s.caught;
-        catches.push({ sec: Math.round(((Date.now() - T0) / 1000) * 10) / 10, total: caught - boot.caught, hintSeen });
-        mark(`つかまえた! (${caught - boot.caught}匹目) ヒントを見てから=${hintSeen}`);
+        // どの種が ふえたかを 差分で見る(報告に「何が とれたか」を のこす)
+        const got = Object.keys(s.each).filter((id) => (s.each[id] ?? 0) > (boot.each[id] ?? 0));
+        for (const id of got) kinds.add(id);
+        catches.push({ sec: Math.round(((Date.now() - T0) / 1000) * 10) / 10, total: caught - boot.caught, got, hintSeen });
+        mark(`つかまえた! (${caught - boot.caught}匹目 ${got.join(',') || '?'}) ヒントを見てから=${hintSeen}`);
         target = null;
         hintSeen = false;
         best = Infinity;
@@ -236,11 +272,12 @@ try {
   const elapsed = Math.round(((Date.now() - T0) / 1000) * 10) / 10;
   result = total >= NEED ? 'PASS' : 'FAIL';
   mark(`${result}: ${elapsed}秒で ${total}匹(合格は${LIMIT_MS / 1000}秒で${NEED}匹)`);
+  console.log('つかまえた種類:', [...kinds].join(' / ') || '(なし)');
   console.log('見えたヒント:', [...hints].join(' / ') || '(なし)');
   writeFileSync(
     `.logs/bug_probe_${TAG}.json`,
     JSON.stringify(
-      { result, phase: TAG, need: NEED, limitSec: LIMIT_MS / 1000, elapsedSec: elapsed, total, catches, hints: [...hints], errors: errors.slice(0, 5), log },
+      { result, phase: TAG, area: AREA, need: NEED, limitSec: LIMIT_MS / 1000, elapsedSec: elapsed, total, catches, kinds: [...kinds], hints: [...hints], errors: errors.slice(0, 5), log },
       null,
       2
     )
