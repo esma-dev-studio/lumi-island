@@ -9,7 +9,8 @@ import {
 import type { VisitPraiseFacts } from '../data/npcs';
 import { GATHER_NODES } from '../data/island';
 import {
-  FESTIVAL_FAR, FESTIVAL_FROM, FESTIVAL_LANDING, FESTIVAL_TO, festivalStand,
+  FESTIVAL_FAR, FESTIVAL_FROM, FESTIVAL_LANDING, FESTIVAL_PLAZA, FESTIVAL_RING_R, FESTIVAL_TO,
+  festivalStand,
 } from './FestivalSystem';
 import { chatStandOf, type ChatPairDef } from './ChatEventSystem';
 import type { GameState } from '../game/GameState';
@@ -46,12 +47,13 @@ const VISIT_ENTRY: ScheduleEntry = { from: VISIT_FROM, to: VISIT_TO, spot: VISIT
 // 話しかけ・受注・報告は ふだんどおり動く(そのままの talk 候補が出る)。
 //
 // 差しかえの強さ(上から順に強い):
-//   1. ツムギの工房前ロック(最初の依頼を受けるまで動かない。迷子防止がいちばん強い)
-//   2. 朝の来訪(7〜9時。まつり18〜21時とは 時間が重ならないので実際には競合しない)
-//   3. **ほしまつり(18〜21時)** ← ここ。在宅も 依頼中の立ち位置も 上書きする
+//   1. **ほしまつり(18〜21時)** ← ここ。在宅も 依頼中の立ち位置も 工房前ロックも 上書きする
+//   2. ツムギの工房前ロック(最初の依頼を受けるまで動かない。迷子防止)
+//   3. 朝の来訪(7〜9時。まつり18〜21時とは 時間が重ならないので実際には競合しない)
 //   4. 依頼の受注・報告相手の questEntry(家に入らず外で待つ)
 //   5. ふだんのスケジュール
-// 3を4より強くしてよい理由: まつりの会場は 桟橋のたもとの ひらけた場所で、
+// v26 まで 1と2が 逆で、ツムギだけ まつりに来ないバグになっていた(resolveEntry の説明を見ること)。
+// 1を4より強くしてよい理由: まつりの会場は 桟橋のたもとの ひらけた場所で、
 // 誘導の矢印は「NPCの実際の位置」を指す(GameScene.targetPosOf)から、
 // 依頼の相手が まつりにいても 子どもは かならず たどりつける。
 // ---------------------------------------------------------------------------
@@ -68,9 +70,9 @@ const FESTIVAL_ENTRY: ScheduleEntry = {
 // ぜんぶ決める。ここは 差しかえの強さの順番に 1段 足すだけ。
 //
 // 差しかえの強さ(上から順に強い):
-//   1. ツムギの工房前ロック(最初の依頼を受けるまで動かない)
-//   2. 朝の来訪(7〜9時)
-//   3. ほしまつり(18〜21時)
+//   1. ほしまつり(18〜21時)
+//   2. ツムギの工房前ロック(最初の依頼を受けるまで動かない)
+//   3. 朝の来訪(7〜9時)
 //   4. **立ち話** ← ここ。**いちばん よわい**
 //        - 依頼が1つでも動いている日は ChatEventSystem が そもそも null を返す
 //          (誘導が指す人は いつもの場所にいる、が こわれない)
@@ -78,6 +80,13 @@ const FESTIVAL_ENTRY: ScheduleEntry = {
 //   5. 依頼の受注・報告相手の questEntry
 //   6. ふだんのスケジュール
 // ---------------------------------------------------------------------------
+/**
+ * v26 名札を出さない「まつりの輪」の ひろがり(輪の半径から これだけ外まで)。
+ * 5人が1.7mの輪に立つので、輪の上では 名札が かさなって おまつりの絵をこわす。
+ * 会場から はなれて 歩いている人には ふつうに 名札を出す。
+ */
+export const NAMEPLATE_RING_PAD = 1.2;
+
 export const CHAT_SPOT_KEY = 'chat';
 // activity は 'watch'。まつりの輪と同じで、到着したら その場から動かず(wanderR:0)
 // spot.rotY(=相手のほう)を 向きつづける枠は 'watch' だけ(update の分岐を参照)
@@ -495,6 +504,18 @@ export class NPCSystem {
   /** 現在のスケジュール枠を解く(依頼相手は在宅時間でもquestEntryへ差し替え) */
   private resolveEntry(rt: NpcRuntime, hour: number): ScheduleEntry {
     let entry = scheduleEntryAt(rt.def.schedule, hour);
+    // v26 ほしまつり(18〜21時)は **いちばん強い差しかえ**。
+    //
+    // ここが工房前ロックより下にあったせいで、ツムギだけ まつりに来なかった
+    // (実測: ほかの4人は 輪の半径1.70mちょうど、ツムギだけ 会場から32.72m=工房前)。
+    // 「最初の依頼を受けるまで動かない」は 島に来た初日の 迷子防止のための ロックで、
+    // まつりは 7日めより あとの ゆうがた3時間にしか 起きない。
+    // それでも フラグが立たないまま 7日めを むかえたセーブ(旧版からの持ちこし・
+    // 依頼をまだ受けていない子)では、ロックが えいえんに まつりを 上書きしていた。
+    // まつりの3時間だけは 島じゅうの人が 桟橋へ行く——ここを ロックより上に置くことで、
+    // 「まつり中は かならず全員が 輪にいる」が 状態に関係なく 成り立つ。
+    // 誘導が こわれない理由は 上の説明のとおり(矢印は NPCの実際の位置を指す)。
+    if (this.festivalSlot(rt) >= 0) return FESTIVAL_ENTRY;
     // 最初の依頼を受けるまで、ツムギは工房前から動かない(迷子防止)
     if (rt.def.id === 'tsumugi' && this.getFlags().q_wood_accepted !== true) {
       return rt.def.questEntry;
@@ -502,8 +523,6 @@ export class NPCSystem {
     // v10 来訪: なかよしのNPCは 朝7〜9時だけ 自宅の庭先にいる。
     // 依頼が動いている日は visitorToday が null を返すので、依頼の枠を横取りすることはない
     if (this.isVisiting(rt.def.id, this.island.time.day, hour)) return VISIT_ENTRY;
-    // v16 ほしまつり(18〜21時)。在宅も 依頼中の立ち位置も 上書きして 桟橋のたもとへ集まる
-    if (this.festivalSlot(rt) >= 0) return FESTIVAL_ENTRY;
     // v21 立ち話。いちばん よわい差しかえ:在宅の枠は 上書きしない(ねている人を 外へ出さない)
     if (entry.activity !== 'home' && this.chatPairOf(rt) !== null) return CHAT_ENTRY;
     if (entry.activity === 'home' && this.questCritical(rt.def.id)) {
@@ -723,6 +742,30 @@ export class NPCSystem {
       if (happy) rt.view.play('happy', { onEnd: () => rt.view.play('idle') });
       this.apply(rt);
     }
+  }
+
+  /**
+   * v26 名札の もとになる「いま見えている人」(同じ場所にいる人だけ)。
+   *
+   * 出す・出さないの判断は ここではしない(NPCSystem は 見た目の都合を知らない)。
+   * 距離・会話中・まつりの輪 の判断は src/ui/NpcNameplate.ts の純関数が ぜんぶ持つ。
+   * 並びは Map の登録順=決定的。
+   */
+  nameplateSources(): { id: string; name: string; x: number; y: number; z: number; inFestivalRing: boolean }[] {
+    const out: { id: string; name: string; x: number; y: number; z: number; inFestivalRing: boolean }[] = [];
+    // まつりの「輪の中」だけを 名札なしにする。まつり中でも 会場から はなれて
+    // 歩いている人には 名札を出す(まつりの3時間だけ 島じゅうの名前が 読めない、を作らない)
+    const festival = this.festivalProbe ? this.festivalProbe().active : false;
+    for (const rt of this.npcs.values()) {
+      if (rt.hidden) continue;
+      if (this.areaOf(rt) !== this.area) continue;
+      const dRing = Math.hypot(rt.x - FESTIVAL_PLAZA.x, rt.z - FESTIVAL_PLAZA.z);
+      out.push({
+        id: rt.def.id, name: rt.def.name, x: rt.x, y: rt.y, z: rt.z,
+        inFestivalRing: festival && dRing <= FESTIVAL_RING_R + NAMEPLATE_RING_PAD,
+      });
+    }
+    return out;
   }
 
   /**

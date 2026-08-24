@@ -1429,6 +1429,179 @@ export function treeMoteState(): { count: number; level: number; alpha: number; 
   };
 }
 
+// ---------------------------------------------------------------------------
+// v26 よるの池の「見るだけの 光の群れ」(ホタルの ひかりが 水の上で ゆれている)。
+//
+// **つかまえる ホタル(systems/BugSystem)とは 別もの**。ここにあるのは
+// メッシュ1枚と マテリアル1つだけで、当たり判定にも Eの候補にも 1度も入らない
+// ——「つかまえられそうなのに つかまえられない」を 構造から なくすため、
+//   置き場所(src/data/island.ts の POND_GLIMMER_SPOTS)を ぜんぶ 池の水の上にして、
+//   つかまえる ホタルの とまり場からは 8m以上 はなしてある。
+//
+// 作りは 昼の木立ちの粒(initTreeMotes)と まったく同じ流儀:
+//   ・粒は「たてよこ2枚の六角形を 十字に組んだ」形。どの角度から見ても 丸い点に見える
+//   ・動きは 時計と とまり場の座標だけで決まる(乱数を1つも引かない)= 撮影が決定的
+//   ・メッシュは1枚。位置の書きこみは 12Hz(drawCallは +1 しか ふえない)
+// 明滅は 既存のホタルと 同じ式(BugSystem: max(0,sin(t*2.1+ph*2.3))**2)の
+// ゆっくり版。**大きさで ちかちかさせる**のも 既存のホタルと同じ流儀
+// (共有マテリアルの色は さわらない)。
+// ---------------------------------------------------------------------------
+/** 粒の半径(m)。つかまえる ホタルより ずっと 小さく(主張しすぎない) */
+const GLIM_R = 0.055;
+/** 池の上を ただよう ひろがり(m)。岸まで とどかない はば */
+const GLIM_SPREAD = 0.8;
+/** 水面からの 高さ(m) */
+const GLIM_Y0 = 0.34;
+const GLIM_Y1 = 0.98;
+const GLIM_HZ = 12;
+/** 夜の ふかさが これを こえたら 出る(0=昼 1=まよなか) */
+const GLIM_NIGHT_ON = 0.42;
+/** いちばん こい ときの あかるさ(加算合成なので 1.0でも 白く とばない) */
+const GLIM_ALPHA = 0.85;
+
+/** 粒1つぶんの形(原点まわり)。木立ちの粒と同じ「十字に組んだ六角形2枚」 */
+const GLIM_SHAPE: [number, number, number][] = ((): [number, number, number][] => {
+  const r = GLIM_R;
+  const out: [number, number, number][] = [[0, 0, 0]];
+  for (let k = 0; k < 6; k++) {
+    const a = (k / 6) * Math.PI * 2;
+    out.push([Math.cos(a) * r, Math.sin(a) * r, 0]);
+  }
+  out.push([0, 0, 0]);
+  for (let k = 0; k < 6; k++) {
+    const a = (k / 6) * Math.PI * 2 + 0.5;
+    out.push([0, Math.sin(a) * r, Math.cos(a) * r]);
+  }
+  return out;
+})();
+const GLIM_VERTS = GLIM_SHAPE.length;
+
+interface PondGlimmer {
+  mesh: Mesh;
+  mat: StandardMaterial;
+  pos: Float32Array;
+  sx: Float32Array;
+  sy: Float32Array;
+  sz: Float32Array;
+  phase: Float32Array;
+  n: number;
+}
+let glimmer: PondGlimmer | null = null;
+let glimT = 0;
+let glimAcc = 1;
+let glimLevel = 0;
+
+/**
+ * よるの池の 光の群れを 作る(IslandScene.build から1回だけ)。
+ * @param spots 粒の 中心(世界座標)。y は 水面の高さ
+ */
+export function initPondGlimmer(s: Scene, spots: { x: number; y: number; z: number }[]): void {
+  const n = spots.length;
+  const pos: number[] = [];
+  const col: number[] = [];
+  const idx: number[] = [];
+  const sx = new Float32Array(n);
+  const sy = new Float32Array(n);
+  const sz = new Float32Array(n);
+  const phase = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const sp = spots[i];
+    sx[i] = sp.x;
+    sy[i] = sp.y;
+    sz[i] = sp.z;
+    phase[i] = (i * 1.37) % (Math.PI * 2);
+    const base = i * GLIM_VERTS;
+    for (const [lx, ly, lz] of GLIM_SHAPE) {
+      pos.push(lx, ly, lz);
+      // 芯は 白に近く、ふちは 黄みどり(ホタルの光の色)。粒ごとに ごくわずか 色をずらす
+      const v = 0.92 + ((i * 7) % 5) * 0.016;
+      col.push(v, v, v * 0.72, 1);
+    }
+    for (let f = 0; f < 2; f++) {
+      const c = base + f * 7;
+      for (let k = 0; k < 6; k++) idx.push(c, c + 1 + k, c + 1 + ((k + 1) % 6));
+    }
+  }
+  const mesh = new Mesh('pondGlimmer', s);
+  const vd = new VertexData();
+  vd.positions = pos;
+  vd.indices = idx;
+  vd.colors = col;
+  vd.normals = pos.map(() => 0);
+  vd.applyToMesh(mesh, true);
+  mesh.isPickable = false;
+  mesh.setEnabled(false);
+  const mat = new StandardMaterial('pondGlimmerMat', s);
+  mat.diffuseColor = Color3.Black();
+  mat.specularColor = Color3.Black();
+  // disableLighting のときは emissiveColor に色を置く(diffuseは項ごと捨てられる)
+  mat.emissiveColor = Color3.FromHexString('#f4e9b4'); // ホタルの あかり(白に振り切らない)
+  mat.disableLighting = true;
+  mat.backFaceCulling = false;
+  mat.alphaMode = Constants.ALPHA_ADD; // 暗い水の上に「光を足す」(通常アルファは灰色の板になる)
+  mat.alpha = 0;
+  mesh.material = mat;
+  glimmer = { mesh, mat, pos: new Float32Array(pos), sx, sy, sz, phase, n };
+  glimT = 0;
+  glimAcc = 1;
+  glimLevel = 0;
+  updatePondGlimmer(0, 0, 0);
+}
+
+/**
+ * よるの池の 光の群れの 1フレーム。
+ * @param dt    秒
+ * @param night 夜の ふかさ(0=昼 1=まよなか)
+ * @param rain  雨あし(0=はれ 1=本降り)。雨の夜は 出ない(虫と同じあつかい)
+ */
+export function updatePondGlimmer(dt: number, night: number, rain: number): void {
+  if (!glimmer) return;
+  const nv = Math.max(0, Math.min(1, night));
+  const want =
+    Math.max(0, Math.min(1, (nv - GLIM_NIGHT_ON) / (1 - GLIM_NIGHT_ON))) *
+    (1 - Math.max(0, Math.min(1, rain)));
+  glimLevel = want;
+  const on = want > 0.03;
+  if (glimmer.mesh.isEnabled(false) !== on) glimmer.mesh.setEnabled(on);
+  glimmer.mat.alpha = GLIM_ALPHA * want;
+  if (!on) return;
+  glimAcc += dt;
+  if (glimAcc < 1 / GLIM_HZ) return;
+  glimT += glimAcc;
+  glimAcc = 0;
+  const t = glimT;
+  const p = glimmer.pos;
+  for (let i = 0; i < glimmer.n; i++) {
+    const ph = glimmer.phase[i];
+    // ゆっくりした8の字。3つの周期がどれも素どうしなので、同じ形をくり返さない
+    const cx = glimmer.sx[i] + Math.sin(t * 0.13 + ph) * GLIM_SPREAD + Math.sin(t * 0.23 + ph * 1.7) * 0.22;
+    const cz = glimmer.sz[i] + Math.cos(t * 0.17 + ph * 1.3) * GLIM_SPREAD + Math.cos(t * 0.11 + ph) * 0.2;
+    const cy = glimmer.sy[i] + GLIM_Y0 + (GLIM_Y1 - GLIM_Y0) * (0.5 + 0.5 * Math.sin(t * 0.19 + ph * 2.1));
+    // 明滅は 大きさで出す(既存のホタルと同じ流儀。共有マテリアルの色はさわらない)
+    const blink = Math.max(0, Math.sin(t * 1.45 + ph * 2.3)) ** 2;
+    const sc = 0.36 + 0.9 * blink;
+    let b = i * GLIM_VERTS * 3;
+    for (let k = 0; k < GLIM_VERTS; k++) {
+      p[b++] = cx + GLIM_SHAPE[k][0] * sc;
+      p[b++] = cy + GLIM_SHAPE[k][1] * sc;
+      p[b++] = cz + GLIM_SHAPE[k][2] * sc;
+    }
+  }
+  // 第3引数(updateExtends)を true に(木立ちの粒と同じ理由。false だと
+  // 外わくが 原点まわりのまま残り、視錐台カリングで まるごと消える)
+  glimmer.mesh.updateVerticesData(VertexBuffer.PositionKind, p, true, false);
+}
+
+/** よるの池の 光の群れの 状態(検証・撮影用。読むだけで副作用はない) */
+export function pondGlimmerState(): { count: number; level: number; alpha: number; visible: boolean } {
+  return {
+    count: glimmer?.n ?? 0,
+    level: Math.round(glimLevel * 100) / 100,
+    alpha: Math.round((glimmer?.mat.alpha ?? 0) * 100) / 100,
+    visible: glimmer?.mesh.isEnabled(false) ?? false,
+  };
+}
+
 /** 毎フレーム: 飛んでいくアイテムの更新 */
 export function updateEffects(dt: number, px: number, py: number, pz: number): void {
   updateCookGlow(dt, px, py, pz);

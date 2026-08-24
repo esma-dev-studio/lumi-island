@@ -115,7 +115,7 @@ test('「?」行 → 条件を やると 本物のレシピに かわる(おお�
   await openCraft(page);
   const qRows = page.locator('.craft-panel .craft-q-row');
   expect(await qRows.count(), '「?」行がある').toBeGreaterThan(0);
-  await expect(page.locator('.craft-panel .craft-q-row', { hasText: 'むしかごに 虫を 1ぴき 入れると ひらめく' }))
+  await expect(page.locator('.craft-panel .craft-q-row', { hasText: 'むしかごに 虫を 1ぴき 入れたら ひらめく' }))
     .toHaveCount(1);
   // 名前は ぜんぶ「???」で、シルエットだけ見える
   const names = await page.locator('.craft-panel .craft-q-name').allTextContents();
@@ -143,7 +143,7 @@ test('「?」行 → 条件を やると 本物のレシピに かわる(おお�
 
   // ---- 3) 「?」行が 消えて 本物のレシピに かわっている ----
   await openCraft(page);
-  await expect(page.locator('.craft-panel .craft-q-row', { hasText: 'むしかごに 虫を 1ぴき 入れると ひらめく' }))
+  await expect(page.locator('.craft-panel .craft-q-row', { hasText: 'むしかごに 虫を 1ぴき 入れたら ひらめく' }))
     .toHaveCount(0);
   const newRow = page.locator('.craft-panel .craft-row', { hasText: 'おおきな むしかご' });
   await expect(newRow).toHaveCount(1);

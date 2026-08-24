@@ -130,6 +130,10 @@ export class DisplayUI {
         </div>`;
       })
       .join('');
+    // v16.1 いちばん下の2つのボタンは「うごかす」「もちかえる」だけにする。
+    // 何を うごかすのかは すぐ上の 見出し(「おおきな すいそうに いきものを いれる」)が
+    // もう言っている。家具の名前を くりかえすと 1行に 入りきらず 2行に 折れていた
+    // (UI総ざらいの写真 16)。動きの名前だけ 残すほうが 目で 追いやすい。
     // 「あと何びき入るか」を数で見せる(たくさん入る家具で いま何びきか いつでも分かる)
     const count = cap > 1 ? ` <span class="panel-count">${contents.length} / ${cap}ひき</span>` : '';
     const insideBlock =
@@ -148,8 +152,8 @@ export class DisplayUI {
       ${contents.length > 0 ? '<div class="panel-sub">いれる</div>' : ''}
       ${putBlock}
       <div class="panel-sub">入れた いきものは いつでも とりだせるよ。
-        <button class="craft-btn sub" data-move style="white-space:nowrap;margin-left:8px">${def.label}を うごかす</button>
-        <button class="craft-btn sub" data-carry style="white-space:nowrap;margin-left:8px">${def.label}を もちかえる</button>
+        <button class="craft-btn sub" data-move style="white-space:nowrap;margin-left:8px">うごかす</button>
+        <button class="craft-btn sub" data-carry style="white-space:nowrap;margin-left:8px">もちかえる</button>
       </div>
     `;
     // クリック処理はコンストラクタの委譲リスナーが担当(ここでは付けない)

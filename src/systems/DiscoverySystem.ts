@@ -109,16 +109,30 @@ export const RECIPE_HINTS: RecipeHintDef[] = [
 /**
  * ひらめき条件の 子ども向けの文(**唯一の 文の出どころ**)。
  * 種類ごとに テンプレが1本だけ。名前は ITEMS / DISPLAY_FURNITURE から とる。
+ *
+ * v16.1 語尾を **3型** に分けた:
+ *   ① 「〜と ひらめく」   … 手の動きに 名前がある素材(ひろう・ほりだす)
+ *   ② 「〜で ひらめく」   … 手に入れかたを 1つに しぼれない素材/いきもの。
+ *                          「はじめての」を あたまに 置いて、**1つめで ひらめく**ことも 言う
+ *                          (RECIPE_DISCOVERY は 初回入手で 発火する = 文と しくみが 合う)
+ *   ③ 「〜たら ひらめく」 … 展示家具に 入れる(自分で する ひと手間)
+ * v16.0 は 全部が「〜と ひらめく」で、しかも 4行つづけて「◯◯を 手に入れると ひらめく」と
+ * 同じ形が ならんでいた(UI総ざらいの写真 07)。読む目が すべって 条件が 頭に入らない。
+ * 語尾が ちがうと「これは さっきと ちがう条件だ」と 目で 気づける。
+ * どの型も しめくくりは「ひらめく」でそろえる(何が起きるのかは 1つの言葉に 固定する)。
  */
 export function recipeHintText(hint: RecipeHint): string {
   switch (hint.kind) {
     case 'gather':
-      return `${ITEMS[hint.item].name}を ${hint.verb}と ひらめく`;
+      // ② 「手に入れる」= 入手の道が いくつもあるもの(かって・もらって・ほって)
+      return hint.verb === '手に入れる'
+        ? `はじめての ${ITEMS[hint.item].name}で ひらめく`
+        : `${ITEMS[hint.item].name}を ${hint.verb}と ひらめく`; // ①
     case 'gatherAny':
-      return `${hint.label}を ${hint.verb}と ひらめく`;
+      return `${hint.label}を ${hint.verb}と ひらめく`; // ①
     case 'display': {
       const d = DISPLAY_FURNITURE[hint.furniture];
-      return `${d.label}に ${d.contentLabel}を 1ぴき 入れると ひらめく`;
+      return `${d.label}に ${d.contentLabel}を 1ぴき 入れたら ひらめく`; // ③
     }
   }
 }

@@ -37,7 +37,7 @@ export class WorldMarkerController {
   private arrowDist!: HTMLElement;
   private npcEls = new Map<string, HTMLElement>();
   private npcLast = new Map<string, { x: number; y: number; text: string }>();
-  private arrowLast = { x: 0, y: 0, deg: 0, dist: -1 };
+  private arrowLast = { x: 0, y: 0, deg: 0, dist: -1, dup: false };
   private beacon: Mesh;
   private beaconMat: StandardMaterial;
   private tmp = new Vector3();
@@ -129,13 +129,21 @@ export class WorldMarkerController {
     for (const el of this.npcEls.values()) el.classList.add('hidden');
   }
 
+  /**
+   * @param objectiveDist v16.1 「いまやること」カードに 出ている「→ Nm」の N。
+   *   矢印の m バッジが これと **同じ数** のときは バッジを 出さない
+   *   (同じ数字を 画面の2か所に 出さない。UI総ざらいの写真 41/24)。
+   *   文字そのものは 書きかえつづける: 回帰ボットが `.dir-dist` の テキストで
+   *   目的地までの きょりを 読んでいるので、その道は 切らない(消すのは 見た目だけ)。
+   */
   update(
     targetPos: { x: number; z: number } | null,
     targetIsNpc: boolean,
     playerX: number,
     playerZ: number,
     npcMarkers: MarkerNpc[],
-    reportMode: boolean
+    reportMode: boolean,
+    objectiveDist: number | null = null
   ): void {
     // 足もとの高さ(heightAt)は光の柱と矢印で同じ値を使う。
     // 中身は「入り江→部屋→NPCの家→桟橋→デッキ→地形」の6段をたどる関数なので、
@@ -197,6 +205,12 @@ export class WorldMarkerController {
         if (this.arrowLast.dist !== m) {
           this.arrowLast.dist = m;
           this.arrowDist.textContent = `${m}m`;
+        }
+        // 目標カードが 同じ「Nm」を 出しているあいだは、矢印の m バッジを 見せない
+        const dup = objectiveDist !== null && objectiveDist === m;
+        if (this.arrowLast.dup !== dup) {
+          this.arrowLast.dup = dup;
+          this.arrowDist.classList.toggle('hidden', dup);
         }
         this.arrowEl.classList.toggle('report', reportMode);
       }

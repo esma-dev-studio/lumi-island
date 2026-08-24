@@ -42,7 +42,8 @@ export class ObjectiveHud {
     }
     let sub = '';
     if (o.progress) sub = `${o.progress.cur} / ${o.progress.max}`;
-    if (dist !== null && dist > SUB_DIST_MIN) sub += (sub ? '　' : '') + `→ ${Math.round(dist)}m`;
+    this.shownDist = dist !== null && dist > SUB_DIST_MIN ? Math.round(dist) : null;
+    if (this.shownDist !== null) sub += (sub ? '　' : '') + `→ ${this.shownDist}m`;
     if (this.lastSub !== sub) {
       this.lastSub = sub;
       this.subEl.textContent = sub;
@@ -50,4 +51,17 @@ export class ObjectiveHud {
     }
   }
   private lastSub: string | null = null;
+
+  /**
+   * v16.1 いま このカードに 出ている「→ Nm」の N(出ていなければ null)。
+   *
+   * 矢印マーカーの m バッジは、この数と 同じときだけ 出さない
+   * (同じ数字が 画面の2か所に 出るのを やめる。UI総ざらいの写真 41/24)。
+   * 「何を出しているか」を 知っているのは このクラスだけなので、
+   * 判定の元も ここ1つに しておく=表示と 突きあわせが ずれない。
+   */
+  private shownDist: number | null = null;
+  get shownDistance(): number | null {
+    return this.shownDist;
+  }
 }

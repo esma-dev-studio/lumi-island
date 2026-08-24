@@ -50,9 +50,11 @@ const DISPLAY_ONLY = new Set([
   'chat-bubble', // NPCどうしの立ち話のふきだし
   'dir-arrow', // 目的地の方向矢印
   'npc-marker', // NPC頭上の「!」
+  'npc-nameplate', // v26 NPC頭上の名札(4mまで近づいたときだけ出る)
   'craft-pop', // つくった!の小さなポップ
   'combo-found', // くみあわせ発見の演出
-  'toast-box', // トーストの積み場
+  'toast-box', // 小物トーストの積み場(右下)
+  'banner-box', // v16.1 じっせき・バッジ・ごほうびのバナー(中央上・1枚ずつ)
   'hud-top', // 時計・ルミナのチップ
   'hud-fx', // りょうりの効果チップ
   'hud-hint', // 画面下のEヒント

@@ -29,7 +29,7 @@ const DOOR_OUT = { x: -30.9, z: 6.9 };
 /** #ui-root に置く「見せるだけ」の要素(tests/unit/overlay_hit.test.ts と同じ表) */
 const DISPLAY_ONLY = [
   'sleep-fade', 'chat-bubble', 'dir-arrow', 'npc-marker', 'craft-pop', 'combo-found',
-  'toast-box', 'hud-top', 'hud-fx', 'hud-hint', 'obj-hud', 'touch-root',
+  'toast-box', 'banner-box', 'hud-top', 'hud-fx', 'hud-hint', 'obj-hud', 'touch-root',
 ];
 
 const errors: string[] = [];

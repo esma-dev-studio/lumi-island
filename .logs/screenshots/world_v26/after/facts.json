@@ -1,0 +1,160 @@
+{
+  "day": 27,
+  "festivalDay": 28,
+  "occ_garden": {
+    "count": 1,
+    "coverSum": 1,
+    "veil": 0.12,
+    "top": [
+      {
+        "name": "tree_808",
+        "vis": 0.12,
+        "cover": 1,
+        "r": 3.21,
+        "dc": 3.08,
+        "k": 1.04
+      }
+    ],
+    "drawCalls": 344,
+    "meshes": 524,
+    "activeMeshes": 66
+  },
+  "occ_forest": {
+    "count": 1,
+    "coverSum": 0.217,
+    "veil": 0.074,
+    "top": [
+      {
+        "name": "tree_1030",
+        "vis": 0.34,
+        "cover": 0.217,
+        "r": 1.93,
+        "dc": 6.06,
+        "k": 0.32
+      }
+    ],
+    "drawCalls": 284,
+    "meshes": 527,
+    "activeMeshes": 36
+  },
+  "night": {
+    "catchableFireflies": 1,
+    "glimmer": {
+      "count": 5,
+      "level": 1,
+      "alpha": 0.85,
+      "visible": true
+    },
+    "occ": {
+      "count": 1,
+      "coverSum": 0.82,
+      "veil": 0.098,
+      "top": [
+        {
+          "name": "tree_983",
+          "vis": 0.12,
+          "cover": 0.82,
+          "r": 3.2,
+          "dc": 4.06,
+          "k": 0.79
+        }
+      ],
+      "drawCalls": 411,
+      "meshes": 536,
+      "activeMeshes": 102
+    }
+  },
+  "night_wide": {
+    "player": {
+      "x": 18.5,
+      "z": 20
+    },
+    "glimmer": {
+      "count": 5,
+      "level": 1,
+      "alpha": 0.85,
+      "visible": true
+    },
+    "hint": "Eほしのかけらをひろう",
+    "occ": {
+      "count": 0,
+      "coverSum": 0,
+      "veil": 0,
+      "top": [],
+      "drawCalls": 283,
+      "meshes": 542,
+      "activeMeshes": 35
+    }
+  },
+  "glimmerCost": {
+    "on": {
+      "draw": 283,
+      "active": 35
+    },
+    "off": {
+      "draw": 283,
+      "active": 35
+    },
+    "drawDelta": 0,
+    "activeDelta": 0,
+    "meshVerts": 70,
+    "meshTris": 60
+  },
+  "nameplate_near": {
+    "total": 1,
+    "shown": [
+      {
+        "text": "ミナモ",
+        "opacity": "0.9",
+        "left": "829px",
+        "top": "162px"
+      }
+    ]
+  },
+  "nameplate_hint": "",
+  "nameplate_talking": {
+    "total": 1,
+    "shown": []
+  },
+  "nameplate_far": {
+    "total": 1,
+    "shown": []
+  },
+  "festival": {
+    "attendees": [
+      "minamo",
+      "nokto",
+      "tsumugi",
+      "roka",
+      "ten"
+    ],
+    "inRing": 5,
+    "stands": [
+      {
+        "id": "minamo",
+        "d": 1.7
+      },
+      {
+        "id": "nokto",
+        "d": 1.7
+      },
+      {
+        "id": "tsumugi",
+        "d": 1.7
+      },
+      {
+        "id": "roka",
+        "d": 1.7
+      },
+      {
+        "id": "ten",
+        "d": 1.7
+      }
+    ],
+    "nameplates": {
+      "total": 1,
+      "shown": []
+    }
+  },
+  "consoleErrors": []
+}

@@ -78,7 +78,7 @@ export class TitleScreen {
           <div class="help-grid">${byInput(HELP_KEYBOARD, HELP_TOUCH)}
           </div>
         </div>
-        <div class="title-credit">オリジナル作品 / 3Dモデル・音はすべてプログラム生成 <span class="title-ver">v16.0</span></div>
+        <div class="title-credit">オリジナル作品 / 3Dモデル・音はすべてプログラム生成 <span class="title-ver">v16.1</span></div>
       </div>
     `;
     const file = this.el.querySelector<HTMLInputElement>('.tx-file')!;
@@ -101,9 +101,13 @@ export class TitleScreen {
           this.el.querySelectorAll<HTMLElement>('.title-extra').forEach((p) => {
             p.classList.toggle('hidden', p.dataset.panel !== act || !p.classList.contains('hidden'));
           });
-          // せっていは中身が増えて画面より縦に長くなったので、開いたらパネルの下まで見えるようにする
-          // (スクロールできる形にはしてあるが、開いた瞬間に見えないボタンがあると気づけない)
-          this.el.querySelector<HTMLElement>('.title-extra:not(.hidden)')?.scrollIntoView({ block: 'end' });
+          // v16.1 ページごと 流すのは やめた(scrollIntoView を 使わない)。
+          // 開いたパネルは CSSで「画面の70%まで・中でスクロール」に なっているので、
+          // ロゴと4つのボタンは いつも 画面に のこる(v16.0 は パネルを 見せるために
+          // ページを 下へ 流し、タイトルも ボタンも 画面の外へ 出ていた=写真 04)。
+          // 開くたびに 中身の いちばん上から 見せる。
+          const opened = this.el.querySelector<HTMLElement>('.title-extra:not(.hidden)');
+          if (opened) opened.scrollTop = 0;
         } else if (act === 'sound') {
           const o = loadOpts();
           o.sound = !o.sound;

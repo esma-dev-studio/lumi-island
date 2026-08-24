@@ -196,9 +196,13 @@ export class PlacementSystem {
   active: ItemId | null = null;
   private ghost: Mesh | null = null;
   private ghostR = 0;
+  /** 足もとの 丸いしるし。太いリング(ring)+ うすい中の塗り(indicator)の2枚組 */
   private indicator: Mesh;
+  private ring: Mesh;
   private okMat: StandardMaterial;
   private ngMat: StandardMaterial;
+  private okRingMat: StandardMaterial;
+  private ngRingMat: StandardMaterial;
   private rot = 0;
   private valid = false;
   private result: PlacementCheck = { ok: false };
@@ -218,20 +222,42 @@ export class PlacementSystem {
     private island: IslandScene,
     private state: GameState
   ) {
-    this.indicator = CreateDisc('placeInd', { radius: 0.62, tessellation: 28 }, island.scene);
+    // v16.1 足もとのしるしを「太いリング」にする。
+    // まるい板を2枚かさね、外がわの板の はみ出しぶん(0.82-0.64=0.18m)が リングに見える
+    // ——ドーナツのメッシュを 新しく import しないので、Viteの依存の割りかたを 動かさない(教訓4)。
+    // 高さは かならず ずらす(同じ高さの板2枚は Zファイティングで しま模様になる。教訓1)。
+    this.ring = CreateDisc('placeRing', { radius: 0.82, tessellation: 36 }, island.scene);
+    this.ring.rotation.x = Math.PI / 2;
+    this.ring.isPickable = false;
+    this.indicator = CreateDisc('placeInd', { radius: 0.64, tessellation: 32 }, island.scene);
     this.indicator.rotation.x = Math.PI / 2;
+    this.indicator.isPickable = false;
+    // 中の塗り(うすい)
     this.okMat = new StandardMaterial('plOk', island.scene);
     this.okMat.diffuseColor = Color3.FromHexString('#7fbf8f');
     this.okMat.emissiveColor = Color3.FromHexString('#3f7a50');
-    this.okMat.alpha = 0.5;
+    this.okMat.alpha = 0.26;
     this.okMat.specularColor = Color3.Black();
     this.ngMat = new StandardMaterial('plNg', island.scene);
     this.ngMat.diffuseColor = Color3.FromHexString('#cf6f5f');
     this.ngMat.emissiveColor = Color3.FromHexString('#8a3f34');
-    this.ngMat.alpha = 0.5;
+    this.ngMat.alpha = 0.26;
     this.ngMat.specularColor = Color3.Black();
+    // リング(はっきり見える。草の上でも 形が とぎれない濃さにする)
+    this.okRingMat = new StandardMaterial('plOkRing', island.scene);
+    this.okRingMat.diffuseColor = Color3.FromHexString('#8fd6a2');
+    this.okRingMat.emissiveColor = Color3.FromHexString('#3f8a58');
+    this.okRingMat.alpha = 0.92;
+    this.okRingMat.specularColor = Color3.Black();
+    this.ngRingMat = new StandardMaterial('plNgRing', island.scene);
+    this.ngRingMat.diffuseColor = Color3.FromHexString('#e08573');
+    this.ngRingMat.emissiveColor = Color3.FromHexString('#a04434');
+    this.ngRingMat.alpha = 0.92;
+    this.ngRingMat.specularColor = Color3.Black();
     this.indicator.material = this.okMat;
+    this.ring.material = this.okRingMat;
     this.indicator.setEnabled(false);
+    this.ring.setEnabled(false);
     this.baseCircles = island.circles.length;
   }
 
@@ -311,6 +337,7 @@ export class PlacementSystem {
     this.active = item;
     this.rot = 0;
     this.indicator.setEnabled(true);
+    this.ring.setEnabled(true);
     return true;
   }
 
@@ -339,6 +366,7 @@ export class PlacementSystem {
     p.mesh.setEnabled(false); // 本体は かくす(ゴーストだけが 見える)
     this.rebuildColliders();
     this.indicator.setEnabled(true);
+    this.ring.setEnabled(true);
     sfx('pickup');
     return true;
   }
@@ -359,6 +387,7 @@ export class PlacementSystem {
     this.valid = false;
     this.result = { ok: false };
     this.indicator.setEnabled(false);
+    this.ring.setEnabled(false);
     // v24 うごかすのを やめた: 元の場所の本体を そのまま 見せなおす(データは 触っていない)
     if (this.moveId !== null) {
       const p = this.placed.get(this.moveId);
@@ -385,10 +414,12 @@ export class PlacementSystem {
       : this.island.groundY(this.gx, this.gz);
     this.ghost.position.set(this.gx, y - 0.01, this.gz);
     this.ghost.rotation.y = this.rot;
-    this.indicator.position.set(this.gx, y + 0.04, this.gz);
+    this.ring.position.set(this.gx, y + 0.035, this.gz);
+    this.indicator.position.set(this.gx, y + 0.05, this.gz);
     this.result = this.check(this.gx, this.gz);
     this.valid = this.result.ok;
     this.indicator.material = this.valid ? this.okMat : this.ngMat;
+    this.ring.material = this.valid ? this.okRingMat : this.ngRingMat;
   }
 
   /**
@@ -701,5 +732,14 @@ export class PlacementSystem {
     const put = this.moveId !== null ? 'ここに おく' : 'おく';
     if (this.valid) return `<kbd>E</kbd>${put} <kbd>R</kbd>まわす <kbd>Esc</kbd>やめる`;
     return `${this.reason} — うごかして ばしょを さがそう <kbd>R</kbd>まわす <kbd>Esc</kbd>やめる`;
+  }
+
+  /**
+   * v16.1 ヒント帯の いろ(はいち中だけ)。'ok'=おける / 'ng'=おけない。
+   * 文字列(hint)には しるしを 入れず、いろと ○/× は HUD が この値から 出す
+   * ——同じ文字列を タッチの行動ボタンや 回帰ボットが 読むため(見た目を 混ぜない)。
+   */
+  get hintTone(): 'ok' | 'ng' {
+    return this.valid ? 'ok' : 'ng';
   }
 }

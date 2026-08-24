@@ -56,9 +56,11 @@ body { font-family: var(--font); color: var(--ink); }
 #ui-root > .chat-bubble,
 #ui-root > .dir-arrow,
 #ui-root > .npc-marker,
+#ui-root > .npc-nameplate,
 #ui-root > .craft-pop,
 #ui-root > .combo-found,
 #ui-root > .toast-box,
+#ui-root > .banner-box,
 #ui-root > .hud-top,
 #ui-root > .hud-fx,
 #ui-root > .hud-hint,
@@ -100,6 +102,27 @@ body { font-family: var(--font); color: var(--ink); }
   padding: 4px 10px; font-size: 0.82rem; font-weight: 700; color: var(--ink);
 }
 .hud-chip svg { color: var(--amber); }
+/* ---- v16.1 ルミナの その場フィードバック ----
+   売った・買った瞬間に、右上のカウンタの すぐ下へ「+368」「-300」が 0.9秒 浮いて消える。
+   お金が どこで どれだけ 動いたのかを、目を 動かさずに 読めるようにする
+   (v16.0 は 左上に「+368 ルミナ」の トーストが出るだけで、
+    右上の数字が いつのまにか 変わっていた——UI総ざらいの写真 39)。
+   浮きは カウンタの子(position:absolute)なので、#ui-root に 新しいオーバーレイを 足さない */
+#hud-lumina { position: relative; }
+.lumina-pop {
+  position: absolute; top: calc(100% + 3px); right: 2px;
+  font-size: 0.86rem; font-weight: 900; white-space: nowrap; pointer-events: none;
+  text-shadow: 0 1px 3px rgba(250, 246, 236, 0.9);
+  animation: lumina-pop 0.9s ease-out forwards;
+}
+.lumina-pop.gain { color: #c9821f; }
+.lumina-pop.loss { color: var(--ink-soft); }
+@keyframes lumina-pop {
+  0% { opacity: 0; transform: translateY(3px); }
+  14% { opacity: 1; transform: translateY(-1px); }
+  70% { opacity: 1; transform: translateY(-8px); }
+  100% { opacity: 0; transform: translateY(-15px); }
+}
 .hud-hint {
   position: absolute; left: 50%; bottom: calc(var(--sa-b) + 26px); transform: translateX(-50%);
   background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
@@ -107,6 +130,23 @@ body { font-family: var(--font); color: var(--ink); }
   opacity: 0; transition: opacity 0.15s; pointer-events: none;
 }
 .hud-hint.show { opacity: 1; }
+/* ---- v16.1 はいち中のヒント帯(おける / おけない を 色でも 言う) ----
+   ・帯の色: おける=みどり / おけない=あか。文字を読む前に 色で 分かる
+   ・高さ: 地面の 配置リング(足もとの すこし前)に かぶらない所まで 上げる
+     (v16.0 は 帯が リングの 上に のっていた——UI総ざらいの写真 24/42) */
+.hud-hint.place { bottom: calc(var(--sa-b) + 118px); }
+.hud-hint.place.ok { background: #eefaf1; border-color: #7fbf8f; color: #2f6b45; }
+.hud-hint.place.ng { background: #fdeeea; border-color: #d98b7a; color: #8a3f34; }
+.hud-hint.place.ok kbd { background: #4f9a78; }
+.hud-hint.place.ng kbd { background: #b45a48; }
+/* ○ / × の しるし。文字より ひとまわり大きくして、帯の いちばん左に 置く */
+.ph-mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.5em; height: 1.5em; margin-right: 8px; border-radius: 50%;
+  font-size: 0.92rem; font-weight: 900; line-height: 1;
+}
+.ph-mark.ok { background: #4f9a78; color: #fff; }
+.ph-mark.ng { background: #b45a48; color: #fff; }
 .hud-hint kbd {
   font-family: var(--font); background: var(--amber); color: #fff; border-radius: 4px;
   padding: 0 6px; margin-right: 6px; font-size: 0.8rem;
@@ -161,6 +201,9 @@ body { font-family: var(--font); color: var(--ink); }
   display: block; font-size: 0.72rem; font-weight: 900; color: #fff;
   background: rgba(40, 32, 20, 0.55); border-radius: 4px; padding: 0 5px; margin-top: -3px;
 }
+/* v16.1 「いまやること」カードが 同じ「Nm」を 出しているあいだは かくす
+   (文字は 書きかえつづける = 回帰ボットの きょり読みは そのまま動く) */
+.dir-dist.hidden { display: none; }
 .npc-marker {
   position: absolute; transform: translate(-50%, -100%);
   font-size: 1.15rem; font-weight: 900; color: #fff; pointer-events: none; z-index: 5;
@@ -171,6 +214,25 @@ body { font-family: var(--font); color: var(--ink); }
 }
 .npc-marker.report { background: #4f9a78; }
 .npc-marker.hidden { display: none; }
+
+/* ---- v26 NPCの 頭の上の 名札(4mまで近づいたときだけ ふわっと出る) ---- */
+/*
+ * 島のUIのことば(クリーム地・こげ茶の字・細い枠)そのまま。小さく・うすく・静かに。
+ * 出し入れは opacity だけ(display の 出し入れでは フェードが かからない。
+ * 画面下のEヒント `.hud-hint` と まったく同じ作り)。
+ * z-index は「!」(.npc-marker=5)より 下。誘導の印が 名札に かくれない。
+ * 動く演出(marker-float)は 付けない —— 名前は 目で追うものではなく 読むもの。
+ */
+.npc-nameplate {
+  position: absolute; transform: translate(-50%, -100%);
+  padding: 2px 9px; border-radius: 5px; white-space: nowrap;
+  background: var(--paper); border: 1px solid var(--line); color: var(--ink);
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em; line-height: 1.5;
+  box-shadow: 0 2px 6px rgba(30, 24, 12, 0.16);
+  pointer-events: none; z-index: 4;
+  opacity: 0; transition: opacity 0.25s ease;
+}
+.npc-nameplate.show { opacity: 0.9; }
 
 /* ---- v21 立ち話の ふきだし(会話ボックスとは 別もの。操作も 世界も 止めない) ---- */
 .chat-bubble {
@@ -386,7 +448,23 @@ html.touch-ui .chat-bubble { font-size: 0.92rem; max-width: min(340px, 52vw); }
   background: #f7f4ec; border: 1px dashed var(--line); border-radius: 5px;
   padding: 7px 10px; font-size: 0.84rem; color: var(--ink-soft);
 }
-.craft-q-ico { filter: brightness(0); opacity: 0.26; }
+/* v16.1 シルエットを「節の色の うすい ぬり」にする。
+   まっ黒(brightness(0))だと 6〜12行の「?」が ぜんぶ 同じ灰色に見え、
+   何の なかまの レシピか 分からなかった(UI総ざらいの写真 07)。
+   絵の中の 色は CSS で 1色に ぬりかえる:
+     ・fill="none" の 線だけの部品は そのまま(塗りつぶさない)
+     ・それ以外の fill / stroke は currentColor に そろえる
+   → 絵を もう1セット 持たずに、形を のこしたまま 1色の シルエットになる。 */
+.craft-q-ico { opacity: 0.45; color: #7a6a56; }
+.craft-q-ico svg [fill]:not([fill='none']) { fill: currentColor; }
+.craft-q-ico svg [stroke]:not([stroke='none']) { stroke: currentColor; }
+/* 節の色(クラフト一覧の 見出しと 同じ ならび順) */
+.craft-q-ico.q-tool { color: #6f7f8c; }
+.craft-q-ico.q-furniture { color: #a8794a; }
+.craft-q-ico.q-dish { color: #c08a45; }
+.craft-q-ico.q-paint { color: #8a6fb0; }
+.craft-q-ico.q-decor { color: #4f9a78; }
+.craft-q-ico.q-other { color: #7a6a56; }
 .craft-q-name { font-weight: 900; letter-spacing: 0.1em; min-width: 3.4em; color: var(--ink-soft); }
 .craft-q-hint {
   flex: 1; min-width: 0; font-size: 0.78rem; line-height: 1.7;
@@ -509,7 +587,18 @@ html.touch-ui .chat-bubble { font-size: 0.92rem; max-width: min(340px, 52vw); }
 .tc-btns { display: flex; gap: 10px; justify-content: center; }
 .tc-btns .title-btn { width: 120px; }
 .tc-btns .title-btn.danger { width: 120px; background: #b45a48; border: none; color: #fff; }
-.title-inner { text-align: center; color: #e8e2d2; max-width: 420px; width: 90%; margin: auto 0; }
+/*
+ * v16.1 タイトルの中身は「たてに ならぶ 4つのかたまり」= ロゴ / ボタン / 開いたパネル / クレジット。
+ * flex の たて並びにして **ロゴとボタンだけは 絶対に ちぢめない**(flex: none)。
+ * のこりの高さが たりないときは 開いたパネル(.title-extra)だけが ちぢんで
+ * 中で スクロールする ので、「そうさほうほう」を開いても
+ * ロゴと4つのボタンは いつも 画面に のこる(v16.0 は ページごと 下へ流れて 消えていた)。
+ */
+.title-inner {
+  text-align: center; color: #e8e2d2; max-width: 420px; width: 90%; margin: auto 0;
+  display: flex; flex-direction: column; max-height: 100%; min-height: 0;
+}
+.title-logo, .title-menu, .title-credit { flex: 0 0 auto; }
 .title-jp { font-size: 2.5rem; font-weight: 900; letter-spacing: 0.14em; text-shadow: 0 2px 22px rgba(8, 12, 24, 0.85), 0 0 26px rgba(159, 232, 200, 0.35); }
 .title-en { font-size: 0.95rem; letter-spacing: 0.42em; color: #9fe8c8; margin-top: 2px; }
 .title-sub { font-size: 0.86rem; color: #9fb2d8; margin: 14px 0 30px; }
@@ -523,14 +612,38 @@ html.touch-ui .chat-bubble { font-size: 0.92rem; max-width: min(340px, 52vw); }
 .title-btn:disabled { background: #3a4358; color: #7a86a0; cursor: default; }
 .title-btn.sub { background: transparent; border: 1px solid #4a5878; color: #cfd8e8; }
 .title-btn.sub:hover { border-color: var(--amber); color: #ffd9a0; }
+/* v16.1 タイトルの「せってい」「そうさほうほう」は 背景が 3Dの夜の島なので、
+   すきとおったままだと 木・ベンチが 文字の うしろに 出て 読みにくい(写真01)。
+   うすい 夜色の 不透明地を しいて、ボタンの かたちを はっきりさせる
+   (ポーズメニュー・モーダルの中は 紙の上なので、それぞれの 上書きが そのまま勝つ) */
+.title-screen .title-btn.sub { background: rgba(18, 26, 46, 0.62); }
+.title-screen .title-btn.sub:hover { background: rgba(24, 34, 58, 0.72); }
+.title-screen .tc-box .title-btn.sub { background: #fff; }
 .title-btn.danger { background: transparent; border: 1px solid #8a4a3f; color: #e8a396; width: auto; padding: 6px 18px; }
-.title-extra { margin-top: 18px; background: rgba(20, 28, 48, 0.72); border: 1px solid #3a4358; border-radius: 6px; padding: 12px 16px; font-size: 0.85rem; }
+/*
+ * v16.1 開いたパネル(せってい / そうさほうほう)は **パネルの中だけ** スクロールする。
+ *   ・max-height … 画面の70%まで。これ以上は 大きくしない
+ *   ・flex: 0 1 auto + min-height: 0 … 画面が せまい日は そのぶん もっと ちぢむ
+ *     (ロゴ・ボタンを 押し出さないための 逃げ場が ここ1つになる)
+ * v16.0 は パネルが 画面より 長くなると **ページごと** 下へ流れ、
+ * タイトルロゴも 4つのボタンも 画面の外へ 出ていた(UI総ざらいの写真 04)。
+ * せっていも そうさほうほうも 同じ形にそろえてある。
+ */
+.title-extra {
+  margin-top: 18px; background: rgba(20, 28, 48, 0.72); border: 1px solid #3a4358;
+  border-radius: 6px; padding: 12px 16px; font-size: 0.85rem;
+  flex: 0 1 auto; min-height: 0;
+  max-height: min(70vh, calc(var(--app-h, 100vh) * 0.7));
+  overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
 .title-extra.hidden { display: none; }
 .tx-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
 .tx-row .title-btn { width: auto; padding: 5px 20px; font-size: 0.82rem; }
-.help-grid { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; text-align: left; }
-/* そうさ一覧は17行ある。スクロールは外がわ(.title-screen / .panel)に1本だけ持たせ、
-   ここには入れ子のスクロール枠を作らない——指の画面で「どちらが動くのか」が分からなくなるため */
+.help-grid { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; text-align: left; }
+/* そうさ一覧は17行ある。スクロールする箱は **開いたパネル(.title-extra)の1本だけ**。
+   ここ(.help-grid)に もう1本 作ると 入れ子になり、指の画面で「どちらが動くのか」が
+   分からなくなる。外がわ(.title-screen / .panel)を 流さないのが v16.1 の変更点 */
 /* 節の小見出し(2列ぶち抜き)。行のかたまりを見分けるための細い区切り線つき */
 .help-sec {
   grid-column: 1 / -1; margin-top: 8px; padding-top: 7px; border-top: 1px solid #3a4358;
@@ -577,7 +690,11 @@ html.touch-ui .chat-bubble { font-size: 0.92rem; max-width: min(340px, 52vw); }
 .tm-pick span { font-size: 0.78rem; opacity: 0.82; }
 
 /* ---- ポーズメニュー ---- */
-.pause-panel { min-width: 300px; }
+/* タイトルと同じ形にそろえる: 見出し・ボタンの列は ちぢめず、
+   開いたパネル(そうさほうほう / ふくのいろ)だけが ちぢんで 中でスクロールする。
+   こうすると ポーズ画面ぜんたいが 流れないので、「つづける」がいつでも押せる */
+.pause-panel { min-width: 300px; display: flex; flex-direction: column; }
+.pause-panel > .panel-title, .pause-panel > .pause-list { flex: 0 0 auto; }
 .pause-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }
 .pause-panel .title-btn { background: var(--amber); }
 .pause-panel .title-btn.sub { background: #fff; border: 1px solid var(--line); color: var(--ink); }
@@ -623,16 +740,23 @@ html.touch-ui .dlg-key { display: none; }
 /* ---- ずかん(あつめたもの・じっせき) ---- */
 .panel-sub.first { margin-top: 0; padding-top: 0; border-top: none; }
 .panel-sub small { font-weight: 900; color: var(--amber); margin-left: 6px; }
-.codex-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+/* 列は minmax(0,1fr)+マスに min-width:0(ふつうの 1fr は「中身の最小幅」より せまくなれない)。
+   名前を nowrap で1行に収めているので、min-width を書かないと マスの最小幅が
+   名前まるごとの幅になり、3列ぶんが パネルより 広くなって 横スクロールが出る
+   ——実際に v16.0 では 3列めの 個数が 枠の外で 切れていた(UI総ざらいの写真 10)。
+   バッジ(.badge-grid)・すてき度(.hs-parts)は 先に 同じ手当てが 入っている */
+.codex-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .codex-cell {
-  display: flex; align-items: center; gap: 5px; background: #fff;
+  display: flex; align-items: center; gap: 5px; min-width: 0; background: #fff;
   border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; font-size: 0.8rem;
 }
 .codex-cell.unknown { background: #ece5d6; color: var(--ink-soft); }
 .codex-cell.unknown .inv-ico { filter: grayscale(1) brightness(0.4); opacity: 0.4; }
-.codex-name { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.codex-cell .inv-ico { flex: none; }
+.codex-name { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .codex-cell.unknown .codex-name { font-weight: 900; letter-spacing: 0.06em; }
-.codex-n { font-weight: 900; color: var(--amber); }
+/* 個数は かならず 読めること(名前より 先に 場所を もらう) */
+.codex-n { flex: none; font-weight: 900; color: var(--amber); white-space: nowrap; }
 /* v16 しまの ぎょうじ(ほしまつり)の ひとことメモ。
    じっせきの1行(.ach-row)と同じ格。まだ 見ていないうちは 地色をおさえ、
    見たあとだけ あたたかい色になる = ずかんの中でも「思い出」として のこる */
@@ -642,16 +766,17 @@ html.touch-ui .dlg-key { display: none; }
 }
 .codex-note.seen { background: #fcf3e2; border-color: #e0c489; }
 .codex-note .inv-ico { font-size: 1.25rem; line-height: 0; display: flex; flex: 0 0 auto; padding-top: 0.3em; }
-.codex-note-text { flex: 1; font-weight: 700; line-height: 1.85; }
+.codex-note-text { flex: 1; min-width: 0; font-weight: 700; line-height: 1.85; overflow-wrap: break-word; }
 .codex-note-text small { display: block; font-weight: 500; font-size: 0.76rem; color: var(--ink-soft); }
 .codex-note.seen .codex-note-text { color: #8a5f2f; }
 .ach-list { display: flex; flex-direction: column; gap: 6px; }
 .ach-row {
-  display: flex; align-items: center; gap: 8px; background: #fff;
+  display: flex; align-items: center; gap: 8px; min-width: 0; background: #fff;
   border: 1px solid var(--line); border-radius: 5px; padding: 7px 10px; font-size: 0.84rem;
 }
+.ach-row > .inv-ico { flex: none; }
 .ach-row.done { background: #f1faf3; border-color: #a9d8bd; }
-.ach-name { flex: 1; font-weight: 700; line-height: 1.4; }
+.ach-name { flex: 1; min-width: 0; font-weight: 700; line-height: 1.4; overflow-wrap: break-word; }
 .ach-name small { display: block; font-weight: 500; font-size: 0.74rem; color: var(--ink-soft); }
 .ach-row.done .ach-name { color: #3f7a50; }
 .ach-state { font-weight: 900; color: var(--ink-soft); white-space: nowrap; }
@@ -737,20 +862,59 @@ html.touch-ui .dlg-key { display: none; }
   text-align: right; font-size: 0.78rem; font-weight: 700; color: var(--ink-soft);
 }
 
-/* ---- トースト ---- */
-/* 「いまやること」の下に積む(上に重ねると両方読めなくなる) */
+/* ---- お知らせの3レーン(v16.1) ---- */
+/*
+ * ① 小物(.toast-box)  … 右下。下から積む(新しいものが 下)。上限4・2.1秒。
+ * ② バナー(.banner-box)… 中央上。1枚ずつ 順番に 2.2秒。落とさない(Toast.ts のキュー)。
+ * ③ 左上               … 「いまやること」(.obj-hud)専用。ここには 何も積まない。
+ * v16.0 までは ①②を まとめて 左上に積んでいたので、目標カードが 読めなくなり、
+ * お祝いが 小物にうもれ、上限4で 落ちていた(UI総ざらいの写真 27/41)。
+ */
 .toast-box {
-  position: absolute; left: calc(var(--sa-l) + 14px); top: calc(var(--sa-t) + 112px);
-  display: flex; flex-direction: column; gap: 6px;
+  position: absolute; right: calc(var(--sa-r) + 14px); bottom: calc(var(--sa-b) + 16px);
+  display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+  max-width: min(360px, 42vw);
 }
 .toast {
   display: flex; align-items: center; gap: 7px;
   background: var(--paper); border: 1px solid var(--line); border-left: 3px solid var(--amber);
   border-radius: var(--radius); padding: 6px 12px; font-size: 0.84rem; font-weight: 700;
-  opacity: 0; transform: translateX(-8px); transition: all 0.18s;
+  opacity: 0; transform: translateX(8px); transition: all 0.18s;
 }
 .toast.show { opacity: 1; transform: translateX(0); }
 .t-ico { font-size: 1.15rem; line-height: 0; display: flex; }
+
+/* ---- ② お祝いのバナー(中央上・1枚ずつ) ---- */
+/* 小物より ひとまわり大きく・あたたかい ふちにして「これは お祝い」と ひと目で分かるようにする。
+   帯・紙吹雪までは やらない: 出る回数が 多いので、静かな1枚に とどめる(教訓1) */
+/* 上から 116px = 左上の「いまやること」カード(高さ72〜110px)の 下。
+   まん中に出すので 左のカードとは 横にも 重ならないが、ラベルが2行になった日でも
+   ぶつからない高さに そろえてある(タッチは カードも 指ボタンも 大きいので 140px) */
+.banner-box {
+  position: absolute; left: 50%; top: calc(var(--sa-t) + 116px); transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; z-index: 7;
+  max-width: min(560px, 76vw);
+}
+.toast.banner {
+  gap: 9px; padding: 9px 18px; font-size: 0.92rem;
+  border: 1px solid #e0c489; border-left: 1px solid #e0c489;
+  background: #fdf6e6;
+  box-shadow: 0 4px 16px rgba(30, 24, 12, 0.22);
+  transform: translateY(-8px);
+  text-align: left;
+}
+.toast.banner.show { transform: translateY(0); }
+.toast.banner .t-ico { font-size: 1.4rem; color: var(--amber); }
+.banner-text { line-height: 1.5; }
+/* 「+あと 3」= まだ 続きが あることの しるし(数字は キューの長さそのもの) */
+.banner-more {
+  flex: none; font-size: 0.72rem; font-weight: 900; color: #fff; background: var(--amber);
+  border-radius: 999px; padding: 2px 9px; line-height: 1.6; white-space: nowrap;
+}
+/* バッジは みどり寄り・ごほうびは あめ色。じっせきは いちばん あかるい */
+.toast.banner-badge { border-color: #a9d8bd; background: #f2fbf5; }
+.toast.banner-badge .t-ico { color: #4f9a78; }
+.toast.banner-reward { border-color: #e0c489; background: #fdf6e6; }
 
 /* ================= タッチ端末(iPad/iPhone)向け ================= */
 /* main.ts が <html class="touch-ui"> を付ける。PC(マウス)には一切かからない。 */
@@ -762,11 +926,19 @@ html.touch-ui .obj-hud { min-width: 250px; max-width: 40vw; padding: 10px 16px; 
 html.touch-ui .obj-head { font-size: 0.72rem; }
 html.touch-ui .obj-label { font-size: 1rem; }
 html.touch-ui .obj-sub { font-size: 0.84rem; }
-html.touch-ui .toast-box { top: calc(var(--sa-t) + 132px); }
+/* 小物レーンは右下。指の画面では 行動ボタン(高さ116・下26)と はいちボタンの列
+   (下152から上へ)を よけて、その上へ 積む */
+html.touch-ui .toast-box { bottom: calc(var(--sa-b) + 268px); max-width: min(340px, 40vw); }
+html.touch-ui .banner-box { top: calc(var(--sa-t) + 140px); }
 html.touch-ui .toast { font-size: 0.88rem; padding: 9px 14px; }
+html.touch-ui .toast.banner { font-size: 0.96rem; padding: 11px 20px; }
 /* 画面下のヒントは指のコントロールに隠れないよう少し上げる */
 html.touch-ui .hud-hint { font-size: 0.92rem; padding: 9px 20px; bottom: calc(var(--sa-b) + 104px); }
+/* はいち中は さらに上へ(地面の 配置リング + はいちボタンの列(下152から上へ)を よける)。
+   `html.touch-ui .hud-hint` は id を含まないが 型セレクタぶん強いので、同じ強さで 打ちなおす */
+html.touch-ui .hud-hint.place { bottom: calc(var(--sa-b) + 196px); }
 html.touch-ui .npc-marker { width: 32px; height: 32px; line-height: 32px; font-size: 1.25rem; }
+html.touch-ui .npc-nameplate { font-size: 0.82rem; padding: 3px 11px; }
 html.touch-ui .dir-dist { font-size: 0.78rem; }
 
 /* --- 会話 --- */
@@ -824,10 +996,12 @@ html.touch-ui .tx-col .title-btn.tx-wide { font-size: 0.92rem; padding: 12px 8px
   html.touch-ui .obj-hud { max-width: 58vw; }
   html.touch-ui .dialogue { width: min(640px, 90vw); }
   html.touch-ui .panel { min-width: min(560px, 92vw); }
-  html.touch-ui .inv-grid { grid-template-columns: repeat(2, 1fr); }
-  html.touch-ui .codex-grid { grid-template-columns: repeat(2, 1fr); }
-  html.touch-ui .badge-grid { grid-template-columns: repeat(2, 1fr); }
-  html.touch-ui .combo-grid { grid-template-columns: repeat(2, 1fr); }
+  /* たてむきの2列も minmax(0,1fr)。ふつうの 1fr では 中身の最小幅より せまくなれず、
+     日本語の nowrap で パネルから はみ出す(よこむき3列と同じ理由) */
+  html.touch-ui .inv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html.touch-ui .codex-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html.touch-ui .badge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html.touch-ui .combo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* たてむきの案内(数秒で消える・タップでも消せる) */

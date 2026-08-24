@@ -45,8 +45,10 @@ function clearedState(): GameState {
   const s = newGameState();
   for (const k of Object.keys(s.quests)) s.quests[k] = 'done';
   s.tools = ['axe', 'pickaxe', 'rod', 'sickle', 'net', 'shovel'];
-  // 最初の依頼を引き受けた しるし。これが無いと ツムギは 工房前から動かない
-  // (NPCSystem のいちばん強い差しかえ。迷子防止が まつりより 強いのは 仕様)
+  // 最初の依頼を引き受けた しるし(ふだんの遊びでは かならず立っている)。
+  // v26 まで これが無いと ツムギだけ まつりに来なかった —— まつりは いちばん強い
+  // 差しかえに なおしたので、いまは このフラグが 無くても 全員が 輪に立つ
+  // (下の「フラグが無くても 5人ぜんいん」が それを 機械で 見張る)
   s.flags.q_wood_accepted = true;
   return s;
 }
@@ -231,6 +233,46 @@ describe('ほしまつり: NPCの集合(立ち位置の差しかえ)', () => {
       expect(p.x).toBeCloseTo(stand.x, 6);
       expect(p.z).toBeCloseTo(stand.z, 6);
     }
+  });
+
+  it('v26 5人ぜんいんが 輪に立つ(q_wood_accepted が 立っていないセーブでも)', () => {
+    // 写真32(UI総ざらい)で 5人中4人しか 集まらなかった 実害の再発ふせぎ。
+    // 原因は「ツムギの工房前ロック」が まつりの差しかえより **強かった** こと。
+    // 実測では ほかの4人が 輪の半径1.70mちょうど、ツムギだけ 会場から32.72m(工房前)だった。
+    const s = allMetState();
+    s.npcs.ten = { friendship: 0, talkedToday: false, giftedToday: false };
+    delete s.flags.q_wood_accepted; // ← v26 まで ツムギだけ 来なくなっていた条件
+    const ids = festivalAttendees(s);
+    expect(ids).toEqual(['minamo', 'nokto', 'tsumugi', 'roka', 'ten']);
+    const sys = makeNpcSystem(s, { day: 7, hour: 19 });
+    sys.snapToSchedule(19);
+    for (let i = 0; i < ids.length; i++) {
+      const stand = festivalStand(i, ids.length);
+      const p = sys.positionOf(ids[i])!;
+      expect(p.hidden, ids[i]).toBe(false);
+      expect(standOf(sys, ids[i]), `${ids[i]} が 輪にいない`).not.toBe(null);
+      expect(p.x, ids[i]).toBeCloseTo(stand.x, 6);
+      expect(p.z, ids[i]).toBeCloseTo(stand.z, 6);
+      // 会場からの きょり = 輪の半径ちょうど(撮影ハーネスが 数える 判定と同じ)
+      expect(Math.hypot(p.x - FESTIVAL_PLAZA.x, p.z - FESTIVAL_PLAZA.z)).toBeCloseTo(FESTIVAL_RING_R, 6);
+    }
+  });
+
+  it('v26 まつりの時間の外では 工房前ロックは これまでどおり効く(迷子防止は こわさない)', () => {
+    const s = clearedState();
+    delete s.flags.q_wood_accepted;
+    // ツムギは 11時なら ふだん 工房(shop)にいる。ロックの行き先も shop なので、
+    // 「ロックが効いている」ことは 在宅時間(21時〜)で 確かめる
+    const night = makeNpcSystem(s, { day: 8, hour: 21.5 }); // まつりでない日の 在宅時間
+    night.snapToSchedule(21.5);
+    expect(night.positionOf('tsumugi')!.hidden, 'ロックが効けば 外に立っている').toBe(false);
+    const shop = NPC_SPOTS.tsumugi.shop;
+    expect(night.positionOf('tsumugi')!.x).toBeCloseTo(shop.x, 6);
+    // フラグが立っていれば ふだんどおり 在宅
+    s.flags.q_wood_accepted = true;
+    const unlocked = makeNpcSystem(s, { day: 8, hour: 21.5 });
+    unlocked.snapToSchedule(21.5);
+    expect(unlocked.positionOf('tsumugi')!.hidden).toBe(true);
   });
 
   it('在宅の時間帯でも 家から出てくる(まつりが 在宅を 上書きする)', () => {

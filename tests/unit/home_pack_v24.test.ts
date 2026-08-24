@@ -254,10 +254,38 @@ describe('v24 まだ しらないレシピの「?」行', () => {
       .toBe('うきだまを ひろうと ひらめく');
     expect(recipeHintText({ kind: 'gatherAny', label: '虫', verb: 'つかまえる' }))
       .toBe('虫を つかまえると ひらめく');
+    // v16.1 語尾は3型。展示家具は「〜たら ひらめく」
     expect(recipeHintText({ kind: 'display', furniture: 'f_bugcage' }))
-      .toBe('むしかごに 虫を 1ぴき 入れると ひらめく');
+      .toBe('むしかごに 虫を 1ぴき 入れたら ひらめく');
     expect(recipeHintText({ kind: 'display', furniture: 'f_aquarium' }))
-      .toBe('すいそうに 魚を 1ぴき 入れると ひらめく');
+      .toBe('すいそうに 魚を 1ぴき 入れたら ひらめく');
+    // v16.1 手に入れかたが 1つに しぼれないものは「はじめての 〜で ひらめく」
+    expect(recipeHintText({ kind: 'gather', item: 'straw', verb: '手に入れる' }))
+      .toBe('はじめての わらで ひらめく');
+  });
+
+  /**
+   * v16.1 「?」行の 語尾を 3型に した。
+   *
+   * v16.0 は 全部が「〜と ひらめく」で、しかも 4行つづけて
+   * 「◯◯を 手に入れると ひらめく」と 同じ形が ならんでいた(UI総ざらいの写真 07)。
+   * 読む目が すべって 条件が 頭に入らないので、条件の 種類ごとに 語尾を 変える。
+   * ここでは「実際に 画面に ならぶ 行(RECIPE_HINTS 全部)に 3型が そろっているか」を
+   * 機械で 見はる —— テンプレを 足したり けずったりして 1型に もどったら 落ちる。
+   */
+  it('語尾は3型そろっている(と / で / たら)。どれも しめくくりは「ひらめく」', () => {
+    // 動詞は ひろう / つかまえる / ほりだす と いろいろなので、共通するのは「と ひらめく」
+    const ENDINGS = ['と ひらめく', 'で ひらめく', 'たら ひらめく'];
+    const texts = RECIPE_HINTS.map((h) => recipeHintText(h.hint));
+    for (const e of ENDINGS) {
+      expect(texts.some((t) => t.endsWith(e)), `${e} の行が1つも無い`).toBe(true);
+    }
+    for (const t of texts) {
+      expect(ENDINGS.some((e) => t.endsWith(e)), t).toBe(true);
+    }
+    // 同じ語尾ばかりに ならない: いちばん多い型でも 全体の8割まで
+    const most = Math.max(...ENDINGS.map((e) => texts.filter((t) => t.endsWith(e)).length));
+    expect(most / texts.length).toBeLessThanOrEqual(0.8);
   });
 
   it('文の中の 名前は ITEMS / DISPLAY_FURNITURE から とっている(写経していない)', () => {
@@ -312,7 +340,7 @@ describe('v24 まだ しらないレシピの「?」行', () => {
     learnRecipe(s, 'r_bugcage');
     expect(ids()).toContain('r_bugcage_big');
     const row = unknownRecipeHints(s).find((u) => u.recipe.id === 'r_bugcage_big')!;
-    expect(row.text).toBe('むしかごに 虫を 1ぴき 入れると ひらめく');
+    expect(row.text).toBe('むしかごに 虫を 1ぴき 入れたら ひらめく');
     learnRecipe(s, 'r_bugcage_big');
     expect(ids()).not.toContain('r_bugcage_big');
   });

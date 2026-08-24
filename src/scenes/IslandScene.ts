@@ -11,6 +11,7 @@ import {
 import {
   initEffects, attachLightPool, registerGlowSource, unregisterGlowSource, burst,
   initTreeMotes, updateTreeMotes, registerSnowSurface,
+  initPondGlimmer, updatePondGlimmer, pondGlimmerState,
 } from '../entities/effects';
 import {
   buildWater, onPier, updatePond, updateSeaSurface, MOON_FALLBACK_AZ, PIER, SEA_Y, type WaterRefs,
@@ -35,7 +36,7 @@ import {
   FESTIVAL_PLAZA, FESTIVAL_POLES, FESTIVAL_POLE_R, FESTIVAL_STAND_R,
 } from '../systems/FestivalSystem';
 import {
-  GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, STAR_SPOTS, DRIFT_SPOTS, SEABIRD_CIRCLES,
+  GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, POND_GLIMMER_SPOTS, STAR_SPOTS, DRIFT_SPOTS, SEABIRD_CIRCLES,
   BUG_SPOTS, DIG_SPOTS, BOTTLE_SPOTS, BULLETIN_BOARD, PLAZA_BENCHES,
   type BugSpotKind, type GatherNodeDef,
 } from '../data/island';
@@ -554,6 +555,14 @@ export class IslandScene {
       moteSpots.push({ x: tx, y: terrainHeight(tx, tz), z: tz });
     }
     initTreeMotes(s, moteSpots);
+
+    // ---- v26 よるの池の「見るだけの 光の群れ」(メッシュ1枚) ----
+    // つかまえる ホタルとは 別もの。ぜんぶ 池の水の上なので、子どもが 近づいても
+    // つかまえる ヒントは 出ない(理由は src/data/island.ts の POND_GLIMMER_SPOTS)
+    initPondGlimmer(
+      s,
+      POND_GLIMMER_SPOTS.map((p) => ({ x: p.x, y: POND.waterY, z: p.z }))
+    );
 
     // ---- うみどり(海の上を旋回するだけ) ----
     // 影・遮蔽フェード・当たり判定のどれにも入れない(空の上なので影は落とせず、負荷だけ増える)
@@ -1154,6 +1163,13 @@ export class IslandScene {
     updateSeaSurface(this.water, dtSec, { azX: az.x, azZ: az.z, night, rain });
     // v22 昼の木立ちの粒(夜と雨は出ない)
     updateTreeMotes(dtSec, 1 - night, rain);
+    // v26 よるの池の 光の群れ(昼と雨は出ない。木立ちの粒と ちょうど 裏がえし)
+    updatePondGlimmer(dtSec, night, rain);
+  }
+
+  /** v26 よるの池の 光の群れの ようす(検証・撮影用。読むだけで副作用はない) */
+  get pondGlimmer(): { count: number; level: number; alpha: number; visible: boolean } {
+    return pondGlimmerState();
   }
 
   /**

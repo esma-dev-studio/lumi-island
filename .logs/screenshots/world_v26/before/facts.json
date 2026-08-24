@@ -1,0 +1,112 @@
+{
+  "day": 27,
+  "festivalDay": 28,
+  "occ_garden": {
+    "count": 1,
+    "coverSum": 1,
+    "veil": 0.35,
+    "top": [
+      {
+        "name": "tree_808",
+        "vis": 0.35,
+        "cover": 1,
+        "r": 3.21,
+        "dc": 3.08,
+        "k": 1.04
+      }
+    ],
+    "drawCalls": 344,
+    "meshes": 535,
+    "activeMeshes": 66
+  },
+  "occ_forest": {
+    "count": 1,
+    "coverSum": 0.217,
+    "veil": 0.076,
+    "top": [
+      {
+        "name": "tree_1030",
+        "vis": 0.35,
+        "cover": 0.217,
+        "r": 1.93,
+        "dc": 6.06,
+        "k": 0.32
+      }
+    ],
+    "drawCalls": 284,
+    "meshes": 537,
+    "activeMeshes": 36
+  },
+  "night": {
+    "catchableFireflies": 1,
+    "glimmer": null,
+    "occ": {
+      "count": 1,
+      "coverSum": 0.82,
+      "veil": 0.287,
+      "top": [
+        {
+          "name": "tree_983",
+          "vis": 0.35,
+          "cover": 0.82,
+          "r": 3.2,
+          "dc": 4.06,
+          "k": 0.79
+        }
+      ],
+      "drawCalls": 411,
+      "meshes": 542,
+      "activeMeshes": 102
+    }
+  },
+  "nameplate_near": {
+    "total": 0,
+    "shown": []
+  },
+  "nameplate_hint": "Eミナモと はなす",
+  "nameplate_talking": {
+    "total": 0,
+    "shown": []
+  },
+  "nameplate_far": {
+    "total": 0,
+    "shown": []
+  },
+  "festival": {
+    "attendees": [
+      "minamo",
+      "nokto",
+      "tsumugi",
+      "roka",
+      "ten"
+    ],
+    "inRing": 4,
+    "stands": [
+      {
+        "id": "minamo",
+        "d": 1.7
+      },
+      {
+        "id": "nokto",
+        "d": 1.7
+      },
+      {
+        "id": "tsumugi",
+        "d": 32.72
+      },
+      {
+        "id": "roka",
+        "d": 1.7
+      },
+      {
+        "id": "ten",
+        "d": 1.7
+      }
+    ],
+    "nameplates": {
+      "total": 0,
+      "shown": []
+    }
+  },
+  "consoleErrors": []
+}

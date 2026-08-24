@@ -275,12 +275,18 @@ export class CraftUI {
    * 別のクラス(craft-q-*)にして ボタンも持たせないことで、
    * 「?」行が ボットの クラフト操作に まざる みちを 構造的に なくしてある
    * (一覧の いちばん下に 置くのも 同じ理由——`.craft-row` の1つめは いままでどおり)。
-   * シルエットは 本物のアイコンを CSSで まっ黒に 落としたもの。
+   * シルエットは 本物のアイコンを CSSで 1色に ぬりつぶしたもの。
    * 絵を もう1セット 描かないので、家具を足しても シルエットが 遅れない。
+   *
+   * v16.1 その1色を **節(どうぐ/かぐ/りょうり…)の色**にした(まっ黒は やめた)。
+   * 「?」行は 一覧の いちばん下に まとまって ならぶので、まっ黒だと
+   * どれも 同じ 灰色のかたまりに 見え、何の なかまの レシピか 分からなかった
+   * (UI総ざらいの写真 07)。うすい 節の色なら「まだ 見えない」ことは そのままに、
+   * どうぐ なのか かぐ なのかは 目で 分かる。
    */
-  private unknownRow(text: string, out: string): string {
+  private unknownRow(text: string, out: string, sec: CraftSection): string {
     return `<div class="craft-q-row">
-          <span class="inv-ico craft-q-ico">${icon(out)}</span>
+          <span class="inv-ico craft-q-ico q-${sec}">${icon(out)}</span>
           <span class="craft-q-name">???</span>
           <span class="craft-q-hint">${text}</span>
         </div>`;
@@ -317,7 +323,9 @@ export class CraftUI {
       rows += section(
         'まだ しらない レシピ',
         `<div class="craft-q-lead">つぎの ことを すると、作りかたを ひらめくよ。</div>` +
-          unknown.map((u) => this.unknownRow(u.text, String(u.recipe.out))).join('')
+          unknown
+            .map((u) => this.unknownRow(u.text, String(u.recipe.out), craftSectionOf(u.recipe)))
+            .join('')
       );
     }
     return `<div class="craft-list">${rows || '<div class="inv-empty">まだレシピを知らない。島のみんなに聞いてみよう!</div>'}</div>`;

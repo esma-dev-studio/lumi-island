@@ -44,6 +44,7 @@ import {
 } from '../systems/BondEventSystem';
 import { validateBossFishData } from '../systems/BossFishSystem';
 import { ChatBubbleUI } from '../ui/ChatBubbleUI';
+import { NpcNameplate } from '../ui/NpcNameplate';
 /** 立ち話・見せ場で 二人が ならぶ ときの あいだ(m)。会話のツーショットと同じ間合い */
 const BOND_PAIR_GAP = 1.15;
 import {
@@ -108,7 +109,7 @@ import {
 } from '../systems/PhotoSystem';
 import { TouchControls } from '../ui/TouchControls';
 import { save } from '../save/SaveSystem';
-import { toast } from '../ui/Toast';
+import { banner, toast } from '../ui/Toast';
 import { sfx, setAmbient, setMusic } from '../audio/AudioSystem';
 import { ZoneTracker } from '../audio/ambienceZones';
 import { EmoteState, replyingNpc } from '../systems/EmoteSystem';
@@ -218,6 +219,8 @@ export class GameScene {
   chat!: ChatEventSystem;
   /** v21 立ち話の 吹き出し(会話ボックスとは 別の要素。世界も 操作も 止めない) */
   chatBubble!: ChatBubbleUI;
+  /** v26 NPCの頭の上の名札(4mまで近づいたときだけ ふわっと出る) */
+  nameplates!: NpcNameplate;
   codexUI!: CodexUI;
   /** v13 メッセージボトルの手紙(ずかんからの読み返しも ここを通る) */
   letterUI!: LetterUI;
@@ -361,6 +364,7 @@ export class GameScene {
     // v21 立ち話(進行は純ロジック / 吹き出しは会話ボックスとは別の要素)
     this.chat = new ChatEventSystem();
     this.chatBubble = new ChatBubbleUI(this.scene);
+    this.nameplates = new NpcNameplate(this.scene);
     this.codexUI = new CodexUI(() => this.state);
     // ずかんより あとに作る: DOMの ならび順が そのまま かさなり順になるので、
     // ずかんを開いたまま 手紙を ひらいても 手紙が 上に来る(z-indexは style.css にも入れてある)
@@ -586,11 +590,12 @@ export class GameScene {
     // (1つずつのトーストは、このあと 遊びながら 取ったときに出る)。
     const gotBadges = evaluateBadges(this.state);
     if (gotBadges.length > 0) {
-      toast(
+      banner(
         gotBadges.length === 1
           ? `バッジ「${gotBadges[0].name}」を ゲット! ずかんで 見てみよう`
           : `バッジを ${gotBadges.length}こ ゲット! ずかんで 見てみよう`,
-        'lumina'
+        'lumina',
+        'badge'
       );
       save(this.state);
     }
@@ -677,7 +682,11 @@ export class GameScene {
     if (this.modalOpen || this.seq.active || this.indoor || this.npcHome !== null) {
       this.markers.hideAll();
     } else {
-      this.markers.update(tp, tp?.isNpc ?? false, this.player.x, this.player.z, marks, reportMode);
+      // 第7引数 = 目標カードに いま出ている「→ Nm」。同じ数なら 矢印の m バッジを 出さない
+      this.markers.update(
+        tp, tp?.isNpc ?? false, this.player.x, this.player.z, marks, reportMode,
+        this.objHud.shownDistance
+      );
     }
     const progressKey = obj.progress ? `${obj.progress.cur}/${obj.progress.max}` : '';
     this.tutorial.update(dt, this.player.moving, obj, progressKey, dist);
@@ -785,6 +794,31 @@ export class GameScene {
       return;
     }
     this.chatBubble.show(p.x, p.y, p.z, b.text);
+  }
+
+  // ---------- v26 NPCの頭の上の名札 ----------
+  /**
+   * 名札の1フレーム。
+   *
+   * 出さない場面を きびしくしてあるのが 要点(立ち話の吹き出しと 同じ考えかた):
+   *   世界が凍っているとき・会話中・見せ場中・パネル表示中・フォトモード・配置モード。
+   * まつりの輪(5人が1.7mの輪に立つ)と 立ち話の ふきだしを 出している人は、
+   * 純関数 nameplateTargets が 中で はじく。
+   */
+  private updateNameplates(frozen: boolean): void {
+    const suppressed =
+      frozen || this.dialogue.open || this.seq.active || this.modalOpen ||
+      this.pauseMenu.open || this.photoUI.open || this.placement.active !== null;
+    if (suppressed) {
+      this.nameplates.hideAll();
+      return;
+    }
+    this.nameplates.update(this.npcs.nameplateSources(), {
+      px: this.player.x,
+      pz: this.player.z,
+      suppressed: false,
+      bubbleSpeaker: this.chat.bubble?.speaker ?? null,
+    });
   }
 
   // ---------- v21 なかよし度カンストの「ふたりの じかん」 ----------
@@ -1390,7 +1424,7 @@ export class GameScene {
     const unlocked = evaluateAchievements(this.state);
     const badges = evaluateBadges(this.state);
     if (unlocked.length === 0 && badges.length === 0) return;
-    for (const a of unlocked) toast(`じっせき たっせい! ${a.name}`, a.icon);
+    for (const a of unlocked) banner(`じっせき たっせい! ${a.name}`, a.icon, 'achievement');
     this.announceRewards(grantAchievementRewards(this.state));
     this.announceBadges(badges);
     // v18 じっせき=お祝いのファンファーレ / バッジだけ=小さな「ちりん」。
@@ -1409,9 +1443,9 @@ export class GameScene {
   private announceBadges(badges: BadgeDef[]): void {
     if (badges.length === 0) return;
     const shown = badges.slice(0, 3);
-    for (const b of shown) toast(`バッジ: ${b.name}`, b.pict);
+    for (const b of shown) banner(`バッジ: ${b.name}`, b.pict, 'badge');
     if (badges.length > shown.length) {
-      toast(`ほかにも ${badges.length - shown.length}この バッジを ゲット!`, 'lumina');
+      banner(`ほかにも ${badges.length - shown.length}この バッジを ゲット!`, 'lumina', 'badge');
     }
   }
 
@@ -1442,9 +1476,9 @@ export class GameScene {
   private announceRewards(granted: GrantedReward[]): void {
     if (granted.length === 0) return;
     const shown = granted.slice(0, 4);
-    for (const g of shown) toast(`ごほうび: ${rewardLabel(g.reward)}(${g.def.name})`, rewardIcon(g.reward));
+    for (const g of shown) banner(`ごほうび: ${rewardLabel(g.reward)}(${g.def.name})`, rewardIcon(g.reward), 'reward');
     if (granted.length > shown.length) {
-      toast(`ほかにも ${granted.length - shown.length}この ごほうびが とどいた!`, 'lumina');
+      banner(`ほかにも ${granted.length - shown.length}この ごほうびが とどいた!`, 'lumina', 'reward');
     }
     this.hud.setLumina(this.state.lumina);
   }
@@ -1892,6 +1926,9 @@ export class GameScene {
     if (this.photoUI.open && (menuPaused || this.modalOpen || this.seq.active)) this.closePhotoMode();
     // マウスの見回し(ドラッグ・ホイール)を受け付けるか: ポーズ中・パネル表示中は回さない
     this.camCtl.orbitEnabled = !menuPaused && !this.modalOpen;
+    // v26 ポーズ中は 下の更新まるごとが 走らないので、名札は ここで たたむ
+    // (出しっぱなしにすると ポーズメニューの うしろに 名札だけ 残る)
+    if (menuPaused) this.nameplates.hideAll();
     if (!menuPaused) {
       if (this.hitstop > 0) {
         this.hitstop -= dt; // ヒットストップ: 描画は続け、世界を一瞬止める
@@ -1941,9 +1978,15 @@ export class GameScene {
         if (wx.rainbow <= 0.001 && this.rainbowToldToday && wx.rain > 0.5) this.rainbowToldToday = false;
         this.seq.update(dt);
         this.updateChat(dt, frozen);
+        this.updateNameplates(frozen);
         const hint = this.routeWithPickups(uiOpen);
         this.shownHint = uiOpen || this.pauseMenu.open ? '' : hint;
-        this.hud.setHint(this.shownHint);
+        // v16.1 はいち中だけ ヒント帯に ○(おける)/×(おけない)を出し、帯の色も かえる。
+        // 地面の 太いリングと 同じ意味を 2か所で そろえて言う(色だけ・記号だけに たよらない)
+        this.hud.setHint(
+          this.shownHint,
+          this.placement.active && this.shownHint ? this.placement.hintTone : null
+        );
         this.updateObjective(dt);
         // 進行まわり
         if (this.island.time.day !== this.lastDay) {
