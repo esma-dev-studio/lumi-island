@@ -34,10 +34,13 @@ export const HELP_KEYBOARD = `
             <span><kbd>E</kbd>/<kbd>Space</kbd></span><span>しらべる・とる・はなす</span>
             <span><kbd>X</kbd></span><span>てをふる(つづけて もう一度で よろこぶ)</span>
             <span><kbd>R</kbd></span><span>(はいち中)まわす</span>
+            <span><kbd>P</kbd></span><span>しゃしんを とる(フォトモード)</span>
             ${sec('しらべると できること')}
             <span>ベンチの まえで <kbd>E</kbd></span><span>すわる(もう一度 <kbd>E</kbd>で たつ)</span>
             <span>たてふだの まえで <kbd>E</kbd></span><span>でんごんばん(きょうの おてつだい)</span>
             <span>おいた かぐの まえで <kbd>E</kbd></span><span>いろみずで いろを ぬる</span>
+            <span>おいた かぐの まえで <kbd>R</kbd></span><span>その場で うごかす(もちかえらずに おきなおす)</span>
+            <span>しゃしんたての まえで <kbd>E</kbd></span><span>とった しゃしんを かざる</span>
             ${sec('がめんを ひらく')}
             <span><kbd>Tab</kbd>/<kbd>I</kbd></span><span>もちもの</span>
             <span><kbd>C</kbd></span><span>クラフト(レシピ / くみあわせ)</span>
@@ -55,10 +58,13 @@ export const HELP_TOUCH = `
             <span>右下の 大きいボタン</span><span>しらべる・とる・はなす</span>
             <span>「てをふる」ボタン</span><span>てをふる(つづけて もう一度で よろこぶ)</span>
             <span>「まわす」ボタン</span><span>(はいち中)まわす</span>
+            <span>右上の「しゃしん」</span><span>しゃしんを とる(フォトモード)</span>
             ${sec('しらべると できること')}
             <span>ベンチの そばで 大きいボタン</span><span>すわる(もう一度で たつ)</span>
             <span>たてふだの そばで 大きいボタン</span><span>でんごんばん(きょうの おてつだい)</span>
             <span>おいた かぐの そばで 大きいボタン</span><span>いろみずで いろを ぬる</span>
+            <span>「うごかす」ボタン</span><span>その場で うごかす(もちかえらずに おきなおす)</span>
+            <span>しゃしんたての そばで 大きいボタン</span><span>とった しゃしんを かざる</span>
             ${sec('がめんを ひらく')}
             <span>右上の「もちもの」</span><span>もちもの</span>
             <span>右上の「クラフト」</span><span>クラフト(レシピ / くみあわせ)</span>

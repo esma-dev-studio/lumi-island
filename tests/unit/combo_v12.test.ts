@@ -2,7 +2,7 @@
 // v12「くみあわせクラフト+りょうり+いろみず」。
 //
 // 断言する中身:
-//   1) データ(16種のかくしレシピ・レシピのcostと一致・りょうりの効果が1つずつ・絵がある)
+//   1) データ(20種のかくしレシピ・レシピのcostと一致・りょうりの効果が1つずつ・絵がある)
 //   2) 一致判定(順不同・個数一致・重複・数が2〜3でないもの)
 //   3) 発見(材料を消費して1つ作る/はずれは何も減らない/キッチンだいの条件/はっけんずみ)
 //   4) 発見 →「あたらしい!」→ 通常タブの先頭 → 1回つくると目じるしが消える
@@ -96,7 +96,7 @@ function withKitchen(s: GameState): GameState {
 }
 
 // ===========================================================================
-describe('データ: かくしレシピ16種', () => {
+describe('データ: かくしレシピ20種', () => {
   it('整合性チェックが ぜんぶ通る', () => {
     expect(validateComboData()).toEqual([]);
     expect(validateItemData()).toEqual([]);
@@ -104,12 +104,13 @@ describe('データ: かくしレシピ16種', () => {
     expect(validateGiftData()).toEqual([]);
   });
 
-  it('りょうり6・いろ6(いろみず4+かべがみ2)・かざり4の16種', () => {
-    expect(COMBOS.length).toBe(16);
+  // v24 おうちパックで かざりを4つ足して 20種(りょうり・いろは 変えていない)
+  it('りょうり6・いろ6(いろみず4+かべがみ2)・かざり8の20種', () => {
+    expect(COMBOS.length).toBe(20);
     const byGroup = (g: keyof typeof COMBO_GROUPS): number => COMBOS.filter((c) => c.group === g).length;
     expect(byGroup('cook')).toBe(6);
     expect(byGroup('paint')).toBe(6);
-    expect(byGroup('deco')).toBe(4);
+    expect(byGroup('deco')).toBe(8);
     // どれも 2〜3個の材料で できている(えらべる上限をこえるものを作らない)
     for (const c of COMBOS) {
       expect(comboSize(c), c.id).toBeGreaterThanOrEqual(COMBO_MIN);
@@ -211,7 +212,7 @@ describe('一致の判定(順不同・個数一致)', () => {
     expect(sameTally({ moss: 2 }, { moss: 2, cutgrass: 1 })).toBe(false);
   });
 
-  it('16種ぜんぶ、じぶんの材料で じぶんが当たる', () => {
+  it('20種ぜんぶ、じぶんの材料で じぶんが当たる', () => {
     for (const c of COMBOS) {
       const sel: ItemId[] = [];
       for (const [item, n] of Object.entries(c.inputs) as [ItemId, number][]) {

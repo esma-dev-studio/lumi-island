@@ -101,11 +101,13 @@ describe('新レシピ4種', () => {
     // v12のくみあわせで「うみのランプ」「ほしのモビール」「こけのびん」、
     // v14で じっせきの ごほうび限定の2種(きんのランタン・よるのとうだい)、
     // v20第3章で いちば島の2種(いちばのちょうちん・かおりのランプ)、
-    // v21で ぬしのトロフィー1種(ヨルノヌシのがく=光る大魚なので、がくの中の魚が 光る)が加わった。
+    // v21で ぬしのトロフィー1種(ヨルノヌシのがく=光る大魚なので、がくの中の魚が 光る)、
+    // v24 おうちパックで3種(まるいランプ・あおいランタン・ほしのオルゴール)が加わった。
     // 数え方(ITEMSのglowフラグ)は変えていない
     expect(glowing.sort()).toEqual([
-      'f_aroma_lamp', 'f_flowervase', 'f_lantern', 'f_lighthouse_lantern', 'f_lighthouse_lantern_night',
-      'f_market_lantern', 'f_mushlamp', 'f_sealamp', 'f_seamobile',
+      'f_aroma_lamp', 'f_blue_lantern', 'f_flowervase', 'f_lantern', 'f_lighthouse_lantern',
+      'f_lighthouse_lantern_night', 'f_market_lantern', 'f_mushlamp', 'f_roundlamp',
+      'f_sealamp', 'f_seamobile', 'f_starbox',
       'f_starlantern', 'f_starlantern_gold', 'f_starmobile', 'f_stonelamp', 'f_terrarium',
       'f_trophy_yoru',
     ]);
@@ -127,6 +129,10 @@ describe('新レシピ4種', () => {
       'r_net', 'r_shovel', 'r_strawmat',
       // v12: キッチンだい(くみあわせの りょうりの入口)も最初から見せる
       'r_kitchen',
+      // v24 おうちパック: すわる・のせる・しく の基本5つも最初から見せる
+      // (「家をひろげたのに 置くものが少ない」への こたえ。のこり3つは ひらめきで出る)。
+      // ならびは INITIAL_RECIPES ではなく RECIPES の順(knownRecipes が RECIPES を たどる)
+      'r_lowtable', 'r_stool', 'r_blocks', 'r_bigrug', 'r_futon',
     ]);
   });
 
@@ -180,7 +186,9 @@ describe('レシピのひらめき(初回入手フック)', () => {
   it('ひらめきの対象でない素材では何も起きない', () => {
     const s = newGameState();
     const before = [...s.recipes];
-    for (const item of ['flower', 'shell', 'wood', 'moss'] as const) {
+    // v24: ヒカリゴケ(moss)は「はっぱの木」の ひらめきの きっかけに なったので、
+    // ここでは いしに 入れかえた(ひらめき表に のっていない素材を えらぶ、という 意図は同じ)
+    for (const item of ['flower', 'shell', 'wood', 'stone'] as const) {
       expect(discoverRecipe(s, item)).toBeNull();
     }
     expect(s.recipes).toEqual(before);

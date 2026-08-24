@@ -49,8 +49,21 @@ const cycle = <T>(pool: readonly T[], week: number, offset: number): T =>
 export const MARKET_WALLS: readonly ItemId[] = ['wall_lantern', 'wall_market'];
 /** ゆかいた(同上) */
 export const MARKET_FLOORS: readonly ItemId[] = ['floor_stone', 'floor_mat'];
-/** 家具(3種から 毎週2つ出る) */
-export const MARKET_FURNITURE: readonly ItemId[] = ['f_market_lantern', 'f_travel_trunk', 'f_station_clock'];
+/**
+ * 家具(7種から 毎週3つ出る)。
+ *
+ * v20は3種から2つ(=3週で ひとまわり)だった。v24で4種たして7種にしたので、
+ * 出る数も2→3にしてある: 2つのままだと 同じ家具が また来るまで 最長6週(42日)かかり、
+ * 「先週 買いのがしたものが かならず また来る」という 週がわりの やくそくが
+ * 子どもの ものさしでは 遠すぎる。3つなら 最長5週・どの家具も 7週のうち3週ならぶ。
+ */
+export const MARKET_FURNITURE: readonly ItemId[] = [
+  'f_market_lantern', 'f_travel_trunk', 'f_station_clock',
+  // v24 おうちパックの いちば島 限定4種
+  'f_exotic_jar', 'f_bead_curtain', 'f_camel_doll', 'f_blue_lantern',
+];
+/** 家具が 1週に ならぶ数 */
+export const MARKET_FURNITURE_PER_WEEK = 3;
 /** よその島の素材(りょうり・クラフトの新しい材料) */
 export const MARKET_MATERIALS: readonly ItemId[] = ['aroma_leaf', 'sweet_honey'];
 /** レシピの巻物。買うと 未発見の くみあわせを1つ おしえてくれる */
@@ -61,6 +74,8 @@ export const MARKET_PRICES: Partial<Record<ItemId, number>> = {
   wall_lantern: 260, wall_market: 260,
   floor_stone: 260, floor_mat: 260,
   f_market_lantern: 340, f_travel_trunk: 380, f_station_clock: 440,
+  // v24 おうちパックの4種。売値の およそ6ばい(既存3種と 同じ帯)
+  f_exotic_jar: 390, f_bead_curtain: 330, f_camel_doll: 410, f_blue_lantern: 360,
   aroma_leaf: 70, sweet_honey: 90,
   scroll: 900,
 };
@@ -86,10 +101,9 @@ export function marketStock(week: number): MarketRow[] {
   };
   add(cycle(MARKET_WALLS, w, 0), 'style');
   add(cycle(MARKET_FLOORS, w, 1), 'style');
-  // 家具は 3つのうち 2つ。となりあう2つを えらんで 1週ずつ ずらす
-  // = 3週で ぜんぶ ひとまわりし、どれも 3週に2回 ならぶ
-  add(cycle(MARKET_FURNITURE, w, 0), 'furniture');
-  add(cycle(MARKET_FURNITURE, w, 1), 'furniture');
+  // 家具は 7つのうち となりあう3つ。1週ずつ ずらす
+  // = 7週で ぜんぶ ひとまわりし、どれも 7週に3回 ならぶ
+  for (let k = 0; k < MARKET_FURNITURE_PER_WEEK; k++) add(cycle(MARKET_FURNITURE, w, k), 'furniture');
   // 素材は 週によって1種か2種(偶数週は2種=にぎやかな週)
   if (w % 2 === 0) {
     for (const m of MARKET_MATERIALS) add(m, 'material');

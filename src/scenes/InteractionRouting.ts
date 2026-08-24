@@ -4,7 +4,7 @@ import { BULLETIN_BOARD, PLAZA_BENCHES, POIS } from '../data/island';
 import {
   SIT_REACH, nearestSeat, seatOfFurniture, seatOfPlazaBench, type Seat,
 } from '../systems/SitSystem';
-import { ITEMS, displayCapacity } from '../data/items';
+import { ITEMS, displayCapacity, type ItemId } from '../data/items';
 import { BULLETIN_REACH } from '../systems/BulletinSystem';
 import { BUG_CATCH_R, BUG_HINT_R } from '../systems/BugSystem';
 import { hasTool } from '../game/GameState';
@@ -47,6 +47,20 @@ export const HOME_POINT = { x: -30.9, z: 6.7 };
 export const HOME_EXIT = { x: -29.9, z: 6.7 };
 
 /**
+ * 置いた家具の「もちかえる」ヒント。
+ *
+ * v24 うしろに <kbd>R</kbd>うごかす を そえる。**E の中身は 1ミリも 変えていない**
+ * ——E は これまでどおり「もちかえる」で、その場で 模様替えしたい子だけが R を押す。
+ * (キー表示を そえるだけなので、タッチの行動ボタンの文字も これまでと同じ
+ *  「◯◯を もちかえる」になる。TouchControls.hintToLabel が 2つめの kbd から先を 落とす。
+ *  タッチには 配置バーの「うごかす」ボタンを 出す。)
+ * 意味カテゴリ(tools/ux_semantic_check.mjs)も「もちかえる」を見る carry のまま。
+ */
+function carryHint(item: ItemId): string {
+  return `<kbd>E</kbd>${ITEMS[item].name}を もちかえる <kbd>R</kbd>うごかす`;
+}
+
+/**
  * v10 展示家具(すいそう・むしかご)のE候補。中身が無ければ「いれる」(選択パネル)、
  * 入っていれば「とりだす」。もちかえるはパネルの中に入口を用意してある。
  *
@@ -86,6 +100,32 @@ function displayCandidate(gs: GameScene, near: PlacedRuntime, px: number, pz: nu
       if (takeNow) gs.placement.takeOut(near);
       else gs.openDisplay(near);
     },
+  };
+}
+
+/**
+ * v24 しゃしんたての E候補(「しゃしんを かざる」)。
+ *
+ * すいそう・むしかごの「いれる/とりだす」と まったく同じ考え方——
+ * その家具にしか 無い あそびなので、いろみず(59)より1つ強い58にして、
+ * 「もちかえる」(60)は パネルの中(アルバム)ではなく R の「うごかす」と
+ * ふつうの もちかえりに ゆずる。
+ * kind は 'pickup' なので、依頼の誘導中(guided)は 自動で かくれる。
+ */
+function photoStandCandidate(
+  gs: GameScene, near: PlacedRuntime, px: number, pz: number
+): InteractionCandidate | null {
+  if (!gs.placement.isPhotoStand(near)) return null;
+  return {
+    id: `photo_${near.data.id}`,
+    kind: 'pickup',
+    targetId: String(near.data.id),
+    itemId: near.data.item,
+    priority: PRIORITY.furniture - 2,
+    distance: Math.hypot(px - near.data.x, pz - near.data.z),
+    enabled: true,
+    hint: '<kbd>E</kbd>しゃしんを かざる',
+    run: () => gs.openPhotoStand(near),
   };
 }
 
@@ -418,12 +458,14 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
       if (disp) cands.push(disp);
       const inPaint = paintCandidate(gs, inNear, px, pz);
       if (inPaint) cands.push(inPaint);
+      const inPhoto = photoStandCandidate(gs, inNear, px, pz);
+      if (inPhoto) cands.push(inPhoto);
       cands.push({
         id: `furn_${inNear.data.id}`, kind: 'pickup',
         targetId: String(inNear.data.id), itemId: inNear.data.item,
         priority: PRIORITY.furniture,
         distance: Math.hypot(px - inNear.data.x, pz - inNear.data.z), enabled: true,
-        hint: `<kbd>E</kbd>${ITEMS[inNear.data.item].name}を もちかえる`,
+        hint: carryHint(inNear.data.item),
         run: () => gs.placement.pickUp(inNear),
       });
     }
@@ -801,12 +843,14 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     if (disp) cands.push(disp);
     const paint = paintCandidate(gs, near, px, pz);
     if (paint) cands.push(paint);
+    const photo = photoStandCandidate(gs, near, px, pz);
+    if (photo) cands.push(photo);
     cands.push({
       id: `furn_${near.data.id}`, kind: 'pickup',
       targetId: String(near.data.id), itemId: near.data.item,
       priority: PRIORITY.furniture,
       distance: Math.hypot(px - near.data.x, pz - near.data.z), enabled: true,
-      hint: `<kbd>E</kbd>${ITEMS[near.data.item].name}を もちかえる`,
+      hint: carryHint(near.data.item),
       run: () => gs.placement.pickUp(near),
     });
   }

@@ -375,6 +375,23 @@ html.touch-ui .chat-bubble { font-size: 0.92rem; max-width: min(340px, 52vw); }
 .craft-btn:disabled { background: #cfc7b8; cursor: default; }
 .craft-btn.sub { background: #fff; color: var(--amber); border: 1px solid var(--amber); }
 .crafted-label { font-size: 0.76rem; color: var(--ink-soft); font-weight: 700; }
+/* ---- v24 まだ しらないレシピの「?」行 ----
+   .craft-row とは別のクラスにしてある(自動テスト・ボットが .craft-row で
+   「作れる行」を さがすので、ボタンの無い行を まぜない)。
+   シルエットは 本物のアイコンを まっ黒に 落として うすくしたもの:
+   絵を2セット 持たないので、家具を足しても シルエットが 遅れて 腐らない。 */
+.craft-q-lead { font-size: 0.76rem; color: var(--ink-soft); line-height: 1.7; padding: 0 2px 2px; }
+.craft-q-row {
+  display: flex; align-items: center; gap: 8px;
+  background: #f7f4ec; border: 1px dashed var(--line); border-radius: 5px;
+  padding: 7px 10px; font-size: 0.84rem; color: var(--ink-soft);
+}
+.craft-q-ico { filter: brightness(0); opacity: 0.26; }
+.craft-q-name { font-weight: 900; letter-spacing: 0.1em; min-width: 3.4em; color: var(--ink-soft); }
+.craft-q-hint {
+  flex: 1; min-width: 0; font-size: 0.78rem; line-height: 1.7;
+  overflow-wrap: break-word; word-break: keep-all;
+}
 .shop-price { display: inline-flex; align-items: center; gap: 2px; font-weight: 700; color: var(--amber); min-width: 3.4em; }
 .shop-lumina { display: inline-flex; align-items: center; gap: 3px; font-size: 0.9rem; color: var(--amber); margin-left: auto; margin-right: 10px; }
 .shop-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
@@ -655,6 +672,28 @@ html.touch-ui .dlg-key { display: none; }
 .codex-tabs { margin-bottom: 12px; }
 .badge-total { font-size: 0.86rem; font-weight: 700; color: var(--ink-soft); margin-bottom: 4px; }
 .badge-total b { font-size: 1.15rem; font-weight: 900; color: var(--amber); }
+/* ---- v24 おうちの すてき度(ずかんタブの いちばん上)----
+   マスの列は minmax(0,1fr)+min-width:0(1fr だけだと 日本語のnowrapで 横スクロールが出る) */
+.home-score {
+  background: #fffaf0; border: 1px solid var(--line); border-radius: 6px;
+  padding: 9px 11px; margin-bottom: 10px;
+}
+.hs-head { font-size: 0.86rem; font-weight: 700; color: var(--ink-soft); }
+.hs-head b { font-size: 1.3rem; font-weight: 900; color: var(--amber); }
+.hs-head small { margin-left: 6px; font-size: 0.76rem; color: var(--ink-soft); }
+.hs-bar {
+  height: 8px; border-radius: 999px; background: #eee6d6; margin: 6px 0 7px; overflow: hidden;
+}
+.hs-bar i { display: block; height: 100%; background: var(--amber); }
+.hs-parts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 8px; }
+.hs-part {
+  min-width: 0; font-size: 0.72rem; color: var(--ink-soft);
+  word-break: keep-all; overflow-wrap: break-word; line-height: 1.6;
+}
+.hs-part b { font-weight: 900; color: var(--ink); }
+.hs-part.full b { color: var(--amber); }
+.hs-next { margin-top: 6px; font-size: 0.76rem; color: var(--ink-soft); line-height: 1.7; }
+.hs-next b { font-weight: 900; color: var(--amber); }
 /* 列は minmax(0,1fr)。ふつうの 1fr だと 列が「中身の最小幅」より せまくなれず、
    名前を1行に収めている(nowrap)ぶん パネルから 右へ はみ出して 横スクロールが出る
    (実機のスクショで発覚。3列めが 切れて見えていた) */
@@ -809,3 +848,57 @@ html.touch-ui .tx-col .title-btn.tx-wide { font-size: 0.92rem; padding: 12px 8px
   from { opacity: 0; transform: translate(-50%, -10px); }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
+
+/* ---- v24 フォトモード(P / 右上の「しゃしん」ボタン)---- */
+/*
+ * わくの中は 1つも ふさがない(見まわし・歩きは そのまま)。
+ * 根は クリックを 受けとらず、下の photo-btn だけが auto に もどる
+ * (#ui-root > * の auto は idを含むので、同じ強さで 打ちなおすこと。教訓2)。
+ */
+#ui-root > .photo-frame { pointer-events: none; }
+.photo-frame { position: absolute; inset: 0; z-index: 30; }
+.photo-frame.hidden { display: none; }
+.photo-frame .photo-btn { pointer-events: auto; }
+/* 額のふち(上下左右の帯)。中の絵を じゃましない太さにする */
+.photo-edge { position: absolute; background: rgba(22, 26, 34, 0.42); }
+.photo-edge-t { left: 0; right: 0; top: 0; height: calc(var(--sa-t) + 26px); }
+.photo-edge-b { left: 0; right: 0; bottom: 0; height: calc(var(--sa-b) + 74px); }
+.photo-edge-l { top: 0; bottom: 0; left: 0; width: 26px; }
+.photo-edge-r { top: 0; bottom: 0; right: 0; width: 26px; }
+/* かどの かぎかっこ(「ここが 写真の はし」を 目で わかるようにする) */
+.photo-corner { position: absolute; width: 34px; height: 34px; border: 3px solid rgba(242, 236, 220, 0.9); }
+.photo-corner-tl { left: 34px; top: calc(var(--sa-t) + 34px); border-right: 0; border-bottom: 0; }
+.photo-corner-tr { right: 34px; top: calc(var(--sa-t) + 34px); border-left: 0; border-bottom: 0; }
+.photo-corner-bl { left: 34px; bottom: calc(var(--sa-b) + 82px); border-right: 0; border-top: 0; }
+.photo-corner-br { right: 34px; bottom: calc(var(--sa-b) + 82px); border-left: 0; border-top: 0; }
+.photo-bar {
+  position: absolute; left: 50%; bottom: calc(var(--sa-b) + 16px); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 12px; color: #f2ecdc;
+  font-size: 0.92rem; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap;
+}
+.photo-note { opacity: 0.9; }
+.photo-count { opacity: 0.8; }
+.photo-btn {
+  min-height: 44px; padding: 10px 20px; border-radius: 999px; cursor: pointer;
+  background: #f2ecdc; color: #2a2318; border: 1px solid #b8a680;
+  font-family: inherit; font-size: 0.95rem; font-weight: 900; letter-spacing: 0.04em;
+}
+.photo-btn.sub { background: rgba(28, 42, 74, 0.86); color: #f2ecdc; border-color: #4a5878; }
+.photo-btn:active { transform: translateY(1px); }
+/* シャッターの白い ひとフラッシュ */
+.photo-flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+.photo-flash.on { animation: photo-flash 0.36s ease-out; }
+@keyframes photo-flash { from { opacity: 0.85; } to { opacity: 0; } }
+/* フォトモードのあいだ、ほかのUIは ぜんぶ しまう(写真に うつるのは 島だけ) */
+body.photo-mode #ui-root > *:not(.photo-frame) { display: none; }
+
+/* ---- v24 アルバム(ずかんのタブ)---- */
+.album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11em, 1fr)); gap: 10px; }
+.album-cell {
+  display: flex; flex-direction: column; gap: 6px; min-width: 0;
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; background: #fffdf6;
+}
+.album-cell img { width: 100%; height: auto; border-radius: 4px; display: block; }
+.album-when { font-size: 0.78rem; color: #6f6350; }
+.album-row { display: flex; gap: 6px; }
+.album-row .craft-btn { flex: 1; min-width: 0; }

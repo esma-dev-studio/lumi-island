@@ -1,10 +1,11 @@
 // セーブ/ロード(localStorage)。スキーマ検証・サニタイズと、壊れたデータからの安全な復旧。
 import { newGameState, SAVE_VERSION, type GameState, type PlacedFurniture, type QuestState } from '../game/GameState';
 import {
-  ITEMS, TOOLS, RECIPES, DEFAULT_HOME_STYLE, isStyleFor, isPaintColor, isPlaceable,
+  ITEMS, TOOLS, RECIPES, DEFAULT_HOME_STYLE, isStyleFor, isPaint, isPaintColor, isPlaceable,
   canDisplayIn, displayCapacity, isDisplayFurniture,
   type ItemId, type ToolId,
 } from '../data/items';
+import { SNOW_NEED } from '../systems/WeatherSystem';
 import { QUESTS } from '../data/quests';
 import { NPCS } from '../data/npcs';
 import { BADGES } from '../data/badges';
@@ -37,6 +38,8 @@ const COUNT_MAX = 9_999_999;
 const BULLETIN_DONE_RE = /^[a-z][a-z0-9_]{1,38}$/;
 /** 1日に出る おてつだいの上限。読みこみでも同じ数で切る(数の情報源は BulletinSystem ひとつ) */
 const BULLETIN_DONE_MAX = ERRAND_MAX;
+/** v24 しゃしんたてに かざった1まいの番号(アルバム側の Photo.id と同じ形) */
+const PHOTO_ID_RE = /^p[0-9]{1,15}$/;
 
 export function hasSave(): boolean {
   try {
@@ -287,6 +290,11 @@ export function sanitizeState(parsed: unknown): GameState | null {
         // 知らない色・壊れた値("red"・数値・#付けわすれ)は「色なし」= もとの色にもどす
         // (codex・homeStyle と同じ「知らない値は捨てる」方針)
         if (isPaintColor(f.color)) entry.color = f.color;
+        // v24 しゃしんたてに かざった1まいの番号。形(p123)だけを見る。
+        // その番号の しゃしんが アルバムに 無くても かまわない
+        // (アルバムは 別のキーなので、片方だけ 消えることが ありうる。
+        //  そのときは「まだ かざっていない」板として 描かれる = 絵が 化けない)
+        if (typeof f.photo === 'string' && PHOTO_ID_RE.test(f.photo)) entry.photo = f.photo;
         s.furniture.push(entry);
       }
     }
@@ -347,6 +355,19 @@ export function sanitizeState(parsed: unknown): GameState | null {
       const day = fs.day;
       if (finite(day) && Number.isInteger(day) && day >= 1 && day <= 100000) {
         s.festival = { day, got: fs.got === true, flown: fs.flown === true };
+      }
+    }
+
+    // v24 ミオの ふくの色。いろみずの表にある色だけ通す(知らない値は もとの服にもどす)
+    if (typeof raw.outfit === 'string' && isPaint(raw.outfit)) s.outfit = raw.outfit;
+
+    // v24 きょう ゆきを 何回 あつめたか。日づけが 範囲の外・こわれた値なら まるごと捨てる
+    // (= その日は まだ 0回。festival・bulletin と まったく同じ方針)
+    const sn = raw.snow as { day?: unknown; count?: unknown } | undefined;
+    if (sn && typeof sn === 'object' && !Array.isArray(sn)) {
+      const day = sn.day;
+      if (finite(day) && Number.isInteger(day) && day >= 1 && day <= 100000) {
+        s.snow = { day, count: intIn(sn.count, 0, SNOW_NEED, 0) };
       }
     }
 

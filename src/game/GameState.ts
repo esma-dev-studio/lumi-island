@@ -29,6 +29,13 @@ export interface PlacedFurniture {
    * 「色の表を減らしても 旧セーブが化けない」。
    */
   color?: string;
+  /**
+   * v24 しゃしんたてに かざっている しゃしんの番号(src/systems/PhotoSystem.ts の Photo.id)。
+   * 中身(絵そのもの)は アルバム側(別のキー lumi_photos)にあり、ここには 番号だけを持つ
+   * ——セーブ本体が しゃしんで ふくらまない・アルバムを 消しても セーブは 壊れない。
+   * その番号の しゃしんが 無ければ「まだ かざっていない」板のまま(表示側が そう描く)。
+   */
+  photo?: string;
 }
 
 /**
@@ -132,6 +139,18 @@ export interface GameState {
   bulletin?: BulletinProgress;
   /** v16 ほしまつりの進みぐあい。未設定 = この回の まつりでは まだ何もしていない */
   festival?: FestivalProgress;
+  /**
+   * v24 ミオの ふくの色(src/data/items.ts の PAINT_COLORS のキー)。
+   * 未設定 = 生まれたときの みどりの服。知らない値は セーブの読みこみで捨てる
+   * (homeStyle・家具の色と まったく同じ「知らない値は 通さない」方針)。
+   */
+  outfit?: string;
+  /**
+   * v24 きょう ゆきを 何回 あつめたか(3回で ゆきだるまが 手に入る)。
+   * 日づけと いっしょに持つので、日ごとの リセット処理を 1つも ふやさずに
+   * 「その日の ぶん」が 成り立つ(でんごんばん・ほしまつりと 同じ考えかた)。
+   */
+  snow?: { day: number; count: number };
 }
 
 export function newGameState(): GameState {

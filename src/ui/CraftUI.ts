@@ -5,6 +5,10 @@
 // タブを足しても「レシピ」がわのDOM(.craft-list / .craft-row / .craft-name / .craft-btn)は
 // 1つも変えていない。回帰ボット・UXボットは この形で作る手順を読むので、
 // 見出しやクラスを変えると 自動テストが いっせいに動かなくなる。
+//
+// v24 いちばん下に「まだ しらない レシピ」の節(?行)を足した。
+// こちらは **別のクラス craft-q-***(ボタンなし)にしてあるので、
+// .craft-row / .craft-btn を読む ボット・E2Eの みちには 1つも入らない。
 import type { GameState } from '../game/GameState';
 import { knownRecipes, canCraft, craft, craftList } from '../systems/CraftingSystem';
 import { ITEMS, TOOLS, type ItemId, type RecipeDef, type ToolId } from '../data/items';
@@ -12,6 +16,7 @@ import { COMBO_MAX, COMBO_MIN } from '../data/combos';
 import {
   COMBO_LOCKED_TEXT, canOffer, discoveredCount, previewCombo, tryCombo,
 } from '../systems/ComboSystem';
+import { unknownRecipeHints } from '../systems/DiscoverySystem';
 import { COMBOS } from '../data/combos';
 import { icon } from './icons';
 import { byInput } from './inputMode';
@@ -262,6 +267,25 @@ export class CraftUI {
         </div>`;
   }
 
+  /**
+   * v24 まだ しらないレシピの「?」行。
+   *
+   * ボタンを **1つも 置かない**のが 大事なところ:
+   * 回帰ボット・UXボット・E2Eは `.craft-row` と `.craft-btn` で 作る手順を 読むので、
+   * 別のクラス(craft-q-*)にして ボタンも持たせないことで、
+   * 「?」行が ボットの クラフト操作に まざる みちを 構造的に なくしてある
+   * (一覧の いちばん下に 置くのも 同じ理由——`.craft-row` の1つめは いままでどおり)。
+   * シルエットは 本物のアイコンを CSSで まっ黒に 落としたもの。
+   * 絵を もう1セット 描かないので、家具を足しても シルエットが 遅れない。
+   */
+  private unknownRow(text: string, out: string): string {
+    return `<div class="craft-q-row">
+          <span class="inv-ico craft-q-ico">${icon(out)}</span>
+          <span class="craft-q-name">???</span>
+          <span class="craft-q-hint">${text}</span>
+        </div>`;
+  }
+
   private renderRecipeTab(s: GameState): string {
     // 並びは craftList にまかせる(おぼえたばかりのレシピが上に来る)。
     // v19: レシピが40を超えて一覧が長くなり、スクロールの現在地が分からなくなったので
@@ -286,6 +310,15 @@ export class CraftUI {
     }
     for (const g of groups) {
       rows += section(g.title, g.entries.map((e) => this.recipeRow(s, e.recipe, false)).join(''));
+    }
+    // v24 いちばん下に「まだ しらない レシピ」。ひらめく きっかけを 1行ずつ 書く
+    const unknown = unknownRecipeHints(s);
+    if (unknown.length) {
+      rows += section(
+        'まだ しらない レシピ',
+        `<div class="craft-q-lead">つぎの ことを すると、作りかたを ひらめくよ。</div>` +
+          unknown.map((u) => this.unknownRow(u.text, String(u.recipe.out))).join('')
+      );
     }
     return `<div class="craft-list">${rows || '<div class="inv-empty">まだレシピを知らない。島のみんなに聞いてみよう!</div>'}</div>`;
   }

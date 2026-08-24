@@ -37,13 +37,17 @@ export class DisplayUI {
   onTake: ((slot: number) => void) | null = null;
   /** この家具を もちかえる */
   onCarry: (() => void) | null = null;
+  /** v24 この家具を その場で うごかす(中身ごと 置き直す) */
+  onMove: (() => void) | null = null;
 
   constructor(private getState: () => GameState) {
     this.el = document.createElement('div');
     this.el.className = 'panel display-panel hidden';
     document.getElementById('ui-root')!.appendChild(this.el);
     this.el.addEventListener('click', (e) => {
-      const t = (e.target as HTMLElement).closest('[data-close], [data-carry], [data-put], [data-take]') as HTMLElement | null;
+      const t = (e.target as HTMLElement).closest(
+        '[data-close], [data-carry], [data-move], [data-put], [data-take]'
+      ) as HTMLElement | null;
       if (!t) return;
       if (t.hasAttribute('data-close')) {
         this.close();
@@ -52,6 +56,11 @@ export class DisplayUI {
       if (t.hasAttribute('data-carry')) {
         this.close();
         this.onCarry?.();
+        return;
+      }
+      if (t.hasAttribute('data-move')) {
+        this.close();
+        this.onMove?.();
         return;
       }
       const take = t.dataset.take;
@@ -139,6 +148,7 @@ export class DisplayUI {
       ${contents.length > 0 ? '<div class="panel-sub">いれる</div>' : ''}
       ${putBlock}
       <div class="panel-sub">入れた いきものは いつでも とりだせるよ。
+        <button class="craft-btn sub" data-move style="white-space:nowrap;margin-left:8px">${def.label}を うごかす</button>
         <button class="craft-btn sub" data-carry style="white-space:nowrap;margin-left:8px">${def.label}を もちかえる</button>
       </div>
     `;

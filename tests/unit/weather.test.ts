@@ -85,17 +85,20 @@ describe('天気の決まり方(日付だけで決まる)', () => {
     expect(a.update(0.5, 30, 9).weather).toBe(new WeatherSystem().update(0.5, 30, 9).weather);
   });
 
-  it('確率は はれ60% / くもり20% / あめ20%(1000日で±3%以内)', () => {
+  // v24 「ゆき」を くもりの帯から 分けて足した(くもり20% → くもり10% + ゆき10%)。
+  // あめの帯(u>=0.8)は 1つも 動かないので、あめの日づけは v23 と 同じまま
+  it('確率は はれ60% / くもり10% / ゆき10% / あめ20%(1000日で±3%以内)', () => {
     const N = 1000;
-    const count: Record<Weather, number> = { sunny: 0, cloudy: 0, rainy: 0 };
+    const count: Record<Weather, number> = { sunny: 0, cloudy: 0, rainy: 0, snowy: 0 };
     for (let d = 1; d <= N; d++) count[weatherOfDay(d)]++;
-    expect(count.sunny + count.cloudy + count.rainy).toBe(N);
-    for (const w of ['sunny', 'cloudy', 'rainy'] as Weather[]) {
+    expect(count.sunny + count.cloudy + count.rainy + count.snowy).toBe(N);
+    for (const w of ['sunny', 'cloudy', 'rainy', 'snowy'] as Weather[]) {
       expect(Math.abs(count[w] / N - WEATHER_RATE[w]), `${w}=${count[w]}`).toBeLessThan(0.03);
     }
-    // 3種類ともちゃんと出る(片寄って1種類だけ、にならない)
-    expect(count.cloudy).toBeGreaterThan(100);
+    // 4種類ともちゃんと出る(片寄って1種類だけ、にならない)
+    expect(count.cloudy).toBeGreaterThan(50);
     expect(count.rainy).toBeGreaterThan(100);
+    expect(count.snowy).toBeGreaterThan(50);
   });
 
   it('シードは0以上1未満にちらばる', () => {

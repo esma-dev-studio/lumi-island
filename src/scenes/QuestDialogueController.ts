@@ -41,6 +41,14 @@ export interface QuestDialogueDeps {
    * (とうだいの点灯・ほしまつりと まったく同じ流儀)。
    */
   onBondEvent: (npcId: string) => void;
+  /**
+   * v24 ふくを そめたことに 気づく一言(1回だけ)。null なら 何も足さない。
+   *
+   * ここだけに フックを1つ 置いてあるのは、会話の表(src/data/npcs.ts)を
+   * ふやさずに「見た目の変化に 反応する」を 成り立たせるため。
+   * なかよし度は 1も 動かさない(気づいてもらう だけの ごほうび)。
+   */
+  noticeOutfit?: (npcId: string) => string | null;
 }
 
 /** 家の拡張こうじを たのめる相手(島の大工=ツムギ) */
@@ -101,6 +109,11 @@ export class QuestDialogueController {
     // そこには寄り道の入口(おくりもの・こうじ)も、こうじの案内も足さない
     // (ふだんのあいさつと、進行中の雑談にだけ足す)。
     const questCritical = q !== null && (q.mode === 'offer' || q.mode === 'done');
+    // v24 そめた ふくに 気づく一言。大事な場面(受注・報告)には まぜない
+    if (!questCritical) {
+      const notice = d.noticeOutfit?.(npcId);
+      if (notice) lines = [...lines, notice];
+    }
     // v11 「へやを ひろくできる」ことを、大工(ツムギ)の会話で かならず教える。
     // ボタンを押さなくても読める「1行の案内」にしてあるので、お金が足りない子にも
     // 「300ルミナ ためればいい」と伝わる(文面は HomeExpansion.homeExpandTalkLine)。

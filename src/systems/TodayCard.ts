@@ -20,7 +20,7 @@ import { NPCS, NPC_BY_ID, homeGiftFor } from '../data/npcs';
 import { ITEMS, isDisplayFurniture, isPaint, type ItemId } from '../data/items';
 import { willVisitToday } from './NPCSystem';
 import { plotsBloomingOn } from './GardenSystem';
-import { willRainbowOn } from './WeatherSystem';
+import { willRainbowOn, willSnowOn } from './WeatherSystem';
 import { isBottleDay } from './BottleSystem';
 import {
   FESTIVAL_DAY_TEXT, FESTIVAL_EVE_TEXT, isFestivalDay, isFestivalEve,
@@ -108,6 +108,13 @@ function eventsOf(s: GameState, day: number): TodayEvent[] {
   // 5) あめのち にじ(src/systems/WeatherSystem.ts willRainbowOn)
   if (willRainbowOn(day)) {
     out.push({ id: 'rainbow', text: 'あめのち にじの よかん', icon: 'rainbow' });
+  }
+
+  // 5.5) v24 ゆきの日(10日に1回ぐらいの まれな天気)。
+  // 虹と 同じ たぐいの「その日にしか 見られない空」なので、虹の すぐ下に置く。
+  // 日づけの計算は 1つも写経せず WeatherSystem に聞く(上の約束2のとおり)
+  if (willSnowOn(day)) {
+    out.push({ id: 'snow', text: 'ゆきが ふりそう。ゆきだるまを 作れるかも', icon: 'f_snowman' });
   }
 
   // 6) 浜に メッセージボトル(src/systems/BottleSystem.ts isBottleDay)

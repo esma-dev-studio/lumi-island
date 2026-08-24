@@ -107,10 +107,23 @@ export class InputRouter {
     this.gs.playEmote();
   }
 
-  /** R・まわすボタン(配置中のみ) */
+  /** P・しゃしんボタン: フォトモードの 出し入れ(v24) */
+  togglePhoto(): void {
+    this.gs.togglePhotoMode();
+  }
+
+  /**
+   * R・まわすボタン。
+   *   配置中           … まわす(これまでどおり)
+   *   置いた家具のそば … v24 その場で うごかす(編集モード)をはじめる
+   * どちらでもない場面では 何も起きない(押しても おどろかない)。
+   */
   rotatePlacement(): void {
     const gs = this.gs;
-    if (!gs.placement.active) return;
+    if (!gs.placement.active) {
+      gs.moveNearestFurniture();
+      return;
+    }
     sfx('ui'); // v18 まわした手ごたえ(ここも無音だった)
     gs.placement.rotate();
   }
@@ -133,6 +146,12 @@ export class InputRouter {
   escape(): void {
     const gs = this.gs;
     if (gs.seq.active) return; // 就寝・見せ場の途中で中断やポーズをさせない(状態破壊防止)
+    // v24 フォトモードは いちばん上の わく。開いていたら それだけ とじる
+    // (Escで ポーズまで 出てしまうと、写真を とる → メニュー、と 2段 もどることになる)
+    if (gs.photoUI.open) {
+      gs.closePhotoMode();
+      return;
+    }
     // おくりものの選択パネルは会話の上に乗る小さなUI。開いていたらそれだけ閉じて会話に戻す
     // (Escで会話ごと終わってしまうと、話しかけ直しが必要になって子どもが迷う)
     if (gs.questDlg?.giftUI.open) {
@@ -203,6 +222,10 @@ export class InputRouter {
       }
       if (e.code === 'KeyX') {
         this.emote();
+        return;
+      }
+      if (e.code === 'KeyP') {
+        this.togglePhoto();
         return;
       }
       if (e.code === 'Escape') {

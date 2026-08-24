@@ -66,7 +66,19 @@ export type ItemId =
   | 'sunsetfish' | 'f_pair_bench' | 'f_travel_map'
   // ぬし(3か所)と、その トロフィー家具3種
   | 'nushi_koi' | 'nushi_dai' | 'nushi_yoru'
-  | 'f_trophy_koi' | 'f_trophy_dai' | 'f_trophy_yoru';
+  | 'f_trophy_koi' | 'f_trophy_dai' | 'f_trophy_yoru'
+  // ---- v24 おうちパック: おける家具を 20しゅるい ふやす ----
+  // 入手経路を4つに散らしてある(どれか1つに かたよると「行く場所」が ふえない):
+  //   クラフト8(島の素材だけで作れる) / ツムギの店4(お金で買う)
+  //   いちば島の週がわり4(かよう理由) / くみあわせ4(見つける あそび)
+  | 'f_lowtable' | 'f_stool' | 'f_bookstack' | 'f_wallclock'
+  | 'f_bigrug' | 'f_houseplant' | 'f_blocks' | 'f_futon'
+  | 'f_teddy' | 'f_roundlamp' | 'f_smalldesk' | 'f_bigvase'
+  | 'f_exotic_jar' | 'f_bead_curtain' | 'f_camel_doll' | 'f_blue_lantern'
+  | 'f_starbox' | 'f_shellframe' | 'f_mushstool' | 'f_bigwind'
+  // ---- v24 くらしパック: 買う・作るのではなく「その日 したこと」で手に入る2つ ----
+  // ゆきだるま = ゆきの日に 草地で ゆきを 3回 あつめる / しゃしんたて = はじめて しゃしんを とる
+  | 'f_snowman' | 'f_photostand';
 
 export type ToolId = 'axe' | 'pickaxe' | 'rod' | 'sickle' | 'net' | 'shovel';
 
@@ -347,11 +359,56 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     id: 'f_trophy_yoru', name: 'ヨルノヌシのがく', sell: 0, kind: 'furniture', glow: true, keyItem: true,
     desc: 'ヨルノヌシを うつしとった 木のがくぶち。よるは 魚の かたちが あお白く 光る',
   },
+  // =========================================================================
+  // v24 おうちパック(おける家具 20しゅるい)。
+  //
+  // 「家を ひろげたのに おくものが 少ない」という 実プレイの声から。
+  // どれも いろみずで ぬれる(=光る部品を もたない or 光る部品だけ よけて ぬれる)ので、
+  // 同じ家具を 4色に ぬり分けて ならべる あそびが そのまま つかえる。
+  // 売値は「材料の 手に入りにくさ + 大きさ」で決めてある(既存の家具と つり合う帯に そろえた)。
+  // =========================================================================
+  // ---- クラフト8種(島の素材だけで作れる。5つは 最初から見え、3つは ひらめきで出る)----
+  f_lowtable: { id: 'f_lowtable', name: 'ローテーブル', sell: 32, kind: 'furniture', desc: 'せの ひくい 木のテーブル。ラグの上に おいて、りょうりを ならべられる' },
+  f_stool: { id: 'f_stool', name: 'スツール', sell: 24, kind: 'furniture', desc: 'せもたれの ない まるいイス。どこにでも おける、かるい こしかけ' },
+  f_bookstack: { id: 'f_bookstack', name: 'ほんのやま', sell: 30, kind: 'furniture', desc: 'よみかけの 本を つみあげた やま。いちばん上の1さつが ひらいたまま' },
+  f_wallclock: { id: 'f_wallclock', name: 'かべどけい', sell: 46, kind: 'furniture', desc: 'こうせきの はりが ひかる まるい とけい。かべぎわに かけて かざる' },
+  f_bigrug: { id: 'f_bigrug', name: 'おおきな ラグ', sell: 44, kind: 'furniture', desc: 'へやの まん中に しける、よこに ひろい しきもの。ふちに あみめの もようが ある' },
+  f_houseplant: { id: 'f_houseplant', name: 'はっぱの木', sell: 40, kind: 'furniture', desc: 'せの高い はちうえの 木。大きな はっぱが 天じょうの ほうへ のびている' },
+  f_blocks: { id: 'f_blocks', name: 'つみきの はこ', sell: 28, kind: 'furniture', desc: '木の はこに 入った つみき。四角と 三角と まるが ころがり出ている' },
+  f_futon: { id: 'f_futon', name: 'ふとん', sell: 36, kind: 'furniture', desc: 'わらを つめて ぬのを かけた しきぶとん。まくらが ちょこんと のっている' },
+  // ---- ツムギの店で買う4種(SHOP_STOCK。ねだんは 売値の2ばい=既存の店の やくそく)----
+  f_teddy: { id: 'f_teddy', name: 'くまの ぬいぐるみ', sell: 45, kind: 'furniture', desc: 'ツムギが ぬのを ぬい合わせた くまの ぬいぐるみ。首に リボンを まいている' },
+  f_roundlamp: { id: 'f_roundlamp', name: 'まるい ランプ', sell: 55, kind: 'furniture', glow: true, desc: '三本あしの 台に のった まるい あかり。夜は あたたかい 色に ともる' },
+  f_smalldesk: { id: 'f_smalldesk', name: 'ちいさな つくえ', sell: 40, kind: 'furniture', desc: 'ひきだしが 1つ ついた 小さな つくえ。手紙を かくのに ちょうどよい' },
+  f_bigvase: { id: 'f_bigvase', name: 'おおきな かびん', sell: 36, kind: 'furniture', desc: 'ゆかに じかに おく 背の高い かびん。えだつきの のばなが いけてある' },
+  // ---- いちば島の 週がわり4種(テンの店でしか 買えない)----
+  f_exotic_jar: { id: 'f_exotic_jar', name: 'いこくの つぼ', sell: 64, kind: 'furniture', desc: 'よその島の つぼ。首が ほそく、青い つる草の もようが まいている' },
+  f_bead_curtain: { id: 'f_bead_curtain', name: 'ビーズのれん', sell: 56, kind: 'furniture', desc: 'いろとりどりの たまを つないだ のれん。風が とおると かちかち 鳴る' },
+  f_camel_doll: { id: 'f_camel_doll', name: 'らくだの ぬいぐるみ', sell: 68, kind: 'furniture', desc: 'こぶが 2つ ある らくだの ぬいぐるみ。せなかに ちいさな にもつを のせている' },
+  f_blue_lantern: { id: 'f_blue_lantern', name: 'あおい ランタン', sell: 60, kind: 'furniture', glow: true, desc: 'あおい ガラスの ランタン。夜は 水の中に いるような 色に ともる' },
+  // ---- くみあわせで 見つかる4種(かくしレシピ。src/data/combos.ts)----
+  f_starbox: { id: 'f_starbox', name: 'ほしのオルゴール', sell: 72, kind: 'furniture', glow: true, desc: 'ふたを あけると ほしのかけらが のぞく 木の はこ。夜は 中から あお白い 光が もれる' },
+  f_shellframe: { id: 'f_shellframe', name: 'かいがらの フレーム', sell: 44, kind: 'furniture', desc: '木の がくぶちの まわりに かいがらを ならべた かざり。まん中は 海の絵' },
+  f_mushstool: { id: 'f_mushstool', name: 'きのこの スツール', sell: 46, kind: 'furniture', desc: 'きのこの かさを ざぶとんに した こしかけ。すわると すこし はずむ' },
+  f_bigwind: { id: 'f_bigwind', name: 'おおきな ふうりん', sell: 66, kind: 'furniture', desc: 'かいがらを 五つ ぶらさげた 大きな ふうりん。かいのふうりんより 音が ひくい' },
+  // ---- v24 くらしパック(お店にも クラフトにも 出さない2つ)----
+  // どちらも「その日 したこと」でしか 手に入らない。売ってしまっても また作れる/また とれる
+  f_snowman: {
+    id: 'f_snowman', name: 'ゆきだるま', sell: 20, kind: 'furniture',
+    desc: 'ゆきの日に あつめた ゆきで 作った だるま。えだの手と 木の実の目。とけずに ずっと のこる',
+  },
+  f_photostand: {
+    id: 'f_photostand', name: 'しゃしんたて', sell: 24, kind: 'furniture',
+    desc: 'とった しゃしんを 1まい かざる 木の たて。アルバムから すきな1まいを えらべる',
+  },
 };
 
 // ---------------------------------------------------------------------------
 // v10/v13 展示家具(すいそう・むしかご と、その おおきい版)。
 // 「置いた家具に いきものを 入れて かざる」しくみを、この1つの表だけで決める。
+//   - contentLabel : 中に入れるものの よび名(「魚」「虫」)。
+//                「?」レシピの ひらめき条件文(src/systems/DiscoverySystem.ts)が これを読む。
+//                文言を そこに書きうつすと 家具を足したときに 片方だけ 腐るので、ここが唯一の出どころ。
 //   - accepts  : 入れられるItemId(もちものから1つ減って PlacedFurniture.contents に入る)
 //   - capacity : 何びきまで 入るか(小さい版=1 / おおきい版=6)
 //                ここを増やすだけで UI(スロット・のこり数)・セーブの切りつめ・実績まで ついてくる。
@@ -386,6 +443,7 @@ const DISPLAY_BUGS = [
 export const DISPLAY_FURNITURE = {
   f_aquarium: {
     label: 'すいそう',
+    contentLabel: '魚',
     accepts: DISPLAY_FISH,
     capacity: 1,
     statKey: 'display_fish',
@@ -395,6 +453,7 @@ export const DISPLAY_FURNITURE = {
   },
   f_aquarium_big: {
     label: 'おおきな すいそう',
+    contentLabel: '魚',
     accepts: DISPLAY_FISH,
     capacity: 6,
     statKey: 'display_fish',
@@ -403,6 +462,7 @@ export const DISPLAY_FURNITURE = {
   },
   f_bugcage: {
     label: 'むしかご',
+    contentLabel: '虫',
     accepts: DISPLAY_BUGS,
     capacity: 1,
     statKey: 'display_bug',
@@ -412,6 +472,7 @@ export const DISPLAY_FURNITURE = {
   },
   f_bugcage_big: {
     label: 'おおきな むしかご',
+    contentLabel: '虫',
     accepts: DISPLAY_BUGS,
     capacity: 6,
     statKey: 'display_bug',
@@ -419,7 +480,7 @@ export const DISPLAY_FURNITURE = {
     full: 'おおきな むしかごは 6ぴきで いっぱい。とりだすと また いれられるよ',
   },
 } as const satisfies Record<string, {
-  label: string; accepts: readonly ItemId[]; capacity: number;
+  label: string; contentLabel: string; accepts: readonly ItemId[]; capacity: number;
   statKey: string; empty: string; full: string; upgrade?: string;
 }>;
 
@@ -660,6 +721,24 @@ export const RECIPES: RecipeDef[] = [
   // (= 週がわりの店に かよう理由が レシピの側からも できる)。
   { id: 'r_aroma_lamp', name: 'かおりのランプ', out: 'f_aroma_lamp', outKind: 'item', cost: { aroma_leaf: 2, wood: 1 } },
   { id: 'r_far_map', name: 'よそじまのちず', out: 'f_far_map', outKind: 'item', cost: { aroma_leaf: 1, sweet_honey: 1, wood: 2 } },
+  // ---- v24 おうちパックの クラフト8種 ----
+  // 材料は ぜんぶ「島で 手に入るもの」だけ。よその島の素材を まぜないので、
+  // 第1章の うちから 家を にぎやかに できる(実プレイの「置くものが少ない」への こたえ)。
+  // 5つは INITIAL_RECIPES(最初から見える)、3つは RECIPE_DISCOVERY(ひらめきで出る)。
+  { id: 'r_lowtable', name: 'ローテーブル', out: 'f_lowtable', outKind: 'item', cost: { wood: 2, twig: 2 } },
+  { id: 'r_stool', name: 'スツール', out: 'f_stool', outKind: 'item', cost: { wood: 2, cutgrass: 1 } },
+  { id: 'r_blocks', name: 'つみきの はこ', out: 'f_blocks', outKind: 'item', cost: { wood: 3, twig: 1 } },
+  { id: 'r_bigrug', name: 'おおきな ラグ', out: 'f_bigrug', outKind: 'item', cost: { fiber: 4, cutgrass: 3 } },
+  { id: 'r_futon', name: 'ふとん', out: 'f_futon', outKind: 'item', cost: { straw: 4, cutgrass: 2 } },
+  { id: 'r_bookstack', name: 'ほんのやま', out: 'f_bookstack', outKind: 'item', cost: { wood: 1, fiber: 3 } },
+  { id: 'r_wallclock', name: 'かべどけい', out: 'f_wallclock', outKind: 'item', cost: { wood: 2, ore: 1 } },
+  { id: 'r_houseplant', name: 'はっぱの木', out: 'f_houseplant', outKind: 'item', cost: { clay: 2, moss: 1, cutgrass: 2 } },
+  // ---- v24 くみあわせで見つかる4種 ----
+  // 材料は COMBOS の inputs と 必ず同じにする(validateComboData が機械検査する)。
+  { id: 'r_starbox', name: 'ほしのオルゴール', out: 'f_starbox', outKind: 'item', cost: { starshard: 1, wood: 2 } },
+  { id: 'r_shellframe', name: 'かいがらの フレーム', out: 'f_shellframe', outKind: 'item', cost: { shell: 1, wood: 2 } },
+  { id: 'r_mushstool', name: 'きのこの スツール', out: 'f_mushstool', outKind: 'item', cost: { mushroom: 2, wood: 1 } },
+  { id: 'r_bigwind', name: 'おおきな ふうりん', out: 'f_bigwind', outKind: 'item', cost: { shell: 2, wood: 1 } },
 ];
 
 // 最初から知っているレシピ。
@@ -674,21 +753,35 @@ export const RECIPES: RecipeDef[] = [
 // むしかご・いにしえのつぼ・かかしは、その道具でとれた素材の初回入手でひらめく。
 // v12: キッチンだいも最初から見せる。くみあわせタブの りょうりが
 // 「キッチンだいが あれば つくれそう」と出たときに、作りかたが すぐ見つかるようにする。
+// v24: おうちパックの クラフト8種のうち5つを 最初から見せる。
+// 「家を ひろげたのに 置くものが少ない」への こたえなので、
+// いちばん よく使う すわる・のせる・しく の3つ(スツール・ローテーブル・おおきなラグ)は
+// 最初の日から 作れるようにしてある。のこり3つ(ほんのやま・かべどけい・はっぱの木)は
+// 素材の入手で ひらめく = クラフト画面の「?」行に 出る側にまわす。
 export const INITIAL_RECIPES = [
   'r_sickle', 'r_rod', 'r_flowerbed', 'r_shelldeco',
   'r_bookcase', 'r_dishrack', 'r_flowervase', 'r_wall_leaf', 'r_floor_rug',
   'r_broom', 'r_jar', 'r_gardentable',
   'r_net', 'r_shovel', 'r_strawmat',
   'r_kitchen',
+  'r_stool', 'r_lowtable', 'r_bigrug', 'r_blocks', 'r_futon',
 ];
 
 // ツムギの店で買える家具・かべがみ・ゆかいた
+// 家具の ねだんは「売値の およそ2ばい」(買って すぐ売ると だいたい半分)。
+// 模様替え(かべ・ゆか)だけは 3ばい: 一度買えば ずっと使えるので 高くしてある。
 export const SHOP_STOCK: { item: ItemId; price: number }[] = [
   { item: 'f_chair', price: 40 },
   { item: 'f_shelf', price: 90 },
   { item: 'f_rug', price: 60 },
   { item: 'f_pot', price: 35 },
   { item: 'f_sign', price: 30 },
+  // v24 おうちパックの お店4種。ならびは「安い順」ではなく
+  // 「大きいもの → 小さいもの」= 部屋を 組み立てる じゅんばんにしてある
+  { item: 'f_smalldesk', price: 80 },
+  { item: 'f_roundlamp', price: 110 },
+  { item: 'f_teddy', price: 90 },
+  { item: 'f_bigvase', price: 72 },
   // 模様替え(6種とも同じ値段)。作れる2種も置いてある(作らずに買ってもよい・戻したいときにも買える)
   { item: 'wall_cream', price: 120 },
   { item: 'wall_sky', price: 120 },

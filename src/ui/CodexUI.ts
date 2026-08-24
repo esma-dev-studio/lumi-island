@@ -21,6 +21,11 @@ import { badgeCountByCategory, badgeRows, earnedBadgeCount } from '../systems/Ba
 import {
   BADGES, BADGE_CATEGORIES, BADGE_CATEGORY_ORDER, BADGE_TIERS, type BadgeDef,
 } from '../data/badges';
+import {
+  HOME_SCORE_CAPS, HOME_SCORE_LABELS, HOME_SCORE_MAX, HOME_SCORE_TIER_LABELS,
+  homeScore, homeScoreParts, homeScoreTier, homeScoreToNextTier, type HomeScoreKey,
+} from '../systems/HomeScore';
+import { PHOTO_MAX, photoLabel, type Photo } from '../systems/PhotoSystem';
 import { badgeIcon, icon } from './icons';
 import { byInput } from './inputMode';
 
@@ -33,7 +38,7 @@ const CHECK =
 const CODEX_ITEMS = Object.keys(ITEMS) as ItemId[];
 
 /** タブの種類。既定は codex(v13までと同じ画面) */
-type CodexTab = 'codex' | 'badge';
+type CodexTab = 'codex' | 'badge' | 'album';
 
 /** バッジ1つぶんの絵(台座の形・色・段位のふち・中央のピクトを合成する) */
 function badgeArt(def: BadgeDef): string {
@@ -47,6 +52,37 @@ function badgeArt(def: BadgeDef): string {
   });
 }
 
+/**
+ * v24 おうちの「すてき度」(ずかんタブの いちばん上)。
+ *
+ * 数の出どころは src/systems/HomeScore.ts ひとつだけ——
+ * ここに書いてある 見出し・上限・段の呼び名も ぜんぶ あちらから もらう
+ * (バッジ hm_score1/2 と 来訪NPCの ほめ言葉も 同じ関数を読む)。
+ * 「/」を つかった 分数表示は しない: ずかんの「N / M」と 見た目が まぎれるため。
+ * 教訓3の「つぎの目標」を そのまま 出せるように、あと何てんかも 1行 そえる。
+ */
+function homeScoreBlock(s: GameState): string {
+  const total = homeScore(s);
+  const parts = homeScoreParts(s);
+  const tier = homeScoreTier(s);
+  const next = homeScoreToNextTier(s);
+  const chips = (Object.keys(HOME_SCORE_CAPS) as HomeScoreKey[])
+    .map(
+      (k) =>
+        `<span class="hs-part${parts[k] >= HOME_SCORE_CAPS[k] ? ' full' : ''}">${HOME_SCORE_LABELS[k]} <b>${parts[k]}</b></span>`
+    )
+    .join('');
+  const goal = next
+    ? `<div class="hs-next">あと <b>${next.need}</b> てんで「${next.label}」</div>`
+    : `<div class="hs-next">いちばん上の「${HOME_SCORE_TIER_LABELS[2]}」だよ。おめでとう!</div>`;
+  return `<div class="home-score">
+      <div class="hs-head">おうちの すてき度 <b>${total}</b> てん <small>${HOME_SCORE_TIER_LABELS[tier]}</small></div>
+      <div class="hs-bar"><i style="width:${Math.round((total / HOME_SCORE_MAX) * 100)}%"></i></div>
+      <div class="hs-parts">${chips}</div>
+      ${goal}
+    </div>`;
+}
+
 export class CodexUI {
   private el: HTMLElement;
   open = false;
@@ -54,6 +90,15 @@ export class CodexUI {
   private tab: CodexTab = 'codex';
   /** v13 読んだ手紙を もういちど ひらく(GameSceneが手紙UIへ つなぐ) */
   onReadLetter: ((id: string) => void) | null = null;
+  /** v24 アルバムの中身を 読む(GameSceneが持っている。ここでは 読むだけ) */
+  getPhotos: (() => readonly Photo[]) | null = null;
+  /** v24 しゃしんを 1まい けす */
+  onDeletePhoto: ((id: string) => void) | null = null;
+  /**
+   * v24 「かざる1まいを えらぶ」ときだけ 入る受け口。
+   * null なら アルバムは 見るだけ(しゃしんたてから ひらいたときだけ ボタンが出る)。
+   */
+  albumPick: ((id: string) => void) | null = null;
 
   constructor(private getState: () => GameState) {
     this.el = document.createElement('div');
@@ -61,7 +106,9 @@ export class CodexUI {
     document.getElementById('ui-root')!.appendChild(this.el);
     // クリックは委譲リスナー1本(毎描画のonclick割り当てだと「見えるのに押せない」が起きる)
     this.el.addEventListener('click', (e) => {
-      const t = (e.target as HTMLElement).closest('[data-close], [data-letter], [data-tab]') as HTMLElement | null;
+      const t = (e.target as HTMLElement).closest(
+        '[data-close], [data-letter], [data-tab], [data-pick], [data-del]'
+      ) as HTMLElement | null;
       if (!t) return;
       if (t.hasAttribute('data-close')) {
         sfx('close'); // v18 とじる操作の音
@@ -74,6 +121,23 @@ export class CodexUI {
         this.tab = tab;
         this.render();
         this.el.scrollTop = 0; // タブを かえたら いちばん上から見せる
+        return;
+      }
+      const pick = t.dataset.pick;
+      if (pick) {
+        this.albumPick?.(pick);
+        return;
+      }
+      const del = t.dataset.del;
+      if (del) {
+        // 消すのは とりかえしが つかないので、1回だけ たしかめる(教訓2)
+        if (t.dataset.sure === '1') {
+          this.onDeletePhoto?.(del);
+          this.render();
+        } else {
+          t.dataset.sure = '1';
+          t.textContent = 'ほんとに けす?';
+        }
         return;
       }
       const id = t.dataset.letter;
@@ -89,6 +153,8 @@ export class CodexUI {
   close(): void {
     this.open = false;
     this.el.classList.add('hidden');
+    // v24 「かざる」の受け口は 1回かぎり(つぎに ずかんを ひらいたときは 見るだけに もどす)
+    this.albumPick = null;
   }
 
   /** タブの見出し2枚。数は いつも出す(バッジが何こ たまったか ひと目で分かる) */
@@ -96,10 +162,54 @@ export class CodexUI {
     const got = earnedBadgeCount(s);
     const btn = (id: CodexTab, label: string): string =>
       `<button class="shop-tab${this.tab === id ? ' on' : ''}" data-tab="${id}">${label}</button>`;
+    const shots = this.getPhotos?.().length ?? 0;
     return `<div class="shop-tabs codex-tabs">
       ${btn('codex', 'ずかん')}
       ${btn('badge', `バッジ ${got}/${BADGES.length}`)}
+      ${btn('album', `アルバム ${shots}/${PHOTO_MAX}`)}
     </div>`;
+  }
+
+  /** v24 アルバムを ひらく(しゃしんたてから えらぶときも ここを通る) */
+  showAlbum(getPhotos: () => readonly Photo[]): void {
+    this.getPhotos = getPhotos;
+    this.tab = 'album';
+    this.open = true;
+    this.render();
+    this.el.classList.remove('hidden');
+    this.el.scrollTop = 0;
+    sfx('page');
+  }
+
+  /**
+   * v24 アルバムのタブ。新しい しゃしんが 上に来るように さかさに ならべる。
+   * 「かざる」は しゃしんたてから ひらいたときだけ 出す(ふだんは 見るだけ)。
+   */
+  private renderAlbum(s: GameState): void {
+    const photos = [...(this.getPhotos?.() ?? [])].reverse();
+    const cells = photos
+      .map(
+        (p) => `<div class="album-cell">
+          <img src="${p.data}" alt="${photoLabel(p)}" loading="lazy">
+          <span class="album-when">${photoLabel(p)}</span>
+          <span class="album-row">
+            ${this.albumPick ? `<button class="craft-btn sub" data-pick="${p.id}">かざる</button>` : ''}
+            <button class="craft-btn sub" data-del="${p.id}">けす</button>
+          </span>
+        </div>`
+      )
+      .join('');
+    const empty =
+      '<div class="inv-empty">まだ 1まいも ないよ。' +
+      byInput('Pキー', '右上の「しゃしん」') +
+      'で しゃしんを とってみよう!</div>';
+    this.el.innerHTML = `
+      <div class="panel-title">ずかん <span class="panel-close" data-close>${byInput('とじる(Z)', 'とじる')}</span></div>
+      ${this.tabsHtml(s)}
+      <div class="panel-sub first">アルバム <small>${photos.length} / ${PHOTO_MAX}まい</small></div>
+      ${photos.length > 0 ? `<div class="album-grid">${cells}</div>` : empty}
+      <div class="panel-sub">いっぱいに なると 古い しゃしんから きえるよ。しゃしんたてに かざって みよう</div>
+    `;
   }
 
   /**
@@ -143,6 +253,10 @@ export class CodexUI {
     const s = this.getState();
     if (this.tab === 'badge') {
       this.renderBadges(s);
+      return;
+    }
+    if (this.tab === 'album') {
+      this.renderAlbum(s);
       return;
     }
     const codex = (s.codex ?? {}) as Partial<Record<ItemId, number>>;
@@ -240,6 +354,7 @@ export class CodexUI {
     this.el.innerHTML = `
       <div class="panel-title">ずかん <span class="panel-close" data-close>${byInput('とじる(Z)', 'とじる')}</span></div>
       ${this.tabsHtml(s)}
+      ${homeScoreBlock(s)}
       <div class="panel-sub first">あつめたもの <small>${found} / ${CODEX_ITEMS.length}</small></div>
       <div class="codex-grid">${cells}</div>
       <div class="panel-sub">くみあわせ <small>${comboFound} / ${COMBOS.length}</small></div>

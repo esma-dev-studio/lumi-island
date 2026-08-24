@@ -24,7 +24,9 @@ import { makeBench } from '../entities/buildings';
 import {
   makeSimpleDeck, makeStationTrain, makeTrainReflection, type StationTrainMesh,
 } from '../entities/station';
-import { attachLightPool, registerGlowSource, unregisterGlowSource } from '../entities/effects';
+import {
+  attachLightPool, registerGlowSource, registerSnowSurface, unregisterGlowSource,
+} from '../entities/effects';
 import { washEnvelope } from '../entities/water';
 import { coveNightLevel } from './CoveArea';
 import type { BugSpotKind } from '../data/island';
@@ -107,6 +109,7 @@ export class MarketArea {
     ground.parent = this.root;
     ground.position.set(0, 0, 0);
     ground.receiveShadows = true;
+    registerSnowSurface(ground); // v24 ゆきの日は いちば島の地面にも 積もる
     put(makeMarketSea(scene, seaMat), 0, 0, MARKET_SEA_Y);
     this.foam = makeMarketFoam(scene);
     this.foam.mesh.parent = this.root;

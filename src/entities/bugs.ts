@@ -21,12 +21,20 @@ import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 import { A0, appendBlob, toMesh, jitterColor, getGlowMats, type Arrays } from './flora';
 import { faceOutward } from './deco';
+import { vnoise } from './terrain';
 import type { BugId } from '../systems/BugSystem';
 
 const C_BODY_DARK = Color3.FromHexString('#3f3a33'); // 虫のからだ(こげ茶)
 const C_WING_WHITE = Color3.FromHexString('#f4f2e8');
 const C_WING_EDGE = Color3.FromHexString('#c9c2ac');
+// かごの中の モンシロの 黒点(v25)。羽の白との差が つく こさにする
+// (#c9c2ac の ぼかしでは 接写でも 点に 見えなかった)。
+// まっ黒にすると「あな」に見えるので、こげ茶がかった すみ色にする
+const C_SHIRO_DOT = Color3.FromHexString('#453f34');
 const C_AGEHA = Color3.FromHexString('#f2e2a8'); // アゲハの地色(クリーム)
+// かごの中の アゲハの 地色(v25)。野外の #f2e2a8 は かごの木ごしだと 白に とんで
+// モンシロと 見わけが つかないので、かごの中だけ 黄を こくする(野外の チョウは そのまま)
+const C_AGEHA_CAGE = Color3.FromHexString('#edd47e');
 const C_AGEHA_BAND = Color3.FromHexString('#2f2b26'); // アゲハの黒すじ
 const C_TENTO = Color3.FromHexString('#c8483c'); // テントウのはね(赤)
 const C_KABUTO = Color3.FromHexString('#5a3a24'); // カブトムシ(黒茶)
@@ -915,6 +923,272 @@ export function makeBugMesh(scene: Scene, id: BugId, seed: number): BugMesh {
 export const CAGED_GLOW_NAME = 'cagedBugGlow';
 
 /**
+ * v24 かごの中で 動かす羽(子メッシュ)の名前。furniture.ts が rotation.z を入れて はばたかせる。
+ * 左は `${CAGED_WING_NAME}L`・右は `${CAGED_WING_NAME}R`。
+ *
+ * かごの中の チョウは「羽を **立てて** とまっている」姿を もとの形にしてあり、
+ * ひらく角(rotation.z)で ぱたぱたさせる——本物の チョウも とまっているときは
+ * 羽を ひらいたり とじたり する。広げた形を もとにすると かごの わくを つきぬける
+ * (おおきなかごの とまり場は はしから 0.088m しか あいていない。display_big_v13 が 数で 見張っている)。
+ */
+export const CAGED_WING_NAME = 'cagedBugWing';
+
+/** かごの中の チョウの 羽の つけね(からだの上)。furniture.ts が ここへ 子メッシュを置く */
+const CAGED_WING_ROOT_Y = 0.017;
+/**
+ * 羽を いつも すこし ひらいておく角(rad)。
+ * cagedBugPose の wing は 0.08〜0.70 で、いちばん とじたときは 左右の羽が
+ * ぴったり かさなって「1まいの板」に見える。**止まった1枚**でも 2まいと 分かるように、
+ * かたち そのものを この角ぶん 外へ たおしておく(うごきの決まりは BugSystem のまま)。
+ */
+const CAGED_WING_SPLAY = 0.05;
+
+/**
+ * かごの中で 羽を ひらく はばの 取りぶん(furniture.ts が rotation.z に かける)。
+ *
+ * cagedBugPose の wing(0.08〜0.70rad = 5〜40度)を そのまま 入れると、
+ * かごを 正面から 見たとき 羽が **Vの字**に ひらいて「紙ひこうき」に 見えた
+ * (v25 1回めの実写 ref_shiro_after.png)。チョウは 羽を 立てて とまっている姿が
+ * いちばん チョウらしいので、かごの中だけ ひらきを 半分ちょっとに おさえる。
+ * うごきの決まり(BugSystem)は 1つも 変えない=決定論も そのまま。
+ */
+export const CAGED_WING_GAIN: Readonly<Partial<Record<BugId, number>>> = { b_shiro: 0.6, b_ageha: 0.6 };
+
+/**
+ * ひらたい板(v25)。チョウの 羽と、その もようは これで 作る。
+ *
+ * **なぜ appendBlob を やめたのか**: appendBlob は ゆがませた球なので、いくつ ならべても
+ * 「たまの ふさ」にしか ならない。v24/v25前半の ミニチョウが 接写で
+ * 白い カリフラワーに 見えていた原因が これ(.logs/screenshots/v25_cagewing/unlit_shiro_before.png
+ * = 無照明で 頂点色だけを 出した1枚。光でも 法線でもなく **形**が わるいことが これで 決まった)。
+ * 羽は「ふちの かたちが すべて」なので、外わくを そのまま 打ちこめる 板を 用意する。
+ *
+ * 作り: 球と まったく同じ つなぎ方(輪×だん)のまま、
+ *   - 「だん」を x(あつみ)の むきに とる
+ *   - 「輪」を outline の 点そのものに する
+ * ので、法線の むきの きまり(toMesh 'flip' + faceOutward)は appendBlob と 同じでよい。
+ * PROFILE の まん中(k=1)だけが ふちで、その 前後は **たいらな面**。
+ * ふくらませないので、正面から見たとき ぴたりと 外わくの かたちに 見える。
+ *
+ * outline は [z, y] を **反時計まわり**(z=右・y=上)で。順が 逆だと 面が 裏返る。
+ * 右ばね(sx<0)は x を 鏡にする=向きが 裏返るので、中で 順を ひっくり返して そろえる。
+ * outline は まん中の点から すべての ふちが 見える形(星形)にすること
+ * (へこみが 深いと その三角だけ 法線が 裏を向き、display_big_v13 の 外向き検査に かかる)。
+ *
+ * @param sx     +1=左ばね / -1=右ばね
+ * @param baseX  板の まん中の |x|(m)。かさねる板は ここを ずらして Zファイティングを よける
+ * @param thick  あつみの 半分(m)
+ */
+function appendPlate(
+  A: Arrays, sx: number, baseX: number, thick: number,
+  outline: readonly (readonly [number, number])[], color: Color3,
+  opts: { rimDark?: number; tilt?: number; seed?: number } = {}
+): void {
+  const n = outline.length;
+  const seed = opts.seed ?? 1;
+  const rimDark = opts.rimDark ?? 0.12;
+  const tilt = opts.tilt ?? 0;
+  let cz = 0, cy = 0;
+  for (const [z, y] of outline) {
+    cz += z;
+    cy += y;
+  }
+  cz /= n;
+  cy /= n;
+  // [面の ひろがり, あつみ]。0.94 まで たいら → ふち(1.0)で 0 に落とす
+  const PROFILE: readonly (readonly [number, number])[] = [[0, 1], [0.94, 1], [1, 0], [0.94, -1], [0, -1]];
+  const ct = Math.cos(tilt), st = Math.sin(tilt);
+  const base = A.pos.length / 3;
+  for (const [k, e] of PROFILE) {
+    for (let s = 0; s <= n; s++) {
+      const [oz, oy] = outline[sx > 0 ? s % n : (n - (s % n)) % n];
+      const x0 = sx * (baseX + e * thick);
+      const y0 = cy + k * (oy - cy);
+      A.pos.push(x0 * ct - y0 * st, x0 * st + y0 * ct, cz + k * (oz - cz));
+      // ふちを すこし 落とすと、まっ白でも 羽の あつみと かさなりが 読める
+      const f = (1 - rimDark * k) * (0.95 + vnoise(oz * 47 + seed, oy * 47 + seed) * 0.1);
+      A.col.push(color.r * f, color.g * f, color.b * f, 1);
+    }
+  }
+  for (let r = 0; r < PROFILE.length - 1; r++) {
+    for (let s = 0; s < n; s++) {
+      const a = base + r * (n + 1) + s;
+      const b = a + 1;
+      const c = a + n + 1;
+      A.idx.push(a, b, c, b, c + 1, c);
+    }
+  }
+}
+
+/** 2点を むすぶ 帯(羽の すじ・黒すじ)の わく。反時計まわりの 4点を 返す */
+function stripe(
+  z0: number, y0: number, z1: number, y1: number, w0: number, w1: number
+): readonly (readonly [number, number])[] {
+  const dz = z1 - z0, dy = y1 - y0;
+  const len = Math.hypot(dz, dy) || 1;
+  const pz = -dy / len, py = dz / len; // すすむ向きを 左へ 90度 まわした ほうこう
+  return [
+    [z0 - pz * w0, y0 - py * w0],
+    [z1 - pz * w1, y1 - py * w1],
+    [z1 + pz * w1, y1 + py * w1],
+    [z0 + pz * w0, y0 + py * w0],
+  ];
+}
+
+/**
+ * かごの中の チョウの 前ばね・後ばねの わく(羽の つけね y=0 = 回転の中心)。
+ *
+ * かたちの きめどころは 3つ。どれか 1つでも 欠けると 別のものに 見える(v25の実写で 順に つぶした):
+ *   ① **上前の とがり**(0.050,0.076)。ここを まるめると 貝・扇子に なる。
+ *   ② 前ばねの うしろの すそを 高く 切る(-0.030,0.024)。**後ばねが 下うしろへ はみ出す**
+ *      = 前後2まいの くびれが 出る。これが チョウの羽の 記号そのもの。
+ *   ③ 後ばねを 前ばねより うしろへ のばす。アゲハは さらに **尾状突起**(うしろへ 出るとげ)。
+ */
+const CAGED_FOREWING: readonly (readonly [number, number])[] = [
+  [0.026, 0.000], [0.036, 0.032], [0.044, 0.084], [0.020, 0.080], [0.000, 0.068],
+  [-0.016, 0.048], [-0.026, 0.026], [-0.022, 0.006], [-0.004, -0.004], [0.012, -0.006],
+];
+const CAGED_HINDWING: readonly (readonly [number, number])[] = [
+  [0.012, -0.006], [0.016, 0.014], [0.004, 0.034], [-0.014, 0.042], [-0.032, 0.036],
+  [-0.042, 0.018], [-0.040, -0.002], [-0.024, -0.014], [-0.004, -0.014],
+];
+const CAGED_HINDWING_TAILED: readonly (readonly [number, number])[] = [
+  [0.014, -0.006], [0.018, 0.016], [0.006, 0.038], [-0.014, 0.046], [-0.034, 0.040],
+  [-0.046, 0.022], [-0.058, -0.004], [-0.044, -0.002], [-0.030, -0.014], [-0.008, -0.016],
+];
+
+/**
+ * かごの中の チョウの 片ばね(v25)。回転の中心は メッシュの原点=からだの上。
+ *
+ * **なぜ「立てた羽」なのか**: かごの とまり場は どれも 虫が よこ(±X)を 向くので、
+ * かごを 正面から 見ると チョウは かならず **真よこ**から 見えることになる。
+ * 羽を 水平に ひろげた姿は 真よこからは 1本の線に つぶれるが、立てておけば
+ * 前ばね・後ばね・もようが まるごと 正面を 向く = 静止した1枚でも チョウと分かる。
+ *
+ * かさねる順は 内から 後ばね → 前ばね → もよう。|x| を 少しずつ 大きくして
+ * 同じ面に 置かない(同じ面だと Zファイティングで しま・黒面が 出る。教訓1)。
+ * もようは 羽の面から 1mm 出るだけ = 接写でも「はりついた もよう」に 見える。
+ *
+ * @param sx  +1=左ばね / -1=右ばね(名前と ひらく向きが これで決まる)
+ */
+function cagedButterflyWing(scene: Scene, sx: number, seed: number, kind: 'shiro' | 'ageha'): Mesh {
+  const W = A0();
+  const base = kind === 'shiro' ? C_WING_WHITE : C_AGEHA_CAGE;
+  // 羽ぜんたいを 外へ たおしておく(左は +x へ・右は -x へ)
+  const tilt = -sx * CAGED_WING_SPLAY;
+  const P = (bx: number, th: number, o: readonly (readonly [number, number])[], c: Color3,
+    rimDark: number, sd: number): void =>
+    appendPlate(W, sx, bx, th, o, c, { rimDark, tilt, seed: sd });
+
+  // 後ばね(内がわ・下うしろ)。地色を 落として 前ばねとの かさなり(=2まいある)を 見せる
+  P(0.0065, 0.0016, kind === 'ageha' ? CAGED_HINDWING_TAILED : CAGED_HINDWING,
+    jitterColor(base, seed + 2, 0.05).scale(0.87), 0.16, seed + 2);
+  // 前ばね(主役。からだより ずっと 大きい)
+  P(0.0100, 0.0018, CAGED_FOREWING, jitterColor(base, seed, 0.04), 0.13, seed);
+
+  const M = (o: readonly (readonly [number, number])[], c: Color3, sd: number, onHind = false): void =>
+    appendPlate(W, sx, onHind ? 0.0089 : 0.0128, 0.0005, o, c, { rimDark: 0.06, tilt, seed: sd });
+  if (kind === 'shiro') {
+    // モンシロ: 白いだけだと「白いかたまり」なので、
+    //   ① 羽のすじ(うすい灰。これが いちばん「羽」に見せる)
+    //   ② 羽のさきの くすんだ ふち(本物の モンシロも さきが 黒っぽい)
+    //   ③ 黒点1つ(種の 判別記号は これ だけ。教訓1)
+    // すじは **細く**。太い すじを 何本も 引くと 扇子(せんす)に 見えた(v25 2回めの実写)
+    for (const [z0, y0, z1, y1, w0, w1, sd] of [
+      [0.008, -0.002, 0.0376, 0.0552, 0.0018, 0.0008, 6],
+      [0.004, 0.000, 0.0218, 0.0733, 0.0017, 0.0008, 7],
+      [0.000, 0.000, -0.0056, 0.0578, 0.0016, 0.0008, 13],
+      [-0.004, 0.000, -0.0197, 0.0354, 0.0015, 0.0008, 20],
+    ] as [number, number, number, number, number, number, number][]) {
+      M(stripe(z0, y0, z1, y1, w0, w1), jitterColor(C_WING_EDGE, seed + sd, 0.05), seed + sd);
+    }
+    M(stripe(-0.004, 0.000, -0.0317, 0.0297, 0.0016, 0.0008),
+      jitterColor(C_WING_EDGE, seed + 14, 0.05), seed + 14, true);
+    // 羽のさき(前ばねの とがりの 内がわ)
+    M([[0.042, 0.081], [0.024, 0.077], [0.026, 0.062], [0.035, 0.058]], C_WING_EDGE, seed + 15);
+    // 黒点: まん丸で 大きいと「あな・目」に見える(v25の実写で確認)ので、
+    // たてに長い だ円にして 小さく、羽の まん中より すこし 前へ ずらす
+    M([[0.008, 0.036], [0.005, 0.042], [-0.001, 0.041], [-0.003, 0.035], [0.000, 0.030], [0.006, 0.031]],
+      C_SHIRO_DOT, seed + 8);
+  } else {
+    // アゲハ: 黄色い地に、つけねから 外へ ひろがる 黒すじ。
+    // 太さ・長さ・向きを ばらして「しましま模様」の 記号にしない
+    for (const [z0, y0, z1, y1, w0, w1, sd] of [
+      [0.010, -0.002, 0.0352, 0.0449, 0.0026, 0.0016, 8],
+      [0.004, 0.000, 0.0198, 0.0733, 0.0026, 0.0016, 9],
+      [-0.002, 0.000, -0.0138, 0.0471, 0.0024, 0.0014, 12],
+    ] as [number, number, number, number, number, number, number][]) {
+      M(stripe(z0, y0, z1, y1, w0, w1), jitterColor(C_AGEHA_BAND, seed + sd, 0.1), seed + sd);
+    }
+    // 前ばねの 外がわの こい ふち(わくを 16% 内へ 寄せた 線を 4本で なぞる)。
+    // すじだけだと 扇子に 見えるが、ふちの 帯が 1本 入ると「羽の ふち」に 見える
+    const edge: [number, number][] = [
+      [0.0381, 0.0759], [0.0179, 0.0725], [0.0011, 0.0625], [-0.0123, 0.0457], [-0.0207, 0.0272],
+    ];
+    for (let i = 0; i < edge.length - 1; i++) {
+      M(stripe(edge[i][0], edge[i][1], edge[i + 1][0], edge[i + 1][1], 0.0030, 0.0030),
+        jitterColor(C_AGEHA_BAND, seed + 17 + i, 0.08), seed + 17 + i);
+    }
+    // 後ばねの ふちと 尾状突起(アゲハだと ひと目で分かる かたち)
+    const hedge: [number, number][] = [[0.0014, 0.0333], [-0.0150, 0.0399], [-0.0314, 0.0350]];
+    for (let i = 0; i < hedge.length - 1; i++) {
+      M(stripe(hedge[i][0], hedge[i][1], hedge[i + 1][0], hedge[i + 1][1], 0.0030, 0.0030),
+        jitterColor(C_AGEHA_BAND, seed + 22 + i, 0.08), seed + 22 + i, true);
+    }
+    M([[-0.033, 0.004], [-0.044, 0.017], [-0.052, -0.002], [-0.039, -0.004]],
+      C_AGEHA_BAND, seed + 11, true);
+  }
+  const m = faceOutward(toMesh(scene, `${CAGED_WING_NAME}${sx > 0 ? 'L' : 'R'}`, W, 'flip'));
+  m.isPickable = false;
+  return m;
+}
+
+/**
+ * かごの中の チョウの からだ(v25)。**羽を 主役にする**ため、実物の チョウの胴より
+ * ずっと 細く・短くする(v24は 胴が 羽と 同じくらい 大きく、接写で「黒い板」に見えていた)。
+ * よこ幅は いちばん内がわの 羽(後ばね |x|=0.0065-0.0016)より 細くして、
+ * 羽を つきぬけさせない。足もとは y=0 まわり・正面は +Z。
+ */
+function cagedButterflyBody(A: Arrays, seed: number): void {
+  // はら(細長い。うしろの さきだけ 羽の下から のぞく)・むね・あたま
+  appendBlob(A, 0, 0.003, -0.014, 0.0042, 0.0050, 0.024, jitterColor(C_BODY_DARK, seed, 0.1), {
+    segs: 6, noise: 0.05, seed, bottomDark: 0.14,
+  });
+  appendBlob(A, 0, 0.006, 0.014, 0.0046, 0.0056, 0.010, C_BODY_DARK, {
+    segs: 5, noise: 0.05, seed: seed + 1,
+  });
+  appendBlob(A, 0, 0.007, 0.028, 0.0040, 0.0044, 0.0060, C_BODY_DARK, {
+    segs: 5, noise: 0.05, seed: seed + 2,
+  });
+  // 触角(あたまから 上前へ)。**板**で 引く: たまを ならべると すきまが あいて
+  // 「黒い ビーズの ひも」に 見えた(v25 1回めの実写)。板なら 1本の 細い線になる。
+  // さきが ふくらんだ こん棒(チョウの 触角の 見わけどころ)を つける。
+  // 左右で 長さを わずかに 変え、まっすぐ2本の 記号にしない
+  for (let i = 0; i < 2; i++) {
+    const sx = i === 0 ? 1 : -1;
+    const far = 1 + i * 0.1;
+    const tz = 0.030 + 0.020 * far, ty = 0.011 + 0.028 * far;
+    appendPlate(A, sx, 0.0030, 0.0008, stripe(0.028, 0.010, tz, ty, 0.0016, 0.0010),
+      C_BODY_DARK, { rimDark: 0.1, seed: seed + 3 + i });
+    appendPlate(A, sx, 0.0030, 0.0011,
+      [[tz + 0.0035, ty + 0.0008], [tz + 0.0008, ty + 0.0038], [tz - 0.0028, ty + 0.0022],
+        [tz - 0.0022, ty - 0.0026], [tz + 0.0022, ty - 0.0030]],
+      C_BODY_DARK, { rimDark: 0.1, seed: seed + 5 + i });
+  }
+}
+
+/** かごの中の トンボの 片ばね(たたんだ姿)。ホバリングの ふるえを 見せるために 子メッシュにする */
+function cagedDragonflyWing(scene: Scene, sx: number, seed: number, len: number): Mesh {
+  const W = A0();
+  appendBlob(W, sx * 0.01, 0.016, -0.012 - len * 0.35, 0.008, 0.004, len,
+    jitterColor(C_TONBO_WING, seed + 30 + sx, 0.05),
+    { segs: 6, noise: 0.08, seed: seed + 30 + sx, bottomDark: 0.04 });
+  const m = faceOutward(toMesh(scene, `${CAGED_WING_NAME}${sx > 0 ? 'L' : 'R'}`, W, 'flip'));
+  m.isPickable = false;
+  return m;
+}
+
+/**
  * むしかごの中に置く小さな虫。羽は動かさないので子メッシュにしない。
  * ただしホタルの「光る おしり」だけは、共有の発光マテリアルを使うために子メッシュにする
  * (共有のmintを からだ全体にかけると、暗い頂点色とかけ算されて にごる。v9に実機で確認ずみ)。
@@ -923,6 +1197,10 @@ export const CAGED_GLOW_NAME = 'cagedBugGlow';
 export function makeCagedBugMesh(scene: Scene, id: BugId, seed: number): Mesh {
   const A = A0();
   let firefly = false;
+  /** v24 あとで 子メッシュにする羽(かごの中で 動かす種だけ) */
+  let wings: Mesh[] = [];
+  /** 羽の つけね(=はばたきの 回転の中心)の 高さ。チョウだけ からだの上に そろえる */
+  let wingY = 0.006;
   switch (id) {
     case 'b_tento':
       ladybug(A, seed, 0.85);
@@ -970,28 +1248,32 @@ export function makeCagedBugMesh(scene: Scene, id: BugId, seed: number): Mesh {
       grasshopper(A, seed, 0.85);
       break;
     case 'b_tonbo':
-      // かごの中では 羽をたたんだ姿(ぱたぱたさせない)。胴が長いので すこし ちぢめる
+      // 胴が長いので すこし ちぢめる。v24 羽は 子メッシュにして ホバリングの ふるえを見せる
       dragonflyBody(A, seed);
-      for (const [sx, len] of [[1, 0.062], [-1, 0.056]] as [number, number][]) {
-        appendBlob(A, sx * 0.01, 0.016, -0.012 - len * 0.35, 0.008, 0.004, len,
-          jitterColor(C_TONBO_WING, seed + 30 + sx, 0.05),
-          { segs: 6, noise: 0.08, seed: seed + 30 + sx, bottomDark: 0.04 });
-      }
+      wings = [
+        cagedDragonflyWing(scene, 1, seed, 0.062),
+        cagedDragonflyWing(scene, -1, seed, 0.056),
+      ];
       break;
     default: {
-      // チョウ: 羽をたたんで とまっている姿(かごの中で ぱたぱたさせない)
-      butterflyBody(A, seed);
-      const base = id === 'b_ageha' ? C_AGEHA : C_WING_WHITE;
-      for (const sx of [-1, 1]) {
-        appendBlob(A, sx * 0.012, 0.05, 0.01, 0.014, 0.055, 0.05, jitterColor(base, seed + sx + 3, 0.06), {
-          segs: 6, noise: 0.1, seed: seed + 3, bottomDark: 0.1,
-        });
-      }
+      // チョウ: 羽を 立てて とまっている姿(v25。cagedButterflyWing のコメントに理由)。
+      // v24 羽だけ 子メッシュにして、かごの中で ひらいたり とじたり させる
+      cagedButterflyBody(A, seed);
+      const kind = id === 'b_ageha' ? 'ageha' : 'shiro';
+      wingY = CAGED_WING_ROOT_Y;
+      wings = [
+        cagedButterflyWing(scene, 1, seed, kind),
+        cagedButterflyWing(scene, -1, seed, kind),
+      ];
       break;
     }
   }
   const m = faceOutward(toMesh(scene, `cagedBug_${id}`, A, 'flip'));
   m.isPickable = false;
+  for (const w of wings) {
+    w.parent = m;
+    w.position.set(0, wingY, 0);
+  }
   if (firefly) {
     // おしりだけ 黄みどりに光らせる。頂点色は白に近づける(共有マテリアルの色とかけ算になるため)
     // かごの中では からだが小さいので、光る おしりは大きめに作る

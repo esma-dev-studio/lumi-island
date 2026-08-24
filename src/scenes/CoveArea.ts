@@ -23,7 +23,7 @@ import {
 } from '../entities/cove';
 import { makeLamp } from '../entities/buildings';
 import { washEnvelope } from '../entities/water';
-import { attachLightPool, registerGlowSource } from '../entities/effects';
+import { attachLightPool, registerGlowSource, registerSnowSurface } from '../entities/effects';
 import type { BugSpotKind, GatherNodeDef } from '../data/island';
 import type { CircleCollider } from './IslandScene';
 
@@ -297,6 +297,7 @@ export class CoveArea {
     ground.parent = this.root;
     ground.position.set(0, 0, 0);
     ground.receiveShadows = true;
+    registerSnowSurface(ground); // v24 ゆきの日は 入り江の砂地にも 積もる(島だけ白いと ちぐはぐ)
     put(makeCoveSea(scene, seaMat), 0, 0, COVE_SEA_Y);
 
     // ---- 光る砂浜(夜だけ波うちぎわが青緑にともる) ----

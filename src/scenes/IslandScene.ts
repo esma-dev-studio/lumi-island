@@ -10,7 +10,7 @@ import {
 } from '../entities/terrain';
 import {
   initEffects, attachLightPool, registerGlowSource, unregisterGlowSource, burst,
-  initTreeMotes, updateTreeMotes,
+  initTreeMotes, updateTreeMotes, registerSnowSurface,
 } from '../entities/effects';
 import {
   buildWater, onPier, updatePond, updateSeaSurface, MOON_FALLBACK_AZ, PIER, SEA_Y, type WaterRefs,
@@ -250,6 +250,8 @@ export class IslandScene {
     const s = this.scene;
     initEffects(s);
     this.terrain = buildTerrain(s);
+    // v24 ゆきの日に 白くなる面(地面)。頂点色を まぜるだけなので 歩ける ところは 不変
+    registerSnowSurface(this.terrain.mesh);
     this.water = buildWater(s);
     this.dayNight = new DayNight(s, this.water);
     // 水面は空映りのごく弱い自己発光を持つが、発光レイヤーの対象にはしない
@@ -401,6 +403,7 @@ export class IslandScene {
       mesh.position.set(p.x, terrainHeight(p.x, p.z) - 0.05, p.z);
       mesh.rotation.y = p.rotY ?? 0;
       caster(mesh);
+      registerSnowSurface(mesh); // v24 屋根(上を向いた面)にだけ 積もる
       // 壁の見た目(b.w × b.d)+HOUSE_PADまで。軒の出(0.55m)は判定に入れない
       this.rects.push({ x: p.x, z: p.z, w: b.w + HOUSE_PAD * 2, d: b.d + HOUSE_PAD * 2, rot: p.rotY ?? 0 });
     }
@@ -538,7 +541,10 @@ export class IslandScene {
     // ---- v22 草地のクローバー/小花のパッチ(静的メッシュ1枚。当たり判定は足さない) ----
     // 引きの画で草地が「緑一色」に見えないようにするための、地面の変化のうちの1つ。
     // もう1つ(地面色のごく淡いむら)は terrain.terrainColor が頂点カラーで持っている。
-    makeGroundPatches(s);
+    // v24 ゆきの日は この面も 白くする。**いちばん目に入る 地面が ここ**で、
+    // terrain だけを 白くすると 引きの画は 白いのに 足もとの接写は 夏の緑、という
+    // ちぐはぐな島になる(実測: terrain 17161頂点に対して この面は 13170頂点)
+    registerSnowSurface(makeGroundPatches(s));
 
     // ---- v22 昼の空気感: 木立ちのそばで舞う光の粒(メッシュ1枚) ----
     // 夜のホタルと同じ流儀で「昼だけ・木の近くだけ」。とまり木は林の木から決定論で選ぶ
@@ -1393,12 +1399,23 @@ export class IslandScene {
     return this.bugAreaNow?.sched.active.map((b) => b.bug) ?? [];
   }
   /** いま出ている虫の一覧(検証・デバッグ用。位置は毎フレーム変わる) */
-  get bugList(): { key: number; bug: string; x: number; z: number; wary: boolean; fleeing: boolean }[] {
+  get bugList(): {
+    key: number; bug: string; x: number; z: number; wary: boolean; fleeing: boolean; hopping: boolean;
+    fromX: number; fromZ: number; toX: number; toZ: number;
+  }[] {
     const a = this.bugAreaNow;
     if (!a) return [];
     return a.sched.active.map((b) => {
       const p = a.sched.positionOf(b);
-      return { key: b.key, bug: b.bug, x: p.x, z: p.z, wary: b.wary, fleeing: b.fleeT > 0 };
+      // v24 hopping = スポットの間を とんで わたっている とちゅう(撮影ハーネスが 待ちうける)。
+      // from/to は その飛行の 出発地と行き先(とんでいないときは いまのスポット)
+      const from = a.spots[b.hopFrom] ?? a.spots[b.spot];
+      const to = a.spots[b.spot];
+      return {
+        key: b.key, bug: b.bug, x: p.x, z: p.z, wary: b.wary,
+        fleeing: b.fleeT > 0, hopping: b.hopT > 0,
+        fromX: from.x, fromZ: from.z, toX: to.x, toZ: to.z,
+      };
     });
   }
   /** いま虫が出ている場所(検証・デバッグ用) */
@@ -1444,17 +1461,26 @@ export class IslandScene {
       const m = entry.m;
       const def = BUG_BY_ID[b.bug];
       const spot = a.spots[b.spot];
-      const o = bugOffset(def, b);
+      // v24 とんで わたっている とちゅうは「出発地 − 行き先」を わたす(判定と同じ位置になる)
+      const travel = a.sched.travelOf(b);
+      const o = bugOffset(def, b, travel);
       // 虫のとまり場は動かない座標なので、足もとの高さは1回だけ求めて覚えておく。
       // groundY は入り江→部屋→NPCの家→桟橋→デッキ→地形の6段を毎回たどる関数で、
       // 虫の数ぶん毎フレーム呼ぶと そこそこ効く(CPUプロファイルで pathDist が上位に出ていた)
-      let gy = a.spotY[b.spot];
-      if (gy === undefined) {
-        gy = this.groundY(spot.x, spot.z);
-        a.spotY[b.spot] = gy;
-      }
+      const gyOf = (i: number): number => {
+        let v = a.spotY[i];
+        if (v === undefined) {
+          v = this.groundY(a.spots[i].x, a.spots[i].z);
+          a.spotY[i] = v;
+        }
+        return v;
+      };
+      let gy = gyOf(b.spot);
+      // とんでいるあいだは 足もとの高さも 出発地と行き先で まぜる
+      // (坂の上の花から 下の花へ わたるときに 地面へ もぐらない)
+      if (o.hopMix > 0) gy = gy + (gyOf(b.hopFrom) - gy) * o.hopMix;
       m.root.position.set(spot.x + o.dx, gy + o.dy, spot.z + o.dz);
-      if (spot.kind === 'tree') {
+      if (spot.kind === 'tree' && o.hopMix === 0) {
         // 木の みきに とまっている姿。スポットは幹から+Z側へ寄せてあるので、
         // 頭を上へ向けて(x回転)幹に はりつかせる(データ側の約束: src/data/island.ts BUG_SPOTS)
         m.root.rotation.set(-1.15, 0, 0);

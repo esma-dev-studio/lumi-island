@@ -58,6 +58,9 @@ const DISPLAY_ONLY = new Set([
   'hud-hint', // 画面下のEヒント
   'obj-hud', // 「いまやること」
   'touch-root', // タッチUIの根(中のボタンだけが auto に戻る)
+  // v24 フォトモードの額のわく。まん中は 見まわし・歩きの じゃまを 1つも しないので
+  // 根は none、シャッターと とじるの2つだけ auto に もどす(touch-root と同じ作り)
+  'photo-frame',
 ]);
 
 /** 演出の暗転など、要素に直接 style を書いているもの(インラインは id より強いので安全) */

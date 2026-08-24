@@ -13,7 +13,8 @@ import { bondCount, bondDone } from '../systems/BondEventSystem';
 import {
   BOSS_FISH, inNushiHour, nushiCaught, nushiCount, nushiUnlocked, spotCatchCount,
 } from '../systems/BossFishSystem';
-import { lanternFlightState } from '../entities/effects';
+import { lanternFlightState, weatherFxState } from '../entities/effects';
+import { SNOW_SPOTS } from '../systems/WeatherSystem';
 import { ambienceState, musicState, rainState } from '../audio/AudioSystem';
 
 /** debugフラグのときだけ window.__lumiDebug を生やす */
@@ -136,6 +137,27 @@ export function installLumiDebugApi(gs: GameScene): void {
      * false で v14.2 とまったく同じ絵になる。
      */
     setSky: (on: boolean) => gs.setSkyEnabled(on),
+    /**
+     * v24 いまの天気(読み取りだけ)。ゆき・あめの ふりぐあいと 積もりぐあい、
+     * 見た目の側(パーティクル・ふきだまり)を まとめて 返す。
+     * 空模様は スクショだけでは 「ゆきなのか くもりなのか」を 数で 確かめられない。
+     */
+    weather: () => ({
+      day: gs.island.time.day,
+      hour: Math.round(gs.island.time.hour * 100) / 100,
+      ...gs.weather.state,
+      ...weatherFxState(),
+    }),
+    /** v24 ゆきの ふきだまりの 場所(E2Eが そこへ 立つために 読む) */
+    driftPos: (spot: number) => SNOW_SPOTS[spot % SNOW_SPOTS.length],
+    /** v24 いま出ている会話の中身(読み取りだけ)。ふくの一言などを 文字で 確かめる */
+    dialogueLines: () => ({
+      open: gs.dialogue.open,
+      lines: (gs.dialogue as unknown as { lines: string[] }).lines ?? [],
+    }),
+    /** v24 アルバムの ようす(絵そのものは 返さない=ログが ふくらまない) */
+    photos: () =>
+      gs.photos.map((p) => ({ id: p.id, day: p.day, hour: p.hour, chars: p.data.length })),
     unlockAll: () => {
       gs.state.flags.unlock_inv = true;
       gs.state.flags.unlock_craft = true;

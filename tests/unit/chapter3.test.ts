@@ -19,7 +19,7 @@ import {
 } from '../../src/systems/TrainRideSystem';
 import { NIGHT_TRAIN_KEY, isTrainDay } from '../../src/systems/NightTrainSystem';
 import {
-  MARKET_FURNITURE, MARKET_SCROLL, MARKET_WEEK_DAYS, canOfferScroll, daysLeftInWeek,
+  MARKET_FURNITURE, MARKET_FURNITURE_PER_WEEK, MARKET_SCROLL, MARKET_WEEK_DAYS, canOfferScroll, daysLeftInWeek,
   hasScrollOnWeek, marketStock, marketStockOfDay, marketWeek, nextUnknownCombo, openScroll,
 } from '../../src/systems/MarketStock';
 import { COMBOS } from '../../src/data/combos';
@@ -237,17 +237,18 @@ describe('テンの店の 週がわり', () => {
     for (let d = 8; d <= 14; d++) expect(marketStockOfDay(d)).toEqual(marketStock(1));
   });
 
-  it('毎週 かべ1・ゆか1・家具2・素材1〜2 がならぶ', () => {
+  // v24 家具は 3種→7種、1週にならぶ数は 2→3(MARKET_FURNITURE_PER_WEEK)
+  it('毎週 かべ1・ゆか1・家具3・素材1〜2 がならぶ', () => {
     for (let w = 0; w < 20; w++) {
       const rows = marketStock(w);
       const g = (k: string): number => rows.filter((r) => r.group === k).length;
       expect(g('style'), `week ${w}`).toBe(2);
-      expect(g('furniture'), `week ${w}`).toBe(2);
+      expect(g('furniture'), `week ${w}`).toBe(MARKET_FURNITURE_PER_WEEK);
       expect(g('material'), `week ${w}`).toBeGreaterThanOrEqual(1);
       expect(g('material'), `week ${w}`).toBeLessThanOrEqual(2);
-      // 家具が 2行とも 同じものに ならない
+      // 家具の行が 同じものに ならない
       const f = rows.filter((r) => r.group === 'furniture').map((r) => r.item);
-      expect(new Set(f).size, `week ${w}`).toBe(2);
+      expect(new Set(f).size, `week ${w}`).toBe(MARKET_FURNITURE_PER_WEEK);
       for (const item of f) expect(MARKET_FURNITURE).toContain(item);
       // ねだんは ぜんぶ 正の整数
       for (const r of rows) expect(Number.isInteger(r.price) && r.price > 0).toBe(true);

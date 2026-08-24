@@ -62,6 +62,14 @@ export interface VisitPraise {
   display: string[];
   many: string[];
   bloom: string[];
+  /**
+   * v24 おうちの すてき度(src/systems/HomeScore.ts)の 段で 出しわける ひとこと。
+   * [0]=まだ これから / [1]=にぎやか / [2]=とっておき の 3本ちょうど。
+   * さかいめは HOME_SCORE_TIERS(30 / 70)。**いちばん最後に 言う**ので、
+   * 会話の しめくくりが 家の ようすで かわる。
+   * 段を 渡さずに 呼ぶと 1本も 出ない(v23までと まったく同じ 3行のまま)。
+   */
+  tiers: [string, string, string];
 }
 
 /** 家のようす(GameStateから作る。判定は src/systems/NPCSystem.ts の visitPraiseFacts) */
@@ -89,13 +97,22 @@ export const HOME_GIFT_CYCLE = 4;
 /** おみやげをもらえる なかよし度のさかいめ(これ未満はもらえない) */
 export const HOME_GIFT_FRIENDSHIP = 3;
 
-/** 来訪したNPCが話す行(純関数。表示側はふつうの会話と同じ道すじで出す) */
-export function visitPraiseLines(def: NpcDef, facts: VisitPraiseFacts): string[] {
+/**
+ * 来訪したNPCが話す行(純関数。表示側はふつうの会話と同じ道すじで出す)。
+ *
+ * v24: 3つめの引数に おうちの すてき度の 段(0〜2)を わたすと、
+ * いちばん最後に その段の ひとことを 足す。わたさなければ v23までと同じ。
+ * 段を facts に まぜず 別の引数にしてあるのは、
+ * visitPraiseFacts(GameState→facts)の 形を 1バイトも 変えないため
+ * (既存のテスト・呼び出しが そのまま 生きる)。
+ */
+export function visitPraiseLines(def: NpcDef, facts: VisitPraiseFacts, tier?: 0 | 1 | 2): string[] {
   const p = def.visitPraise;
   const lines = [...p.base];
   if (facts.display) lines.push(...p.display);
   if (facts.many) lines.push(...p.many);
   if (facts.bloom) lines.push(...p.bloom);
+  if (tier !== undefined && p.tiers[tier]) lines.push(p.tiers[tier]);
   return lines;
 }
 
@@ -256,6 +273,11 @@ export const NPCS: NpcDef[] = [
       display: ['あ、いきものを かざってる! ぼくの たからばこより ずっと いいなあ。'],
       many: ['ものが たくさん あるね。ぐるっと 見てまわりたく なるよ。'],
       bloom: ['にわの お花、まんかいだ。水を あげるの、うまいんだね。'],
+      tiers: [
+        'まだ ひろびろ してるね。ぼくの ひろいものも おいて いい?',
+        'だいぶ にぎやかに なったね! どこから 見ても たのしいや。',
+        'すごい……! この おうち、島で いちばん すてきかも しれないよ。',
+      ],
     },
     schedule: [
       { from: 6, to: 10, spot: 'pond', activity: 'fish' },
@@ -316,6 +338,11 @@ export const NPCS: NpcDef[] = [
       display: ['いきものを かざっておるのか。よい 目の つけどころじゃ。'],
       many: ['ずいぶん ものが ふえたのう。おぬしの 日々が 見えるようじゃ。'],
       bloom: ['にわの花が まんかいじゃ。夜には ちがう顔を 見せるぞい。'],
+      tiers: [
+        'まだ すきまが 多いのう。ここに 何を おくか、考えるのが たのしいのじゃ。',
+        'ずいぶん 形に なってきたのう。ならべ方に おぬしの くせが 出ておる。',
+        'ふむ……ここまで くると ひとつの 星ずのようじゃ。ワシの すみかも まねしたいわい。',
+      ],
     },
     schedule: [
       { from: 6, to: 17, spot: 'home', activity: 'home' }, // 昼はうとうと
@@ -369,6 +396,11 @@ export const NPCS: NpcDef[] = [
       display: ['いきものを かざるなんて、いい アイデアね。まねしても いい?'],
       many: ['家具が こんなに! わたしの お店より にぎやかかも。'],
       bloom: ['にわの お花、まんかいね。ここから ながめるのが さいこうだわ。'],
+      tiers: [
+        'まっさらな へやも いいものね。ここから 作っていきましょ。',
+        'いい ぐあいに そろってきたわね。色の あわせ方が じょうずだわ。',
+        'まあ……わたしの お店より すてきよ。こんど 手つだいに 来て ほしいくらい。',
+      ],
     },
     schedule: [
       { from: 6, to: 12, spot: 'shop', activity: 'work' },
@@ -391,6 +423,10 @@ export const NPCS: NpcDef[] = [
       'うきだまの ガラスの中に ヒカリゴケを もりつけたら、小さな 森みたいに ならないかしら。',
       'かんなくずの においって、いいものよ。まどを あけると 木の いきが するの。',
       'いい木は、たたくと おとが ちがうの。おとで えらぶのよ、わたしは。',
+      // v24 おおきい版の 告知(ずっと 気づかれていなかったので、雑談でも 1本 言う)。
+      // クラフト画面の「?」行と 同じことを、ツムギの口から も 伝える二重の 案内
+      // (材料名を 出さないので、上の くみあわせヒントの検査には かからない)。
+      'むしかごや すいそうは、つかっていると おおきいのを ひらめくのよ。ためして みてね。',
     ],
     // 工房の おくの すまいでしか言えない話(作業台・道具の壁かけ・木材・織りかけの布)
     homeLines: [
@@ -445,6 +481,11 @@ export const NPCS: NpcDef[] = [
       display: ['いきものを かざってる! ぼくも とうだいに かざりたいな。'],
       many: ['ものが たくさんある。ひとつずつ 見ても いい?'],
       bloom: ['にわの お花、まんかいだね。よるも ここは あかるいのかな。'],
+      tiers: [
+        'まだ すこし さびしいけど……そこが いいのかも しれないね。',
+        'ものが ふえたね。ここに いると、なんだか ほっと するよ。',
+        'とうだいの てっぺんより、ここのほうが きれいだ。……ないしょ ね。',
+      ],
     },
     /**
      * 1日の行き先(spotキーは src/data/island.ts の NPC_SPOTS.roka)。
@@ -540,6 +581,11 @@ export const NPCS: NpcDef[] = [
       display: ['いきものを かざってる! 生きてるものは 売り買いできないから、うらやましいな。'],
       many: ['ものが たくさん あるね。これ ぜんぶ、ここに おいたままで いいんだ。……いいなあ。'],
       bloom: ['にわの お花、まんかいだ。うごかない場所に 花を うえるって、すごいことだよ。'],
+      tiers: [
+        'まだ かるい おうちだね。旅の はじまりって かんじだ。',
+        'いい しなものが そろってきたね。ぼくの めききでも 上の上だよ。',
+        'ここまで くると、もう おみせだよ。ぼくが 買いに 来たいくらいさ。',
+      ],
     },
     /**
      * 1日の行き先(spotキーは src/data/island.ts の NPC_SPOTS.ten)。

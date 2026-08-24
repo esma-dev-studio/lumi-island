@@ -184,6 +184,14 @@ export class CameraController {
   get pitch(): number {
     return this.orbitPitch;
   }
+  /**
+   * v24 フォトモード: いまの見回しを かえずに 少しだけ 引く/もどす。
+   * @param zoom ZOOM_MIN〜ZOOM_MAX に まるめて 入れる
+   */
+  setZoom(zoom: number): void {
+    this.orbitZoom = clampRange(zoom, ZOOM_MIN, ZOOM_MAX);
+  }
+
   /** 見回しを既定の構図へ戻す */
   resetOrbit(): void {
     this.setYaw(0);

@@ -19,6 +19,8 @@ export class PaintUI {
   onChoose: ((paint: PaintId | null) => void) | null = null;
   /** この家具を もちかえる */
   onCarry: (() => void) | null = null;
+  /** v24 この家具を その場で うごかす(持ち帰らずに 置き直す) */
+  onMove: (() => void) | null = null;
 
   constructor(private getState: () => GameState) {
     this.el = document.createElement('div');
@@ -26,7 +28,7 @@ export class PaintUI {
     document.getElementById('ui-root')!.appendChild(this.el);
     this.el.addEventListener('click', (e) => {
       const t = (e.target as HTMLElement).closest(
-        '[data-close], [data-carry], [data-paint], [data-reset]'
+        '[data-close], [data-carry], [data-move], [data-paint], [data-reset]'
       ) as HTMLElement | null;
       if (!t) return;
       if (t.hasAttribute('data-close')) {
@@ -37,6 +39,11 @@ export class PaintUI {
       if (t.hasAttribute('data-carry')) {
         this.close();
         this.onCarry?.();
+        return;
+      }
+      if (t.hasAttribute('data-move')) {
+        this.close();
+        this.onMove?.();
         return;
       }
       if (t.hasAttribute('data-reset')) {
@@ -96,6 +103,7 @@ export class PaintUI {
         slots || '<div class="inv-empty">いろみずを まだ もっていない。クラフトの「くみあわせ」で さがしてみよう!</div>'
       }</div>
       <div class="panel-sub">いろみずは つかっても なくならないよ。なんども ぬりなおせる。${reset}
+        <button class="craft-btn sub" data-move style="white-space:nowrap;margin-left:8px">${name}を うごかす</button>
         <button class="craft-btn sub" data-carry style="white-space:nowrap;margin-left:8px">${name}を もちかえる</button>
       </div>
     `;

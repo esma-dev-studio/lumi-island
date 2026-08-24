@@ -181,6 +181,10 @@ export const BADGES: BadgeDef[] = [
   { id: 'hm_exp1', name: 'こうじ 1かい', desc: 'ツムギに たのんで へやを ひろげよう', cat: 'home', tier: 'silver', src: 'home_stage', target: 1, pict: 'f_table' },
   { id: 'hm_exp2', name: 'こうじ 2かい', desc: 'へやを もう一段 ひろげよう', cat: 'home', tier: 'gold', src: 'home_stage', target: 2, pict: 'f_gardentable' },
   { id: 'hm_garden', name: 'にわに かざり 3こ', desc: 'お庭の さくの中に 家具を 3こ おこう', cat: 'home', tier: 'silver', src: 'garden_furniture', target: 3, pict: 'f_flowerbed' },
+  // v24 おうちの すてき度(src/systems/HomeScore.ts)。さかいめは HOME_SCORE_TIERS と同じ 30 / 70
+  // 名まえは HOME_SCORE_TIER_LABELS の 1段め・2段めと 同じことば(ずかんの表示と そろえる)
+  { id: 'hm_score1', name: 'にぎやかな おうち', desc: 'かぐを ならべて おうちの すてき度を 30に しよう', cat: 'home', tier: 'silver', src: 'home_score', target: 30, pict: 'f_lowtable' },
+  { id: 'hm_score2', name: 'とっておきの おうち', desc: 'いろぬり・もようがえ・にわも つかって すてき度を 70に しよう', cat: 'home', tier: 'gold', src: 'home_score', target: 70, pict: 'f_roundlamp' },
 
   // ============================================================
   // なかよし(10)…… おくりもの3段+なかよし度+4人ぶんの「なかよし10」
@@ -270,7 +274,8 @@ export const BADGE_COUNT_MIN = 98;
 // 足したぶんだけ 上へずらす(減らす側の下限は そのまま)。
 // v21 生命感パック(ぬし・立ち話・ふたりのじかん)で3つ足して111個
 // v23 カブト・クワガタ10しゅるいを1つ足して112個
-export const BADGE_COUNT_MAX = 112;
+// v24 おうちパック(すてき度30・70)で2つ足して114個
+export const BADGE_COUNT_MAX = 114;
 
 /** ならび順つきの カテゴリ一覧(ずかんの見出しの順) */
 export const BADGE_CATEGORY_ORDER: BadgeCategory[] = (

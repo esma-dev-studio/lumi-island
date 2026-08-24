@@ -1,0 +1,39 @@
+■ 1. むしかごの中の チョウ
+  おおきなむしかご: true
+  cage_butterfly_1.png (1枚め)
+  cage_butterfly_2.png (2枚め: 位置が 変わっている)
+  1枚めの姿勢: -0.1737,0.0753,1.550|0.1848,-0.0700,4.620|-0.0669,-0.0242,4.393|0.0751,0.0354,1.183|-0.0793,0.0380,5.196|0.0707,-0.0326,2.020
+  2枚めの姿勢: -0.1883,0.0750,1.550|0.1735,-0.0711,4.620|-0.0580,-0.0296,4.226|0.0710,0.0344,1.183|-0.0795,0.0302,5.051|0.0607,-0.0255,1.964
+  動いた: true
+■ 2. 野生の「とんで わたる」
+  ! とんでいる虫を つかまえられなかった
+■ 3. その場で うごかす(ゴースト)
+  ヒント: Eウッドベンチを もちかえる Rうごかす
+  movingId=1 / ヒント: Eここに おく Rまわす Escやめる
+  move_ghost.png (半とうめいの ゴーストと 緑の わ)
+  move_done.png (置き直したあと)
+■ 4. ゆきの日
+  昼の天気: {"day":1,"hour":11.04,"weather":"snowy","rain":0,"rainbow":0,"cold":0.85,"snails":[],"t":1.7732999999523162,"snow":1,"cover":1,"drifts":[0,1,2,3],"rainParticles":0,"rainEmitRate":0,"snowCover":1,"snowParticles":193,"snowEmitRate":150,"snowSurfaces":5,"driftsVisible":[0,1,2,3],"puddleAlpha":0,"puddlesVisible":0,"rainbowVisible":false,"snailsVisible":[]}
+  snow_day.png (ゆきの島・昼)
+  snow_night.png (ゆきの島・夜)
+  ふきだまりの ヒント: Eゆきを あつめる(0/3)
+  snow_drift.png (ゆきの ふきだまり)
+  ゆきだるま: 1
+  snowman.png (ゆきだるま)
+■ 5. フォトモード
+  photo_mode.png (額の わく+シャッター)
+  アルバム: [{"id":"p1","day":1,"hour":11.126447999997136,"chars":11467}]
+  photo_after_shot.png (とった あとの 一言)
+  photo_taken.jpg (11467 文字の data URL から)
+  album_tab.png (ずかんの アルバム)
+  しゃしんたての ヒント: Eしゃしんを かざる
+  photostand.png (しゃしんたてに かざった1まい)
+■ 6. ふくを そめる
+  outfit_before.png (そめる前)
+  outfit_paint_red.png (あか)
+  outfit_paint_blue.png (あお)
+  outfit_paint_yellow.png (きいろ)
+  outfit_paint_green.png (みどり)
+  いろみずは へらない: {"paint_red":1,"paint_blue":1,"paint_yellow":1,"paint_green":1}
+
+コンソールエラー: 0

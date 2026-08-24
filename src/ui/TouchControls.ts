@@ -68,6 +68,10 @@ export interface TouchFrame {
   hint: string;
   gates: KeyGates;
   placementActive: boolean;
+  /** v24 近くに「うごかせる家具」があるか(タッチの うごかすボタンを 出す条件) */
+  moveTarget?: boolean;
+  /** v24 フォトモードの ボタンを 出してよいか */
+  photoReady?: boolean;
   dialogueOpen: boolean;
   questCompleteOpen: boolean;
   sequenceActive: boolean;
@@ -85,6 +89,10 @@ export interface TouchControlsOptions {
   onQuest: () => void;
   onMenu: () => void;
   onRotate: () => void;
+  /** v24 その場で家具を うごかす。渡されないときはボタン自体を出さない */
+  onMove?: () => void;
+  /** v24 フォトモード。渡されないときはボタン自体を出さない */
+  onPhoto?: () => void;
   /** v18 エモート(てをふる)。渡されないときはボタン自体を出さない */
   onEmote?: () => void;
   /** ずかん。渡されないときはボタン自体を出さない(機能のないボタンは置かない) */
@@ -103,6 +111,10 @@ const GLYPH = {
   menu: SVG('<path d="M4 7h16M4 12h16M4 17h16"/>'),
   rotate: SVG('<path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/>'),
   cancel: SVG('<path d="M6 6l12 12M18 6L6 18"/>'),
+  // v24 うごかす: 四方向の矢印(家具を べつの ばしょへ ずらす)
+  move: SVG('<path d="M12 3v18M3 12h18"/><path d="M12 3 9.6 5.6M12 3l2.4 2.6M12 21l-2.4-2.6M12 21l2.4-2.6M3 12l2.6-2.4M3 12l2.6 2.4M21 12l-2.6-2.4M21 12l-2.6 2.4"/>'),
+  // v24 しゃしん: カメラ(上のファインダー+まるいレンズ)
+  photo: SVG('<path d="M3 8.6h4l1.6-2.4h6.8L17 8.6h4v10.4H3Z"/><circle cx="12" cy="13.6" r="3.4"/>'),
   // v18 てをふる: 4本の指と親指をひらいた手のひら + 動きを表す2本の弧
   // (絵文字は使わない=フォントに左右されず、線の太さも ほかのアイコンとそろう)
   wave: SVG(
@@ -155,8 +167,10 @@ export class TouchControls {
   private btnCraft: HTMLElement;
   private btnQuest: HTMLElement;
   private btnCodex: HTMLElement;
+  private btnPhoto: HTMLElement;
   private btnEmote: HTMLElement;
   private placeBar: HTMLElement;
+  private moveBar: HTMLElement;
   private detachFns: Array<() => void> = [];
   private stickId: number | null = null;
   private origin = { x: 0, y: 0 };
@@ -177,11 +191,15 @@ export class TouchControls {
         <button class="touch-btn hidden" data-el="craft" type="button">${GLYPH.craft}<span>クラフト</span></button>
         <button class="touch-btn hidden" data-el="quest" type="button">${GLYPH.quest}<span>おねがい</span></button>
         <button class="touch-btn hidden" data-el="codex" type="button">${GLYPH.codex}<span>ずかん</span></button>
+        <button class="touch-btn hidden" data-el="photo" type="button">${GLYPH.photo}<span>しゃしん</span></button>
         <button class="touch-btn" data-el="menu" type="button">${GLYPH.menu}<span>メニュー</span></button>
       </div>
       <div class="touch-place hidden" data-el="place">
         <button class="touch-btn" data-el="rotate" type="button">${GLYPH.rotate}<span>まわす</span></button>
         <button class="touch-btn" data-el="cancel" type="button">${GLYPH.cancel}<span>やめる</span></button>
+      </div>
+      <div class="touch-place hidden" data-el="movebar">
+        <button class="touch-btn" data-el="move" type="button">${GLYPH.move}<span>うごかす</span></button>
       </div>
       <button class="touch-emote hidden" data-el="emote" type="button">${GLYPH.wave}<span>てをふる</span></button>
       <button class="touch-action dim" data-el="action" type="button">しらべる</button>
@@ -196,8 +214,10 @@ export class TouchControls {
     this.btnCraft = pick('craft');
     this.btnQuest = pick('quest');
     this.btnCodex = pick('codex');
+    this.btnPhoto = pick('photo');
     this.btnEmote = pick('emote');
     this.placeBar = pick('place');
+    this.moveBar = pick('movebar');
     opts.root.appendChild(el);
   }
 
@@ -209,6 +229,12 @@ export class TouchControls {
     this.detachFns.push(...pressable(this.btnCraft, () => o.onCraft(), null));
     this.detachFns.push(...pressable(this.btnQuest, () => o.onQuest(), null));
     if (o.onCodex) this.detachFns.push(...pressable(this.btnCodex, () => o.onCodex!(), null));
+    // v24 しゃしん・うごかすは 押した音を それぞれの機能側で鳴らす(音の二重を避ける)
+    if (o.onPhoto) this.detachFns.push(...pressable(this.btnPhoto, () => o.onPhoto!(), null));
+    if (o.onMove) {
+      const btnMove = this.el.querySelector('[data-el="move"]') as HTMLElement;
+      this.detachFns.push(...pressable(btnMove, () => o.onMove!(), null));
+    }
     // エモートは押した音を エモート側(GameScene)が鳴らすので ここでは鳴らさない
     if (o.onEmote) this.detachFns.push(...pressable(this.btnEmote, () => o.onEmote!(), null));
     this.detachFns.push(...pressable(this.el.querySelector('[data-el="menu"]') as HTMLElement, () => o.onMenu(), null));
@@ -345,7 +371,16 @@ export class TouchControls {
     this.btnQuest.classList.toggle('hidden', !f.gates.quest);
     // ずかんは「もちもの」と同じ解放ゲート
     this.btnCodex.classList.toggle('hidden', !f.gates.inventory || !this.opts.onCodex);
+    // v24 しゃしんは「もちもの」と同じ解放ゲート(はじめの手ほどきの あいだは 出さない)
+    this.btnPhoto.classList.toggle('hidden', !f.gates.inventory || !this.opts.onPhoto || !f.photoReady);
     this.placeBar.classList.toggle('hidden', !f.placementActive || hideWorld);
+    // v24 「うごかす」は 置いた家具のそばに立ったときだけ。
+    // 配置中は まわす/やめる の バーが 出ているので こちらは しまう(2つ 同時には 出さない)
+    this.moveBar.classList.toggle(
+      'hidden',
+      !this.opts.onMove || !f.moveTarget || f.placementActive || hideWorld ||
+        f.dialogueOpen || f.questCompleteOpen || f.sequenceActive
+    );
     // v18 エモートは「世界を動かせるとき」だけ出す(会話・パネル・配置中は しまう)
     this.btnEmote.classList.toggle(
       'hidden',

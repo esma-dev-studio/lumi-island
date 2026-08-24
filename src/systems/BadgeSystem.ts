@@ -25,6 +25,7 @@ import { MARKET_VISIT_KEY } from './TrainRideSystem';
 import { GIFT_TOTAL_KEY } from './GiftSystem';
 import { insideGardenZone } from './GardenSystem';
 import { homeExpandStage } from './HomeExpansion';
+import { homeScore } from './HomeScore';
 import { COOKED_FOODS, DECOR_SLOT, ITEMS, type ItemId } from '../data/items';
 import {
   BADGES, BADGE_BY_ID, BADGE_CATEGORIES, BADGE_CATEGORY_ORDER, BADGE_COUNT_MAX,
@@ -160,6 +161,8 @@ export const BADGE_SOURCES: Record<string, BadgeSource> = {
     label: 'お庭の家具の数',
     read: (s) => placed(s).filter((f) => insideGardenZone(f.x, f.z)).length,
   },
+  // v24 おうちの すてき度(0〜100)。ずかんの表示・来訪NPCの ほめ言葉と 同じ関数を読む
+  home_score: { label: 'おうちのすてき度', read: homeScore },
   // ---- なかよし ----
   gift_total: { label: 'おくりものの回数', read: (s) => statCount(s, GIFT_TOTAL_KEY) },
   friend_max: { label: 'いちばんのなかよし度', read: maxFriendship },

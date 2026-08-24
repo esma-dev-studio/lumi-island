@@ -35,8 +35,8 @@ export interface ComboDef {
 }
 
 /**
- * かくしレシピ16種。
- *   りょうり6 / いろみず4+かべがみ2 / かざり4
+ * かくしレシピ20種。
+ *   りょうり6 / いろみず4+かべがみ2 / かざり4(v12)+ かざり4(v24)
  * 材料は「いかにも それらしい組み合わせ」にして、当てずっぽうでなく
  * 「そうかも?」で当てられるようにしてある(やきざかな=サカナ+もくざい など)。
  */
@@ -60,6 +60,15 @@ export const COMBOS: ComboDef[] = [
   { id: 'c_terrarium', recipe: 'r_terrarium', group: 'deco', inputs: { moss: 2, glassfloat: 1 } },
   { id: 'c_sealamp', recipe: 'r_sealamp', group: 'deco', inputs: { lightshell: 2, wood: 1 } },
   { id: 'c_starmobile', recipe: 'r_starmobile', group: 'deco', inputs: { starweed: 2, fiber: 1 } },
+  // ---- v24 おうちパックの かざり4種 ----
+  // どれも「もくざい+もう1つ」で、島の はじめのほうの素材だけで 当てられる。
+  // ねらいは、第2章の素材(ほしくさ・ひかりの貝)が そろう前の子でも
+  // かくしレシピを 1つは 自力で 見つけられるようにすること
+  // (v12の4種は 入り江の素材ばかりで、島だけで 当てられるのが かいのふうりんだけだった)。
+  { id: 'c_shellframe', recipe: 'r_shellframe', group: 'deco', inputs: { shell: 1, wood: 2 } },
+  { id: 'c_mushstool', recipe: 'r_mushstool', group: 'deco', inputs: { mushroom: 2, wood: 1 } },
+  { id: 'c_bigwind', recipe: 'r_bigwind', group: 'deco', inputs: { shell: 2, wood: 1 } },
+  { id: 'c_starbox', recipe: 'r_starbox', group: 'deco', inputs: { starshard: 1, wood: 2 } },
 ];
 
 export const COMBO_BY_ID: Record<string, ComboDef> = Object.fromEntries(COMBOS.map((c) => [c.id, c]));

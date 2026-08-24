@@ -1,0 +1,28 @@
+■ おおきなむしかご(v24 と 同じ 中身)
+  中身: b_shiro,b_ageha,b_shiro,b_tonbo,b_ageha,b_shiro
+  ref_mix_before.png (v24 と 同じ 構図)
+  macro_mix_before.png (画面 758,395) (接写)
+  unlit_mix_before.png (画面 731,398) (無照明・頂点色だけ)
+  full_mix_before.png (かご ぜんたい)
+■ おおきなむしかご(モンシロだけ)
+  中身: b_shiro,b_shiro,b_shiro,b_shiro,b_shiro,b_shiro
+  ref_shiro_before.png (v24 と 同じ 構図)
+  macro_shiro_before.png (画面 751,396) (接写)
+  unlit_shiro_before.png (画面 756,396) (無照明・頂点色だけ)
+  full_shiro_before.png (かご ぜんたい)
+■ おおきなむしかご(アゲハだけ)
+  中身: b_ageha,b_ageha,b_ageha,b_ageha,b_ageha,b_ageha
+  ref_ageha_before.png (v24 と 同じ 構図)
+  macro_ageha_before.png (画面 753,396) (接写)
+  unlit_ageha_before.png (画面 758,395) (無照明・頂点色だけ)
+  full_ageha_before.png (かご ぜんたい)
+■ 小さいむしかご(モンシロ1ぴき)
+  中身: b_shiro
+  small_before.png (画面 628,603) (小さいかご)
+■ 野生の とんでいる チョウ
+  b_shiro: (16.5,13) → (16.5,13)
+  wild_1_before.png (画面 -209,211) (とんでいる y=2.80)
+  wild_2_before.png (画面 649,382) (とんでいる y=3.15)
+  wild_3_before.png (画面 665,363) (とまった y=2.65)
+
+コンソールエラー: 0

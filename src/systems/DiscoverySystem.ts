@@ -8,7 +8,10 @@
 // 返ってきたレシピがあればトーストで知らせる。
 import type { GameState } from '../game/GameState';
 import { learnRecipe } from '../game/GameState';
-import { RECIPES, type ItemId, type RecipeDef } from '../data/items';
+import {
+  DISPLAY_FURNITURE, ITEMS, RECIPES,
+  type DisplayFurnitureId, type ItemId, type RecipeDef,
+} from '../data/items';
 
 /**
  * 素材 → その素材を初めて手に入れたときにひらめくレシピID。
@@ -33,7 +36,115 @@ export const RECIPE_DISCOVERY: Partial<Record<ItemId, string[]>> = {
   b_miyama: ['r_bugcage'], b_caucasus: ['r_bugcage'], b_niji: ['r_bugcage'], b_hercules: ['r_bugcage'],
   shard_pot: ['r_ancient_pot'],
   straw: ['r_scarecrow'],
+  // v24 おうちパックの クラフト3種。
+  // どれも「もう持っている素材」を きっかけにしてある: ひらめきは codex(累計)ではなく
+  // learnRecipe の返り値だけで決まるので、ずっと遊んでいる子でも
+  // **つぎに その素材を 手に入れた とき** に ちゃんと ひらめく。
+  fiber: ['r_bookstack'],
+  ore: ['r_wallclock'],
+  moss: ['r_houseplant'],
 };
+
+// ---------------------------------------------------------------------------
+// v24 クラフト画面の「?」行(まだ しらないレシピの ひらめき条件)。
+//
+// なぜ要るか:
+//   おおきな すいそう・おおきな むしかごは「小さい版に 1ぴき入れる」と ひらめくが、
+//   その条件が どこにも 出ていないため、実プレイの家族が **存在に 気づけなかった**。
+//   ずかんの「?」わく(かくしレシピ)と同じ考え方を クラフトの レシピタブにも入れる。
+//
+// 決めごと:
+//   - 文は **条件の種類ごとの テンプレ1本** から組み立てる(手で書いた文を ここに置かない)。
+//     家具・素材を足したときに 文だけ 腐るのを 構造で止める。
+//   - かくしレシピ(COMBOS)は 対象外。あちらは「当てる あそび」なので、
+//     ヒントを出すと 遊びが1つ 消える(ずかんに ?わくが すでにある)。
+//   - お礼・依頼で もらうレシピも 対象外。まだ会っていない人の 名前が 先に出てしまう。
+//   - `requires` は「そのレシピを おぼえてから 見せる」= 到達可能なものだけ ならべる印。
+// ---------------------------------------------------------------------------
+
+/** 素材の 手に入れかた(文の 動詞だけを 決める) */
+export type GatherVerb = 'ひろう' | 'つかまえる' | 'ほりだす' | '手に入れる';
+
+export type RecipeHint =
+  /** その素材を 手に入れると ひらめく(RECIPE_DISCOVERY と 1対1) */
+  | { kind: 'gather'; item: ItemId; verb: GatherVerb }
+  /** どれか1つを 手に入れると ひらめく(虫のように 種類が多いとき まとめて呼ぶ) */
+  | { kind: 'gatherAny'; label: string; verb: GatherVerb }
+  /** その展示家具に いきものを 1ぴき 入れると ひらめく(おおきい版) */
+  | { kind: 'display'; furniture: DisplayFurnitureId };
+
+export interface RecipeHintDef {
+  /** まだ おぼえていないと「?」行になるレシピID */
+  recipe: string;
+  hint: RecipeHint;
+  /** これを ぜんぶ おぼえていないと 「?」行にも 出さない(先ばしりの案内を 止める) */
+  requires?: string[];
+}
+
+/**
+ * 「?」行に ならぶ レシピと、その ひらめき条件。
+ * ならぶ順は この配列のとおり(乱数も 並べかえも しない)。
+ */
+export const RECIPE_HINTS: RecipeHintDef[] = [
+  { recipe: 'r_mushlamp', hint: { kind: 'gather', item: 'mushroom', verb: 'ひろう' } },
+  { recipe: 'r_starlantern', hint: { kind: 'gather', item: 'starshard', verb: 'ひろう' } },
+  { recipe: 'r_pinwheel', hint: { kind: 'gather', item: 'twig', verb: 'ひろう' } },
+  { recipe: 'r_birdhouse', hint: { kind: 'gather', item: 'twig', verb: 'ひろう' } },
+  { recipe: 'r_pot', hint: { kind: 'gather', item: 'clay', verb: 'ひろう' } },
+  { recipe: 'r_seamobile', hint: { kind: 'gather', item: 'glassfloat', verb: 'ひろう' } },
+  { recipe: 'r_aquarium', hint: { kind: 'gather', item: 'glassfloat', verb: 'ひろう' } },
+  { recipe: 'r_bugcage', hint: { kind: 'gatherAny', label: '虫', verb: 'つかまえる' } },
+  { recipe: 'r_ancient_pot', hint: { kind: 'gather', item: 'shard_pot', verb: 'ほりだす' } },
+  { recipe: 'r_scarecrow', hint: { kind: 'gather', item: 'straw', verb: '手に入れる' } },
+  // v24 おうちパックの3種
+  { recipe: 'r_bookstack', hint: { kind: 'gather', item: 'fiber', verb: '手に入れる' } },
+  { recipe: 'r_wallclock', hint: { kind: 'gather', item: 'ore', verb: '手に入れる' } },
+  { recipe: 'r_houseplant', hint: { kind: 'gather', item: 'moss', verb: '手に入れる' } },
+  // おおきい版2つ。小さい版の 作りかたを おぼえてから 見せる
+  // (むしかごを 知らない子に「むしかごに 入れる」と 言っても 先ばしりになる)
+  { recipe: 'r_aquarium_big', hint: { kind: 'display', furniture: 'f_aquarium' }, requires: ['r_aquarium'] },
+  { recipe: 'r_bugcage_big', hint: { kind: 'display', furniture: 'f_bugcage' }, requires: ['r_bugcage'] },
+];
+
+/**
+ * ひらめき条件の 子ども向けの文(**唯一の 文の出どころ**)。
+ * 種類ごとに テンプレが1本だけ。名前は ITEMS / DISPLAY_FURNITURE から とる。
+ */
+export function recipeHintText(hint: RecipeHint): string {
+  switch (hint.kind) {
+    case 'gather':
+      return `${ITEMS[hint.item].name}を ${hint.verb}と ひらめく`;
+    case 'gatherAny':
+      return `${hint.label}を ${hint.verb}と ひらめく`;
+    case 'display': {
+      const d = DISPLAY_FURNITURE[hint.furniture];
+      return `${d.label}に ${d.contentLabel}を 1ぴき 入れると ひらめく`;
+    }
+  }
+}
+
+/** 「?」行の1件(UIは これを そのまま ならべるだけ) */
+export interface UnknownRecipeHint {
+  recipe: RecipeDef;
+  text: string;
+}
+
+/**
+ * まだ おぼえていない・けれど 今の状態から 手が とどく レシピと その条件文。
+ * 純関数(状態を 1バイトも 変えない)。
+ */
+export function unknownRecipeHints(s: GameState): UnknownRecipeHint[] {
+  const known = new Set(Array.isArray(s.recipes) ? s.recipes : []);
+  const out: UnknownRecipeHint[] = [];
+  for (const h of RECIPE_HINTS) {
+    if (known.has(h.recipe)) continue;
+    if (h.requires && !h.requires.every((r) => known.has(r))) continue;
+    const recipe = RECIPES.find((r) => r.id === h.recipe);
+    if (!recipe) continue; // データ不整合(validateDiscoveryDataが拾う)
+    out.push({ recipe, text: recipeHintText(h.hint) });
+  }
+  return out;
+}
 
 /**
  * 素材の入手でひらめくレシピを覚えて返す(まだ知らないものだけ)。
@@ -56,13 +167,48 @@ export function discoverRecipe(state: GameState, item: ItemId): RecipeDef | null
   return discoverRecipes(state, item)[0] ?? null;
 }
 
-/** データ整合性チェック用: ひらめき表のレシピIDが実在するか */
+/**
+ * データ整合性チェック用: ひらめき表のレシピIDが実在するか。
+ * v24: 「?」行の表(RECIPE_HINTS)も ここで まとめて 機械検査する。
+ *   - 条件のあるレシピは かならず「?」行を 持つ(足したのに 見えない を 構造で止める)
+ *   - 「?」行は かならず 条件を持つレシピ(=ひらめきで手に入るもの)だけ
+ *   - 文が 空にならない・requires が 実在するレシピを ゆびさしている
+ */
 export function validateDiscoveryData(): string[] {
   const problems: string[] = [];
   for (const [item, ids] of Object.entries(RECIPE_DISCOVERY)) {
     for (const id of ids) {
       if (!RECIPES.some((r) => r.id === id)) problems.push(`ひらめき表の${item}のレシピ${id}が存在しない`);
     }
+  }
+  // ---- v24 「?」行の表 ----
+  const hinted = new Set(RECIPE_HINTS.map((h) => h.recipe));
+  if (hinted.size !== RECIPE_HINTS.length) problems.push('「?」行のレシピが重複');
+  for (const h of RECIPE_HINTS) {
+    if (!RECIPES.some((r) => r.id === h.recipe)) problems.push(`「?」行のレシピ${h.recipe}が存在しない`);
+    if (recipeHintText(h.hint).length < 6) problems.push(`「?」行${h.recipe}の条件文が短すぎる`);
+    if (h.hint.kind === 'gather' && !(h.hint.item in ITEMS)) {
+      problems.push(`「?」行${h.recipe}のきっかけ${h.hint.item}が存在しない`);
+    }
+    for (const req of h.requires ?? []) {
+      if (!RECIPES.some((r) => r.id === req)) problems.push(`「?」行${h.recipe}のrequires${req}が存在しない`);
+      if (req === h.recipe) problems.push(`「?」行${h.recipe}のrequiresが自分自身`);
+    }
+  }
+  // ひらめきで手に入るレシピは ぜんぶ「?」行を持つ(両方向を見る)
+  const discoverable = new Set<string>();
+  for (const ids of Object.values(RECIPE_DISCOVERY)) for (const id of ids) discoverable.add(id);
+  for (const [id, def] of Object.entries(DISPLAY_FURNITURE)) {
+    const up = (def as { upgrade?: string }).upgrade;
+    if (up === undefined) continue;
+    discoverable.add(up);
+    if (!hinted.has(up)) problems.push(`展示家具${id}のおおきい版${up}に「?」行が無い`);
+  }
+  for (const id of discoverable) {
+    if (!hinted.has(id)) problems.push(`ひらめくレシピ${id}に「?」行が無い`);
+  }
+  for (const h of RECIPE_HINTS) {
+    if (!discoverable.has(h.recipe)) problems.push(`「?」行${h.recipe}は ひらめきで手に入らない`);
   }
   return problems;
 }

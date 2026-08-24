@@ -19,6 +19,7 @@ import { toast } from '../ui/Toast';
 import { sfx } from '../audio/AudioSystem';
 import { save } from '../save/SaveSystem';
 import { attachLightPool, registerGlowSource, unregisterGlowSource } from '../entities/effects';
+import { loadPhotos, photoById } from './PhotoSystem';
 import { terrainHeight } from '../entities/terrain';
 import { POIS, POND, ENTRANCES, NPC_SPOTS, GATHER_NODES } from '../data/island';
 import {
@@ -149,13 +150,19 @@ export function slopeAt(x: number, z: number): number {
  *
  * v13: 第5引数は置くものの半径(m)。お庭の花だん・門・柵との重なりを、
  * 大きい家具ほど広く見るために使う(省略すると小さめの家具として見る)。
+ *
+ * v24: 第6引数は「見ないことにする家具のID」。**その場で うごかす**(編集モード)ときに、
+ * うごかしている家具じしんと 重なって「ほかの家具と かさなっているよ」になるのを防ぐ。
+ * うごかしているあいだも データ(state.furniture)からは 消さない——
+ * 自動セーブが とちゅうで走っても 家具が 消えないようにするため。
  */
 export function checkPlacement(
   state: GameState,
   x: number,
   z: number,
   player: { x: number; z: number } = state.player,
-  radius = 0.3
+  radius = 0.3,
+  skipId: number | null = null
 ): PlacementCheck {
   if (Math.hypot(x, z) > MAP_R) return ng(PLACE_REASON.outside);
   if (terrainHeight(x, z) < WATER_H) return ng(PLACE_REASON.water); // 海・水ぎわ
@@ -163,6 +170,7 @@ export function checkPlacement(
   if (slopeAt(x, z) > SLOPE_MAX) return ng(PLACE_REASON.slope);
   if (near(x, z, player, R_PLAYER)) return ng(PLACE_REASON.player);
   for (const f of state.furniture) {
+    if (f.id === skipId) continue;
     if (near(x, z, f, R_FURNITURE)) return ng(PLACE_REASON.furniture);
   }
   // v13 お庭(柵の内がわ): 花だんの上・門の前・柵の上には置けない。
@@ -197,6 +205,12 @@ export class PlacementSystem {
   private lastPlayer = { x: 0, z: 0 }; // 直近のプレイヤー位置(state.playerは保存時しか更新されない)
   private gx = 0;
   private gz = 0;
+  /**
+   * v24 その場で うごかしている家具のID(編集モード)。null なら ふつうの配置。
+   * データ(state.furniture)からは 消さないので、うごかしている とちゅうに
+   * 自動セーブが走っても 家具が 消えることはない。
+   */
+  private moveId: number | null = null;
   placed = new Map<number, PlacedRuntime>();
   private baseCircles: number;
 
@@ -221,16 +235,22 @@ export class PlacementSystem {
     this.baseCircles = island.circles.length;
   }
 
-  /** 起動時・変更時にコライダーを積み直す */
+  /**
+   * 起動時・変更時にコライダーを積み直す。
+   * v24 うごかしている家具(moveId)は のぞく——じぶんの当たり判定に ぶつかって
+   * 「ほかの ものと かさなっているよ」から 動けなくなるため。置き直したら 元にもどる。
+   */
   private rebuildColliders(): void {
     this.island.circles.length = this.baseCircles;
     for (const p of this.placed.values()) {
+      if (p.data.id === this.moveId) continue;
       if (p.colliderR > 0) this.island.circles.push({ x: p.data.x, z: p.data.z, r: p.colliderR });
     }
   }
 
   /** セーブデータから復元 */
   restore(): void {
+    this.cancel(); // v24 うごかしている とちゅうなら やめる(消すメッシュを 指したままにしない)
     // 注意: 家具のマテリアルは島全体で共有(flora)。第2引数trueで消すと発光や木の実まで壊れる
     for (const p of this.placed.values()) p.mesh.dispose();
     this.placed.clear();
@@ -245,8 +265,9 @@ export class PlacementSystem {
 
   private spawn(f: PlacedFurniture): void {
     // 展示家具(すいそう・むしかご)は中身つきで作る。中身は出し入れのたびに作り直す(respawn)。
-    // 旧セーブの content(1匹)も displayContents が contents 1件として読む
-    const fm = makeFurnitureMesh(this.island.scene, f.item, displayContents(f));
+    // 旧セーブの content(1匹)も displayContents が contents 1件として読む。
+    // v24 しゃしんたては かざる1まい(data URL)も いっしょに わたす
+    const fm = makeFurnitureMesh(this.island.scene, f.item, displayContents(f), this.photoData(f));
     // v12 いろみずで ぬった色。作った直後(親付け・光だまりの前)に1回だけ塗る。
     // 色を変えるたびにメッシュごと作り直す(respawn)ので、データと絵がずれない
     if (f.color) tintFurnitureMesh(fm.root, f.color);
@@ -293,6 +314,40 @@ export class PlacementSystem {
     return true;
   }
 
+  /**
+   * v24 その場で うごかす(編集モード)。持ち帰らずに ゴーストを 出して 置き直す。
+   *
+   * 置ける場所の きまりは ふつうの配置と **1つも 変えていない**(同じ check を通す)。
+   * ちがうのは 3つだけ:
+   *   - もちものを 減らさない・ふやさない(うごかすだけ)
+   *   - うごかしている家具じしんは 重なりの相手から のぞく(moveId)
+   *   - 中身(すいそうの魚・むしかごの虫)と ぬった色は そのまま ついてくる
+   * やめた(Esc)ときは 元の場所の まま = 何も なかったことになる。
+   */
+  beginMove(p: PlacedRuntime): boolean {
+    if (!this.placed.has(p.data.id)) return false;
+    this.cancel();
+    const contents = displayContents(p.data);
+    const fm = makeFurnitureMesh(this.island.scene, p.data.item, contents);
+    if (p.data.color) tintFurnitureMesh(fm.root, p.data.color);
+    fm.root.visibility = 0.55;
+    this.ghost = fm.root;
+    this.ghostR = fm.colliderR;
+    this.active = p.data.item;
+    this.rot = p.data.rotY;
+    this.moveId = p.data.id;
+    p.mesh.setEnabled(false); // 本体は かくす(ゴーストだけが 見える)
+    this.rebuildColliders();
+    this.indicator.setEnabled(true);
+    sfx('pickup');
+    return true;
+  }
+
+  /** v24 いま その場で うごかしている家具のID(表示・テスト用。ふつうの配置なら null) */
+  get movingId(): number | null {
+    return this.moveId;
+  }
+
   rotate(): void {
     this.rot = (this.rot + Math.PI / 4) % (Math.PI * 2);
   }
@@ -304,6 +359,13 @@ export class PlacementSystem {
     this.valid = false;
     this.result = { ok: false };
     this.indicator.setEnabled(false);
+    // v24 うごかすのを やめた: 元の場所の本体を そのまま 見せなおす(データは 触っていない)
+    if (this.moveId !== null) {
+      const p = this.placed.get(this.moveId);
+      this.moveId = null;
+      if (p) p.mesh.setEnabled(true);
+      this.rebuildColliders();
+    }
   }
 
   update(player: PlayerController): void {
@@ -337,6 +399,7 @@ export class PlacementSystem {
     const r = Math.max(0.22, this.ghostR);
     const others: HomeObstacle[] = [];
     for (const p of this.placed.values()) {
+      if (p.data.id === this.moveId) continue; // v24 うごかしている じぶんとは 重ならない
       if (!this.isIndoorSpot(p.data.x, p.data.z)) continue;
       others.push({ x: p.data.x, z: p.data.z, r: Math.max(0.22, p.colliderR) });
     }
@@ -349,11 +412,12 @@ export class PlacementSystem {
     // 室内にいるあいだは室内のルールだけ(屋外のルール・挙動は何も変わらない)
     if (insideHomeFloor(this.lastPlayer.x, this.lastPlayer.z)) return this.checkIndoor(x, z);
     const r = Math.max(0.3, this.ghostR);
-    const base = checkPlacement(this.state, x, z, this.lastPlayer, r);
+    const base = checkPlacement(this.state, x, z, this.lastPlayer, r, this.moveId);
     if (!base.ok) return base;
     if (!this.island.walkable(x, z)) return ng(PLACE_REASON.outside);
     // 他の家具(大きい家具はコライダー分だけ広く見る)
     for (const p of this.placed.values()) {
+      if (p.data.id === this.moveId) continue; // v24 うごかしている じぶんとは 重ならない
       if (Math.hypot(x - p.data.x, z - p.data.z) < Math.max(0.55, p.colliderR + r * 0.8)) {
         return ng(PLACE_REASON.furniture);
       }
@@ -379,6 +443,10 @@ export class PlacementSystem {
     this.result = this.check(this.gx, this.gz);
     this.valid = this.result.ok;
     if (!this.valid) return false;
+    // v24 その場で うごかしていたなら、同じ家具を 新しい場所へ 置き直す。
+    // もちものは 1つも 増えも減りもしない・じっせきの「置いた数」も 増やさない
+    // (うごかすのは「置く」ではないので、数えると 累計が ふくらむ)
+    if (this.moveId !== null) return this.finishMove();
     const item = this.active;
     if (!invRemove(this.state, item, 1)) return false;
     const f: PlacedFurniture = {
@@ -396,6 +464,36 @@ export class PlacementSystem {
     this.rebuildColliders();
     this.cancel();
     toast(`${ITEMS[item].name}を おいた`, item);
+    sfx('place');
+    save(this.state);
+    return true;
+  }
+
+  /**
+   * v24 うごかしていた家具を 新しい場所へ 置き直す(place の中から呼ばれる)。
+   * 見た目は 作り直す(spawn)ので、光だまり・中身・ぬった色・当たり判定が
+   * 「置いたばかりの家具」と まったく同じ道を通る = ずれようがない。
+   */
+  private finishMove(): boolean {
+    const id = this.moveId;
+    if (id === null) return false;
+    const p = this.placed.get(id);
+    if (!p) {
+      this.cancel();
+      return false;
+    }
+    const item = p.data.item;
+    if (ITEMS[item].glow) unregisterGlowSource(p.data.x, p.data.z);
+    p.mesh.dispose(); // 共有マテリアルを道連れにしない
+    this.placed.delete(id);
+    p.data.x = this.gx;
+    p.data.z = this.gz;
+    p.data.rotY = this.rot;
+    this.moveId = null; // spawn/rebuild の前に もどす(かくし忘れを 作らない)
+    this.spawn(p.data);
+    this.rebuildColliders();
+    this.cancel();
+    toast(`${ITEMS[item].name}を うごかした`, item);
     sfx('place');
     save(this.state);
     return true;
@@ -552,6 +650,41 @@ export class PlacementSystem {
     return true;
   }
 
+  // ---- v24 しゃしんたて(かざる1まいを えらぶ) ----
+  //
+  // 家具が持つのは **しゃしんの番号だけ**(PlacedFurniture.photo)。絵そのものは
+  // アルバム(別の localStorage キー)にある。見た目は家具ごと作り直して合わせる
+  // ——展示家具の中身・ぬった色と まったく同じ流儀。
+
+  /** その家具に かざってある1まいの 絵(data URL)。無ければ undefined */
+  private photoData(f: PlacedFurniture): string | undefined {
+    if (f.item !== 'f_photostand' || !f.photo) return undefined;
+    return photoById(loadPhotos(), f.photo)?.data ?? undefined;
+  }
+
+  /**
+   * しゃしんたてに かざる1まいを えらぶ(undefined で 外す)。
+   * @returns 変わったか(同じ1まいなら false = 作り直さない)
+   */
+  setPhoto(p: PlacedRuntime, id: string | undefined): boolean {
+    if (p.data.item !== 'f_photostand') return false;
+    if ((p.data.photo ?? undefined) === id) return false;
+    if (id === undefined) delete p.data.photo;
+    else p.data.photo = id;
+    this.respawn(p);
+    if (id !== undefined) {
+      toast('しゃしんを かざった', 'f_photostand');
+      sfx('place');
+    }
+    save(this.state);
+    return true;
+  }
+
+  /** その家具が しゃしんたてか(Eのヒントと 入口の判定は ここを通す) */
+  isPhotoStand(p: PlacedRuntime): boolean {
+    return p.data.item === 'f_photostand';
+  }
+
   /** その家具に いろみずを ぬれるか(いろみずを1つでも持っていること) */
   canPaint(): boolean {
     return (Object.keys(PAINT_COLORS) as PaintId[]).some((id) => isPaint(id) && (this.state.inventory[id] ?? 0) > 0);
@@ -563,7 +696,10 @@ export class PlacementSystem {
   }
 
   get hint(): string {
-    if (this.valid) return '<kbd>E</kbd>おく <kbd>R</kbd>まわす <kbd>Esc</kbd>やめる';
+    // v24 うごかしているときは「ここに おく」。もちものから 置くときの「おく」と
+    // 言いわけて、いま何をしているのかを 1行で 分かるようにする
+    const put = this.moveId !== null ? 'ここに おく' : 'おく';
+    if (this.valid) return `<kbd>E</kbd>${put} <kbd>R</kbd>まわす <kbd>Esc</kbd>やめる`;
     return `${this.reason} — うごかして ばしょを さがそう <kbd>R</kbd>まわす <kbd>Esc</kbd>やめる`;
   }
 }

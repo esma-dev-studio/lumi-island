@@ -93,6 +93,76 @@ export const BUG_HOP_SAFE_R = 4.0;
 /** とまり直した直後、この秒数は もう にげない(追いついた子が つかまえられる) */
 export const BUG_SETTLE_SEC = 2.0;
 
+// ---------------------------------------------------------------------------
+// v24 「とんで わたる」(野生の チョウ・トンボ・ホタルだけ)
+//
+// v23まで、虫は スポットの上を ただよいつづけ、場所を変えるのは
+// 「にげたとき」だけだった(しかも 一瞬で 移る)。そのため、遠くから ながめても
+// 「花から 花へ ひらひら 飛んでいく」という いちばん虫らしい絵が 1度も出なかった。
+//
+// 約束(捕獲・逃走の不変条件を1つも 変えないための ならべ):
+//   1. とび立つのは **プレイヤーが BUG_HOP_CALM_R より遠いとき だけ**。
+//      近づいている子の 目の前で 逃げるように 見える動きは 絶対に 起こさない。
+//   2. とび先も プレイヤーから BUG_HOP_CALM_R 以上 はなれた スポットだけ。
+//      = とんでいる虫が 捕獲圏(2.6m)や 予告圏(5m)に 割りこむことは 構造的にない。
+//   3. とんでいる あいだは つかまえられない(にげている虫と まったく同じあつかい)。
+//      着いたら BUG_SETTLE_SEC のあいだ にげない = 追いかけた子は つかまえられる。
+//   4. プレイヤーの位置が わたされない場面(単体テスト・タイトル背景)では とび立たない。
+// 時こくは 種と 通し番号の ハッシュで決めるので Math.random は要らない(決定的)。
+// ---------------------------------------------------------------------------
+/** とんで わたるのに かかる時間(実秒) */
+export const BUG_HOP_SEC = 1.25;
+/** とちゅうで もち上がる高さ(m)。低空を すべるように わたる */
+export const BUG_HOP_LIFT = 0.55;
+/**
+ * 行き先が 1つも あいていないときの「ひとまわり」の半径(m)。
+ *
+ * 島の花のスポットは 4つしか なく、モンシロチョウが 4匹 出た日は
+ * **どの花も ふさがっている**(実測)。そんな日でも 舞って見えるように、
+ * 同じ花へ もどる ひとまわりの 飛行を する ——
+ * 本物の チョウも 花の まわりを ぐるりと まわって 同じ花に もどる。
+ */
+export const BUG_HOP_LOOP_R = 1.6;
+/** つぎに とび立つまでの 間(実秒)。この はんいで 虫ごとに ばらす */
+export const BUG_HOP_WAIT_MIN = 9;
+export const BUG_HOP_WAIT_MAX = 20;
+/** プレイヤーが この距離より近いと とび立たない(m)。予告圏5mの ずっと外がわ */
+export const BUG_HOP_CALM_R = 9;
+/**
+ * とび先を さがす半径(m)。近くの花・池のあいだを 行き来する。
+ * 島の花のスポットは いちばん近い同士でも 10m、はなれた組は 15.6m あるので、
+ * 12m だと「となりの花が ふさがっている日は 1度も とばない」になる(実機で確認)。
+ * にげたときの とまり直し(BUG_HOP_R=22m)より 内がわに とどめて、
+ * 「見えている となりの花へ わたる」ぐらいの きょりに する。
+ */
+export const BUG_HOP_TRIP_R = 18;
+
+/**
+ * v24 虫の「うごきかた」。かごの中の見せかたと、野生で とんで わたるかを これ1つで決める。
+ *   flutter … ひらひら 舞う(チョウ2種)
+ *   hover   … すっと 動いて 止まる(トンボ)
+ *   drift   … ふわふわ ただよう(ホタル。明滅は これまでどおり)
+ *   walk    … ゆっくり 歩いて ときどき 向きを変える(カブクワ族・バッタ・カマキリ・セミ ほか)
+ */
+export type BugMotion = 'flutter' | 'hover' | 'drift' | 'walk';
+
+const BUG_MOTION: Partial<Record<BugId, BugMotion>> = {
+  b_shiro: 'flutter',
+  b_ageha: 'flutter',
+  b_tonbo: 'hover',
+  b_hotaru: 'drift',
+};
+
+/** その虫の うごきかた(表にないものは ぜんぶ「歩く」) */
+export function bugMotion(id: BugId): BugMotion {
+  return BUG_MOTION[id] ?? 'walk';
+}
+
+/** とんで わたる種か(歩く虫は これまでどおり スポットに いすわる) */
+export function bugFlies(id: BugId): boolean {
+  return bugMotion(id) !== 'walk';
+}
+
 /**
  * v12 りょうり「くしやき」の効果「むしと なかよし」。
  * にげはじめる距離(runFlee / walkFlee)に かける倍率。1=ふだんどおり。
@@ -314,6 +384,15 @@ export interface ActiveBug {
   wary: boolean;
   /** 見た目のばらつき用 */
   seed: number;
+  /**
+   * v24 スポットからスポットへ とんで わたっている とちゅうの経過(実秒)。
+   * 0 なら とまっている。0より大きいあいだは spot が「行き先」・hopFrom が「出発地」。
+   */
+  hopT: number;
+  /** v24 とび立った もとのスポット番号(hopT>0のあいだだけ 意味がある) */
+  hopFrom: number;
+  /** v24 つぎに とび立つ時こく(b.t とくらべる)。とび立つたびに 決めなおす */
+  hopAt: number;
 }
 
 export interface BugPlan {
@@ -334,9 +413,28 @@ export interface BugOffset {
   blink: number;
   /** 見た目の大きさ 1..0.05(にげているあいだ だんだん小さくなって飛び去って見える) */
   scale: number;
+  /**
+   * v24 とんで わたっている とちゅうの「出発地の重み」1→0。
+   * 0 なら 行き先に とまっている。表示側が 足もとの高さを 出発地と行き先で
+   * まぜるために使う(地形の高さは BugSystem が知らない)。
+   */
+  hopMix: number;
 }
 
-export function bugOffset(def: BugDef, b: { t: number; fleeT: number; wary: boolean; seed: number }): BugOffset {
+/** 0..1 をなめらかに(端で速さ0)。とんで わたる弧に使う */
+const smooth = (u: number): number => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
+
+/**
+ * スポットのまわりの ただよい。
+ *
+ * @param travel v24 とんで わたっているときだけ わたす「出発地 − 行き先」の平面ベクトル。
+ *   省略すると v23までと 1ミリも 同じ結果になる(既存の呼び出し・テストは そのまま)。
+ */
+export function bugOffset(
+  def: BugDef,
+  b: { t: number; fleeT: number; wary: boolean; seed: number; hopT?: number },
+  travel?: { dx: number; dz: number }
+): BugOffset {
   const ph = b.seed * 1.7;
   const a = ph + b.t * def.speed;
   // 円ではなく8の字ぎみに動かす(同じ輪をぐるぐる回ると機械に見える)
@@ -348,16 +446,169 @@ export function bugOffset(def: BugDef, b: { t: number; fleeT: number; wary: bool
   const f = b.fleeT;
   const flee = f > 0 ? f * f * 3.2 : 0;
   const wingSpeed = def.hoverR > 0 ? (b.wary ? 26 : 17) : 0;
+  // v24 とんで わたる: 出発地から 行き先へ すべるように 移り、まん中で いちばん高くなる。
+  // travel が無い(=とんでいない)ときは hop の項が すべて 0 になり、これまでと同じ式に戻る
+  const hopT = b.hopT ?? 0;
+  const u = hopT > 0 ? Math.min(1, hopT / BUG_HOP_SEC) : 0;
+  const mix = hopT > 0 ? 1 - smooth(u) : 0;
+  const goes = travel !== undefined && (travel.dx !== 0 || travel.dz !== 0);
+  // 行き先が あるとき: 出発地から 行き先へ すべる / 無いとき: 同じ花の まわりを ひとまわり
+  const loop = hopT > 0 && !goes ? 2 * Math.PI * u : 0;
+  const tx = hopT > 0 ? (goes ? travel!.dx * mix : Math.sin(loop) * BUG_HOP_LOOP_R) : 0;
+  const tz = hopT > 0 ? (goes ? travel!.dz * mix : (1 - Math.cos(loop)) * BUG_HOP_LOOP_R) : 0;
+  const lift = hopT > 0 ? Math.sin(Math.PI * u) * BUG_HOP_LIFT : 0;
   return {
-    dx: dx + fx * flee,
-    dy: def.hoverY + bob + (f > 0 ? f * 2.4 : 0),
-    dz: dz + fz * flee,
-    rotY: Math.atan2(-Math.sin(a) * def.hoverR, Math.cos(a * 1.7 + ph) * def.hoverR * 0.72 * 1.7) + ph * 0.1,
-    wing: wingSpeed > 0 ? Math.sin(b.t * wingSpeed + ph) * 0.7 : 0,
+    dx: dx + fx * flee + tx,
+    dy: def.hoverY + bob + (f > 0 ? f * 2.4 : 0) + lift,
+    dz: dz + fz * flee + tz,
+    // とんでいるあいだは 進む向きへ 頭を向ける(ただよいの向きより こちらが 強い)
+    rotY:
+      hopT > 0
+        ? goes
+          ? Math.atan2(-travel!.dx, -travel!.dz)
+          : Math.atan2(Math.cos(loop), Math.sin(loop)) // ひとまわりの 接線
+        : Math.atan2(-Math.sin(a) * def.hoverR, Math.cos(a * 1.7 + ph) * def.hoverR * 0.72 * 1.7) + ph * 0.1,
+    // とんでいるあいだは いちばん速く はばたく(はばたかない虫は そもそも とばない)
+    wing: wingSpeed > 0 ? Math.sin(b.t * (hopT > 0 ? 30 : wingSpeed) + ph) * 0.7 : 0,
     blink: def.glow ? Math.max(0, Math.sin(b.t * 2.1 + ph * 2.3)) ** 2 : 0,
     // にげる演出のあいだだけ小さくなる。とまり直したら fleeT が0に戻るので自動で1へ復帰する
     // (表示側で「戻し忘れ」が起きないよう、大きさもここで決めきる)
     scale: f > 0 ? Math.max(0.05, 1 - f / BUG_FLEE_SEC) : 1,
+    hopMix: mix,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// v24 かご(むしかご・おおきなむしかご)の中の うごき。
+//
+// v23まで、かごの中の虫は 1ミリも 動かなかった(ホタルの明滅だけ)。
+// 「つかまえた虫を ながめる」のが かごの遊びなのに、置いたとたん 標本になっていた。
+//
+// ここは **純ロジック**(Babylon にも DOM にも 依存しない)。表示側(entities/furniture.ts)は
+// 返ってきた値を そのまま 位置と角度に入れるだけ = 動きの決まりが1か所にある。
+//
+// 座標の約束(かごの中で ぜったいに はみ出さないための ならべ):
+//   fwd  … その虫の 正面(+Z)へ 進む量。**0以上 span.fwd 以下**。
+//          後ろへは 下がらない = とまり木の上でも 台の すみでも 外へ出ない。
+//          向きを変えて もどるときは yaw に π が入る(あるいたまま 引き返す絵になる)。
+//   side … 正面の右手(+X)へ ずれる量。-span.side 〜 +span.side。
+//   lift … 上へ 浮く量。0 〜 span.lift。
+// span は かごの とまり場ごとに 表示側が わたす(CAGE_SPECS)。
+// ---------------------------------------------------------------------------
+
+/** かごの中の1匹の姿勢(とまり場からの ずれ)。すべて m / rad */
+export interface CagedBugPose {
+  /** 正面(+Z)へ 進んだ量。0以上 */
+  fwd: number;
+  /** 右手(+X)へ ずれた量 */
+  side: number;
+  /** 上へ 浮いた量。0以上 */
+  lift: number;
+  /** とまり場の向きからの ずれ(rad) */
+  yaw: number;
+  /** 羽を ひらく角(rad)。0=たたんだまま。歩く虫は いつも0 */
+  wing: number;
+  /** 明滅の強さ 0..1(ホタルだけ) */
+  blink: number;
+}
+
+/**
+ * かごの とまり場ごとの「動いてよい はば」。
+ *
+ * turn(向きを かえてよい 角)を 小さく おさえてあるのは、
+ * からだの長い虫(オオクワガタ・ギラファ)を 大きく まわすと、
+ * その 前後の長さが そのまま よこへ ふり出されて かごを つきぬけるため。
+ * 「歩いて ときどき 向きを かえる」は、**小さく 首をふりながら 行ったり来たり**で 出す
+ * (tests/unit/bugs_v24.test.ts が 実メッシュで はみ出し量を 数で 見張っている)。
+ */
+export interface CageSpan {
+  /** 正面へ 進んでよい 長さ(m)。うしろへは 下がらない */
+  fwd: number;
+  /** よこへ ずれてよい 長さ(m) */
+  side: number;
+  /** 上へ 浮いてよい 高さ(m) */
+  lift: number;
+  /** 向きを かえてよい 角(rad) */
+  turn: number;
+}
+
+const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
+const frac = (v: number): number => v - Math.floor(v);
+
+/**
+ * かごの中の虫1匹の姿勢(決定論)。同じ (種・番号・時こく) なら いつでも同じ値。
+ *
+ * @param slot かごの中の何番目か(位相をずらして、何匹も そろって動かないようにする)
+ * @param t    かごの通し時間(実秒)
+ */
+export function cagedBugPose(id: BugId, slot: number, t: number, span: CageSpan): CagedBugPose {
+  const ph = slot * 1.9 + (id.length % 5) * 0.37;
+  const motion = bugMotion(id);
+  const blink = id === 'b_hotaru' ? Math.max(0, Math.sin(t * 2.1 + ph * 2.3)) ** 2 : 0;
+  if (motion === 'flutter') {
+    // ひらひら舞う: 前後1周・左右2周の8の字。羽は ひらいたり たたんだり
+    const a = t * 1.05 + ph;
+    return {
+      fwd: (0.5 - 0.5 * Math.cos(a)) * span.fwd,
+      side: Math.sin(a * 2 + ph) * span.side,
+      lift: (0.5 + 0.5 * Math.sin(a * 1.7 + ph * 0.6)) * span.lift,
+      // 進む向きへ 頭を ふる(8の字なので 左右に ゆれる)
+      yaw: Math.sin(a * 2 + ph) * span.turn,
+      wing: 0.08 + 0.62 * (0.5 - 0.5 * Math.cos(t * 8.5 + ph)),
+      blink,
+    };
+  }
+  if (motion === 'hover') {
+    // ホバリング: ほとんど 止まっていて、ときどき すっと 場所を変える。
+    // 区間ごとの 行き先を ハッシュで決めるので、同じ時こくなら いつでも同じ
+    const cyc = 2.9;
+    const n = Math.floor(t / cyc + ph);
+    const u = frac(t / cyc + ph);
+    const k = smooth(clamp01((u - 0.7) / 0.18)); // 0.70〜0.88 の あいだだけ 動く
+    const at = (i: number): [number, number, number] => [
+      hash3(i, 11, 3) * span.fwd,
+      (hash3(i, 23, 7) * 2 - 1) * span.side,
+      hash3(i, 37, 13) * span.lift,
+    ];
+    const [f0, s0, l0] = at(n);
+    const [f1, s1, l1] = at(n + 1);
+    return {
+      fwd: f0 + (f1 - f0) * k,
+      side: s0 + (s1 - s0) * k,
+      lift: l0 + (l1 - l0) * k,
+      // 動いているあいだだけ 進む向きへ 体を むける
+      yaw: Math.max(-span.turn, Math.min(span.turn, Math.atan2(s1 - s0, (f1 - f0) + 1e-6))) * k,
+      // 羽は 止まって見えるほど 速く ふるえる(ホバリングの音の絵)
+      wing: 0.12 + 0.06 * Math.sin(t * 38 + ph),
+      blink,
+    };
+  }
+  if (motion === 'drift') {
+    // ふわふわ ただよう(ホタル)。周期の合わない2つの波で 同じ道を なぞらない
+    const a = t * 0.55 + ph;
+    return {
+      fwd: (0.5 - 0.5 * Math.cos(a)) * span.fwd,
+      side: Math.sin(a * 0.62 + ph) * span.side,
+      lift: (0.5 + 0.5 * Math.sin(a * 0.83 + ph * 1.3)) * span.lift,
+      yaw: Math.sin(a * 0.62 + ph) * span.turn,
+      wing: 0.1 + 0.28 * (0.5 - 0.5 * Math.cos(t * 5.5 + ph)),
+      blink,
+    };
+  }
+  // 歩く: 前へ ゆっくり 進んで、また もどってくる。
+  // 進むあいだに 首を 左へ、もどるあいだに 右へ ふる = 「ときどき 向きを かえる」。
+  // 位置は 0〜span.fwd の あいだだけ なので、とまり木からも 台のすみからも 落ちない
+  const cyc = 8.5;
+  const u = frac(t / cyc + ph * 0.31);
+  const p = 0.5 - 0.5 * Math.cos(2 * Math.PI * u); // 0→1→0
+  return {
+    fwd: p * span.fwd,
+    // よこ歩きは ほんの少しだけ(まっすぐの ものさしに 見せない)
+    side: Math.sin(2 * Math.PI * u + ph) * span.side * 0.5,
+    lift: 0,
+    yaw: Math.sin(2 * Math.PI * u + ph * 0.7) * span.turn,
+    wing: 0,
+    blink,
   };
 }
 
@@ -468,11 +719,24 @@ export class BugScheduler {
     return this.key;
   }
 
-  /** その虫のいまの平面位置(捕獲・逃走の判定に使う) */
+  /**
+   * その虫のいまの平面位置(捕獲・逃走の判定に使う)。
+   * v24 とんで わたっている とちゅうは 出発地と行き先のあいだ = 見えている位置と 同じ
+   * (見た目だけ 別の場所にいる、という ごまかしを作らない)。
+   */
   positionOf(b: ActiveBug): { x: number; z: number } {
     const p = this.spots[b.spot];
-    const o = bugOffset(BUG_BY_ID[b.bug], b);
+    const o = bugOffset(BUG_BY_ID[b.bug], b, this.travelOf(b));
     return { x: p.x + o.dx, z: p.z + o.dz };
+  }
+
+  /** v24 とんで わたる「出発地 − 行き先」。とんでいなければ undefined */
+  travelOf(b: ActiveBug): { dx: number; dz: number } | undefined {
+    if (b.hopT <= 0) return undefined;
+    const from = this.spots[b.hopFrom];
+    const to = this.spots[b.spot];
+    if (!from || !to) return undefined;
+    return { dx: from.x - to.x, dz: from.z - to.z };
   }
 
   /**
@@ -519,8 +783,24 @@ export class BugScheduler {
             b.spook = 0;
             b.settle = BUG_SETTLE_SEC;
             b.wary = false;
+            b.hopFrom = next;
+            // にげて とまり直した直後に また とび立たない(追いかけた子が つかまえられる)
+            b.hopAt = b.t + this.hopWait(b);
           }
         }
+        continue;
+      }
+      // v24 とんで わたっている とちゅう。着くまでは にげる判定も 捕獲も しない
+      // (にげている虫と まったく同じあつかい)。着いたら しばらく にげない
+      if (b.hopT > 0) {
+        b.hopT += dt;
+        if (b.hopT >= BUG_HOP_SEC) {
+          b.hopT = 0;
+          b.settle = BUG_SETTLE_SEC;
+          b.hopAt = b.t + this.hopWait(b);
+        }
+        b.wary = false;
+        b.spook = 0;
         continue;
       }
       if (b.settle > 0) b.settle = Math.max(0, b.settle - dt);
@@ -554,6 +834,18 @@ export class BugScheduler {
         }
       } else {
         b.spook = Math.max(0, b.spook - dt * BUG_CALM_RATE);
+        // v24 プレイヤーが じゅうぶん遠いときだけ、となりの花・池へ とんで わたる。
+        // 近づいている子の 目の前で 動くことは 構造的に 起きない(距離の門が ここ1つ)
+        if (b.settle <= 0 && b.t >= b.hopAt && d >= BUG_HOP_CALM_R && bugFlies(b.bug)) {
+          const next = this.hopSpot(b, player);
+          if (next === null) {
+            b.hopAt = b.t + this.hopWait(b); // 行き先が無い日は しばらく おあずけ
+          } else {
+            b.hopFrom = b.spot;
+            b.spot = next;
+            b.hopT = 1e-4; // 0 のままだと「とんでいない」と 区別できない
+          }
+        }
       }
     }
     // 足りないぶんを、間をおいて1匹ずつ出す
@@ -591,7 +883,8 @@ export class BugScheduler {
   nearestCatchable(px: number, pz: number, r: number = BUG_CATCH_R): { bug: ActiveBug; distance: number } | null {
     let best: { bug: ActiveBug; distance: number } | null = null;
     for (const b of this.bugs) {
-      if (b.fleeT > 0) continue;
+      // にげている虫と、とんで わたっている とちゅうの虫は 対象外
+      if (b.fleeT > 0 || b.hopT > 0) continue;
       const p = this.positionOf(b);
       const d = Math.hypot(px - p.x, pz - p.z);
       if (d < r && (best === null || d < best.distance)) best = { bug: b, distance: d };
@@ -608,6 +901,44 @@ export class BugScheduler {
    * をいちばん近い順に選ぶ。1つも無ければ もとのスポットに戻る(消えるのは最後の手段)。
    * 距離だけで決めるので Math.random は要らない(決定的)。
    */
+  /**
+   * v24 つぎに とび立つまでの 間(実秒)。虫ごと・回ごとに ばらす(決定的)。
+   * key と 何回とんだかで ハッシュを引くので、走行ごとに 同じ ならびになる。
+   */
+  private hopWait(b: ActiveBug): number {
+    const u = hash3(b.key, Math.floor(b.t * 4), 5171);
+    return BUG_HOP_WAIT_MIN + u * (BUG_HOP_WAIT_MAX - BUG_HOP_WAIT_MIN);
+  }
+
+  /**
+   * v24 とんで わたる先。
+   *   - 同じ種が とまれる場所 / ほかの虫が いない場所
+   *   - BUG_HOP_TRIP_R(12m)以内 = 見えている となりの花・池
+   *   - プレイヤーから BUG_HOP_CALM_R(9m)以上 はなれている
+   * を みたす中で いちばん近い所。1つも無ければ null(その場に とどまる)。
+   */
+  private hopSpot(b: ActiveBug, player: BugPlayer): number | null {
+    const def = BUG_BY_ID[b.bug];
+    const from = this.spots[b.spot];
+    if (!from) return null;
+    const used = new Set(this.bugs.filter((x) => x !== b).map((x) => x.spot));
+    let best: { i: number; d: number } | null = null;
+    for (let i = 0; i < this.spots.length; i++) {
+      if (i === b.spot || used.has(i) || this.cooldown.has(i)) continue;
+      const s = this.spots[i];
+      if (!def.spots.includes(s.kind)) continue;
+      const d = Math.hypot(s.x - from.x, s.z - from.z);
+      if (d > BUG_HOP_TRIP_R) continue;
+      if (Math.hypot(player.x - s.x, player.z - s.z) < BUG_HOP_CALM_R) continue;
+      if (best === null || d < best.d) best = { i, d };
+    }
+    if (best) return best.i;
+    // 同じ種の 花が 1つも あいていない日(モンシロチョウ4匹で 花4つが 満員、など)は、
+    // **同じ花へ もどる ひとまわり**を とぶ。プレイヤーから 遠いことは ここでも 確かめる
+    if (Math.hypot(player.x - from.x, player.z - from.z) < BUG_HOP_CALM_R) return null;
+    return b.spot;
+  }
+
   private rehomeSpot(b: ActiveBug, player: BugPlayer | null): number | null {
     const def = BUG_BY_ID[b.bug];
     const from = this.spots[b.spot];
@@ -669,9 +1000,14 @@ export class BugScheduler {
       }
       const spot = this.pickSpot(def, day, n + attempt, used);
       if (spot === null) continue;
+      const key = this.nextKey++;
       return {
-        key: this.nextKey++, bug: def.id, spot, t: 0, fleeT: 0, spook: 0, settle: 0, wary: false,
+        key, bug: def.id, spot, t: 0, fleeT: 0, spook: 0, settle: 0, wary: false,
         seed: Math.floor(hash3(day, n, spot * 13 + 5) * 997),
+        // v24 出てすぐ とび立つと「出たのに いない」になるので、1回目は 待ち時間を 長めに取る
+        hopT: 0,
+        hopFrom: spot,
+        hopAt: BUG_HOP_WAIT_MIN + hash3(key, spot, 4409) * (BUG_HOP_WAIT_MAX - BUG_HOP_WAIT_MIN),
       };
     }
     return null;

@@ -23,9 +23,10 @@ import { OcclusionController } from './OcclusionController';
 import { WorldPauseController } from './WorldPauseController';
 import { InputRouter } from './InputRouter';
 import { CharacterView } from '../characters/CharacterView';
+import { outfitHex, outfitLabel } from '../characters/outfit';
 import { CHARACTERS } from '../data/characters';
 import { NPC_SPOTS, POIS } from '../data/island';
-import { ITEMS, isCookedFood, validateItemData } from '../data/items';
+import { ITEMS, PAINT_COLORS, isCookedFood, validateItemData, type PaintId } from '../data/items';
 import {
   applyHomeStyle, invAddRecorded, invRemove, newGameState, statAdd, type GameState,
 } from '../game/GameState';
@@ -78,7 +79,7 @@ import {
 import { completeQuest, questFor, syncQuestUnlocks } from '../systems/QuestSystem';
 import { QUEST_BY_ID } from '../data/quests';
 import { NpcAvailabilityService } from '../systems/NpcAvailabilityService';
-import { sharedWeather, type Weather } from '../systems/WeatherSystem';
+import { SNOW_NEED, addSnowScoop, sharedWeather, snowCount, type Weather } from '../systems/WeatherSystem';
 import { finishHomeExpansion, homeExpandStage, shouldFinishConstruction } from '../systems/HomeExpansion';
 import {
   STATION_DONE_TOAST, finishStation, isStationBuilt, orderStation, shouldFinishStation,
@@ -101,6 +102,10 @@ import { CodexUI } from '../ui/CodexUI';
 import { LetterUI } from '../ui/LetterUI';
 import { QuestCompleteUI } from '../ui/QuestCompleteUI';
 import { PauseMenu } from '../ui/PauseMenu';
+import { PhotoUI, framePhoto } from '../ui/PhotoUI';
+import {
+  PHOTO_MAX, fitPhotos, loadPhotos, nextPhotoId, photosToDrop, removePhoto, savePhotos, type Photo,
+} from '../systems/PhotoSystem';
 import { TouchControls } from '../ui/TouchControls';
 import { save } from '../save/SaveSystem';
 import { toast } from '../ui/Toast';
@@ -112,11 +117,15 @@ import { updateEffects, updateWeatherFx, snailWorldPos, burst, flyItem, setCookG
 import { sharedCooking, validateCookingData } from '../systems/CookingEffects';
 import { setBugFleeScale } from '../systems/BugSystem';
 import { validateComboData } from '../data/combos';
+import { validateDiscoveryData } from '../systems/DiscoverySystem';
+import { homeScoreTier, validateHomeScore } from '../systems/HomeScore';
 import { installLumiDebugApi } from '../debug/LumiDebugApi';
 
 /** ?weather= に書ける値(検証・撮影・回帰ボット用)。それ以外は日付から決める */
 const FORCE_WEATHER: Record<string, Weather> = {
   rain: 'rainy', rainy: 'rainy', cloudy: 'cloudy', cloud: 'cloudy', sunny: 'sunny', sun: 'sunny',
+  // v24 ゆき(?weather=snow)
+  snow: 'snowy', snowy: 'snowy',
 };
 
 /**
@@ -214,6 +223,18 @@ export class GameScene {
   letterUI!: LetterUI;
   questComplete!: QuestCompleteUI;
   pauseMenu!: PauseMenu;
+  /** v24 フォトモードの わく(シャッター・とじる) */
+  photoUI!: PhotoUI;
+  /** v24 アルバムの中身(起動時に読み、とるたびに 書きこむ)。セーブ本体とは 別のキー */
+  photos: Photo[] = [];
+  /** つぎの描画の あとで 焼く(WebGLは 描いた ちょくごしか 読み出せない) */
+  private photoPending = false;
+  /** フォトモードに 入る前の カメラの 引き(とじたら もどす) */
+  private photoZoom: number | null = null;
+  /** 「古いものから きえるよ」を 1度 見せたか(2回めの シャッターで 実さいに 消す) */
+  private photoDropOk = false;
+  /** v24 そめた ふくに だれかが 気づいたか(そめるたびに false に もどる) */
+  private outfitNoticed = false;
   touch!: TouchControls;
   paused = false;
   /** いま家の中にいるか(セーブは state.flags.indoor)。E候補・カメラ・室内の表示がこれで切り替わる */
@@ -303,6 +324,7 @@ export class GameScene {
     setHomeExpandedLayout(homeExpandStage(this.state));
     this.island.build();
     this.playerView = await CharacterView.load(this.scene, CHARACTERS.mio);
+    this.applyOutfit(); // v24 セーブしてあった ふくの色を 入れる(未設定なら もとの みどり)
     for (const m of this.playerView.meshes) this.island.shadows.addShadowCaster(m, true);
     this.player = new PlayerController(this.playerView, this.island, {
       x: this.state.player.x, z: this.state.player.z, rotY: this.state.player.rotY,
@@ -349,6 +371,19 @@ export class GameScene {
     };
     this.questComplete = new QuestCompleteUI();
     this.pauseMenu = new PauseMenu();
+    // v24 ポーズメニューから ふくの色を かえる(いろみずを 持っているときだけ 出る)
+    this.pauseMenu.getOutfit = () => ({
+      inventory: this.state.inventory,
+      current: this.state.outfit,
+    });
+    this.pauseMenu.onOutfit = (paint) => this.dyeOutfit(paint);
+    // v24 フォトモード(P)。アルバムは セーブ本体とは 別のキーから 読む
+    this.photoUI = new PhotoUI();
+    this.photos = loadPhotos();
+    this.photoUI.onShutter = () => this.takePhoto();
+    this.photoUI.onClose = () => this.closePhotoMode();
+    this.codexUI.getPhotos = () => this.photos;
+    this.codexUI.onDeletePhoto = (id) => this.deletePhoto(id);
     this.tutorial = new TutorialSystem(this.state);
     this.inter = new InteractionSystem(this.island, this.state, !!this.opts.debug);
     this.fishing = new FishingSystem(this.scene, this.state, !!this.opts.debug);
@@ -389,6 +424,9 @@ export class GameScene {
       onMenu: () => this.inputRouter.escape(),
       onRotate: () => this.inputRouter.rotatePlacement(),
       onEmote: () => this.inputRouter.emote(),
+      // v24 その場で 模様替え / フォトモード(キーボードは R と P。入口は同じメソッド)
+      onMove: () => this.moveNearestFurniture(),
+      onPhoto: () => this.inputRouter.togglePhoto(),
     });
     this.questDlg = new QuestDialogueController({
       state: this.state, npcs: this.npcs, dialogue: this.dialogue,
@@ -399,6 +437,13 @@ export class GameScene {
       onBoatRepaired: () => this.island.applyBoatRepaired(true),
       onStationOrdered: () => orderStation(this.state, this.island.time.day),
       onBondEvent: (npcId) => this.startBondEvent(npcId),
+      // v24 そめた ふくに 気づく一言(そめてから 最初に 話しかけた1人だけ・1回)
+      noticeOutfit: () => {
+        const label = outfitLabel(this.state.outfit);
+        if (this.outfitNoticed || !label) return null;
+        this.outfitNoticed = true;
+        return `あれ? その ふく、${label}に そめたんだね。よく にあってるよ!`;
+      },
     });
     // v21 立ち話の集合(3組・時間帯ごと)。
     // NPCSystem がするのは まつりと同じ「立ち位置の差しかえ」だけなので、
@@ -562,6 +607,8 @@ export class GameScene {
     for (const p of validateChatData()) console.warn('[data]', p);
     for (const p of validateBondData()) console.warn('[data]', p);
     for (const p of validateBossFishData()) console.warn('[data]', p);
+    for (const p of validateDiscoveryData()) console.warn('[data]', p);
+    for (const p of validateHomeScore()) console.warn('[data]', p);
     this.inputRouter.attach();
     this.touch.attach();
     if (this.opts.debug) installLumiDebugApi(this); // 決定的テスト用のAPI(実プレイ検証はデバッグなしで行う)
@@ -888,6 +935,13 @@ export class GameScene {
     // 会話の「つぎへ/おわる」と同じ感覚にそろえ、押して無反応の画面を作らない。
     // 自動テスト・回帰ボットが うっかり 手紙を ひらいても、Eだけで 抜け出せる
     // (世界が凍っているあいだ プレイヤーは動けないので、逃げ道が1つも無いと そこで止まる)。
+    // v24 フォトモードの あいだの E(タッチの丸ボタンは 出ていない)は シャッター。
+    // ほかの候補は 1つも 動かさない(「表示=Eで動くもの」を 1つに たもつ)
+    if (this.photoUI.open) {
+      this.wantInteract = false;
+      if (want) this.takePhoto();
+      return '';
+    }
     if (this.letterUI.open) {
       this.wantInteract = false;
       if (want) this.letterUI.close();
@@ -904,6 +958,9 @@ export class GameScene {
       !uiOpen && !this.indoor && !this.inCove && this.npcHome === null && !this.seq.active && !this.inter.busy &&
       !this.fishing.locksPlayer && !this.placement.active;
     const snail = canPickGround ? this.weather.snailWithinReach(this.player.x, this.player.z) : null;
+    // v24 ゆきの日の ふきだまり。カタツムリと まったく同じ あつかい
+    // (同じ4か所を つかい、あめの日と ゆきの日は 同じ日には 来ない)
+    const drift = canPickGround ? this.weather.driftWithinReach(this.player.x, this.player.z) : null;
     const bottle = canPickGround ? this.island.nearestBottle(this.player.x, this.player.z, BOTTLE_REACH) : null;
     const hint = routeInteraction(this, uiOpen); // Eはここで消費される(他候補があればそれが動く)
     if (hint) return hint;
@@ -912,9 +969,40 @@ export class GameScene {
       if (want) this.pickBottle(bottle.x, bottle.z);
       return '<kbd>E</kbd>びんを ひろう';
     }
+    if (drift) {
+      if (want) this.scoopSnow(drift.spot, drift.x, drift.z);
+      return `<kbd>E</kbd>ゆきを あつめる(${snowCount(this.state, this.island.time.day)}/${SNOW_NEED})`;
+    }
     if (!snail) return '';
     if (want) this.pickSnail(snail.spot);
     return '<kbd>E</kbd>カタツムリをひろう';
+  }
+
+  /**
+   * v24 ゆきを あつめる: 3回で ゆきだるまが 手に入る。
+   * その日の あいだ、その ふきだまりは もう つかえない(4か所あるので 1日1こ できる)。
+   */
+  private scoopSnow(spot: number, x: number, z: number): void {
+    this.weather.markDriftTaken(spot);
+    const done = addSnowScoop(this.state, this.island.time.day);
+    const y = this.island.groundY(x, z);
+    this.player.face(x, z);
+    burst(x, y + 0.25, z, 'splash', 10); // 白っぽい粒(水しぶきと 同じ色みで じゅうぶん)
+    this.playerView.play('pickup', {
+      onEnd: () => {
+        if (!this.player.moving) this.playerView.play('idle');
+      },
+    });
+    if (done) {
+      invAddRecorded(this.state, 'f_snowman', 1);
+      flyItem(x, y + 0.2, z);
+      toast(`ゆきだるまが できた! おいて かざれるよ`, 'f_snowman');
+      sfx('craft');
+    } else {
+      toast(`ゆきを あつめた(${snowCount(this.state, this.island.time.day)}/${SNOW_NEED})`, 'f_snowman');
+      sfx('pickup');
+    }
+    save(this.state);
   }
 
   /**
@@ -1059,7 +1147,8 @@ export class GameScene {
     this.player.face(rt.x, rt.z);
     this.focusDialogueCamera(npcId);
     const st = this.state.npcs[npcId];
-    const lines = visitPraiseLines(def, visitPraiseFacts(this.state));
+    // v24 いちばん最後の ひとことを おうちの すてき度の 段(0〜2)で 出しわける
+    const lines = visitPraiseLines(def, visitPraiseFacts(this.state), homeScoreTier(this.state));
     this.dialogue.show(def.name, lines, () => {
       this.npcs.setTalking(npcId, false);
       this.focusDialogueCamera(null);
@@ -1088,9 +1177,179 @@ export class GameScene {
     this.displayUI.onCarry = () => {
       this.placement.pickUp(p);
     };
+    // v24 中身(魚・虫)ごと その場で 置き直す
+    this.displayUI.onMove = () => {
+      this.placement.beginMove(p);
+    };
     // 中身は PlacementSystem が持つので、パネルは描くたびに読みにいく
     // (「入れたのに 画面の数が古いまま」が構造的に起きない)
     this.displayUI.show(kind, () => this.placement.contentsOf(p));
+  }
+
+  // ---------- v24 ふくを そめる(いろみずで 4色) ----------
+  /**
+   * ミオの ふくを そめる(null で もとの みどりに もどす)。
+   *
+   * いろみずは 家具に ぬるときと 同じで **へらない**(何度でも そめ直せる)。
+   * 見た目は 実行時の 頂点カラーだけ(GLBは 作り直さない)。
+   * NPCが 気づく一言は「つぎに 話したとき1回だけ」。なかよし度は 1も 動かさない。
+   */
+  dyeOutfit(paint: PaintId | null): void {
+    const id = paint ?? undefined;
+    if ((this.state.outfit ?? undefined) === id) return;
+    if (paint !== null && (this.state.inventory[paint] ?? 0) < 1) return;
+    if (id === undefined) delete this.state.outfit;
+    else this.state.outfit = id;
+    this.applyOutfit();
+    // つぎに 話しかけた1人だけが 気づく(だれに 見せるかは 子どもが えらぶ)
+    this.outfitNoticed = false;
+    toast(
+      id === undefined ? 'ふくを もとの色に もどした' : `ふくを ${PAINT_COLORS[paint as PaintId].label}に そめた`,
+      paint ?? 'f_photostand'
+    );
+    sfx('paint');
+    save(this.state);
+  }
+
+  /** いまの ふくの色を 見た目に 入れる(読みこみ直後と そめたとき) */
+  private applyOutfit(): void {
+    this.playerView?.setOutfitTint(outfitHex(this.state.outfit));
+  }
+
+  // ---------- v24 フォトモード(P / 右上の「しゃしん」ボタン) ----------
+  /**
+   * フォトモードに 入れる場面か。
+   * 会話・見せ場・パネル・配置中は 入れない(写真に UIが うつる・操作が かち合う)。
+   */
+  get canOpenPhoto(): boolean {
+    if (this.seq.active || this.modalOpen || this.pauseMenu.open || this.paused) return false;
+    if (this.placement.active !== null) return false;
+    return this.tutorial.gates().inventory; // はじめの手ほどきの あいだは 出さない
+  }
+
+  /** P: フォトモードの 出し入れ */
+  togglePhotoMode(): void {
+    if (this.photoUI.open) {
+      this.closePhotoMode();
+      return;
+    }
+    if (!this.canOpenPhoto) return;
+    this.photoZoom = this.camCtl.zoom;
+    // 少しだけ 引く(引きすぎると 主役が 小さくなるので 1.22倍で とめる)
+    this.camCtl.setZoom(this.photoZoom * 1.22);
+    this.photoUI.show(this.photos.length);
+  }
+
+  /** フォトモードを とじる(カメラの 引きも もどす) */
+  closePhotoMode(): void {
+    if (!this.photoUI.open) return;
+    this.photoUI.close();
+    if (this.photoZoom !== null) this.camCtl.setZoom(this.photoZoom);
+    this.photoZoom = null;
+  }
+
+  /**
+   * シャッター。**その場では 焼かない**——WebGLの えは 描いた ちょくごの 1フレームしか
+   * 読み出せない(preserveDrawingBuffer を 立てていない)ので、
+   * つぎの scene.render() の すぐ後で 焼く(render の さいごに capturePhoto が 走る)。
+   */
+  takePhoto(): void {
+    if (!this.photoUI.open || this.photoPending) return;
+    this.photoPending = true;
+  }
+
+  /** 描いた ちょくごに 呼ばれる: canvas を 額縁つきの1まいに 焼いて しまう */
+  private capturePhoto(): void {
+    this.photoPending = false;
+    const data = framePhoto(this.engine.getRenderingCanvas());
+    if (!data) {
+      this.photoUI.flash('しゃしんが うまく とれなかった…');
+      return;
+    }
+    const next: Photo = {
+      id: nextPhotoId(this.photos),
+      day: this.island.time.day,
+      hour: this.island.time.hour,
+      data,
+    };
+    const drop = photosToDrop(this.photos, next);
+    // いっぱいのときは 「古いものから 消えるよ」と 先に ことわる(勝手には 消さない)
+    if (drop > 0 && !this.photoDropOk) {
+      this.photoDropOk = true;
+      this.photoUI.flash(`アルバムが いっぱい。もう一度 おすと 古い ${drop}まいが きえるよ`);
+      sfx('ui');
+      return;
+    }
+    this.photoDropOk = false;
+    this.photos = fitPhotos([...this.photos, next]);
+    if (!savePhotos(this.photos)) {
+      this.photos = loadPhotos();
+      this.photoUI.flash('アルバムに しまえなかった…(空きが たりない)');
+      return;
+    }
+    // はじめて とった1まいで「しゃしんたて」が 手に入る(飾る あそびの 入口)
+    if ((this.state.codex.f_photostand ?? 0) === 0) {
+      invAddRecorded(this.state, 'f_photostand', 1);
+      toast('しゃしんたてを 手に入れた! すきな1まいを かざれるよ', 'f_photostand');
+      save(this.state);
+    }
+    this.photoUI.setCount(this.photos.length);
+    this.photoUI.flash(`とれた! ずかんの「アルバム」で 見られるよ(${this.photos.length}/${PHOTO_MAX})`);
+    sfx('craft');
+  }
+
+  /**
+   * ずかんの「アルバム」を ひらく。picker を わたすと 各まいに「かざる」が 出る
+   * (しゃしんたてに かざる1まいを えらぶとき)。
+   */
+  openAlbum(pick: ((id: string) => void) | null = null): void {
+    this.codexUI.albumPick = pick;
+    this.codexUI.showAlbum(() => this.photos);
+  }
+
+  /** しゃしんたてに かざる1まいを えらぶ(E候補から) */
+  openPhotoStand(p: PlacedRuntime): void {
+    this.openAlbum((id) => {
+      this.placement.setPhoto(p, id);
+      this.codexUI.close();
+    });
+  }
+
+  /** アルバムから 1まい 消す(ずかんの「けす」) */
+  deletePhoto(id: string): void {
+    this.photos = removePhoto(this.photos, id);
+    savePhotos(this.photos);
+    // かざってあった しゃしんが 消えたら、板は「まだ かざっていない」姿に もどす
+    for (const p of this.placement.placed.values()) {
+      if (p.data.photo === id) this.placement.setPhoto(p, undefined);
+    }
+  }
+
+  // ---------- v24 その場で 模様替え(置いた家具を うごかす) ----------
+  /**
+   * 近くの 置いた家具を その場で うごかしはじめる(R キー / パネルの「うごかす」)。
+   *
+   * 置ける場所の きまりは ふつうの配置と 同じものを 通す(PlacementSystem.beginMove)。
+   * 出せない場面(会話・見せ場・パネル・すわっている・よその家の中・釣りの さいちゅう)は
+   * ここで まとめて はじく = 入口が1つなので「どこから来ても 同じ」になる。
+   * @returns はじめられたか
+   */
+  moveNearestFurniture(): boolean {
+    if (this.seq.active || this.modalOpen || this.pauseMenu.open || this.paused) return false;
+    if (this.player.sitting || this.inter.busy || this.fishing.state !== 'idle') return false;
+    if (this.npcHome !== null) return false; // よその家の物には 手を出さない
+    const near = this.placement.nearest(this.player.x, this.player.z);
+    if (!near) return false;
+    return this.placement.beginMove(near);
+  }
+
+  /** タッチの「うごかす」ボタンを 出してよい場面か(押したときに 必ず動くこと) */
+  get canMoveFurniture(): boolean {
+    if (this.placement.active !== null) return false;
+    if (this.seq.active || this.modalOpen || this.pauseMenu.open || this.paused) return false;
+    if (this.player.sitting || this.inter.busy || this.fishing.state !== 'idle') return false;
+    if (this.npcHome !== null) return false;
+    return this.placement.nearest(this.player.x, this.player.z) !== null;
   }
 
   // ---------- v12 いろみず(おいてある家具に 色を ぬる) ----------
@@ -1105,6 +1364,10 @@ export class GameScene {
     };
     this.paintUI.onCarry = () => {
       this.placement.pickUp(p);
+    };
+    // v24 ぬった色は そのまま その場で 置き直す
+    this.paintUI.onMove = () => {
+      this.placement.beginMove(p);
     };
     this.paintUI.show(p.data.item, p.data.color);
   }
@@ -1623,6 +1886,10 @@ export class GameScene {
   render(): void {
     const dt = Math.min(0.25, this.engine.getDeltaTime() / 1000);
     const menuPaused = this.pauseMenu.open || this.paused;
+    // v24 パネル・会話・見せ場が はじまったら フォトモードは たたむ
+    // (UIを かくしたまま パネルが 開くと「押せないボタン」の画面になる)。
+    // 入口が どこであっても ここ1か所で 拾えるので、ボタンごとの 書き足しは いらない
+    if (this.photoUI.open && (menuPaused || this.modalOpen || this.seq.active)) this.closePhotoMode();
     // マウスの見回し(ドラッグ・ホイール)を受け付けるか: ポーズ中・パネル表示中は回さない
     this.camCtl.orbitEnabled = !menuPaused && !this.modalOpen;
     if (!menuPaused) {
@@ -1744,6 +2011,9 @@ export class GameScene {
       hint: menuPaused ? '' : this.shownHint,
       gates: this.tutorial.gates(),
       placementActive: this.placement.active !== null,
+      // v24 「うごかす」ボタンは 押したら かならず動く場面だけ出す(判定は canMoveFurniture 1つ)
+      moveTarget: !menuPaused && this.canMoveFurniture,
+      photoReady: this.canOpenPhoto,
       dialogueOpen: this.dialogue.open,
       questCompleteOpen: this.questComplete.open,
       sequenceActive: this.seq.active,
@@ -1753,6 +2023,9 @@ export class GameScene {
         this.paintUI.open || this.letterUI.open || this.bulletinUI.open,
     });
     this.scene.render();
+    // v24 シャッター: **描いた ちょくご**に 焼く。
+    // preserveDrawingBuffer を 立てていないので、ここを のがすと まっ白な絵になる
+    if (this.photoPending) this.capturePhoto();
   }
 
   dispose(): void {

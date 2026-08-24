@@ -14,10 +14,20 @@
 // 時間の進みは呼び出し側(GameScene)から渡す。ポーズ・モーダル中はupdateが呼ばれないので、
 // 凍結中に勝手に進まない(ほしのかけら・うきだまと同じ考え方)。
 
-export type Weather = 'sunny' | 'cloudy' | 'rainy';
+export type Weather = 'sunny' | 'cloudy' | 'rainy' | 'snowy';
 
-/** 出現確率(合計1)。テストがこの値と実際の分布を突き合わせる */
-export const WEATHER_RATE: Record<Weather, number> = { sunny: 0.6, cloudy: 0.2, rainy: 0.2 };
+/**
+ * 出現確率(合計1)。テストがこの値と実際の分布を突き合わせる。
+ *
+ * v24 「ゆき」を 10日に1回ぐらいの まれな天気として 足した。
+ * ふやしたぶんは **くもりから 分けている**(0.2 → くもり0.1 + ゆき0.1):
+ * あめの日(u>=0.8)は 1日も 動かないので、カタツムリ・虹・雨の日の釣りといった
+ * 「あめの日にしか できないこと」の 出る日づけが v23 と 1日も 変わらない
+ * (教訓4「抽選テーブルに種を足すときは しきい値を並べる」)。
+ */
+export const WEATHER_RATE: Record<Weather, number> = {
+  sunny: 0.6, cloudy: 0.1, snowy: 0.1, rainy: 0.2,
+};
 
 /** 雨が上がる時刻 */
 export const RAIN_END_HOUR = 15;
@@ -44,12 +54,17 @@ export function weatherSeed(day: number): number {
   return (a >>> 0) / 4294967296;
 }
 
-/** その日の天気(日付だけで決まる) */
+/**
+ * その日の天気(日付だけで決まる)。
+ * しきい値を 小さい順に ならべてあるので、あとから 種類を 足しても
+ * 「うしろの帯」は 動かない(あめの日づけは v23 と 同じ)。
+ */
 export function weatherOfDay(day: number): Weather {
   if (day <= SUNNY_UNTIL_DAY) return 'sunny';
   const u = weatherSeed(day);
   if (u < WEATHER_RATE.sunny) return 'sunny';
   if (u < WEATHER_RATE.sunny + WEATHER_RATE.cloudy) return 'cloudy';
+  if (u < WEATHER_RATE.sunny + WEATHER_RATE.cloudy + WEATHER_RATE.snowy) return 'snowy';
   return 'rainy';
 }
 
@@ -91,13 +106,83 @@ export function rainbowLevelFor(weather: Weather, hour: number): number {
   return Math.sin(Math.PI * t); // 山なり(出ぎわ・消えぎわがなめらか)
 }
 
+// ---------------------------------------------------------------------------
+// v24 ゆきの日
+//
+// ねらい: 冬らしさを 1日だけ 見せる「まれな天気」。あめと 同じ場所に 立つので
+// (どちらも 空から ふる)、**同じ日には ぜったいに 両方 出ない**——
+// weatherOfDay が 1日1つしか 返さない形なので、これは 構造で 保証されている。
+//
+// あめとの ちがい:
+//   - 1日じゅう ふる(あめは 15時に あがる)。よるの ゆきも 見せたいから。
+//   - 地面と 屋根が うっすら 白くなる(見た目だけ。歩ける ところは 1cmも 変わらない)。
+//   - カタツムリは 出ない / 虹も 出ない / 釣りの待ち時間も ふつうのまま。
+//   - 草地の「ふきだまり」で ゆきを あつめられる(3回で ゆきだるま)。
+// ---------------------------------------------------------------------------
+
+/** ふりはじめ・ふりおわりの ぼかし(時) */
+export const SNOW_FADE_HOURS = 0.5;
+/** 地面が まっ白になるまで(時)。朝 おきたときには もう 積もっている */
+export const SNOW_COVER_HOURS = 2;
+/** ゆきだるまが できるまでの 回数 */
+export const SNOW_NEED = 3;
+
+/** ゆきの ふりぐあい(0=ふっていない 1=しっかり)。ゆきの日は 1日じゅう ふる */
+export function snowLevelFor(weather: Weather, hour: number): number {
+  if (weather !== 'snowy') return 0;
+  if (hour < 0 || hour >= 24) return 0;
+  if (hour < SNOW_FADE_HOURS) return clamp01(hour / SNOW_FADE_HOURS);
+  if (hour > 24 - SNOW_FADE_HOURS) return clamp01((24 - hour) / SNOW_FADE_HOURS);
+  return 1;
+}
+
+/**
+ * 地面・屋根の 白さ(0=いつもの色 1=うっすら まっ白)。
+ * 積もるだけで 溶けない(その日が おわれば 天気ごと 変わる)。
+ * **見た目だけの値**: 歩ける ところ・当たり判定・虫や魚の 出る場所は 1つも 変わらない
+ * (tests/unit/snow_v24.test.ts が 歩ける格子の ダンプを つき合わせて 見張る)。
+ */
+export function snowCoverFor(weather: Weather, hour: number): number {
+  if (weather !== 'snowy') return 0;
+  return clamp01(hour / SNOW_COVER_HOURS);
+}
+
+/** その日 ゆきが ふる予定か(朝の「きょうの島」カードの 唯一の問い合わせ口) */
+export function willSnowOn(day: number): boolean {
+  return snowLevelFor(weatherOfDay(day), 12) > 0;
+}
+
+/** その日 ゆきを 何回 あつめたか(日づけが 変わっていれば 0) */
+export function snowCount(s: { snow?: { day: number; count: number } }, day: number): number {
+  const sn = s.snow;
+  if (!sn || sn.day !== Math.floor(day)) return 0;
+  return Math.max(0, Math.min(SNOW_NEED, Math.floor(sn.count)));
+}
+
+/**
+ * ゆきを 1回 あつめる。3回めなら ゆきだるまが できて 数は 0に もどる。
+ * @returns できたか(true=ゆきだるまが 手に入る)
+ */
+export function addSnowScoop(s: { snow?: { day: number; count: number } }, day: number): boolean {
+  const d = Math.floor(day);
+  const n = snowCount(s, d) + 1;
+  if (n >= SNOW_NEED) {
+    s.snow = { day: d, count: 0 };
+    return true;
+  }
+  s.snow = { day: d, count: n };
+  return false;
+}
+
 /**
  * 空と光を寒色へ寄せる度合い(0=いつもの色 1=いちばん寒い)。
  * くもりは弱く、あめは雨脚と同じだけ効かせる。虹の時間は空が晴れていく途中なので、
  * 雨がやんだあとも少しだけ残す(急に真夏の空にならない)。
+ * v24 ゆきは あめより つよい寒色(空も 光も いちばん 青白い)。
  */
 export function coldLevelFor(weather: Weather, hour: number): number {
   if (weather === 'cloudy') return 0.55;
+  if (weather === 'snowy') return Math.max(0.72, snowLevelFor(weather, hour) * 0.85);
   if (weather !== 'rainy') return 0;
   const rain = rainLevelFor(weather, hour);
   if (rain > 0) return Math.max(rain, 0.35);
@@ -137,6 +222,17 @@ export const SNAIL_SPOTS: { x: number; z: number }[] = [
 export const SNAIL_WANDER_R = 0.9;
 /** Eでひろえる距離(m)。近づいてしゃがむ感じの短さにする */
 export const SNAIL_REACH = 1.0;
+
+/**
+ * v24 ゆきを あつめられる場所。カタツムリと **同じ4か所** を使う。
+ *
+ * この4点は「Eで ひろえる距離に立ったとき、ほかのE候補が1つも 射程に入らない」ことを
+ * tests/unit/weather.test.ts が 機械検査ずみ——あめと ゆきは 同じ日に 出ないので
+ * (weatherOfDay が 1日1つしか 返さない)、場所を 分ける理由が 1つも無い。
+ */
+export const SNOW_SPOTS = SNAIL_SPOTS;
+/** ゆきを あつめられる距離(m)。カタツムリと そろえる */
+export const SNOW_REACH = SNAIL_REACH;
 
 /** カタツムリの位置と向き(時間だけで決まる=決定的)。t は実秒 */
 export function snailPose(spot: number, t: number): { x: number; z: number; rotY: number } {
@@ -185,6 +281,12 @@ export interface WeatherNow {
   snails: number[];
   /** カタツムリの姿勢を出すための通し時間(実秒) */
   t: number;
+  /** v24 ゆきの ふりぐあい(0〜1) */
+  snow: number;
+  /** v24 地面・屋根の 白さ(0〜1)。見た目だけ */
+  cover: number;
+  /** v24 まだ ゆきが のこっている ふきだまりの 場所番号 */
+  drifts: number[];
 }
 
 export class WeatherSystem {
@@ -194,7 +296,9 @@ export class WeatherSystem {
   private key = '';
   private taken = new Set<number>();
   private elapsed = 0;
-  private now: WeatherNow = { weather: 'sunny', rain: 0, rainbow: 0, cold: 0, snails: [], t: 0 };
+  private now: WeatherNow = {
+    weather: 'sunny', rain: 0, rainbow: 0, cold: 0, snails: [], t: 0, snow: 0, cover: 0, drifts: [],
+  };
 
   /** シーンを作り直したとき(タイトル→本編)に、持ちこしの状態を捨てる */
   reset(): void {
@@ -202,7 +306,7 @@ export class WeatherSystem {
     this.key = '';
     this.taken.clear();
     this.elapsed = 0;
-    this.now = { weather: 'sunny', rain: 0, rainbow: 0, cold: 0, snails: [], t: 0 };
+    this.now = { weather: 'sunny', rain: 0, rainbow: 0, cold: 0, snails: [], t: 0, snow: 0, cover: 0, drifts: [] };
   }
 
   /** 天気を固定する(検証用)。null で解除 */
@@ -230,16 +334,23 @@ export class WeatherSystem {
     this.elapsed += dt;
     const weather = this.weatherOf(day);
     const rain = rainLevelFor(weather, hour);
-    // 「いまの雨」= 日付。雨が上がる/次の日になれば、拾った記録は捨てる
-    const key = rain > 0 ? String(Math.floor(day)) : '';
+    const snow = snowLevelFor(weather, hour);
+    // 「いまの雨(ゆき)」= 天気+日付。上がる/次の日になれば、拾った記録は捨てる。
+    // あめと ゆきは 同じ日に 出ないので、記録の入れものは 1つで足りる
+    const key = rain > 0 || snow > 0 ? `${weather}${Math.floor(day)}` : '';
     if (key !== this.key) {
       this.key = key;
       this.taken.clear();
     }
     const snails: number[] = [];
+    const drifts: number[] = [];
     if (rain > 0) {
       for (let i = 0; i < SNAIL_SPOTS.length; i++) {
         if (!this.taken.has(i)) snails.push(i);
+      }
+    } else if (snow > 0) {
+      for (let i = 0; i < SNOW_SPOTS.length; i++) {
+        if (!this.taken.has(i)) drifts.push(i);
       }
     }
     this.now = {
@@ -249,6 +360,9 @@ export class WeatherSystem {
       cold: coldLevelFor(weather, hour),
       snails,
       t: this.elapsed,
+      snow,
+      cover: snowCoverFor(weather, hour),
+      drifts,
     };
     return this.now;
   }
@@ -260,6 +374,30 @@ export class WeatherSystem {
   }
   isSnailTaken(spot: number): boolean {
     return this.taken.has(spot);
+  }
+
+  /** v24 ゆきを あつめた: その日のあいだ、その ふきだまりは もう つかえない */
+  markDriftTaken(spot: number): void {
+    this.taken.add(spot);
+    this.now = { ...this.now, drifts: this.now.drifts.filter((s) => s !== spot) };
+  }
+
+  /**
+   * v24 手のとどく ところの ふきだまり(無ければ null)。
+   * カタツムリと まったく同じ形にしてある(ヒントの表示と Eの実行は 必ず この1つから出す)。
+   */
+  driftWithinReach(px: number, pz: number): { spot: number; x: number; z: number } | null {
+    let best: { spot: number; x: number; z: number } | null = null;
+    let bestD = SNOW_REACH;
+    for (const spot of this.now.drifts) {
+      const p = SNOW_SPOTS[spot];
+      const d = Math.hypot(px - p.x, pz - p.z);
+      if (d < bestD) {
+        bestD = d;
+        best = { spot, x: p.x, z: p.z };
+      }
+    }
+    return best;
   }
 
   /**

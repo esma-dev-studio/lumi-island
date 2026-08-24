@@ -10,9 +10,10 @@ import { Constants } from '@babylonjs/core/Engines/constants';
 import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { Scene } from '@babylonjs/core/scene';
-import { A0, appendBlob, appendTrunk, jitterColor, toMesh } from './flora';
+import { A0, appendBlob, appendTrunk, jitterColor, toMesh, type Arrays } from './flora';
+import { faceOutward } from './deco';
 import { terrainHeight } from './terrain';
-import { PUDDLE_SPOTS, SNAIL_SPOTS, snailPose, type WeatherNow } from '../systems/WeatherSystem';
+import { PUDDLE_SPOTS, SNAIL_SPOTS, SNOW_SPOTS, snailPose, type WeatherNow } from '../systems/WeatherSystem';
 
 let scene: Scene | null = null;
 let ps: ParticleSystem | null = null;
@@ -337,7 +338,13 @@ function initWeatherFx(s: Scene): void {
   snailMeshes.clear();
   rainShown = 0;
   rainbowShown = 0;
+  snowPs = null;
+  driftMeshes.clear();
+  snowSurfaces.length = 0;
+  snowShown = 0;
+  coverShown = -1;
   buildRain(s);
+  buildSnow(s);
   buildPuddles(s);
   buildRainbow(s);
   for (let i = 0; i < SNAIL_SPOTS.length; i++) {
@@ -346,6 +353,195 @@ function initWeatherFx(s: Scene): void {
     m.isPickable = false;
     snailMeshes.set(i, m);
   }
+  for (let i = 0; i < SNOW_SPOTS.length; i++) {
+    const m = makeSnowDrift(s, i * 17 + 3);
+    m.setEnabled(false);
+    m.isPickable = false;
+    m.position.set(SNOW_SPOTS[i].x, terrainHeight(SNOW_SPOTS[i].x, SNOW_SPOTS[i].z) - 0.02, SNOW_SPOTS[i].z);
+    driftMeshes.set(i, m);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// v24 ゆき
+//
+// 3つで できている:
+//   1. ふる ゆき   … 雨と同じ「プレイヤーの上の箱から ふらせる」パーティクル。
+//                    ただし ゆっくり・まるく・よこに ゆれる(まっすぐ落ちると あめに見える)。
+//   2. 積もった ゆき … **上を向いた面の 頂点色だけ** を 白へ寄せる(地面・屋根)。
+//                    メッシュの形も 当たり判定も 1つも 変えないので、歩ける ところは 不変
+//                    (tests/unit/snow_v24.test.ts が 歩ける格子の ダンプで 証明する)。
+//   3. ふきだまり   … ゆきを あつめる4か所の 白い山(カタツムリと 同じ場所)。
+// ---------------------------------------------------------------------------
+
+/** ゆきの粒の上限。ゆっくり落ちて 寿命が長いので、雨より少ない発生数で 画面が埋まる */
+const SNOW_CAP = 620;
+/** しっかり ふっているときの発生数(粒/秒) */
+const SNOW_RATE = 300;
+/** ゆきを ふらせる範囲(プレイヤーを中心とした一辺) */
+const SNOW_BOX = 13;
+/** 積もった ゆきの色(まっ白にすると 形が とんで「白い板」に見える) */
+const SNOW_TINT = Color3.FromHexString('#eef3f8');
+/** この向きより 上を向いた面にだけ 積もる(法線のY成分) */
+const SNOW_FACE_UP = 0.34;
+/**
+ * 積もりの こさ。**うっすら** が ねらい:
+ * 0.82 で撮ったら 草の みどりも 道の 土の色も ぜんぶ 消えて まっ白な板になり、
+ * ふっている 粒まで 見えなくなった(実機スクショで 確認)。0.5 で
+ * 「白いけれど 草地と 道の ちがいは 分かる」になる。
+ */
+const SNOW_MAX_MIX = 0.5;
+
+let snowPs: ParticleSystem | null = null;
+const driftMeshes = new Map<number, Mesh>();
+/** ゆきが 積もる面(地面・屋根)と、積もる前の 頂点色 */
+const snowSurfaces: { mesh: Mesh; base: Float32Array; up: Float32Array }[] = [];
+let snowShown = 0;
+/** いま 書きこんである 白さ(-1=まだ1回も 書いていない) */
+let coverShown = -1;
+
+/**
+ * ゆきが 積もる面として 登録する(地面・建物の屋根など)。
+ *
+ * 積もるのは「上を向いた面」だけ。かべや 木の みきは 白くならないので、
+ * 1つのメッシュを まるごと わたして よい(面ごとの えり分けは ここが 法線で行う)。
+ * 頂点色を 書きかえるだけなので、形・法線・当たり判定は 1バイトも 変わらない。
+ */
+export function registerSnowSurface(mesh: Mesh): void {
+  const col = mesh.getVerticesData(VertexBuffer.ColorKind);
+  const nrm = mesh.getVerticesData(VertexBuffer.NormalKind);
+  if (!col || !nrm) return;
+  const up = new Float32Array(col.length / 4);
+  for (let i = 0; i < up.length; i++) {
+    // 上を向くほど 深く 積もる(まっ平ら=1)。よこ向きの面は 0
+    const ny = nrm[i * 3 + 1];
+    up[i] = ny <= SNOW_FACE_UP ? 0 : Math.min(1, (ny - SNOW_FACE_UP) / (1 - SNOW_FACE_UP));
+  }
+  // 頂点色の入れものを「書きかえられる」ものに 置きかえる。
+  // 地面も 建物も VertexData.applyToMesh で 作られていて、そのままでは
+  // updateVerticesData が **だまって 何もしない**(積もらない)。ここで1回だけ 直す
+  mesh.setVerticesData(VertexBuffer.ColorKind, new Float32Array(col), true);
+  const surf = { mesh, base: new Float32Array(col), up };
+  snowSurfaces.push(surf);
+  // すでに 積もっている まっ最中に あとから 登録された面(あとで 作られる 入り江・いちば)にも、
+  // その場で いまの白さを 書きこむ。**登録の順番で 白い面と 白くない面が できない**ための ならべ
+  // (applySnowCover は「前と同じ値なら 何もしない」ので、ここで やらないと 次に 天気が
+  //  変わるまで その面だけ 夏のままに なる)
+  if (coverShown > 0) paintSnow(surf, coverShown);
+  mesh.onDisposeObservable.add(() => {
+    const i = snowSurfaces.findIndex((s) => s.mesh === mesh);
+    if (i >= 0) snowSurfaces.splice(i, 1);
+  });
+}
+
+/** 1つの面に 白さ q(0..1)を 書きこむ */
+function paintSnow(s: { mesh: Mesh; base: Float32Array; up: Float32Array }, q: number): void {
+  const col = new Float32Array(s.base);
+  for (let i = 0; i < s.up.length; i++) {
+    const k = s.up[i] * q * SNOW_MAX_MIX;
+    if (k <= 0) continue;
+    const o = i * 4;
+    col[o] = s.base[o] + (SNOW_TINT.r - s.base[o]) * k;
+    col[o + 1] = s.base[o + 1] + (SNOW_TINT.g - s.base[o + 1]) * k;
+    col[o + 2] = s.base[o + 2] + (SNOW_TINT.b - s.base[o + 2]) * k;
+  }
+  s.mesh.updateVerticesData(VertexBuffer.ColorKind, col, false, false);
+}
+
+/**
+ * 積もりぐあいを 書きこむ(変わったときだけ。1日に20回ほどしか 走らない)。
+ * 単体テストからも 直接 呼べるように export してある
+ * (パーティクルの用意=canvas が いらない道で「白くなるのは 頂点色だけ」を 確かめるため)。
+ */
+export function applySnowCover(cover: number): void {
+  const q = Math.round(Math.max(0, Math.min(1, cover)) * 20) / 20; // 0.05きざみ
+  if (q === coverShown) return;
+  coverShown = q;
+  for (const s of snowSurfaces) paintSnow(s, q);
+}
+
+/** ふる ゆき(まるい粒。よこに ゆれながら ゆっくり おちる) */
+function buildSnow(s: Scene): void {
+  const tex = new DynamicTexture('snowFlake', { width: 32, height: 32 }, s, false);
+  const ctx = tex.getContext() as CanvasRenderingContext2D;
+  const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.45, 'rgba(255,255,255,0.85)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.clearRect(0, 0, 32, 32);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 32, 32);
+  tex.update();
+  tex.hasAlpha = true;
+
+  const p = new ParticleSystem('snow', SNOW_CAP, s);
+  p.particleTexture = tex as unknown as Texture;
+  p.emitter = new Vector3(0, -200, 0); // 毎フレーム プレイヤーの上へ移す
+  // 出す高さは プレイヤーの 2.5〜5.5m 上。
+  // 雨(7〜10m)と同じ高さから ゆっくり 落とすと、寿命の あいだに 画面まで 下りてこず
+  // 「粒が 1つも 見えない」になる(実機スクショで 確認)
+  p.minEmitBox = new Vector3(-SNOW_BOX, 2.5, -SNOW_BOX);
+  p.maxEmitBox = new Vector3(SNOW_BOX, 5.5, SNOW_BOX);
+  p.color1 = new Color4(1, 1, 1, 0.9);
+  p.color2 = new Color4(0.92, 0.96, 1.0, 0.75);
+  p.colorDead = new Color4(0.92, 0.96, 1.0, 0);
+  // 実機で 白い地面に とけて 見えなかったので 大きくしたが、0.18 だと
+  // カメラの すぐ前に わいた1粒が 画面の 1/8 を おおう「白い玉」になった。
+  // 0.06〜0.11 にして、数(SNOW_RATE)で しっかり ふらせる
+  p.minSize = 0.06;
+  p.maxSize = 0.11;
+  p.minLifeTime = 3.2;
+  p.maxLifeTime = 4.4;
+  p.emitRate = 0;
+  p.gravity = new Vector3(0, -1.15, 0); // ふわりと おちる(雨は -9)
+  // よこに ながれる(左右で ばらつかせると「まいおりる」に見える)
+  p.direction1 = new Vector3(-0.5, -1.0, -0.28);
+  p.direction2 = new Vector3(0.32, -1.4, 0.24);
+  p.minEmitPower = 0.7;
+  p.maxEmitPower = 1.3;
+  p.minAngularSpeed = -1.2;
+  p.maxAngularSpeed = 1.2;
+  p.blendMode = ParticleSystem.BLENDMODE_STANDARD;
+  p.start();
+  snowPs = p;
+}
+
+/**
+ * ゆきの ふきだまりの 形(Scene が いらない 純ロジック)。
+ * 単体テストが「面が 外を向いている」ことを 数で 見張れるように 分けてある。
+ */
+export function snowDriftArrays(seed: number): Arrays {
+  const A = A0();
+  appendBlob(A, 0, 0.1, 0, 0.5, 0.16, 0.42, jitterColor(SNOW_TINT, seed, 0.02), {
+    segs: 12, noise: 0.16, seed, flatBottom: true, bottomDark: 0.16,
+  });
+  appendBlob(A, 0.12, 0.2, -0.06, 0.24, 0.11, 0.2, jitterColor(SNOW_TINT, seed + 3, 0.02), {
+    segs: 10, noise: 0.2, seed: seed + 3, bottomDark: 0.1,
+  });
+  return A;
+}
+
+/**
+ * ゆきの ふきだまり(あつめられる 白い山)。てっぺんを 平らにして「すくえそう」に見せる。
+ *
+ * ---- 面の向き(実機の画素で 4通り 測って 決めた。教訓1「1個目を実機で確かめる」)----
+ * 出荷まえは `toMesh(..., 'flip')` だけで、**巻き順を 直しわすれていた**。
+ * appendBlob だけで 組んだ形は 巻き順が 内向きなので、表の面が 背面として カリングされ、
+ * 見えていたのは「向こう側の 内面」。頂点色は 0.88/0.90/0.92 の ほぼ白なのに、
+ * 昼の草地で **灰色の岩**に 見えていた(ゆきの日の 接写で 発覚)。
+ *
+ * 実測(ふきだまりの 画面上の箱の まん中6割の 平均RGB):
+ *   'keep' だけ            … 207,212,216(上面に 黒い帯)
+ *   'flip' だけ(出荷まえ)  … **80,78,75** ← 灰色の岩
+ *   'flip' + 巻き順も反転   … **235,240,245** ← 白い山
+ *   'flip' + 両面描画       … 235,240,245(同じ絵。ただし 裏面も 描く ぶん 損)
+ *
+ * 直しかたは この島の 決まり文句どおり —— appendBlob だけの形は
+ * `faceOutward(toMesh(..., 'flip'))`(bugs.ts・deco.ts と 同じ)。
+ * 巻き順を 自分で ひっくり返さず、共通の helper に まかせる。
+ */
+export function makeSnowDrift(s: Scene, seed: number): Mesh {
+  return faceOutward(toMesh(s, `snowDrift_${seed}`, snowDriftArrays(seed), 'flip'));
 }
 
 // ---- 雨脚 ----
@@ -612,6 +808,13 @@ export function weatherFxState(): Record<string, unknown> {
     rainbow: rainbowShown,
     rainParticles: rainPs?.getActiveCount() ?? 0,
     rainEmitRate: rainPs?.emitRate ?? 0,
+    // v24 ゆき(ふりぐあい・積もり・粒の数・ふきだまり)
+    snow: snowShown,
+    snowCover: coverShown,
+    snowParticles: snowPs?.getActiveCount() ?? 0,
+    snowEmitRate: snowPs?.emitRate ?? 0,
+    snowSurfaces: snowSurfaces.length,
+    driftsVisible: [...driftMeshes.entries()].filter(([, m]) => m.isEnabled()).map(([k]) => k),
     puddleAlpha: puddleMat?.alpha ?? 0,
     puddlesVisible: puddleMeshes.filter((m) => m.isEnabled()).length,
     rainbowVisible: rainbowMesh?.isEnabled() ?? false,
@@ -632,6 +835,19 @@ export function updateWeatherFx(
   const bow = outdoor ? now.rainbow : 0;
   rainShown = rain;
   rainbowShown = bow;
+  // v24 ゆき: ふる粒は 屋外だけ。積もった白さは **屋内にいても そのまま**
+  // (外に出たときに 島が 白いままである = 部屋から出るたびに 積もり直さない)
+  const snow = outdoor ? now.snow : 0;
+  snowShown = snow;
+  if (snowPs) {
+    snowPs.emitRate = SNOW_RATE * snow;
+    (snowPs.emitter as Vector3).set(px, py, pz);
+  }
+  applySnowCover(now.cover);
+  for (const [spot, mesh] of driftMeshes) {
+    const on = outdoor && now.cover > 0.15 && now.drifts.includes(spot);
+    if (mesh.isEnabled() !== on) mesh.setEnabled(on);
+  }
   // 雨脚: 発生数だけで強さを表す(粒の数は上限で頭打ち)
   if (rainPs) {
     rainPs.emitRate = RAIN_RATE * rain;

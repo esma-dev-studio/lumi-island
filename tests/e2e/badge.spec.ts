@@ -14,8 +14,8 @@ const GAME_LOAD = '/?scene=game&debug=1&load=1';
 
 /** src/data/badges.ts の BADGES.length。データ側を増やしたら ここも合わせる */
 // v16 ほしまつり3つ / v20 いちば島・テンの2つ / v21 生命感パック3つ(ぬし・立ち話・ふたりのじかん)/
-// v23 カブト・クワガタ10しゅるいの1つ を足した
-const BADGE_TOTAL = 112;
+// v23 カブト・クワガタ10しゅるいの1つ / v24 おうちの すてき度の2つ を足した
+const BADGE_TOTAL = 114;
 
 const errors: string[] = [];
 function watchErrors(page: Page): void {
