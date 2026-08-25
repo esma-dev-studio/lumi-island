@@ -17,7 +17,7 @@ import {
   BugScheduler, BUG_DEFS, BUG_BY_ID, BUG_IDS, bugOffset, isBugNight, bugPhaseKey,
   BUG_CATCH_R, BUG_HINT_R, BUG_RUN_SPEED, BUG_FLEE_SEC, BUG_FIRST_DELAY_SEC, BUG_RESPAWN_SEC,
   BUG_SPOOK_SEC, BUG_SETTLE_SEC, BUG_HOP_R, BUG_WARY_R,
-  type BugPlayer,
+  type ActiveBug, type BugPlayer,
 } from '../../src/systems/BugSystem';
 import {
   DigScheduler, digSpotsOfDay, pickDigLoot, DIG_LOOT, DIG_RARE, DIG_MIN_PER_DAY, DIG_MAX_PER_DAY,
@@ -332,11 +332,14 @@ describe('v9 虫あみ→虫6種(データ)', () => {
     expect(isAchieved(s, 'a_bug_all')).toBe(true);
   });
 
-  it('虫のスポットは15箇所。歩けて、既存の判定帯から3m以上はなれている', () => {
-    expect(BUG_SPOTS.length).toBe(15);
+  // v27 じゅえきの木(kind:'sap')の とまり場2つが 足されて17箇所になった。
+  // 'sap' は 装飾の木(DECO_TREES)ではなく じゅえきの木のみきに 寄せてあるので、
+  // 装飾の木との 距離は「はなれている」がわで見る(くわしくは saptree_v27.test.ts)
+  it('虫のスポットは17箇所。歩けて、既存の判定帯から3m以上はなれている', () => {
+    expect(BUG_SPOTS.length).toBe(17);
     const byKind: Record<string, number> = {};
     for (const p of BUG_SPOTS) byKind[p.kind] = (byKind[p.kind] ?? 0) + 1;
-    expect(byKind).toEqual({ flower: 4, grass: 5, pond: 3, tree: 3 });
+    expect(byKind).toEqual({ flower: 4, grass: 5, pond: 3, tree: 3, sap: 2 });
     for (const p of BUG_SPOTS) {
       const at = `(${p.x},${p.z}) ${p.kind}`;
       expect(walkable(p.x, p.z), at).toBe(true);
@@ -393,6 +396,17 @@ describe('v9 虫のふるまい(BugSystem)', () => {
     run(s, 120, day, hour);
     return s;
   };
+  /**
+   * v27 じゅえきの木(kind:'sap')に とまっていない、ふつうの1匹。
+   *
+   * じゅえきの木の2匹は 別のきまりで動く:
+   *   - 1本の木に 0.94mの近さで 2匹 かたまる(=「1匹だけを 見る」試験の前提が くずれる)
+   *   - おどろいても 木から はなれない(とまり直し先を さがさない)
+   *   - つかまえると 同じ種が また 同じ みきに 来る(スポットの まわし方が ちがう)
+   * ここは 野生の1匹の ふるまいを 見る場所なので、じゅえきの木は えらばない
+   * ——じゅえきの木の ふるまいは tests/unit/saptree_v27.test.ts が まるごと 見ている。
+   */
+  const wild = (s: BugScheduler): ActiveBug => s.active.find((b) => !s.isSapBug(b.key))!;
 
   /**
    * v11の いちばん大事な保証。
@@ -444,18 +458,23 @@ describe('v9 虫のふるまい(BugSystem)', () => {
 
   // v11: 島は広いので、4〜5匹だと「そもそも見つからない」。昼6〜7・夜4〜5にふやした
   // v17: 顔ぶれは日がわり(todaysBugs)になったが、「昼の虫だけが出る」は変わらない
-  it('昼は6〜7匹・昼の虫だけ', () => {
+  // v27: じゅえきの木の 専用のとまり場2つが 足された。抽選ぶんは 昼6〜7・夜4〜5 のままで、
+  //      ふえるのは「毎日 かならず いる カブクワ2匹」だけ(=昼8〜9・夜6〜7)。
+  //      抽選ぶんが 変わっていないことは activeCount - sapBugs.length で 見る
+  it('昼は6〜7匹+じゅえきの2匹・昼の虫だけ', () => {
     const s = fresh(3, DAY);
-    expect(s.activeCount).toBeGreaterThanOrEqual(6);
-    expect(s.activeCount).toBeLessThanOrEqual(7);
+    expect(s.sapBugs.length).toBe(2);
+    expect(s.activeCount - s.sapBugs.length).toBeGreaterThanOrEqual(6);
+    expect(s.activeCount - s.sapBugs.length).toBeLessThanOrEqual(7);
     expect(s.activeCount).toBe(s.targetCount);
     for (const b of s.active) expect(BUG_BY_ID[b.bug].night, b.bug).toBe(false);
   });
 
-  it('夜は4〜5匹・夜の虫だけ', () => {
+  it('夜は4〜5匹+じゅえきの2匹・夜の虫だけ', () => {
     const s = fresh(3, NIGHT);
-    expect(s.activeCount).toBeGreaterThanOrEqual(4);
-    expect(s.activeCount).toBeLessThanOrEqual(5);
+    expect(s.sapBugs.length).toBe(2);
+    expect(s.activeCount - s.sapBugs.length).toBeGreaterThanOrEqual(4);
+    expect(s.activeCount - s.sapBugs.length).toBeLessThanOrEqual(5);
     for (const b of s.active) expect(BUG_BY_ID[b.bug].night, b.bug).toBe(true);
   });
 
@@ -538,7 +557,7 @@ describe('v9 虫のふるまい(BugSystem)', () => {
 
   it('近すぎる状態が つづくと にげる。にげても近くに とまり直して 消えない', () => {
     const s = fresh(3, DAY);
-    const target = s.active[0];
+    const target = wild(s);
     const def = BUG_BY_ID[target.bug];
     const before = s.activeCount;
     const fromSpot = target.spot;
@@ -567,7 +586,7 @@ describe('v9 虫のふるまい(BugSystem)', () => {
 
   it('とまり直した直後は もう にげない(追いついた子が つかまえられる)', () => {
     const s = fresh(3, DAY);
-    const target = s.active[0];
+    const target = wild(s);
     const def = BUG_BY_ID[target.bug];
     for (let i = 0; i < Math.ceil((BUG_SPOOK_SEC + 0.3) / 0.1); i++) {
       const q = s.positionOf(target);
@@ -587,7 +606,7 @@ describe('v9 虫のふるまい(BugSystem)', () => {
 
   it('歩いて近づけば逃げない。捕獲圏(2.6m)に入れる', () => {
     const s = fresh(3, DAY);
-    const target = s.active[0];
+    const target = wild(s);
     const def = BUG_BY_ID[target.bug];
     // 歩き(速さ1.4 m/s)で、その虫の walkFlee のすぐ外がわに立つ
     const stand = def.walkFlee + 0.15;
@@ -614,7 +633,7 @@ describe('v9 虫のふるまい(BugSystem)', () => {
 
   it('予告ヒント用に、捕獲圏の外の虫も半径をひろげれば拾える', () => {
     const s = fresh(3, DAY);
-    const target = s.active[0];
+    const target = wild(s);
     const q = s.positionOf(target);
     const stand = (BUG_CATCH_R + BUG_HINT_R) / 2; // 捕獲圏の外・予告圏の中
     expect(s.nearestCatchable(q.x + stand, q.z), '既定では拾わない').toBeNull();
@@ -623,7 +642,7 @@ describe('v9 虫のふるまい(BugSystem)', () => {
 
   it('つかまえると消えて、そのスポットは すぐには使われない', () => {
     const s = fresh(3, DAY);
-    const target = s.active[0];
+    const target = wild(s);
     const before = s.activeCount;
     s.markCaught(target.key);
     expect(s.activeCount).toBe(before - 1);

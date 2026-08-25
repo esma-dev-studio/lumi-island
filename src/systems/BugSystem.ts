@@ -650,6 +650,90 @@ export const BUG_ROTATE_DAY = 3;
  */
 export const BUG_ROTATE_NIGHT = 2;
 
+// ---------------------------------------------------------------------------
+// v27 【カブクワ保証枠】島の「きょうの顔ぶれ」には、昼も夜も かならず
+// カブト・クワガタ族が 1種いじょう 入る。
+//
+// なぜ要るか: 島のカブクワは ぜんぶ daily:false(ローテ枠)なので、
+//   昼 … ローテ候補6種(アゲハ・カマキリ・セミ + カブト・クワガタ・ノコギリ)から3種
+//   夜 … ローテ候補4種(スズムシ + オオクワ・ヒラタ・ギラファ)から2種
+// をえらぶ。夜は「カブクワでない種」が スズムシ1つしか 無いので かならず入るが、
+// 昼は「アゲハ・カマキリ・セミ」の3種が そろって えらばれる日があり、
+// 実測で 30日のうち **6日** が「昼に カブクワが 1匹も 出ない日」だった。
+// 虫が すきな子には この日が いちばん がっかりする日なので、構造で つぶす。
+//
+// やり方は「入れかえ」: えらばれた本数(pick)は 1つも 変えないので、
+// 顔ぶれの数・スポットの要りよう(スポット数≥同時数)の検査は これまでどおり通る。
+// ---------------------------------------------------------------------------
+/** 島の昼の カブクワ族(木のみきに とまる) */
+export const ISLAND_BEETLES_DAY: BugId[] = ['b_kabuto', 'b_kuwa', 'b_nokogiri'];
+/** 島の夜の カブクワ族 */
+export const ISLAND_BEETLES_NIGHT: BugId[] = ['b_ookuwa', 'b_hirata', 'b_giraffa'];
+const ISLAND_BEETLE_SET = new Set<BugId>([...ISLAND_BEETLES_DAY, ...ISLAND_BEETLES_NIGHT]);
+/** 島の カブクワ族か(昼夜は id で 決まるので 引数に とらない) */
+export function isIslandBeetle(id: BugId): boolean {
+  return ISLAND_BEETLE_SET.has(id);
+}
+/** その時間帯の 島の カブクワ族(テスト・検証用) */
+export function islandBeetles(night: boolean): BugId[] {
+  return night ? ISLAND_BEETLES_NIGHT : ISLAND_BEETLES_DAY;
+}
+
+// ---------------------------------------------------------------------------
+// v27 じゅえきの木(BugSpotKind 'sap')に 来る虫。
+//
+// ここは **日がわりの抽選に まざらない 専用のとまり場**で、
+// 中身は 日づけと とまり場の番号だけで 決まる(Math.random は使わない)。
+//   昼 … クワガタ・ノコギリ・カブトムシ
+//   夜 … ヒラタ・オオクワ・ギラファ
+// 重みが 小さいほど めずらしい。ふだんの日でも いちばん軽い種(カブトムシ・ギラファ)が
+// 低い かくりつで まざる = 「きょうは なにが いるかな」が 毎日ある。
+//
+// どちらの表も「その時間帯に 出てよい種」だけ(night フラグと そろえてある)。
+// 昼に 夜の虫を 出すと、既存の機械検査(出ている虫の night が 時こくと 合っているか)が
+// こわれるだけでなく、子どもの「よるにしか いない虫」という 手ざわりも こわれる。
+// ---------------------------------------------------------------------------
+const SAP_POOL: Record<'day' | 'night', { id: BugId; w: number }[]> = {
+  day: [
+    { id: 'b_kuwa', w: 4 },
+    { id: 'b_nokogiri', w: 3 },
+    { id: 'b_kabuto', w: 2 },
+  ],
+  night: [
+    { id: 'b_hirata', w: 4 },
+    { id: 'b_ookuwa', w: 2 },
+    { id: 'b_giraffa', w: 1 },
+  ],
+};
+/**
+ * みつを ぬった日に、1つめの とまり場へ かならず 来る「レア枠」。
+ * 昼=カブトムシ(島の昼で いちばん 重みの軽い 木の虫)、
+ * 夜=ギラファノコギリクワガタ(島の夜の レア)。
+ */
+export const SAP_RARE: Record<'day' | 'night', BugId> = { day: 'b_kabuto', night: 'b_giraffa' };
+
+/** じゅえきの木に 来る虫の 顔ぶれ(テスト・ずかんのメモ用) */
+export function sapPool(night: boolean): BugId[] {
+  return SAP_POOL[night ? 'night' : 'day'].map((e) => e.id);
+}
+
+/**
+ * じゅえきの木の とまり場 slot に、その日 とまっている虫(決定論)。
+ * @param rare みつを ぬった日か。true のとき slot 0 は かならず レア枠になる
+ */
+export function sapSpecies(day: number, night: boolean, slot: number, rare = false): BugId {
+  const key = night ? 'night' : 'day';
+  if (rare && slot === 0) return SAP_RARE[key];
+  const pool = SAP_POOL[key];
+  const total = pool.reduce((s, e) => s + e.w, 0);
+  let v = hash3(day, (night ? 401 : 0) + slot * 17 + 11, 6151) * total;
+  for (const e of pool) {
+    v -= e.w;
+    if (v <= 0) return e.id;
+  }
+  return pool[pool.length - 1].id;
+}
+
 /** その時こくに出る種か(hours を持たない種は いつでもtrue) */
 export function bugHourOk(def: BugDef, hour: number): boolean {
   if (!def.hours) return true;
@@ -667,13 +751,19 @@ export function todaysBugs(day: number, night: boolean, hour?: number, area: Bug
   const rot = all.filter((b) => !b.daily);
   const pick = night ? BUG_ROTATE_NIGHT : BUG_ROTATE_DAY;
   // 日付ハッシュの小さい順に pick 種だけ。同点は id 順にして、ならびを完全に決めきる
-  const chosen = new Set(
-    rot
-      .map((b, i) => ({ b, s: hash3(day, phase * 101 + i * 7 + 3, 8291) }))
-      .sort((p, q) => p.s - q.s || (p.b.id < q.b.id ? -1 : 1))
-      .slice(0, Math.min(pick, rot.length))
-      .map((x) => x.b.id)
-  );
+  const order = rot
+    .map((b, i) => ({ b, s: hash3(day, phase * 101 + i * 7 + 3, 8291) }))
+    .sort((p, q) => p.s - q.s || (p.b.id < q.b.id ? -1 : 1));
+  const take = Math.min(pick, rot.length);
+  const list = order.slice(0, take);
+  // v27 カブクワ保証枠(島だけ)。1種も 入らなかった日は、
+  // いちばん順番の近いカブクワを、いちばん順番の遠い枠と 入れかえる。
+  // 本数(take)は 変わらないので、顔ぶれの数も スポットの要りようも これまでどおり
+  if (area === 'island' && take > 0 && !list.some((x) => isIslandBeetle(x.b.id))) {
+    const first = order.find((x) => isIslandBeetle(x.b.id));
+    if (first) list[take - 1] = first;
+  }
+  const chosen = new Set(list.map((x) => x.b.id));
   return all.filter(
     (b) => (b.daily || chosen.has(b.id)) && (hour === undefined || bugHourOk(b, hour))
   );
@@ -695,6 +785,11 @@ export class BugScheduler {
   private target = 0;
   /** スポット番号 → まだ使えない残り秒 */
   private cooldown = new Map<number, number>();
+  /** v27 じゅえきの木の とまり場の番号(ならび順が そのまま slot 番号) */
+  private readonly sapSpots: number[];
+  private readonly sapSet: Set<number>;
+  /** v27 いま「みつを ぬった日」か(呼ぶ側が update で わたす) */
+  private sapRareNow = false;
 
   /**
    * @param spots その場所のとまり場(世界座標)。BugSystem は座標の意味を知らない
@@ -703,7 +798,24 @@ export class BugScheduler {
   constructor(
     private spots: { x: number; z: number; kind: BugSpotKind }[],
     readonly area: BugArea = 'island'
-  ) {}
+  ) {
+    this.sapSpots = spots.map((p, i) => (p.kind === 'sap' ? i : -1)).filter((i) => i >= 0);
+    this.sapSet = new Set(this.sapSpots);
+  }
+
+  /** v27 じゅえきの木の とまり場の番号(検証・テスト用) */
+  get sapSpotIndices(): readonly number[] {
+    return this.sapSpots;
+  }
+  /** v27 その虫が じゅえきの木に とまっているか(実績・検証用) */
+  isSapBug(key: number): boolean {
+    const b = this.bugs.find((x) => x.key === key);
+    return b !== undefined && this.sapSet.has(b.spot);
+  }
+  /** v27 いま じゅえきの木に とまっている虫(検証・テスト用) */
+  get sapBugs(): ActiveBug[] {
+    return this.bugs.filter((b) => this.sapSet.has(b.spot));
+  }
 
   get active(): ActiveBug[] {
     return this.bugs;
@@ -743,8 +855,12 @@ export class BugScheduler {
    * 時間を進める。
    * @param dt 実秒(ポーズ・会話中は呼ばれない)
    * @param player プレイヤーの位置と速さ(省略・nullなら逃走判定をしない)
+   * @param sapRare v27 きょう じゅえきの木に みつを ぬったか(true の日は レア枠が来る)。
+   *   省略すると v26 までと 1ミリも 同じ(既存の呼び出し・テストは そのまま)
    */
-  update(dt: number, day: number, hour: number, player: BugPlayer | null = null): BugPlan {
+  update(
+    dt: number, day: number, hour: number, player: BugPlayer | null = null, sapRare = false
+  ): BugPlan {
     const key = bugPhaseKey(day, hour);
     if (key !== this.key) {
       // 昼夜が入れかわった: いま出ているものは全部消し、その時間帯の顔ぶれを出しなおす
@@ -754,6 +870,7 @@ export class BugScheduler {
       this.seq = 0;
       this.timer = BUG_FIRST_DELAY_SEC;
       this.cooldown.clear();
+      this.sapRareNow = sapRare;
       this.target = this.pickTarget(day, key);
       return { spawned: [], removed };
     }
@@ -763,6 +880,22 @@ export class BugScheduler {
       else this.cooldown.set(spot, v);
     }
     const removed: number[] = [];
+    // v27 みつを ぬった/効き目が きれた瞬間だけ、じゅえきの木の 顔ぶれを 入れかえる。
+    // いま とまっている虫が「きょうの正しい種」と ちがうときだけ どいてもらい、
+    // すぐ(BUG_FIRST_DELAY_SEC)に 新しい虫が 来る = ぬった子が その場で 見とどけられる。
+    if (sapRare !== this.sapRareNow) {
+      this.sapRareNow = sapRare;
+      const night = isBugNight(hour);
+      for (let i = this.bugs.length - 1; i >= 0; i--) {
+        const b = this.bugs[i];
+        const slot = this.sapSpots.indexOf(b.spot);
+        if (slot < 0 || b.bug === sapSpecies(day, night, slot, sapRare)) continue;
+        this.bugs.splice(i, 1);
+        removed.push(b.key);
+        this.cooldown.delete(b.spot);
+      }
+      if (removed.length > 0 && this.timer > BUG_FIRST_DELAY_SEC) this.timer = BUG_FIRST_DELAY_SEC;
+    }
     /** このフレームで にげた虫の音を もう鳴らしたか(何匹 いっせいに にげても音は1回) */
     let fledThisFrame = false;
     for (let i = this.bugs.length - 1; i >= 0; i--) {
@@ -848,14 +981,22 @@ export class BugScheduler {
         }
       }
     }
-    // 足りないぶんを、間をおいて1匹ずつ出す
+    // 足りないぶんを、間をおいて1匹ずつ出す。
+    //
+    // v27 「じゅえきの木の ぶん」と「抽選の ぶん」を **べつべつに** 数える。
+    // ひとまとめに数えると、じゅえきの虫を つかまえた あとの まちじかん(6秒)のあいだに
+    // 抽選の虫が その枠を うめてしまい、じゅえきの木が その日 ずっと 空っぽになる
+    // ——「毎日 かならず 2匹いる」の 保証が 静かに こわれる。
     const spawned: ActiveBug[] = [];
-    const alive = this.bugs.filter((b) => b.fleeT === 0).length;
-    if (alive < this.target) {
+    const alive = this.bugs.filter((b) => b.fleeT === 0);
+    const sapAlive = alive.filter((b) => this.sapSet.has(b.spot)).length;
+    const wildTarget = Math.max(0, this.target - this.sapSpots.length);
+    const needWild = alive.length - sapAlive < wildTarget;
+    if (needWild || sapAlive < this.sapSpots.length) {
       this.timer -= dt;
       if (this.timer <= 0) {
         this.timer = BUG_RESPAWN_SEC;
-        const b = this.spawn(day, hour);
+        const b = this.spawn(day, hour, needWild);
         if (b) {
           this.bugs.push(b);
           spawned.push(b);
@@ -943,6 +1084,10 @@ export class BugScheduler {
     const def = BUG_BY_ID[b.bug];
     const from = this.spots[b.spot];
     if (!from) return null;
+    // v27 じゅえきの木の虫は 木から はなれない(あまい しるを なめに 来ているので、
+    // おどろいても すぐ みきへ もどる)。ここで よそへ 移すと、
+    // 「毎日 かならず 2匹いる」の 保証と 同時出現数の 予算(+2匹)が どちらも くずれる
+    if (this.sapSet.has(b.spot)) return b.spot;
     const used = new Set(this.bugs.filter((x) => x !== b).map((x) => x.spot));
     let best: { i: number; d: number } | null = null;
     for (let i = 0; i < this.spots.length; i++) {
@@ -971,12 +1116,52 @@ export class BugScheduler {
     const base = night ? t.night : t.day;
     if (base === 0) return 0;
     if (this.area !== 'island') return base;
-    return base + (hash3(day, night ? 1 : 0, 977) < 0.5 ? 0 : 1);
+    // v27 じゅえきの木の ぶん(とまり場2つ)は、抽選の数とは 別に かならず 足す。
+    // = 島の同時出現数は 昼6〜7+2・夜4〜5+2 になる(ふえるのは じゅえきの2匹だけ)
+    return base + (hash3(day, night ? 1 : 0, 977) < 0.5 ? 0 : 1) + this.sapSpots.length;
   }
 
-  /** 1匹ぶんの種類とスポットを決める(空きが無ければnull) */
-  private spawn(day: number, hour: number): ActiveBug | null {
+  /**
+   * v27 じゅえきの木の あいている とまり場を 1つ うめる(空きが無ければ null)。
+   * 種は 日づけと slot 番号だけで 決まるので、同じ日なら 何度出しなおしても 同じ虫が来る。
+   */
+  private spawnSap(day: number, night: boolean): ActiveBug | null {
+    if (this.sapSpots.length === 0) return null;
+    const used = new Set(this.bugs.map((b) => b.spot));
+    for (let slot = 0; slot < this.sapSpots.length; slot++) {
+      const spot = this.sapSpots[slot];
+      if (used.has(spot) || this.cooldown.has(spot)) continue;
+      // 通し番号(seq)は 抽選のハッシュに つかうので ここでは 進めない
+      // (じゅえきの木を足しても、ふつうの虫の 日ごとの顔ぶれが 1ミリも 変わらないため)
+      return this.makeBug(sapSpecies(day, night, slot, this.sapRareNow), spot, day, 900 + slot);
+    }
+    return null;
+  }
+
+  /** 1匹ぶんの ActiveBug を組み立てる(抽選と じゅえきの木で 共通) */
+  private makeBug(id: BugId, spot: number, day: number, n: number): ActiveBug {
+    const key = this.nextKey++;
+    return {
+      key, bug: id, spot, t: 0, fleeT: 0, spook: 0, settle: 0, wary: false,
+      seed: Math.floor(hash3(day, n, spot * 13 + 5) * 997),
+      // v24 出てすぐ とび立つと「出たのに いない」になるので、1回目は 待ち時間を 長めに取る
+      hopT: 0,
+      hopFrom: spot,
+      hopAt: BUG_HOP_WAIT_MIN + hash3(key, spot, 4409) * (BUG_HOP_WAIT_MAX - BUG_HOP_WAIT_MIN),
+    };
+  }
+
+  /**
+   * 1匹ぶんの種類とスポットを決める(空きが無ければnull)。
+   * @param allowWild v27 抽選の ぶんに あきが あるか。false なら じゅえきの木だけを うめる
+   */
+  private spawn(day: number, hour: number, allowWild = true): ActiveBug | null {
     const night = isBugNight(hour);
+    // v27 じゅえきの木の とまり場は、ふつうの抽選より **先に** うめる。
+    // = 「きょうは 抽選が かたよって じゅえきの木が 空っぽ」が 構造的に起きない
+    const sap = this.spawnSap(day, night);
+    if (sap) return sap;
+    if (!allowWild) return null;
     // v17 「きょうの顔ぶれ」+「その時こくに出る種」だけを候補にする(v23: 場所も)
     const pool = todaysBugs(day, night, hour, this.area);
     if (pool.length === 0 || this.spots.length === 0) return null;
@@ -1000,15 +1185,7 @@ export class BugScheduler {
       }
       const spot = this.pickSpot(def, day, n + attempt, used);
       if (spot === null) continue;
-      const key = this.nextKey++;
-      return {
-        key, bug: def.id, spot, t: 0, fleeT: 0, spook: 0, settle: 0, wary: false,
-        seed: Math.floor(hash3(day, n, spot * 13 + 5) * 997),
-        // v24 出てすぐ とび立つと「出たのに いない」になるので、1回目は 待ち時間を 長めに取る
-        hopT: 0,
-        hopFrom: spot,
-        hopAt: BUG_HOP_WAIT_MIN + hash3(key, spot, 4409) * (BUG_HOP_WAIT_MAX - BUG_HOP_WAIT_MIN),
-      };
+      return this.makeBug(def.id, spot, day, n);
     }
     return null;
   }

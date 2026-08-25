@@ -78,7 +78,20 @@ export type ItemId =
   | 'f_starbox' | 'f_shellframe' | 'f_mushstool' | 'f_bigwind'
   // ---- v24 くらしパック: 買う・作るのではなく「その日 したこと」で手に入る2つ ----
   // ゆきだるま = ゆきの日に 草地で ゆきを 3回 あつめる / しゃしんたて = はじめて しゃしんを とる
-  | 'f_snowman' | 'f_photostand';
+  | 'f_snowman' | 'f_photostand'
+  // ---- v25 ぬいぐるみパック: おける「おきもの」を 16しゅるい ふやす ----
+  // しまの なかまぬいぐるみ5(そのNPCと なかよし8で テンの店に 入荷する)
+  | 'f_plush_minamo' | 'f_plush_nokto' | 'f_plush_tsumugi' | 'f_plush_roka' | 'f_plush_ten'
+  // ぬいぐるみ4(くじら・ほしのクッション・きのこ・ホタル)
+  | 'f_plush_whale' | 'f_plush_star' | 'f_plush_mush' | 'f_plush_hotaru'
+  // おもちゃ5(きしゃ・ヨット・けんだま・つみきのしろ・ボール)
+  | 'f_toy_train' | 'f_toy_yacht' | 'f_toy_kendama' | 'f_toy_castle' | 'f_toy_ball'
+  // かざり台2(ぬいぐるみを3つ ならべる たな / おもちゃを 入れる はこ)
+  | 'f_plush_shelf' | 'f_toybox'
+  // ---- v27 じゅえきの木: 木に ぬると 虫が あつまる「はなのみつ」(かくしレシピ1つ) ----
+  // いちば島で 買える「あまいみつ(sweet_honey)」と 同じ はたらきをするが、
+  // こちらは 島の素材(ルミベリー+のばな)だけで 作れる = でんしゃに のる前の子でも 作れる
+  | 'nectar';
 
 export type ToolId = 'axe' | 'pickaxe' | 'rod' | 'sickle' | 'net' | 'shovel';
 
@@ -121,6 +134,12 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   // ---- v9 雨の日だけ 地面に出る(むしあみは いらない。手でひろえる) ----
   snail: { id: 'snail', name: 'カタツムリ', sell: 14, kind: 'material', desc: '雨の日だけ 草の上を ゆっくり あるく。手でひろえる' },
   jam: { id: 'jam', name: 'ベリージャム', sell: 45, kind: 'food', desc: 'ルミベリーをにつめた。みんな大すき' },
+  // ---- v27 じゅえきの木に ぬる みつ(かくしレシピ。ルミベリー2+のばな1) ----
+  // kind は material: たべものにすると もちものの「たべる」に ならんでしまう
+  nectar: {
+    id: 'nectar', name: 'はなのみつ', sell: 20, kind: 'material',
+    desc: 'ルミベリーと のばなから 作った、とろりと あまい みつ。じゅえきの木に ぬると 虫が あつまる',
+  },
   // ---- v9 虫6種(むしあみが ひつよう。昼は花と草と林、夜は池と草むら) ----
   b_shiro: { id: 'b_shiro', name: 'モンシロチョウ', sell: 8, kind: 'material', desc: '昼の花のまわりを ひらひら とぶ 白いチョウ' },
   b_ageha: { id: 'b_ageha', name: 'アゲハチョウ', sell: 15, kind: 'material', desc: '花のそばに ときどき来る、大きな もようのチョウ' },
@@ -401,6 +420,87 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     id: 'f_photostand', name: 'しゃしんたて', sell: 24, kind: 'furniture',
     desc: 'とった しゃしんを 1まい かざる 木の たて。アルバムから すきな1まいを えらべる',
   },
+  // =========================================================================
+  // v25 ぬいぐるみパック(おける おきもの 16しゅるい)。
+  //
+  // 「クマの人形みたいな おけるアイテムが たくさん ふえると たのしい」という
+  // 実プレイの声から。v24で 1つだけ あった くまの ぬいぐるみ(f_teddy)を ふくらませて、
+  // **ならべて かざる あそび**を ひとつの まとまりにする:
+  //   ・ぬいぐるみ9(しまの なかま5 + いきもの・かたち4)
+  //   ・おもちゃ5(のりもの・あそびもの)
+  //   ・かざり台2(ぬいぐるみだな=3つ ならべる / おもちゃばこ=小物が こぼれた はこ)
+  // どれも いろみずで ぬれる(光る部品を もつのは ホタルだけで、そこは ぬらない)。
+  // =========================================================================
+  // ---- しまの なかまぬいぐるみ5(テンの店。そのNPCと なかよし8で 入荷する)----
+  // 売値は ぜんぶ そろえてある: 5つは「どれか1つが えらい」ものではなく、
+  // **すきな人を えらぶ**ものなので、値だんで 順番を つけない。
+  f_plush_minamo: {
+    id: 'f_plush_minamo', name: 'ミナモの ぬいぐるみ', sell: 70, kind: 'furniture',
+    desc: 'ミナモを かたどった ぬいぐるみ。青い むねあての つりひもが きちんと ぬってある',
+  },
+  f_plush_nokto: {
+    id: 'f_plush_nokto', name: 'ノクトの ぬいぐるみ', sell: 70, kind: 'furniture',
+    desc: 'ノクトを かたどった ぬいぐるみ。まるい めがねは はりがねで できている',
+  },
+  f_plush_tsumugi: {
+    id: 'f_plush_tsumugi', name: 'ツムギの ぬいぐるみ', sell: 70, kind: 'furniture',
+    desc: 'ツムギを かたどった ぬいぐるみ。うしろへ まがる つのが 2本 ついている',
+  },
+  f_plush_roka: {
+    id: 'f_plush_roka', name: 'ロカの ぬいぐるみ', sell: 70, kind: 'furniture',
+    desc: 'ロカを かたどった ぬいぐるみ。おなかの 白い ぬのが まんまるで やわらかい',
+  },
+  f_plush_ten: {
+    id: 'f_plush_ten', name: 'テンの ぬいぐるみ', sell: 70, kind: 'furniture',
+    desc: 'テンを かたどった ぬいぐるみ。せなかに 小さな ふろしきを しょっている',
+  },
+  // ---- ぬいぐるみ4 ----
+  f_plush_whale: {
+    id: 'f_plush_whale', name: 'くじらの ぬいぐるみ', sell: 50, kind: 'furniture',
+    desc: 'ツムギが ぬった 大きな くじら。せなかの しおふきまで ぬので できている',
+  },
+  f_plush_star: {
+    id: 'f_plush_star', name: 'ほしの クッション', sell: 46, kind: 'furniture',
+    desc: 'ほしの かたちの クッション。かどが 5つ とも まるく ふくらんでいる',
+  },
+  f_plush_mush: {
+    id: 'f_plush_mush', name: 'きのこの ぬいぐるみ', sell: 34, kind: 'furniture',
+    desc: 'きのこを かたどった ぬいぐるみ。かさの ふちに ぬい目の しろい線が はしる',
+  },
+  f_plush_hotaru: {
+    id: 'f_plush_hotaru', name: 'ホタルの ぬいぐるみ', sell: 58, kind: 'furniture', glow: true,
+    desc: 'ヒカリゴケを つめた ホタルの ぬいぐるみ。よるは おしりが みどりに ほんのり ともる',
+  },
+  // ---- おもちゃ5 ----
+  f_toy_train: {
+    id: 'f_toy_train', name: '木の きしゃ', sell: 60, kind: 'furniture',
+    desc: 'よるの うみでんしゃと おなじ こんいろの きしゃ。きかんしゃと 客車の 2りょう つなぎ',
+  },
+  f_toy_yacht: {
+    id: 'f_toy_yacht', name: 'ヨット', sell: 42, kind: 'furniture',
+    desc: '木を けずった 小さな ヨット。ぬのの ほが 風を うけた かたちで とまっている',
+  },
+  f_toy_kendama: {
+    id: 'f_toy_kendama', name: 'けんだま', sell: 22, kind: 'furniture',
+    desc: 'こえだの けんに 木の玉を つないだ あそびどうぐ。玉が ひもで ぶらさがっている',
+  },
+  f_toy_castle: {
+    id: 'f_toy_castle', name: 'つみきの しろ', sell: 54, kind: 'furniture',
+    desc: 'よその島の しろを かたどった つみき。門と やぐらが 3つ たっている',
+  },
+  f_toy_ball: {
+    id: 'f_toy_ball', name: 'ボール', sell: 16, kind: 'furniture',
+    desc: '草を まるく あんで つくった ボール。ぬのの はぎれが 6まい ぬいつけてある',
+  },
+  // ---- かざり台2 ----
+  f_plush_shelf: {
+    id: 'f_plush_shelf', name: 'ぬいぐるみだな', sell: 52, kind: 'furniture',
+    desc: 'ぬいぐるみを 3つまで えらんで ならべられる たな。1だんずつ 草の しきものが しいてある',
+  },
+  f_toybox: {
+    id: 'f_toybox', name: 'おもちゃばこ', sell: 30, kind: 'furniture',
+    desc: 'ふたの あいた 木の はこ。中と まわりに 小さな おもちゃが こぼれている',
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -433,6 +533,20 @@ export const ITEMS: Record<ItemId, ItemDef> = {
 // すいそう・むしかご(大小)・ずかん・おくりもの・実績が ぜんぶ ついてくる。
 // ならびは BUG_IDS(=BUG_DEFS の順)と そろえること(display_v10.test.ts が両方向を見る)。
 const DISPLAY_FISH = ['fish', 'nightfish', 'seafish', 'rarefish', 'koi', 'seabream', 'seahorse'] as const;
+/**
+ * v25 ぬいぐるみだなに ならべられるもの(=「ぬいぐるみ」と よべるもの ぜんぶ)。
+ *
+ * 魚・虫とちがって 中身も **置ける家具** なので、たなに ならべるか 床に おくかを
+ * 子どもが えらべる(たなから とりだすと、そのまま 1つの家具として また 置ける)。
+ * v24までの くまの ぬいぐるみ・らくだの ぬいぐるみも ここに入れる:
+ * あとから 出た たなに「前から 持っていた ぬいぐるみが のらない」のは 理不尽なので。
+ * ならびは ITEMS の 定義順と そろえる(たなの中の ならびも UIの ならびも これ1つで決まる)。
+ */
+const DISPLAY_PLUSH = [
+  'f_teddy', 'f_camel_doll',
+  'f_plush_minamo', 'f_plush_nokto', 'f_plush_tsumugi', 'f_plush_roka', 'f_plush_ten',
+  'f_plush_whale', 'f_plush_star', 'f_plush_mush', 'f_plush_hotaru',
+] as const;
 const DISPLAY_BUGS = [
   'b_shiro', 'b_ageha', 'b_tento', 'b_kabuto', 'b_hotaru', 'b_suzu',
   'b_batta', 'b_kuwa', 'b_kama', 'b_semi', 'b_tonbo', 'b_ookuwa',
@@ -440,6 +554,16 @@ const DISPLAY_BUGS = [
   'b_nokogiri', 'b_hirata', 'b_giraffa', 'b_miyama', 'b_caucasus', 'b_niji', 'b_hercules',
 ] as const;
 
+// v25 ぬいぐるみだなを 足すにあたって、文言の 出どころを この表に そろえた。
+//   unit       : 数の たんい(いきもの=ひき / もの=こ)。パネルの「2 / 3こ」に出る
+//   unitOne    : 「1」の あとに つく形(いっ**ぴき** / 1**こ**)。日本語の 助数詞は
+//                前の数で 音が かわるので、1つのときの形は べつに 持つ
+//                (ここを 1つにすると「1ひき」という 読めない文が 出る)
+//   putLabel   : ボタンと 見出しの 動詞(いれる / かざる)
+//   putPast    : その動詞の 過去形(トースト「◯◯を △△に かざった」)
+//   insideLabel: 「いま 入っているもの」の 見出し
+// ここに置く前は DisplayUI と InteractionRouting に「いきもの」と じか書きしてあり、
+// 魚・虫いがいを 入れる家具を 足したとたんに 文が うそになるところだった(教訓4)。
 export const DISPLAY_FURNITURE = {
   f_aquarium: {
     label: 'すいそう',
@@ -447,6 +571,11 @@ export const DISPLAY_FURNITURE = {
     accepts: DISPLAY_FISH,
     capacity: 1,
     statKey: 'display_fish',
+    unit: 'ひき',
+    unitOne: 'ぴき',
+    putLabel: 'いれる',
+    putPast: 'いれた',
+    insideLabel: 'いま いる いきもの',
     empty: 'いま いれられる魚が ない。海や池で つってこよう!',
     full: 'すいそうは いっぱい。とりだすと また いれられるよ',
     upgrade: 'r_aquarium_big',
@@ -457,6 +586,11 @@ export const DISPLAY_FURNITURE = {
     accepts: DISPLAY_FISH,
     capacity: 6,
     statKey: 'display_fish',
+    unit: 'ひき',
+    unitOne: 'ぴき',
+    putLabel: 'いれる',
+    putPast: 'いれた',
+    insideLabel: 'いま いる いきもの',
     empty: 'いま いれられる魚が ない。海や池で つってこよう!',
     full: 'おおきな すいそうは 6ぴきで いっぱい。とりだすと また いれられるよ',
   },
@@ -466,6 +600,11 @@ export const DISPLAY_FURNITURE = {
     accepts: DISPLAY_BUGS,
     capacity: 1,
     statKey: 'display_bug',
+    unit: 'ひき',
+    unitOne: 'ぴき',
+    putLabel: 'いれる',
+    putPast: 'いれた',
+    insideLabel: 'いま いる いきもの',
     empty: 'いま いれられる虫が ない。むしあみで つかまえてこよう!',
     full: 'むしかごは いっぱい。とりだすと また いれられるよ',
     upgrade: 'r_bugcage_big',
@@ -476,12 +615,35 @@ export const DISPLAY_FURNITURE = {
     accepts: DISPLAY_BUGS,
     capacity: 6,
     statKey: 'display_bug',
+    unit: 'ひき',
+    unitOne: 'ぴき',
+    putLabel: 'いれる',
+    putPast: 'いれた',
+    insideLabel: 'いま いる いきもの',
     empty: 'いま いれられる虫が ない。むしあみで つかまえてこよう!',
     full: 'おおきな むしかごは 6ぴきで いっぱい。とりだすと また いれられるよ',
   },
+  // ---- v25 ぬいぐるみだな(3つ ならべる)----
+  // おおきい版は 作らない: たなは「えらんで ならべる」ための家具なので、
+  // 入る数を ふやすほど えらぶ たのしさが うすくなる(3つは 見せ場が 作れる いちばん小さい数)。
+  f_plush_shelf: {
+    label: 'ぬいぐるみだな',
+    contentLabel: 'ぬいぐるみ',
+    accepts: DISPLAY_PLUSH,
+    capacity: 3,
+    statKey: 'display_plush',
+    unit: 'こ',
+    unitOne: 'こ',
+    putLabel: 'かざる',
+    putPast: 'かざった',
+    insideLabel: 'いま かざってある ぬいぐるみ',
+    empty: 'いま かざれる ぬいぐるみが ない。お店や クラフトで 手に入れよう!',
+    full: 'ぬいぐるみだなは 3つで いっぱい。とりだすと また かざれるよ',
+  },
 } as const satisfies Record<string, {
   label: string; contentLabel: string; accepts: readonly ItemId[]; capacity: number;
-  statKey: string; empty: string; full: string; upgrade?: string;
+  statKey: string; unit: string; unitOne: string; putLabel: string; putPast: string; insideLabel: string;
+  empty: string; full: string; upgrade?: string;
 }>;
 
 export type DisplayFurnitureId = keyof typeof DISPLAY_FURNITURE;
@@ -739,6 +901,19 @@ export const RECIPES: RecipeDef[] = [
   { id: 'r_shellframe', name: 'かいがらの フレーム', out: 'f_shellframe', outKind: 'item', cost: { shell: 1, wood: 2 } },
   { id: 'r_mushstool', name: 'きのこの スツール', out: 'f_mushstool', outKind: 'item', cost: { mushroom: 2, wood: 1 } },
   { id: 'r_bigwind', name: 'おおきな ふうりん', out: 'f_bigwind', outKind: 'item', cost: { shell: 2, wood: 1 } },
+  // ---- v25 ぬいぐるみパックの クラフト5種 ----
+  // 材料は ぜんぶ 島でとれるものだけ。3つ(ボール・けんだま・おもちゃばこ)は
+  // 最初から見え、2つ(きのこの ぬいぐるみ・ぬいぐるみだな)は 素材の入手で ひらめく
+  // = クラフト画面の「?」行に 出る側にまわす(v24の おうちパックと 同じ わけかた)。
+  { id: 'r_toy_ball', name: 'ボール', out: 'f_toy_ball', outKind: 'item', cost: { cutgrass: 3, fiber: 1 } },
+  { id: 'r_toy_kendama', name: 'けんだま', out: 'f_toy_kendama', outKind: 'item', cost: { wood: 2, twig: 1 } },
+  { id: 'r_toybox', name: 'おもちゃばこ', out: 'f_toybox', outKind: 'item', cost: { wood: 3, twig: 2 } },
+  { id: 'r_plush_mush', name: 'きのこの ぬいぐるみ', out: 'f_plush_mush', outKind: 'item', cost: { mushroom: 2, cutgrass: 2 } },
+  { id: 'r_plush_shelf', name: 'ぬいぐるみだな', out: 'f_plush_shelf', outKind: 'item', cost: { wood: 4, fiber: 2, cutgrass: 2 } },
+  // ---- v25 くみあわせで見つかる1種(材料は COMBOS の inputs と 必ず同じ)----
+  { id: 'r_plush_hotaru', name: 'ホタルの ぬいぐるみ', out: 'f_plush_hotaru', outKind: 'item', cost: { moss: 2, straw: 1 } },
+  // ---- v27 くみあわせで見つかる1種(材料は COMBOS の inputs と 必ず同じ)----
+  { id: 'r_nectar', name: 'はなのみつ', out: 'nectar', outKind: 'item', cost: { berry: 2, flower: 1 } },
 ];
 
 // 最初から知っているレシピ。
@@ -758,6 +933,9 @@ export const RECIPES: RecipeDef[] = [
 // いちばん よく使う すわる・のせる・しく の3つ(スツール・ローテーブル・おおきなラグ)は
 // 最初の日から 作れるようにしてある。のこり3つ(ほんのやま・かべどけい・はっぱの木)は
 // 素材の入手で ひらめく = クラフト画面の「?」行に 出る側にまわす。
+// v25: あそびもの3つ(ボール・けんだま・おもちゃばこ)も 最初から見せる。
+// 「作った おもちゃを 入れる場所」が 最初の日から あるほうが、
+// おもちゃを 1つ作った子に つぎの1つを 作る理由が できる(目標の階段。教訓3)。
 export const INITIAL_RECIPES = [
   'r_sickle', 'r_rod', 'r_flowerbed', 'r_shelldeco',
   'r_bookcase', 'r_dishrack', 'r_flowervase', 'r_wall_leaf', 'r_floor_rug',
@@ -765,6 +943,7 @@ export const INITIAL_RECIPES = [
   'r_net', 'r_shovel', 'r_strawmat',
   'r_kitchen',
   'r_stool', 'r_lowtable', 'r_bigrug', 'r_blocks', 'r_futon',
+  'r_toy_ball', 'r_toy_kendama', 'r_toybox',
 ];
 
 // ツムギの店で買える家具・かべがみ・ゆかいた
@@ -782,6 +961,11 @@ export const SHOP_STOCK: { item: ItemId; price: number }[] = [
   { item: 'f_roundlamp', price: 110 },
   { item: 'f_teddy', price: 90 },
   { item: 'f_bigvase', price: 72 },
+  // v25 ぬいぐるみパックの お店3種。ツムギは「ぬのを ぬう人・木を けずる人」なので、
+  // ぬいぐるみ2つと 木のおもちゃ1つを あずかる(くまの ぬいぐるみの となりに ならぶ)
+  { item: 'f_plush_whale', price: 100 },
+  { item: 'f_plush_star', price: 92 },
+  { item: 'f_toy_yacht', price: 84 },
   // 模様替え(6種とも同じ値段)。作れる2種も置いてある(作らずに買ってもよい・戻したいときにも買える)
   { item: 'wall_cream', price: 120 },
   { item: 'wall_sky', price: 120 },
@@ -830,6 +1014,19 @@ export function validateItemData(): string[] {
     }
     // 入る数は1以上の整数(0だと「入れられるのに入らない」家具になる)
     if (!Number.isInteger(def.capacity) || def.capacity < 1) problems.push(`展示家具${id}のcapacityが1以上の整数でない`);
+    // v25 文言(たんい・動詞・見出し)が そろっているか。
+    // ここが空だと パネルの見出しや トーストが「◯◯を に かざった」のように 割れる
+    for (const key of ['unit', 'unitOne', 'putLabel', 'putPast', 'insideLabel'] as const) {
+      if (typeof def[key] !== 'string' || def[key].length === 0) problems.push(`展示家具${id}の${key}が空`);
+    }
+    // 入れられるものは「もちものに ならぶもの」= 名前と せつめいを持つ実在のアイテム。
+    // ぬいぐるみだなのように 家具を 入れる場合は、その家具も 置ける家具であること
+    // (とりだしたら そのまま また 置けないと「たなに入れたら 二度と 置けない」になる)
+    for (const it of accepts) {
+      if (it in ITEMS && ITEMS[it].kind === 'furniture' && !isPlaceable(it)) {
+        problems.push(`展示家具${id}に入れる${it}が置けない`);
+      }
+    }
     // おおきい版のレシピ: 実在して、その産出が また展示家具で、入れられるものが同じで、もっと入ること
     const up = (def as { upgrade?: string }).upgrade;
     if (up !== undefined) {

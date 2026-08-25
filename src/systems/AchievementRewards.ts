@@ -73,6 +73,10 @@ export const ACHIEVEMENT_REWARDS: Record<string, AchievementReward> = {
   a_bond_first: { kind: 'lumina', amount: 80 },
   a_bond_all: { kind: 'lumina', amount: 150 },
   a_nushi_all: { kind: 'lumina', amount: 150 },
+  // v27 じゅえきの木。むしとりの実績(a_bug5=40)と 同じ格の 小さな ごほうびにする
+  // ——「もっと カブクワに 会える」こと自体が いちばんの ごほうびなので、
+  // ここで 限定の ものまで 出すと 二重になる(v21の ぬしと同じ考え方)
+  a_saptree: { kind: 'lumina', amount: 40 },
   a_all_quests: { kind: 'lumina', amount: 200 },
 };
 

@@ -126,32 +126,35 @@ export class DisplayUI {
           <span class="inv-ico">${icon(id)}</span>
           <span class="inv-name" style="${nameStyle}">${item.name}</span>
           <span class="inv-count">×${s.inventory[id] ?? 0}</span>
-          <button class="craft-btn sub" data-put="${id}" style="white-space:nowrap">いれる</button>
+          <button class="craft-btn sub" data-put="${id}" style="white-space:nowrap">${def.putLabel}</button>
         </div>`;
       })
       .join('');
     // v16.1 いちばん下の2つのボタンは「うごかす」「もちかえる」だけにする。
-    // 何を うごかすのかは すぐ上の 見出し(「おおきな すいそうに いきものを いれる」)が
+    // 何を うごかすのかは すぐ上の 見出し(「おおきな すいそうに 魚を いれる」)が
     // もう言っている。家具の名前を くりかえすと 1行に 入りきらず 2行に 折れていた
     // (UI総ざらいの写真 16)。動きの名前だけ 残すほうが 目で 追いやすい。
-    // 「あと何びき入るか」を数で見せる(たくさん入る家具で いま何びきか いつでも分かる)
-    const count = cap > 1 ? ` <span class="panel-count">${contents.length} / ${cap}ひき</span>` : '';
+    // 「あと何こ入るか」を数で見せる(たくさん入る家具で いま何こか いつでも分かる)
+    //
+    // v25 文言は ぜんぶ DISPLAY_FURNITURE から とる(「いきもの」「ひき」を ここに
+    // じか書きしていたので、ぬいぐるみだなを 足したとたんに 文が うそになるところだった)。
+    const count = cap > 1 ? ` <span class="panel-count">${contents.length} / ${cap}${def.unit}</span>` : '';
     const insideBlock =
       contents.length > 0
-        ? `<div class="panel-sub first">いま いる いきもの</div>
+        ? `<div class="panel-sub first">${def.insideLabel}</div>
            <div class="inv-grid" style="${grid}">${inside}</div>`
         : '';
     const putBlock = full
       ? `<div class="inv-empty">${def.full}</div>`
       : `<div class="inv-grid" style="${grid}">${slots || `<div class="inv-empty">${def.empty}</div>`}</div>`;
     this.el.innerHTML = `
-      <div class="panel-title"><span>${def.label}に いきものを いれる${count}</span>
+      <div class="panel-title"><span>${def.label}に ${def.contentLabel}を ${def.putLabel}${count}</span>
         <span class="panel-close" data-close>やめる</span>
       </div>
       ${insideBlock}
-      ${contents.length > 0 ? '<div class="panel-sub">いれる</div>' : ''}
+      ${contents.length > 0 ? `<div class="panel-sub">${def.putLabel}</div>` : ''}
       ${putBlock}
-      <div class="panel-sub">入れた いきものは いつでも とりだせるよ。
+      <div class="panel-sub">とりだすと もちものに もどるよ。
         <button class="craft-btn sub" data-move style="white-space:nowrap;margin-left:8px">うごかす</button>
         <button class="craft-btn sub" data-carry style="white-space:nowrap;margin-left:8px">もちかえる</button>
       </div>

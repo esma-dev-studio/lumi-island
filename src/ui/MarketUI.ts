@@ -8,7 +8,7 @@ import type { GameState } from '../game/GameState';
 import { invAddRecorded } from '../game/GameState';
 import { ITEMS, RECIPES, type ItemId } from '../data/items';
 import {
-  MARKET_SCROLL, SCROLL_SOLDOUT_TEXT, canOfferScroll, daysLeftInWeek, marketStockOfDay, marketWeek, openScroll,
+  MARKET_SCROLL, SCROLL_SOLDOUT_TEXT, daysLeftInWeek, marketRowsFor, marketWeek, openScroll,
   type MarketRow,
 } from '../systems/MarketStock';
 import { icon } from './icons';
@@ -20,8 +20,11 @@ import { sfx } from '../audio/AudioSystem';
 const GROUP_LABEL: Record<MarketRow['group'], string> = {
   style: 'かべと ゆか',
   furniture: 'よその島の かぐ',
+  toy: 'よその島の おもちゃ',
   material: 'よその島の ざいりょう',
   scroll: 'レシピの まきもの',
+  // v25 なかよしの しるし。週がわりではないので、いちばん下に ずっと ならぶ
+  plush: 'しまの なかまの ぬいぐるみ',
 };
 
 export class MarketUI {
@@ -81,10 +84,9 @@ export class MarketUI {
     this.el.classList.add('hidden');
   }
 
-  /** いまの週の品ぞろえ(検証・テストが 画面と同じものを 見られるようにする) */
+  /** いま ならんでいる品(検証・テストが 画面と同じものを 見られるようにする) */
   rows(): MarketRow[] {
-    const s = this.getState();
-    return marketStockOfDay(this.getDay()).filter((r) => r.item !== MARKET_SCROLL || canOfferScroll(s));
+    return marketRowsFor(this.getState(), this.getDay());
   }
 
   private render(): void {

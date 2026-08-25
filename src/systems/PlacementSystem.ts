@@ -119,6 +119,8 @@ const GLOW_TINT: Partial<Record<ItemId, 'amber' | 'mint' | 'blue'>> = {
   // v14 ごほうび限定の2種は もとの家具と 光の色が 逆になる
   // (きんのランタン=あたたかい金 / よるのとうだい=あお白い)
   f_lighthouse_lantern_night: 'blue',
+  // v25 ホタルの ぬいぐるみ: 中身が ヒカリゴケなので みどり(ホタルの ほんものと同じ)
+  f_plush_hotaru: 'mint',
 };
 
 /** 光だまりの広さ(m)。表にないものは既定。はなかざり・うみのモビールは「ほのかに」なので小さい */
@@ -126,6 +128,8 @@ const GLOW_RADIUS_DEFAULT = 1.6;
 const GLOW_RADIUS: Partial<Record<ItemId, number>> = {
   f_flowervase: 1.05,
   f_seamobile: 1.15,
+  // v25 ぬいぐるみの おしりの あかりは「ほんのり」なので いちばん小さい
+  f_plush_hotaru: 0.95,
 };
 
 const ng = (reason: string): PlacementCheck => ({ ok: false, reason });
@@ -617,7 +621,8 @@ export class PlacementSystem {
     delete p.data.content; // 旧項目は移し終えたら残さない
     statAdd(this.state, DISPLAY_FURNITURE[kind].statKey); // じっせき用(入れた回数の累計)
     this.respawn(p);
-    toast(`${ITEMS[item].name}を ${DISPLAY_FURNITURE[kind].label}に いれた`, item);
+    // v25 動詞は 家具の表から(すいそう=いれた / ぬいぐるみだな=かざった)
+    toast(`${ITEMS[item].name}を ${DISPLAY_FURNITURE[kind].label}に ${DISPLAY_FURNITURE[kind].putPast}`, item);
     sfx('place');
     this.learnDisplayUpgrade(kind);
     save(this.state);

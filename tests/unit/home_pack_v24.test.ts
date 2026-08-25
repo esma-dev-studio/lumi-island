@@ -330,7 +330,9 @@ describe('v24 まだ しらないレシピの「?」行', () => {
     expect(learned.map((r) => r.id)).toContain('r_mushlamp');
     expect(s.recipes).toContain('r_mushlamp');
     expect(unknownRecipeHints(s).map((u) => u.recipe.id)).not.toContain('r_mushlamp');
-    expect(unknownRecipeHints(s).length).toBe(before.length - 1);
+    // v25 きのこは 2つ ひらめく(きのこランプ+きのこの ぬいぐるみ)ので、
+    // 減る行の数は「ひらめいた数」で見る(1素材=1レシピ を きめうちにしない)
+    expect(unknownRecipeHints(s).length).toBe(before.length - learned.length);
   });
 
   it('おおきい版は 小さい版を おぼえるまで 出さない(先ばしりの案内を しない)', () => {

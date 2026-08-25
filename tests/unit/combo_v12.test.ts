@@ -105,12 +105,17 @@ describe('データ: かくしレシピ20種', () => {
   });
 
   // v24 おうちパックで かざりを4つ足して 20種(りょうり・いろは 変えていない)
-  it('りょうり6・いろ6(いろみず4+かべがみ2)・かざり8の20種', () => {
-    expect(COMBOS.length).toBe(20);
+  // v25 ぬいぐるみパックで かざりを もう1つ(ホタルの ぬいぐるみ)足して かざり9。
+  // 合計は「なかまごとの 数の合計」で見る —— あとから 新しい なかまが 足されても
+  // 「どの くみあわせも かならず どれかの なかまに 入っている」を 見はりつづけられる
+  it('りょうり6・いろ6(いろみず4+かべがみ2)・かざり9。合計は なかまごとの 数と 合う', () => {
     const byGroup = (g: keyof typeof COMBO_GROUPS): number => COMBOS.filter((c) => c.group === g).length;
+    const total = (Object.keys(COMBO_GROUPS) as (keyof typeof COMBO_GROUPS)[])
+      .reduce((n, g) => n + byGroup(g), 0);
+    expect(COMBOS.length, 'なかまの わからない くみあわせが ある').toBe(total);
     expect(byGroup('cook')).toBe(6);
     expect(byGroup('paint')).toBe(6);
-    expect(byGroup('deco')).toBe(8);
+    expect(byGroup('deco')).toBe(9);
     // どれも 2〜3個の材料で できている(えらべる上限をこえるものを作らない)
     for (const c of COMBOS) {
       expect(comboSize(c), c.id).toBeGreaterThanOrEqual(COMBO_MIN);

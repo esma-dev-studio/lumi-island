@@ -104,9 +104,10 @@ describe('新レシピ4種', () => {
     // v21で ぬしのトロフィー1種(ヨルノヌシのがく=光る大魚なので、がくの中の魚が 光る)、
     // v24 おうちパックで3種(まるいランプ・あおいランタン・ほしのオルゴール)が加わった。
     // 数え方(ITEMSのglowフラグ)は変えていない
+    // v25 ぬいぐるみパックで1種(ホタルの ぬいぐるみ=おしりが みどりに ともる)が加わった
     expect(glowing.sort()).toEqual([
       'f_aroma_lamp', 'f_blue_lantern', 'f_flowervase', 'f_lantern', 'f_lighthouse_lantern',
-      'f_lighthouse_lantern_night', 'f_market_lantern', 'f_mushlamp', 'f_roundlamp',
+      'f_lighthouse_lantern_night', 'f_market_lantern', 'f_mushlamp', 'f_plush_hotaru', 'f_roundlamp',
       'f_sealamp', 'f_seamobile', 'f_starbox',
       'f_starlantern', 'f_starlantern_gold', 'f_starmobile', 'f_stonelamp', 'f_terrarium',
       'f_trophy_yoru',
@@ -133,6 +134,9 @@ describe('新レシピ4種', () => {
       // (「家をひろげたのに 置くものが少ない」への こたえ。のこり3つは ひらめきで出る)。
       // ならびは INITIAL_RECIPES ではなく RECIPES の順(knownRecipes が RECIPES を たどる)
       'r_lowtable', 'r_stool', 'r_blocks', 'r_bigrug', 'r_futon',
+      // v25 ぬいぐるみパック: あそびもの3つも最初から見せる
+      // (作った おもちゃを 入れる場所=おもちゃばこ が 最初の日から ある)
+      'r_toy_ball', 'r_toy_kendama', 'r_toybox',
     ]);
   });
 

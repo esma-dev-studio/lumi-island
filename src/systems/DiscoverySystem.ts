@@ -18,7 +18,9 @@ import {
  * v8から1つの素材で複数ひらめけるようにした(こえだ=かざぐるま+とりのすばこ)。
  */
 export const RECIPE_DISCOVERY: Partial<Record<ItemId, string[]>> = {
-  mushroom: ['r_mushlamp'],
+  // v25 きのこは 2つ ひらめく(きのこランプ + きのこの ぬいぐるみ)。
+  // 1素材で 複数ひらめく形は v8の こえだで 用意ずみ
+  mushroom: ['r_mushlamp', 'r_plush_mush'],
   starshard: ['r_starlantern'],
   twig: ['r_pinwheel', 'r_birdhouse'],
   clay: ['r_pot'],
@@ -43,6 +45,9 @@ export const RECIPE_DISCOVERY: Partial<Record<ItemId, string[]>> = {
   fiber: ['r_bookstack'],
   ore: ['r_wallclock'],
   moss: ['r_houseplant'],
+  // v25 ぬいぐるみだな。きっかけは「たなの 1だんずつに あむ 草の しきもの」=かりくさ
+  // (きっかけを そのレシピの材料から とるのは こえだ→かざぐるま と 同じ流儀)
+  cutgrass: ['r_plush_shelf'],
 };
 
 // ---------------------------------------------------------------------------
@@ -100,6 +105,9 @@ export const RECIPE_HINTS: RecipeHintDef[] = [
   { recipe: 'r_bookstack', hint: { kind: 'gather', item: 'fiber', verb: '手に入れる' } },
   { recipe: 'r_wallclock', hint: { kind: 'gather', item: 'ore', verb: '手に入れる' } },
   { recipe: 'r_houseplant', hint: { kind: 'gather', item: 'moss', verb: '手に入れる' } },
+  // v25 ぬいぐるみパックの2種
+  { recipe: 'r_plush_mush', hint: { kind: 'gather', item: 'mushroom', verb: 'ひろう' } },
+  { recipe: 'r_plush_shelf', hint: { kind: 'gather', item: 'cutgrass', verb: 'ひろう' } },
   // おおきい版2つ。小さい版の 作りかたを おぼえてから 見せる
   // (むしかごを 知らない子に「むしかごに 入れる」と 言っても 先ばしりになる)
   { recipe: 'r_aquarium_big', hint: { kind: 'display', furniture: 'f_aquarium' }, requires: ['r_aquarium'] },
@@ -131,8 +139,11 @@ export function recipeHintText(hint: RecipeHint): string {
     case 'gatherAny':
       return `${hint.label}を ${hint.verb}と ひらめく`; // ①
     case 'display': {
+      // たんいは 家具の表から とる(いきもの=ひき / もの=こ)。
+      // ここに「ぴき」と 書きうつすと、いきもの以外を 入れる家具に おおきい版が
+      // できた日に 文だけ 腐る(v25で ぬいぐるみだなを 足したときの 見直し)
       const d = DISPLAY_FURNITURE[hint.furniture];
-      return `${d.label}に ${d.contentLabel}を 1ぴき 入れたら ひらめく`; // ③
+      return `${d.label}に ${d.contentLabel}を 1${d.unitOne} 入れたら ひらめく`; // ③
     }
   }
 }

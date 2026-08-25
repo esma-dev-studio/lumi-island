@@ -123,9 +123,12 @@ test('おおきな すいそうを お庭に置く → 魚6ぴき → セーブ/
   expect(Math.abs(put.z - GARDEN_SPOT.z)).toBeLessThan(0.6);
   expect(await ev(page, '__lumiDebug.state().inventory.f_aquarium_big')).toBeUndefined();
 
-  // ---- そばに立つと E が「いきものを いれる」になる ----
+  // ---- そばに立つと E が「魚を いれる」になる ----
+  // v25で 文言の 出どころを DISPLAY_FURNITURE に そろえたので、
+  // ここは じか書きの「いきもの」ではなく その家具の contentLabel(すいそう=魚)が 出る
+  // ——クラフトの ひらめき文(「すいそうに 魚を 1ぴき 入れたら ひらめく」)と 同じ 言い方になった
   await standAt(page, BESIDE.x, BESIDE.z, Math.PI / 2);
-  expect(await ev(page, "document.querySelector('.hud-hint').textContent")).toContain('いきものを いれる');
+  expect(await ev(page, "document.querySelector('.hud-hint').textContent")).toContain('魚を いれる');
   await page.keyboard.press('e');
   await page.waitForTimeout(300);
   await expect(page.locator('.display-panel')).toBeVisible();

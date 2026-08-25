@@ -334,7 +334,12 @@ export class QuestDialogueController {
       toast(`${name}から お礼の手紙: 「${r.reward.letter}」`, 'heart');
       sfx('quest');
     }
-    if (r.reward.recipeName) toast(`とくべつなレシピ「${r.reward.recipeName}」を おぼえた!`, r.reward.recipeIcon);
+    // v25 なかよし度8: その人の ぬいぐるみが テンの店に とどいた、の 1本だけ知らせる
+    // (品は 店に ならぶだけで、ここでは 手に入らない。買いに行く理由を つくる)
+    if (r.reward.plushItem) {
+      toast(`テンの店に 「${ITEMS[r.reward.plushItem].name}」が 入荷したよ!`, r.reward.plushItem);
+      sfx('quest');
+    }
     if (r.reward.best) {
       toast(`${name}から 「しんゆうのあかし」を もらった!`, 'heart');
       sfx('quest');

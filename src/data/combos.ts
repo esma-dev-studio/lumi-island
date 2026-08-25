@@ -15,13 +15,17 @@
 import { RECIPES, type ItemId } from './items';
 
 /** くみあわせの なかま分け。ずかんの「?」わくの見出しと、キッチンの要る/要らないを決める */
-export type ComboGroup = 'cook' | 'paint' | 'deco';
+export type ComboGroup = 'cook' | 'paint' | 'deco' | 'field';
 
 export const COMBO_GROUPS: Record<ComboGroup, { label: string; hint: string }> = {
   // りょうりだけ「キッチンだいが 家にあること」が条件(src/systems/ComboSystem.ts hasKitchen)
   cook: { label: 'りょうり', hint: 'キッチンだいが あると つくれる たべもの' },
   paint: { label: 'いろ', hint: '家具や かべの 色を かえる もの' },
   deco: { label: 'かざり', hint: '家に おける 小さな かざり' },
+  // v27 家の外で つかうもの。いまは「はなのみつ」1つだけ。
+  // かざり(家に おける)でも りょうり(たべる)でもないので、なかまを分けてある
+  // ——ずかんの「?」わくの見出しが うそに ならないようにするため
+  field: { label: 'そとで つかう', hint: '島の どこかで つかう もの' },
 };
 
 export interface ComboDef {
@@ -69,6 +73,17 @@ export const COMBOS: ComboDef[] = [
   { id: 'c_mushstool', recipe: 'r_mushstool', group: 'deco', inputs: { mushroom: 2, wood: 1 } },
   { id: 'c_bigwind', recipe: 'r_bigwind', group: 'deco', inputs: { shell: 2, wood: 1 } },
   { id: 'c_starbox', recipe: 'r_starbox', group: 'deco', inputs: { starshard: 1, wood: 2 } },
+  // ---- v25 ぬいぐるみパックの かくしレシピ1種 ----
+  // ヒカリゴケ(夜に光る)+ わら(つめもの)= よるに ほんのり ともる ぬいぐるみ。
+  // 材料に いきものを 使わないのは わざと: ホタルを つかまえて つぶす、と 読めてしまう
+  // 組みかたを 子ども向けの ゲームに 置かない。
+  { id: 'c_plush_hotaru', recipe: 'r_plush_hotaru', group: 'deco', inputs: { moss: 2, straw: 1 } },
+  // ---- v27 じゅえきの木の かくしレシピ1種 ----
+  // あまい実(ルミベリー)+ 花(のばな)= あまい みつ。
+  // 「あまいもの どうしを あわせたら あまい みつ」なので、当てずっぽうでなく
+  // 「そうかも?」で 当てられる。材料は どちらも 島の いちばん はじめの素材で、
+  // 第1章の子でも 作れる = じゅえきの木の あそびに 章の かべを 作らない。
+  { id: 'c_nectar', recipe: 'r_nectar', group: 'field', inputs: { berry: 2, flower: 1 } },
 ];
 
 export const COMBO_BY_ID: Record<string, ComboDef> = Object.fromEntries(COMBOS.map((c) => [c.id, c]));

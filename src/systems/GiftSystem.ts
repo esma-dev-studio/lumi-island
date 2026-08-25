@@ -50,9 +50,56 @@ export const HEARTS_PER = 2;
 /** ハートの数(FRIEND_BEST で ぜんぶ うまる) */
 export const HEART_MAX = FRIEND_BEST / HEARTS_PER;
 
+/**
+ * v25 その人の ぬいぐるみが テンの店に 入荷する なかよし度。
+ *
+ * お礼の手紙(5)と しんゆうのあかし(10)の あいだに もう1つ ごほうびを 置く。
+ * 5〜10の 5てんぶんは これまで「上がるけれど 何も 起きない」区間だったので、
+ * ちょうど まん中より すこし先の 8に「その人の ぬいぐるみが 入荷する」を おく。
+ * 手わたしの ごほうびに しないのは、**行商人のテンが 見つけてくる**という筋のほうが
+ * この島の しくみに なじむため(お金の 出口にもなる。1体400ルミナ)。
+ */
+export const FRIEND_PLUSH = 8;
+/** 上とおなじ数(店がわの 読み名。src/systems/MarketStock.ts が これを使う) */
+export const PLUSH_FRIEND_GATE = FRIEND_PLUSH;
+
+/**
+ * だれと なかよくなると どの ぬいぐるみが 入荷するか(**唯一の対応表**)。
+ * ならびは NPCS の定義順にそろえる(店の ならびも この順で固定される)。
+ */
+export const NPC_PLUSH: readonly { npc: string; item: ItemId }[] = [
+  { npc: 'minamo', item: 'f_plush_minamo' },
+  { npc: 'nokto', item: 'f_plush_nokto' },
+  { npc: 'tsumugi', item: 'f_plush_tsumugi' },
+  { npc: 'roka', item: 'f_plush_roka' },
+  { npc: 'ten', item: 'f_plush_ten' },
+];
+
+/** その人の ぬいぐるみ(表に無い相手なら null) */
+export function plushOfNpc(npcId: string): ItemId | null {
+  return NPC_PLUSH.find((p) => p.npc === npcId)?.item ?? null;
+}
+
+/** その人の いまの なかよし度(記録が無い・こわれている なら0) */
+export function friendshipOf(s: GameState, npcId: string): number {
+  const f = s.npcs?.[npcId]?.friendship;
+  return Number.isFinite(f) ? Math.floor(f as number) : 0;
+}
+
+/**
+ * その人の ぬいぐるみが もう 入荷しているか。
+ * 見るのは **いまの なかよし度だけ**(1回だけの印は見ない)ので、
+ * 会話・依頼で しきい値を こえた子の店にも かならず ならぶ。
+ */
+export function plushUnlocked(s: GameState, npcId: string): boolean {
+  return plushOfNpc(npcId) !== null && friendshipOf(s, npcId) >= FRIEND_PLUSH;
+}
+
 /** ごほうびを1回だけにするための stats キー */
 export const thanksKey = (npcId: string): string => `gift_thanks_${npcId}`;
 export const bestKey = (npcId: string): string => `gift_best_${npcId}`;
+/** v25 ぬいぐるみの「入荷したよ」を1回だけ知らせるための stats キー */
+export const plushKey = (npcId: string): string => `gift_plush_${npcId}`;
 /** おくりものの回数(実績 a_gift_first が読む) */
 export const GIFT_TOTAL_KEY = 'gift_total';
 
@@ -150,6 +197,11 @@ export interface GiftReward {
   recipeIcon?: string;
   /** なかよし度10: 「しんゆうのあかし」 */
   best?: boolean;
+  /**
+   * v25 なかよし度8: その人の ぬいぐるみが テンの店に 入荷した(1回だけ)。
+   * 中身は 入荷した ぬいぐるみのItemId(トーストの ピクトグラムにも つかう)。
+   */
+  plushItem?: ItemId;
 }
 
 export interface GiftResult {
@@ -205,6 +257,15 @@ export function applyGift(s: GameState, npcId: string, item: ItemId): GiftResult
       reward.recipeIcon = recipe?.out;
     }
   }
+  // v25 ぬいぐるみの入荷(なかよし度8)。stats の印は **知らせを1回だけにする**ためのもので、
+  // 店に ならぶかどうかは いつでも いまの なかよし度(plushUnlocked)が決める
+  // ——会話や依頼で 先に8をこえていても、店には ちゃんと ならぶ。
+  const plush = plushOfNpc(npcId);
+  if (plush && rt.friendship >= FRIEND_PLUSH && (s.stats?.[plushKey(npcId)] ?? 0) < 1) {
+    if (!s.stats) s.stats = {};
+    s.stats[plushKey(npcId)] = 1;
+    reward.plushItem = plush;
+  }
   // しんゆうのあかし(なかよし度10)
   if (rt.friendship >= FRIEND_BEST && (s.stats?.[bestKey(npcId)] ?? 0) < 1) {
     if (!s.stats) s.stats = {};
@@ -235,6 +296,21 @@ export function validateGiftData(): string[] {
       if (!(id in ITEMS)) problems.push(`${def.name}の専用セリフのアイテム${id}が存在しない`);
       if (!lines || lines.length === 0) problems.push(`${def.name}の${id}専用セリフが空`);
     }
+  }
+  // v25 ぬいぐるみ: 相手とアイテムが実在するか・相手が重ならないか・しきい値が段の中か
+  const seenPlush = new Set<string>();
+  for (const p of NPC_PLUSH) {
+    if (!NPC_BY_ID[p.npc]) problems.push(`ぬいぐるみの相手${p.npc}が存在しない`);
+    if (seenPlush.has(p.npc)) problems.push(`ぬいぐるみの相手${p.npc}が重複`);
+    seenPlush.add(p.npc);
+    if (!(p.item in ITEMS)) problems.push(`ぬいぐるみ${p.item}が存在しない`);
+    else if (ITEMS[p.item].kind !== 'furniture') problems.push(`ぬいぐるみ${p.item}のkindがfurnitureでない`);
+  }
+  if (new Set(NPC_PLUSH.map((p) => p.item)).size !== NPC_PLUSH.length) problems.push('ぬいぐるみが重複');
+  // しきい値は お礼(5)より上・しんゆう(10)以下。段の外に出ると
+  // 「お礼より先に 入荷する」「しんゆうと 同時に 2つ来る」のどちらかになる
+  if (FRIEND_PLUSH <= FRIEND_THANKS || FRIEND_PLUSH >= FRIEND_BEST) {
+    problems.push(`ぬいぐるみの入荷${FRIEND_PLUSH}がお礼${FRIEND_THANKS}〜しんゆう${FRIEND_BEST}の あいだに ない`);
   }
   // v12 りょうりの好み: 相手が実在するか・りょうりを指しているか・もとの好みと重ならないか
   for (const [npcId, ids] of Object.entries(COOKED_LOVES)) {

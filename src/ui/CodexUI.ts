@@ -17,6 +17,7 @@ import { isRewardGranted, rewardIcon, rewardLabel, rewardOf } from '../systems/A
 import { hasReadLetter, readLetterCount } from '../systems/BottleSystem';
 import { festivalMemo } from '../systems/FestivalSystem';
 import { nushiMemo } from '../systems/BossFishSystem';
+import { sapMemo } from '../systems/SapTreeSystem';
 import { badgeCountByCategory, badgeRows, earnedBadgeCount } from '../systems/BadgeSystem';
 import {
   BADGES, BADGE_CATEGORIES, BADGE_CATEGORY_ORDER, BADGE_TIERS, type BadgeDef,
@@ -342,6 +343,10 @@ export class CodexUI {
     // v21 ぬしの ひとことメモ。まつりと まったく同じ形で ならべる:
     // まだ 見ていない子には「同じ釣り場に かよう」ことだけ、つったあとは のこりの場所が出る
     const nushi = nushiMemo(s);
+    // v27 じゅえきの木の ひとことメモ。まつり・ぬしと まったく同じ形:
+    // まだ つかまえていない子には「あまい においの木には 虫が あつまる」だけ、
+    // つかまえた あとは みつの ことと つかまえた かずが出る
+    const sap = sapMemo(s);
     const memo = `<div class="codex-note${fes.seen ? ' seen' : ''}">
       <span class="inv-ico">${icon('festival')}</span>
       <span class="codex-note-text"><b>${fes.title}</b><small>${fes.text}</small></span>
@@ -349,6 +354,10 @@ export class CodexUI {
     <div class="codex-note${nushi.seen ? ' seen' : ''}">
       <span class="inv-ico">${icon('f_trophy_yoru')}</span>
       <span class="codex-note-text"><b>${nushi.title}</b><small>${nushi.text}</small></span>
+    </div>
+    <div class="codex-note${sap.seen ? ' seen' : ''}">
+      <span class="inv-ico">${icon('nectar')}</span>
+      <span class="codex-note-text"><b>${sap.title}</b><small>${sap.text}</small></span>
     </div>`;
 
     this.el.innerHTML = `

@@ -19,7 +19,7 @@ import {
 import {
   makeTree, makeBerryTree, makeRock, makeOreNode, makeGrassNode, makeMoss, makeLumiTree, getGlowMats,
   makeFlowerNode, makeMushroomNode, makeShellNode, makeStarShard,
-  makeTwigNode, makeCutGrassNode, makeClayNode, makeGlassFloat, makeGroundPatches,
+  makeTwigNode, makeCutGrassNode, makeClayNode, makeGlassFloat, makeGroundPatches, makeSapTree,
 } from '../entities/flora';
 import {
   scatterDeco, buildPondShore, buildHillDeck, hillDeckRails, deckGroundY, HILL_DECK,
@@ -38,6 +38,7 @@ import {
 import {
   GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, POND_GLIMMER_SPOTS, STAR_SPOTS, DRIFT_SPOTS, SEABIRD_CIRCLES,
   BUG_SPOTS, DIG_SPOTS, BOTTLE_SPOTS, BULLETIN_BOARD, PLAZA_BENCHES,
+  SAP_TREE, SAP_STUMP, SAP_TREE_R, SAP_STUMP_R,
   type BugSpotKind, type GatherNodeDef,
 } from '../data/island';
 import { DayNight } from './DayNight';
@@ -242,6 +243,13 @@ export class IslandScene {
    * GameScene が init で1回だけ差しこむ(未設定なら虫は逃げないだけで、他は何も変わらない)。
    */
   playerProbe: (() => BugPlayer) | null = null;
+  /**
+   * v27 きょう じゅえきの木に みつを ぬったか(true の日は レア枠が来る)。
+   * playerProbe と まったく同じ流儀で、GameScene が init で1回だけ 差しこむ
+   * ——IslandScene は セーブ(GameState)を持たないので、読み取り口を1つだけ開ける。
+   * 未設定なら「ぬっていない日」あつかい(ふだんの じゅえきの木は そのまま出る)。
+   */
+  sapRareProbe: (() => boolean) | null = null;
 
   constructor(public engine: Engine) {
     this.scene = new Scene(engine);
@@ -395,6 +403,17 @@ export class IslandScene {
       t.position.set(x, terrainHeight(x, z) - 0.03, z);
       caster(t, false);
       this.circles.push({ x, z, r: 0.32 * sc }); // 幹の根もとぶんだけ(葉群は通り抜けてよい)
+    }
+
+    // ---- v27 じゅえきの木(林に1本だけ。毎日 カブクワが とまっている) ----
+    // 見た目は entities/flora.ts の makeSapTree、立ち位置と とまり場は data/island.ts。
+    // 当たり判定は ふとい みきと 手前の 切りかぶの2つ(葉むらは 通りぬけてよい)
+    {
+      const st = makeSapTree(s, 2027, SAP_TREE.scale);
+      st.tree.position.set(SAP_TREE.x, terrainHeight(SAP_TREE.x, SAP_TREE.z) - 0.03, SAP_TREE.z);
+      caster(st.tree, false);
+      this.circles.push({ x: SAP_TREE.x, z: SAP_TREE.z, r: SAP_TREE_R });
+      this.circles.push({ x: SAP_TREE.x + SAP_STUMP.dx, z: SAP_TREE.z + SAP_STUMP.dz, r: SAP_STUMP_R });
     }
 
     // ---- 建物 ----
@@ -1450,12 +1469,27 @@ export class IslandScene {
     const p = a.sched.positionOf(hit.bug);
     return { bug: hit.bug, distance: hit.distance, x: p.x, z: p.z };
   }
-  /** つかまえた: その虫を消して、スポットを しばらく使わない */
-  catchBug(key: number): void {
+  /**
+   * つかまえた: その虫を消して、スポットを しばらく使わない。
+   * @returns v27 その虫が じゅえきの木に とまっていたか(じっせきの カウンタが読む)
+   */
+  catchBug(key: number): boolean {
     const a = this.bugAreaNow;
-    if (!a) return;
+    if (!a) return false;
+    const atSap = a.sched.isSapBug(key);
     a.sched.markCaught(key);
     this.despawnBug(a.area, key);
+    return atSap;
+  }
+
+  /** v27 いま じゅえきの木に とまっている虫(検証・デバッグ用) */
+  get sapBugList(): { key: number; bug: string; x: number; z: number }[] {
+    const a = this.bugAreaNow;
+    if (!a) return [];
+    return a.sched.sapBugs.map((b) => {
+      const p = a.sched.positionOf(b);
+      return { key: b.key, bug: b.bug, x: p.x, z: p.z };
+    });
   }
 
   private updateBugs(dt: number): void {
@@ -1467,7 +1501,9 @@ export class IslandScene {
       this.bugAreaLast = a?.area ?? null;
     }
     if (!a) return;
-    const plan = a.sched.update(dt, this.time.day, this.time.hour, this.playerProbe?.() ?? null);
+    const plan = a.sched.update(
+      dt, this.time.day, this.time.hour, this.playerProbe?.() ?? null, this.sapRareProbe?.() ?? false
+    );
     for (const key of plan.removed) this.despawnBug(a.area, key);
     for (const b of plan.spawned) this.spawnBug(a.area, b);
     // 位置・向き・はばたきの反映(メッシュは使い回すので、ここでは作らない)
@@ -1496,7 +1532,8 @@ export class IslandScene {
       // (坂の上の花から 下の花へ わたるときに 地面へ もぐらない)
       if (o.hopMix > 0) gy = gy + (gyOf(b.hopFrom) - gy) * o.hopMix;
       m.root.position.set(spot.x + o.dx, gy + o.dy, spot.z + o.dz);
-      if (spot.kind === 'tree' && o.hopMix === 0) {
+      // v27 'sap'(じゅえきの木)も 木の みきなので、'tree' と まったく同じ とまり姿にする
+      if ((spot.kind === 'tree' || spot.kind === 'sap') && o.hopMix === 0) {
         // 木の みきに とまっている姿。スポットは幹から+Z側へ寄せてあるので、
         // 頭を上へ向けて(x回転)幹に はりつかせる(データ側の約束: src/data/island.ts BUG_SPOTS)
         m.root.rotation.set(-1.15, 0, 0);

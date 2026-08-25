@@ -131,8 +131,11 @@ test('「?」行 → 条件を やると 本物のレシピに かわる(おお�
   await closePanel(page, '.craft-panel');
 
   // ---- 2) 条件を 実際に やる(むしかごに ホタルを 入れる) ----
+  // v25で 文言の 出どころを DISPLAY_FURNITURE に そろえたので、
+  // ここは じか書きの「いきもの」ではなく その家具の contentLabel(むしかご=虫)が 出る
+  // ——すぐ上で 見ている ひらめき文「むしかごに 虫を 1ぴき 入れたら ひらめく」と 言い方が そろう
   await standAt(page, BESIDE.x, BESIDE.z, Math.PI / 2);
-  expect(await ev(page, "document.querySelector('.hud-hint').textContent")).toContain('いきものを いれる');
+  expect(await ev(page, "document.querySelector('.hud-hint').textContent")).toContain('虫を いれる');
   await page.keyboard.press('e');
   await page.waitForTimeout(300);
   await expect(page.locator('.display-panel')).toBeVisible();

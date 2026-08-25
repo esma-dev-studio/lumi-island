@@ -4,84 +4,91 @@
   "area": "island",
   "need": 3,
   "limitSec": 120,
-  "elapsedSec": 28.7,
+  "elapsedSec": 34.1,
   "total": 3,
   "catches": [
     {
-      "sec": 4.3,
+      "sec": 21,
       "total": 1,
       "got": [
-        "b_suzu"
+        "b_hirata"
       ],
       "hintSeen": true
     },
     {
-      "sec": 23.6,
+      "sec": 22.2,
       "total": 2,
       "got": [
-        "b_suzu"
+        "b_hirata"
       ],
       "hintSeen": true
     },
     {
-      "sec": 28.7,
+      "sec": 34.1,
       "total": 3,
       "got": [
-        "b_suzu"
+        "b_suzu",
+        "b_hirata"
       ],
       "hintSeen": true
     }
   ],
   "kinds": [
+    "b_hirata",
     "b_suzu"
   ],
   "hints": [
+    "Eベンチに すわる",
+    "Eツムギと はなす",
+    "Eお店をみる(うる・かう)",
+    "Eヒカリゴケをとる",
     "むしが いる! ちかづいて つかまえよう",
+    "E木をきる",
+    "Eきのこをとる",
     "Eむしあみでつかまえる",
-    "Eのばなをつむ",
-    "草をかるには カマが ひつよう"
+    "Eほしのかけらをひろう"
   ],
   "errors": [],
   "log": [
     {
-      "sec": 8.3,
+      "sec": 7.3,
       "label": "ゲーム開始(新規)"
     },
     {
-      "sec": 9.7,
+      "sec": 8.7,
       "label": "支度おわり: island 夜 hour=21.0 虫=0匹 いち=(-3.0,6.0)"
     },
     {
-      "sec": 9.7,
+      "sec": 8.7,
       "label": "いまやること: q_wood_offer 「ツムギの はなしを聞こう」"
     },
     {
-      "sec": 10.2,
-      "label": "ねらう: b_suzu (-3.7,19.0) 13.0m"
+      "sec": 9.1,
+      "label": "ねらう: b_hirata (-2.5,-34.6) 40.6m"
     },
     {
-      "sec": 14,
-      "label": "つかまえた! (1匹目 b_suzu) ヒントを見てから=true"
+      "sec": 29.7,
+      "label": "つかまえた! (1匹目 b_hirata) ヒントを見てから=true"
     },
     {
-      "sec": 14.1,
-      "label": "ねらう: b_suzu (26.3,0.0) 34.1m"
+      "sec": 29.7,
+      "label": "ねらう: b_hirata (-2.5,-34.6) 2.1m"
     },
     {
-      "sec": 33.4,
-      "label": "つかまえた! (2匹目 b_suzu) ヒントを見てから=true"
+      "sec": 30.9,
+      "label": "つかまえた! (2匹目 b_hirata) ヒントを見てから=true"
     },
     {
-      "sec": 33.4,
-      "label": "ねらう: b_suzu (10.0,0.6) 15.2m"
+      "sec": 30.9,
+      "label": "ねらう: b_suzu (10.1,0.6) 36.4m"
     },
     {
-      "sec": 38.4,
-      "label": "つかまえた! (3匹目 b_suzu) ヒントを見てから=true"
+      "sec": 42.8,
+      "label": "つかまえた! (3匹目 b_suzu,b_hirata) ヒントを見てから=true"
     },
     {
-      "sec": 38.4,
-      "label": "PASS: 28.7秒で 3匹(合格は120秒で3匹)"
+      "sec": 42.8,
+      "label": "PASS: 34.1秒で 3匹(合格は120秒で3匹)"
     }
   ]
 }

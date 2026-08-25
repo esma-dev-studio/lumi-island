@@ -1,0 +1,120 @@
+{
+  "result": "PASS",
+  "days": [
+    {
+      "day": 1,
+      "hour": 13,
+      "kinds": [
+        "b_kuwa",
+        "b_kabuto"
+      ],
+      "got": "b_kabuto",
+      "ok": true
+    },
+    {
+      "day": 2,
+      "hour": 21.5,
+      "kinds": [
+        "b_giraffa",
+        "b_hirata"
+      ],
+      "got": "b_hirata",
+      "ok": true
+    },
+    {
+      "day": 3,
+      "hour": 13,
+      "kinds": [
+        "b_nokogiri",
+        "b_kabuto"
+      ],
+      "got": "b_kabuto",
+      "ok": true
+    },
+    {
+      "day": 4,
+      "hour": 21.5,
+      "kinds": [
+        "b_giraffa"
+      ],
+      "got": "b_ookuwa",
+      "ok": true,
+      "honey": true
+    }
+  ],
+  "errors": [],
+  "log": [
+    {
+      "sec": 143.9,
+      "label": "ゲーム開始(新規)"
+    },
+    {
+      "sec": 144.9,
+      "label": "じゅえきの木: (-2.5, -35)"
+    },
+    {
+      "sec": 147.9,
+      "label": "1日め ひる: じゅえきの虫 = [\"b_kuwa\",\"b_kabuto\"]"
+    },
+    {
+      "sec": 148,
+      "label": "  ねらう: b_kabuto (-2.4,-33.7) 6.7m"
+    },
+    {
+      "sec": 150.6,
+      "label": "1日め: つかまえた = b_kabuto → OK"
+    },
+    {
+      "sec": 154.5,
+      "label": "2日め よる: じゅえきの虫 = [\"b_giraffa\",\"b_hirata\"]"
+    },
+    {
+      "sec": 154.5,
+      "label": "  ねらう: b_hirata (-2.4,-33.7) 6.7m"
+    },
+    {
+      "sec": 157.1,
+      "label": "2日め: つかまえた = b_hirata → OK"
+    },
+    {
+      "sec": 161,
+      "label": "3日め ひる: じゅえきの虫 = [\"b_nokogiri\",\"b_kabuto\"]"
+    },
+    {
+      "sec": 161.1,
+      "label": "  ねらう: b_kabuto (-2.4,-33.7) 6.7m"
+    },
+    {
+      "sec": 163.2,
+      "label": "3日め: つかまえた = b_kabuto → OK"
+    },
+    {
+      "sec": 165.7,
+      "label": "ぬる前の ヒント: 「Eみつを ぬる」 じゅえきの虫=[\"b_hirata\"]"
+    },
+    {
+      "sec": 167.3,
+      "label": "ぬったあと: honeyDay=4"
+    },
+    {
+      "sec": 167.3,
+      "label": "レア枠: [\"b_giraffa\"]"
+    },
+    {
+      "sec": 168.3,
+      "label": "1歩さがった ヒント: 「Eむしあみでつかまえる」"
+    },
+    {
+      "sec": 169.4,
+      "label": "  ねらう: b_ookuwa (-2.4,-33.7) 6.7m"
+    },
+    {
+      "sec": 172.1,
+      "label": "みつの日に つかまえた: b_ookuwa"
+    },
+    {
+      "sec": 172.1,
+      "label": "PASS"
+    }
+  ]
+}

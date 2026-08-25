@@ -25,7 +25,7 @@ import { InputRouter } from './InputRouter';
 import { CharacterView } from '../characters/CharacterView';
 import { outfitHex, outfitLabel } from '../characters/outfit';
 import { CHARACTERS } from '../data/characters';
-import { NPC_SPOTS, POIS } from '../data/island';
+import { NPC_SPOTS, POIS, SAP_TREE } from '../data/island';
 import { ITEMS, PAINT_COLORS, isCookedFood, validateItemData, type PaintId } from '../data/items';
 import {
   applyHomeStyle, invAddRecorded, invRemove, newGameState, statAdd, type GameState,
@@ -65,6 +65,7 @@ import {
 import type { BadgeDef } from '../data/badges';
 import { BOTTLE_REACH, BOTTLE_TOTAL_KEY, letterOfDay, markLetterRead } from '../systems/BottleSystem';
 import { NIGHT_TRAIN_KEY } from '../systems/NightTrainSystem';
+import { paintHoney, paintedToday, SAP_PAINT_TOAST } from '../systems/SapTreeSystem';
 import { LETTER_BY_ID, validateLetterData } from '../data/letters';
 import { resetNpcDaily, validateGiftData } from '../systems/GiftSystem';
 import { validateBulletinData } from '../systems/BulletinSystem';
@@ -120,6 +121,7 @@ import { setBugFleeScale } from '../systems/BugSystem';
 import { validateComboData } from '../data/combos';
 import { validateDiscoveryData } from '../systems/DiscoverySystem';
 import { homeScoreTier, validateHomeScore } from '../systems/HomeScore';
+import { validateMarketData } from '../systems/MarketStock';
 import { installLumiDebugApi } from '../debug/LumiDebugApi';
 
 /** ?weather= に書ける値(検証・撮影・回帰ボット用)。それ以外は日付から決める */
@@ -335,6 +337,9 @@ export class GameScene {
     // 虫の逃走判定はプレイヤーの位置と速さで決まる(IslandScene.updateは位置を受け取らないので、
     // ここで読み取り口を1つだけ差しこむ)。src/systems/BugSystem.ts を参照
     this.island.playerProbe = () => ({ x: this.player.x, z: this.player.z, speed: this.player.speed });
+    // v27 じゅえきの木の レア枠は「きょう みつを ぬったか」で決まる。
+    // 判断は SapTreeSystem 1か所だけが持ち、ここは読み取り口を差しこむだけ
+    this.island.sapRareProbe = () => paintedToday(this.state, this.island.time.day);
     this.camCtl = new CameraController(this.scene);
     if (VIGNETTE_ON) this.buildVignette(); // v15 ごく薄いビネット(このファイルの頭を参照)
     // 矢印・光の柱の足もとの高さは「別空間もふくむ床の高さ」から取る
@@ -614,6 +619,7 @@ export class GameScene {
     for (const p of validateBossFishData()) console.warn('[data]', p);
     for (const p of validateDiscoveryData()) console.warn('[data]', p);
     for (const p of validateHomeScore()) console.warn('[data]', p);
+    for (const p of validateMarketData()) console.warn('[data]', p);
     this.inputRouter.attach();
     this.touch.attach();
     if (this.opts.debug) installLumiDebugApi(this); // 決定的テスト用のAPI(実プレイ検証はデバッグなしで行う)
@@ -1089,6 +1095,29 @@ export class GameScene {
 
   // ---------- 庭の花だん ----------
   /** のばなを1つ うえる(芽になる。翌日つぼみ・2日後に満開) */
+  /**
+   * v27 じゅえきの木に みつを ぬる(1日1回)。
+   * ぬれない場面では 何もしない(判断は SapTreeSystem.paintHoney 1か所だけ)。
+   * ぬった瞬間から その日の レア枠が 来る —— 木の前で 待っていれば 数秒で 入れかわる
+   * (BugScheduler が「ぬったか」の 変わり目で じゅえきの虫を 出しなおす)。
+   */
+  paintSapHoney(): void {
+    const day = this.island.time.day;
+    const used = paintHoney(this.state, day);
+    if (!used) return;
+    const y = this.island.groundY(SAP_TREE.x, SAP_TREE.z);
+    this.player.face(SAP_TREE.x, SAP_TREE.z);
+    burst(SAP_TREE.x, y + 0.9, SAP_TREE.z + 0.4, 'craft', 10);
+    toast(SAP_PAINT_TOAST, used);
+    sfx('place');
+    this.playerView.play('interact', {
+      onEnd: () => {
+        if (!this.player.moving) this.playerView.play('idle');
+      },
+    });
+    save(this.state);
+  }
+
   plantGardenFlower(slot: number): void {
     if (!plantFlower(this.state, slot, this.island.time.day)) return;
     const p = GARDEN_PLOTS[slot];

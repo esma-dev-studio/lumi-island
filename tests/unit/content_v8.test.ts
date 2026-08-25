@@ -503,7 +503,8 @@ describe('v8の新レシピ7種', () => {
   it('ひらめきの対象でない素材では何も起きない', () => {
     const s = newGameState();
     const before = [...s.recipes];
-    for (const item of ['cutgrass', 'wood', 'seafish'] as const) {
+    // v25 かりくさは ぬいぐるみだなの きっかけになったので、ここでは いしを つかう
+    for (const item of ['stone', 'wood', 'seafish'] as const) {
       expect(discoverRecipes(s, item)).toEqual([]);
     }
     expect(s.recipes).toEqual(before);

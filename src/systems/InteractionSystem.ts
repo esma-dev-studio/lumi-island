@@ -15,6 +15,7 @@ import { ITEMS } from '../data/items';
 import { discoverRecipes } from './DiscoverySystem';
 import { pickDigLoot, DIG_RARE } from './DigSystem';
 import type { ActiveBug } from './BugSystem';
+import { countSapCatch } from './SapTreeSystem';
 
 /** 採取時の効果音(ノード種ごと)。素手で拾うものはすべて pickup */
 const KIND_SFX: Record<NodeKind, 'chop' | 'mine' | 'sickle' | 'pickup'> = {
@@ -329,7 +330,10 @@ export class InteractionSystem {
     burst(a.x, a.y, a.z, 'craft', 10);
     flyItem(a.x, a.y - 0.2, a.z);
     this.onHit?.();
-    this.island.catchBug(bug.key);
+    // v27 じゅえきの木で つかまえたら 1つ数える(じっせき「じゅえきの木の 虫」が読む)。
+    // どこで つかまえたかを 知っているのは IslandScene だけなので、返り値で 受けとる
+    const atSap = this.island.catchBug(bug.key);
+    if (atSap) countSapCatch(this.state);
     this.award(bug.bug as ItemId, 1);
   }
 

@@ -14,7 +14,11 @@
 import type { GameState } from '../game/GameState';
 import { learnRecipe } from '../game/GameState';
 import { COMBOS, type ComboDef } from '../data/combos';
-import type { ItemId } from '../data/items';
+import { ITEMS, type ItemId } from '../data/items';
+// なかよし度の しきい値と「だれの ぬいぐるみか」の表は GiftSystem が持つ
+// (なかよしの ごほうびだから)。ここは「その品を 店に ならべる」ことだけを 受けもつ
+// —— 参照は この向き1本だけ(MarketStock → GiftSystem)にして、輪にしない。
+import { NPC_PLUSH, PLUSH_FRIEND_GATE, plushUnlocked } from './GiftSystem';
 
 /** 品ぞろえが入れかわる周期(日) */
 export const MARKET_WEEK_DAYS = 7;
@@ -64,6 +68,15 @@ export const MARKET_FURNITURE: readonly ItemId[] = [
 ];
 /** 家具が 1週に ならぶ数 */
 export const MARKET_FURNITURE_PER_WEEK = 3;
+/**
+ * v25 よその島の おもちゃ(2種から 毎週1つ)。
+ *
+ * **家具の輪番(MARKET_FURNITURE)に まぜていない**のは、7種の輪番に 2つ足すと
+ * 9種になって、買いのがした1つが また来るまで 最長7週(49日)になるため。
+ * 別の輪番にすれば 1週おきに かならず 来る = 週がわりの やくそくが 守れる。
+ * ならびも かべ・ゆか・家具のあとの ていいちに なるので、目で さがしやすい。
+ */
+export const MARKET_TOYS: readonly ItemId[] = ['f_toy_train', 'f_toy_castle'];
 /** よその島の素材(りょうり・クラフトの新しい材料) */
 export const MARKET_MATERIALS: readonly ItemId[] = ['aroma_leaf', 'sweet_honey'];
 /** レシピの巻物。買うと 未発見の くみあわせを1つ おしえてくれる */
@@ -76,6 +89,11 @@ export const MARKET_PRICES: Partial<Record<ItemId, number>> = {
   f_market_lantern: 340, f_travel_trunk: 380, f_station_clock: 440,
   // v24 おうちパックの4種。売値の およそ6ばい(既存3種と 同じ帯)
   f_exotic_jar: 390, f_bead_curtain: 330, f_camel_doll: 410, f_blue_lantern: 360,
+  // v25 よその島の おもちゃ2種。売値の およそ6ばい(家具と 同じ帯)
+  f_toy_train: 360, f_toy_castle: 330,
+  // v25 しまの なかまぬいぐるみ(5種とも 同じ値だん。下の PLUSH_PRICE が 唯一の出どころ)
+  f_plush_minamo: 400, f_plush_nokto: 400, f_plush_tsumugi: 400,
+  f_plush_roka: 400, f_plush_ten: 400,
   aroma_leaf: 70, sweet_honey: 90,
   scroll: 900,
 };
@@ -85,7 +103,7 @@ export interface MarketRow {
   item: ItemId;
   price: number;
   /** 見出しのグループ(UIの ならびと ラベルに つかう) */
-  group: 'style' | 'furniture' | 'material' | 'scroll';
+  group: 'style' | 'furniture' | 'toy' | 'plush' | 'material' | 'scroll';
 }
 
 /**
@@ -104,6 +122,8 @@ export function marketStock(week: number): MarketRow[] {
   // 家具は 7つのうち となりあう3つ。1週ずつ ずらす
   // = 7週で ぜんぶ ひとまわりし、どれも 7週に3回 ならぶ
   for (let k = 0; k < MARKET_FURNITURE_PER_WEEK; k++) add(cycle(MARKET_FURNITURE, w, k), 'furniture');
+  // v25 よその島の おもちゃは 2種の輪番から 毎週1つ(=1週おきに かならず また来る)
+  add(cycle(MARKET_TOYS, w, 0), 'toy');
   // 素材は 週によって1種か2種(偶数週は2種=にぎやかな週)
   if (w % 2 === 0) {
     for (const m of MARKET_MATERIALS) add(m, 'material');
@@ -117,6 +137,40 @@ export function marketStock(week: number): MarketRow[] {
 /** きょうの品ぞろえ(日づけから 週を出して呼ぶ) */
 export function marketStockOfDay(day: number): MarketRow[] {
   return marketStock(marketWeek(day));
+}
+
+// ---------------------------------------------------------------------------
+// v25 しまの なかまぬいぐるみ(5種)を テンの店に ならべる。
+//
+// なぜ テンの店で、なぜ 週がわりに しないか:
+//   ・行商人のテンは「よその島で 見つけたものを 持ってくる人」。
+//     島のみんなと なかよくなるほど、テンが その人の ぬいぐるみを 見つけてくる、
+//     という筋が いちばん この島の しくみに なじむ。
+//   ・**週がわりに しない**: なかよくなった しるしの品なので、
+//     「今週は ミナモが 無い」は 子どもに とって ただの おあずけになる。
+//     一度 入荷したら ずっと ならぶ(買いなおしも できる)。
+//   ・1体400ルミナ。この店で いちばん高い おきものにして、たまった お金の 出口にする。
+// なかよし度の しきい値(8)と 相手の表は GiftSystem が持つ。
+// ---------------------------------------------------------------------------
+/** 1体の ねだん(MARKET_PRICES と そろえる。validateMarketData が つき合わせる) */
+export const PLUSH_PRICE = 400;
+
+/** いま 店に ならぶ ぬいぐるみの行(ならびは NPC_PLUSH の順で固定) */
+export function plushRows(s: GameState): MarketRow[] {
+  return NPC_PLUSH.filter((p) => plushUnlocked(s, p.npc)).map((p) => ({
+    item: p.item,
+    price: MARKET_PRICES[p.item] ?? PLUSH_PRICE,
+    group: 'plush' as const,
+  }));
+}
+
+/**
+ * きょう テンの店に ならぶ ぜんぶ(**画面もテストも ここだけを見る**)。
+ *   週がわりの品 → なかまぬいぐるみ の順。まきものは 教えることが残っているときだけ。
+ */
+export function marketRowsFor(s: GameState, day: number): MarketRow[] {
+  const weekly = marketStockOfDay(day).filter((r) => r.item !== MARKET_SCROLL || canOfferScroll(s));
+  return [...weekly, ...plushRows(s)];
 }
 
 /** その週に まきものが ならぶか(カード・テストが読む) */
@@ -164,3 +218,30 @@ export function canOfferScroll(s: GameState): boolean {
 
 /** まきものが 売り切れ(もう教えることが無い)ときの文 */
 export const SCROLL_SOLDOUT_TEXT = 'まきものは いま きらしてるんだ。また こんど!';
+
+/**
+ * データ整合性チェック(起動時に呼ぶ)。
+ * ならぶ品に ねだんが ついているか・ぬいぐるみの相手が 実在するか、を 機械で見る
+ * (人手の作表は かならず 間違える。教訓4)。
+ */
+export function validateMarketData(): string[] {
+  const problems: string[] = [];
+  const pools: [string, readonly ItemId[]][] = [
+    ['かべ', MARKET_WALLS], ['ゆか', MARKET_FLOORS],
+    ['家具', MARKET_FURNITURE], ['おもちゃ', MARKET_TOYS],
+    ['素材', MARKET_MATERIALS],
+  ];
+  for (const [label, pool] of pools) {
+    if (pool.length === 0) problems.push(`テンの店の${label}が空`);
+    for (const id of pool) {
+      if (!(id in ITEMS)) problems.push(`テンの店の${label}${id}が存在しない`);
+      if (!MARKET_PRICES[id]) problems.push(`テンの店の${label}${id}にねだんが無い`);
+    }
+  }
+  // なかまぬいぐるみ: 5体とも 同じ値だんで ならぶ(えらぶ理由を 値だんに しない)
+  for (const p of NPC_PLUSH) {
+    if (MARKET_PRICES[p.item] !== PLUSH_PRICE) problems.push(`ぬいぐるみ${p.item}のねだんが${PLUSH_PRICE}でない`);
+  }
+  if (PLUSH_FRIEND_GATE < 1) problems.push('ぬいぐるみの入荷のしきい値が1未満');
+  return problems;
+}

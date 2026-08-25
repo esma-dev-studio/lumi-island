@@ -19,7 +19,7 @@
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
-import { A0, appendBlob, toMesh, jitterColor, getGlowMats, type Arrays } from './flora';
+import { A0, appendBlob, toMesh, jitterColor, getBugMat, getFloraMat, getGlowMats, type Arrays } from './flora';
 import { faceOutward } from './deco';
 import { vnoise } from './terrain';
 import type { BugId } from '../systems/BugSystem';
@@ -791,8 +791,25 @@ function fireflyBody(A: Arrays, seed: number): void {
   appendBlob(A, 0, 0.002, 0.058, 0.012, 0.01, 0.012, C_BODY_DARK, { segs: 4, noise: 0.05, seed: seed + 2 });
 }
 
-/** 虫1匹ぶんのメッシュ。位置・向き・はばたきは呼び出し側(IslandScene)が毎フレーム入れる */
+/**
+ * 虫1匹ぶんのメッシュ。位置・向き・はばたきは呼び出し側(IslandScene)が毎フレーム入れる。
+ *
+ * 体は toMesh の中で いったん 共有の floraMat が つくので、ここで **虫だけの材質**へ
+ * 入れかえる(flora.ts の getBugMat を みること)。ホタルの ひかる おしりのように
+ * じぶんで べつの材質を 入れてある ところは そのまま のこす。
+ */
 export function makeBugMesh(scene: Scene, id: BugId, seed: number): BugMesh {
+  const m = buildBugMesh(scene, id, seed);
+  const flora = getFloraMat(scene);
+  const mat = getBugMat(scene);
+  const parts = [m.root, m.wingL, m.wingR, ...m.root.getChildMeshes(false)];
+  for (const p of parts) {
+    if (p && p.material === flora) p.material = mat;
+  }
+  return m;
+}
+
+function buildBugMesh(scene: Scene, id: BugId, seed: number): BugMesh {
   const A = A0();
   switch (id) {
     case 'b_shiro':

@@ -7,7 +7,8 @@ import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 import {
-  A0, appendBlob, appendTrunk, appendShellFan, toMesh, applyArrays, getGlowMats, jitterColor, type Arrays,
+  A0, appendBlob, appendTrunk, appendShellFan, flipWinding, toMesh, applyArrays, getGlowMats, jitterColor,
+  type Arrays,
 } from './flora';
 import { makeBench } from './buildings';
 import { makeCagedBugMesh, CAGED_GLOW_NAME, CAGED_WING_GAIN, CAGED_WING_NAME } from './bugs';
@@ -617,16 +618,55 @@ function makeSwimmingFish(scene: Scene, item: string, seed: number, lane: FishLa
 }
 
 /**
- * 展示家具の「中身」メッシュ1つ(家具ローカル座標)。content が無い/入れられないものなら null。
- * すいそう=およぐ魚 / むしかご=とまっている虫(ホタルは夜だけ明滅する)。
+ * v25 ぬいぐるみだなに ならべる 場所(たな板の上。ローカル座標)。
  *
- * slot は「何番目に入っているか」。すいそうは およぐみち、むしかごは とまる場所が変わる
+ * ぬいぐるみは 高さが 0.6〜0.75m ほどあるので、たなの1だんに 1つずつ ならべる
+ * (よこに3つ ならべると、たなの はばが 2m をこえて 部屋を ふさぐ)。
+ * 大きさは 0.52倍: そのままだと 上のだんが 天じょうに とどく。
+ * 向きは 1つずつ すこし ずらしてある —— まっすぐ 3つ ならぶと
+ * 「はこに つめた商品」に見えて、かざった感じが 出ない。
+ */
+const PLUSH_SHELF_SPOTS: { y: number; z: number; rotY: number }[] = [
+  { y: 0.135, z: 0.01, rotY: -0.22 },
+  { y: 0.585, z: 0.0, rotY: 0.16 },
+  { y: 1.035, z: 0.01, rotY: -0.1 },
+];
+/** ならべた ぬいぐるみの 大きさ(たな板の あいだ 0.45m に おさまる) */
+const PLUSH_SHELF_SCALE = 0.52;
+/**
+ * たなに ならべた ぬいぐるみの メッシュ名の あたま。
+ * いろみず(tintFurnitureMesh)は この名前の いる えだを ぬらない ——
+ * たなを あかく ぬったら ミナモまで あかくなる、では 見分けが つかなくなる。
+ */
+export const SHELF_CONTENT_PREFIX = 'shelfPlush_';
+
+/**
+ * 展示家具の「中身」メッシュ1つ(家具ローカル座標)。content が無い/入れられないものなら null。
+ * すいそう=およぐ魚 / むしかご=とまっている虫(ホタルは夜だけ明滅する) /
+ * ぬいぐるみだな=たな板に すわった ぬいぐるみ。
+ *
+ * slot は「何番目に入っているか」。すいそうは およぐみち、むしかごは とまる場所、
+ * ぬいぐるみだなは たなの だんが変わる
  * (大きい家具に6匹入れても、かさならずに べつべつの場所にいる)。
  */
 export function makeDisplayContentMesh(
   scene: Scene, furniture: ItemId, content: ItemId | undefined, slot = 0
 ): Mesh | null {
   if (!content || !isDisplayFurniture(furniture)) return null;
+  if (furniture === 'f_plush_shelf') {
+    // 中身は それ自体が 置ける家具なので、**その家具の メッシュを そのまま 縮めて のせる**
+    // (小さい版を 別に 11こ 作ると、本体を 直したときに かならず 片方が 腐る。教訓4)。
+    // たな自身は accepts に 入っていないので、ここが 無限に もぐることは ない。
+    const spot = PLUSH_SHELF_SPOTS[slot % PLUSH_SHELF_SPOTS.length];
+    const fm = makeFurnitureMesh(scene, content);
+    fm.root.name = `${SHELF_CONTENT_PREFIX}${content}`;
+    fm.root.position.set(0, spot.y, spot.z);
+    fm.root.rotation.y = spot.rotY;
+    fm.root.scaling.setAll(PLUSH_SHELF_SCALE);
+    fm.root.isPickable = false;
+    for (const m of fm.root.getChildMeshes()) m.isPickable = false;
+    return fm.root;
+  }
   if (furniture === 'f_aquarium' || furniture === 'f_aquarium_big') {
     if (!FISH_COLORS[content]) return null;
     const spec = AQUA_SPECS[furniture];
@@ -700,6 +740,7 @@ export function makeDisplayContentMesh(
 export function displayLayoutSlots(furniture: string): number {
   if (furniture === 'f_aquarium' || furniture === 'f_aquarium_big') return AQUA_SPECS[furniture].lanes.length;
   if (furniture === 'f_bugcage' || furniture === 'f_bugcage_big') return CAGE_SPECS[furniture].spots.length;
+  if (furniture === 'f_plush_shelf') return PLUSH_SHELF_SPOTS.length;
   return 0;
 }
 
@@ -966,6 +1007,342 @@ function makePhotoFace(scene: Scene, photo: string | undefined): Mesh {
     mat.dispose();
   });
   return m;
+}
+
+// ---------------------------------------------------------------------------
+// v25 ぬいぐるみの共通づくり。
+//
+// 「クマの人形みたいな おけるアイテムが たくさん ふえると たのしい」という
+// 実プレイの声への こたえなので、**ぬいぐるみに 見えること**が いちばんの仕様。
+// そのために 5つの きまりを 1か所に まとめて、9つの ぬいぐるみ ぜんぶに かける:
+//   1. 頭を うんと 大きく(頭 ≒ 全高の 3ぶんの2)。すわりポーズで 足を 前へ 投げ出す
+//   2. 角のある部品(fbox)を からだに 使わない —— 丸い部品(appendBlob)だけで組む
+//   3. 彩度を おさえた 色(ほんもののキャラの毛色から 彩度だけ 落としたもの)
+//   4. **ふち縫い風の 点線**を 2〜3か所 入れる(ぬの製だと ひと目で わかる)
+//   5. 判別記号は **1つだけ 大きく**(教訓1)。ほかの とくちょうは 小さく そえる
+// ---------------------------------------------------------------------------
+
+/** ふち縫い風の 点線(2てんの あいだに 小さな板を n こ ならべる) */
+function appendSeam(
+  A: Arrays, a: [number, number, number], b: [number, number, number], n: number, size: number, c: Color3
+): void {
+  for (let i = 0; i < n; i++) {
+    const t = n === 1 ? 0.5 : i / (n - 1);
+    fbox(A, a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t,
+      size, size * 0.55, size * 0.55, c);
+  }
+}
+
+/**
+ * 細い わっか(めがねの わく)。XY面の 輪で、正面は +Z。
+ *
+ * 巻き順・法線は **fbox と まったく同じ流儀**にしてある(4すみを 外から見て 左まわりに
+ * ならべ、(0,2,1)(0,3,2) で 三角に わける)。ぬいぐるみの 本体は appendBlob で 組んで
+ * `toMesh(..., 'keep')` に かけるため、そこに appendBlob の わっかを まぜると
+ * 表と裏が くいちがう。fbox と そろえておけば ぬい目の 点線と 同じに ちゃんと 見える。
+ *
+ * @param r  わっかの まん中の 半径
+ * @param h  はりがねの ふとさの 半分(半径ほうこう)
+ * @param d  はりがねの おくゆきの 半分(Zほうこう)
+ */
+function appendRing(
+  A: Arrays, cx: number, cy: number, cz: number, r: number, h: number, d: number, c: Color3, segs = 18
+): void {
+  const base = A.pos.length / 3;
+  for (let i = 0; i < segs; i++) {
+    const th = (i / segs) * Math.PI * 2;
+    const ux = Math.cos(th), uy = Math.sin(th);
+    // 断面の4すみ: 0=外・手前 / 1=外・おく / 2=内・おく / 3=内・手前
+    for (const [rr, zz] of [[r + h, d], [r + h, -d], [r - h, -d], [r - h, d]] as [number, number][]) {
+      A.pos.push(cx + ux * rr, cy + uy * rr, cz + zz);
+      const f = 0.9 + vnoise(ux * 3.1 + 5, uy * 3.1 + 7) * 0.2;
+      A.col.push(c.r * f, c.g * f, c.b * f, 1);
+    }
+  }
+  /** 外から見て 左まわりの 4てんを うけとり、fbox と 同じ 巻き順で はる */
+  const q = (v0: number, v1: number, v2: number, v3: number): void => {
+    A.idx.push(v0, v2, v1, v0, v3, v2);
+  };
+  for (let i = 0; i < segs; i++) {
+    const o = base + i * 4;
+    const n = base + ((i + 1) % segs) * 4;
+    q(o + 1, n + 1, n + 0, o + 0); // 外がわ
+    q(o + 3, n + 3, n + 2, o + 2); // 内がわ
+    q(o + 0, n + 0, n + 3, o + 3); // 手前(+Z)
+    q(o + 2, n + 2, n + 1, o + 1); // おく(-Z)
+  }
+}
+
+/** しまの なかまぬいぐるみ1体ぶんの ちがい(共通の からだに かける ちがいだけ を持つ) */
+interface FriendPlushSpec {
+  fur: string;
+  furDark: string;
+  /** おなか・マズルの あわい色 */
+  light: string;
+  /** はな(・くちばし)の色 */
+  nose: string;
+  /** 目の色。ぜんぶ こい色にする(白目を つけると ぬいぐるみに 見えない) */
+  eye: string;
+  /** 耳の かたち。'none' は 耳の 見えない子(ロカ) */
+  ear: 'round' | 'lop' | 'feather' | 'none';
+  /** 口もとの かたち */
+  muzzle: 'wide' | 'point' | 'beak' | 'goat';
+  /** くちばしの色(muzzle==='beak' のときだけ) */
+  beak?: string;
+  /** 判別記号(**1つだけ 大きく**)。共通のからだを 組んだ あとに よばれる */
+  mark: (A: Arrays) => void;
+  /** しっぽ(あれば)。太さと 長さだけ ちがう */
+  tail?: { len: number; r: number; color: string };
+  colliderR: number;
+}
+
+/** からだの きまった すんぽう(9体で 共有する。ここを 動かすと 全員 いっしょに 変わる) */
+const PLUSH = {
+  headY: 0.42, headRx: 0.2, headRy: 0.195, headRz: 0.185,
+  bodyY: 0.15, bodyRx: 0.175, bodyRy: 0.145, bodyRz: 0.14,
+  legY: 0.055, legR: 0.08,
+  eyeX: 0.072, eyeY: 0.455, eyeZ: 0.163,
+} as const;
+
+const FRIEND_PLUSH_SPECS: Record<string, FriendPlushSpec> = {
+  // ミナモ(カワウソ)= **前かけ(むねあての ある オーバーオール)**
+  f_plush_minamo: {
+    fur: '#9a7a5e', furDark: '#7d6049', light: '#e0cdb0', nose: '#4a3428', eye: '#3a2e24',
+    ear: 'round', muzzle: 'wide',
+    tail: { len: 0.26, r: 0.055, color: '#7d6049' },
+    colliderR: 0.24,
+    mark: (A) => {
+      const CLOTH = Color3.FromHexString('#5d7382');
+      const CLOTH_D = Color3.FromHexString('#465561');
+      // むねあて(前かけ)。**からだの前を ほとんど おおう** 大きさにする ——
+      // 小さいと ただの くまの ぬいぐるみに 見えた(実機の 本人と ならべた 比べで 確認)
+      appendBlob(A, 0, 0.165, 0.085, 0.155, 0.145, 0.085, CLOTH, { segs: 11, noise: 0.05, seed: 610 });
+      appendBlob(A, 0, 0.075, 0.06, 0.175, 0.085, 0.115, CLOTH_D, { segs: 11, noise: 0.06, seed: 611 }); // こしの ぬの
+      for (const s of [-1, 1]) {
+        appendTrunk(A, [[s * 0.085, 0.27, 0.085], [s * 0.13, 0.33, 0.0]], 0.024, 0.021, CLOTH, 612 + s, 0); // つりひも
+        appendBlob(A, s * 0.1, 0.265, 0.115, 0.024, 0.024, 0.016, Color3.FromHexString('#c9a06b'), { segs: 6, noise: 0.05, seed: 614 + s }); // ボタン
+      }
+      appendSeam(A, [-0.11, 0.105, 0.16], [0.11, 0.105, 0.16], 7, 0.017, CLOTH_D); // 前かけの ぬい目
+      // 首の タオル(カワウソの もう1つの しるし。前かけを かくさない はば)
+      appendTrunk(A, [[0, 0.29, 0], [0, 0.315, 0]], 0.135, 0.132, Color3.FromHexString('#e8e0cc'), 616, 0);
+      appendBlob(A, 0.115, 0.245, 0.06, 0.04, 0.065, 0.032, Color3.FromHexString('#cf8a63'), { segs: 7, noise: 0.12, seed: 617 });
+    },
+  },
+  // ノクト(フクロウ)= **まるめがね**
+  f_plush_nokto: {
+    fur: '#8a8375', furDark: '#6f695c', light: '#e5dcc3', nose: '#d9a05c',
+    // 目は 本人と 同じ こはく色。めがねの わくを こげ茶に したので、
+    // 目まで こい色だと わくと 目が くっついて 1つの かたまりに 見える
+    eye: '#bd8438',
+    ear: 'feather', muzzle: 'beak', beak: '#d9a05c',
+    colliderR: 0.24,
+    mark: (A) => {
+      // はりがねは 純黒でなく **こげ茶**(本人の めがね #4a4038 に そろえた こい茶)
+      const WIRE = Color3.FromHexString('#4a3a2b');
+      // 顔ばん(フクロウの 白い面)。**めがねの 下じき**でもある ——
+      // こい毛色の 上に こい はりがねを 置くと 輪が 見えなかった
+      // (実機の 本人と ならべた 比べで 確認)
+      const DISC = Color3.FromHexString('#e5dcc3');
+      for (const s of [-1, 1]) {
+        appendBlob(A, s * 0.072, 0.45, 0.125, 0.088, 0.098, 0.075, DISC, { segs: 10, noise: 0.05, seed: 616 + s });
+      }
+      appendBlob(A, 0, 0.4, 0.15, 0.075, 0.075, 0.06, jitterColor(DISC, 618, 0.05), { segs: 9, noise: 0.06, seed: 618 });
+      // まるめがね: **細い はりがね1本の 輪**(appendRing)。
+      // 小玉を 9つ ならべて 輪に していたが、玉どうしの すきまと おくの 黒目が かさなり
+      // 「目に 虫が たかっている」ように 見えた(実機の 接写で 確認)。
+      // 本人の めがねと 同じく、細い 丸フレーム1本+おくに こはく色の 目 にする
+      for (const s of [-1, 1]) {
+        appendRing(A, s * 0.07, 0.455, 0.166, 0.046, 0.0075, 0.011, WIRE, 20);
+        appendTrunk(A, [[s * 0.12, 0.462, 0.155], [s * 0.158, 0.47, 0.06]], 0.008, 0.007, WIRE, 630 + s, 0); // つる
+      }
+      fbox(A, 0, 0.458, 0.17, 0.05, 0.011, 0.011, WIRE); // ブリッジ
+    },
+  },
+  // ツムギ(ヤギ)= **うしろへ まがる つの2本**
+  f_plush_tsumugi: {
+    fur: '#e2d8c4', furDark: '#c9bda6', light: '#f0e8d8', nose: '#c9a08d', eye: '#8a6a3d',
+    ear: 'lop', muzzle: 'goat',
+    colliderR: 0.25,
+    mark: (A) => {
+      const HORN = Color3.FromHexString('#a8906a');
+      const HORN_D = Color3.FromHexString('#7d6a4c');
+      for (const s of [-1, 1]) {
+        // 本人の つのは 頭と おなじくらい 長い。ぬいぐるみでも いちばんの しるしなので
+        // ここだけは 大きいまま のこす(教訓1: 判別記号は 1つだけ 大きく)
+        appendTrunk(A, [
+          [s * 0.075, 0.56, -0.005], [s * 0.1, 0.66, -0.06],
+          [s * 0.112, 0.715, -0.15], [s * 0.108, 0.7, -0.245], [s * 0.095, 0.645, -0.3],
+        ], 0.04, 0.012, HORN, 640 + s, 0.05);
+        // つのの すじ(3本)。ヤギの つのの わっかを かるく 出す
+        for (let i = 0; i < 3; i++) {
+          appendBlob(A, s * (0.082 + i * 0.008), 0.6 + i * 0.03, -0.02 - i * 0.028, 0.031 - i * 0.005, 0.008, 0.031 - i * 0.005,
+            HORN_D, { segs: 8, noise: 0.05, seed: 642 + i });
+        }
+      }
+      // あごひげ(ヤギの もう1つの しるし。つのより 小さく そえる)
+      appendBlob(A, 0, 0.29, 0.16, 0.035, 0.055, 0.03, Color3.FromHexString('#d5c8ad'), { segs: 7, noise: 0.14, seed: 646 });
+    },
+  },
+  // ロカ(ペンギン)= **おなかの白**
+  f_plush_roka: {
+    fur: '#4a5d75', furDark: '#3d4e66', light: '#f2ece0', nose: '#e9b04b', eye: '#33302a',
+    ear: 'none', muzzle: 'beak', beak: '#e9b04b',
+    colliderR: 0.25,
+    mark: (A) => {
+      const WHITE = Color3.FromHexString('#f2ece0');
+      // おなかの白: からだの 前ぜんたい + あごの 下まで つながる 1まいの ぬの
+      appendBlob(A, 0, 0.155, 0.05, 0.155, 0.135, 0.11, WHITE, { segs: 12, noise: 0.05, seed: 650 });
+      appendBlob(A, 0, 0.335, 0.08, 0.125, 0.09, 0.115, jitterColor(WHITE, 651, 0.04), { segs: 10, noise: 0.05, seed: 651 }); // のど
+      appendBlob(A, 0, 0.44, 0.13, 0.135, 0.115, 0.075, jitterColor(WHITE, 652, 0.03), { segs: 10, noise: 0.05, seed: 652 }); // 顔の 白い面
+      // 白い ぬのの ふちを ぬい目で 見せる(ぬのを はぎ合わせた かたち)
+      appendSeam(A, [-0.155, 0.2, 0.09], [-0.075, 0.325, 0.13], 4, 0.015, Color3.FromHexString('#d9d2c4'));
+      appendSeam(A, [0.155, 0.2, 0.09], [0.075, 0.325, 0.13], 4, 0.015, Color3.FromHexString('#d9d2c4'));
+      // マフラー(灯台守の しるし。おなかの白を かくさない 太さにする)
+      const SC = Color3.FromHexString('#cf6242');
+      appendTrunk(A, [[0, 0.3, 0], [0, 0.325, 0]], 0.15, 0.145, SC, 653, 0);
+      appendBlob(A, 0.115, 0.245, 0.075, 0.045, 0.075, 0.035, jitterColor(SC, 654, 0.1), { segs: 7, noise: 0.12, seed: 654 });
+    },
+  },
+  // テン(イタチ)= **せなかの 風呂敷**
+  f_plush_ten: {
+    fur: '#b8875c', furDark: '#8a5f38', light: '#f0e2c4', nose: '#3a2e26', eye: '#3a2e24',
+    ear: 'round', muzzle: 'point',
+    tail: { len: 0.32, r: 0.062, color: '#8a5f38' },
+    colliderR: 0.26,
+    mark: (A) => {
+      const CLOTH = Color3.FromHexString('#7a8f6a');
+      const CLOTH_L = Color3.FromHexString('#96a882');
+      const CLOTH_D = Color3.FromHexString('#5f7352');
+      // たすきは 本人の ひもと 同じ 麻いろ(#c9a06b)。みどりの ひもを 顔の 高さに 通すと
+      // 「顔を しばった 不良品」に 見えたので、色も 通り道も 本人に そろえる
+      const ROPE = Color3.FromHexString('#c9a06b');
+      const ROPE_D = Color3.FromHexString('#a8814e');
+      // つつみは **正面からも 肩ごしに 見える 高さ・はば**にする ——
+      // 背中だけに つけると、正面からは たすきの ひもしか 見えなかった
+      // (実機の 本人と ならべた 比べで 確認)
+      appendBlob(A, 0, 0.3, -0.155, 0.185, 0.155, 0.115, CLOTH, { segs: 12, noise: 0.09, seed: 660 }); // つつみ
+      for (const s of [-1, 1]) {
+        // むすび目の かどは **頭の うしろへ ぬく**(z=-0.15 だと 頭に めりこみ、
+        // 玉の ふちが 顔の 上に 細い すじで すけて「目に かかった ひも」に 見えた)
+        appendBlob(A, s * 0.08, 0.44, -0.235, 0.065, 0.08, 0.05, CLOTH_L, { segs: 7, noise: 0.16, seed: 661 + s }); // むすび目の かど
+        appendBlob(A, s * 0.175, 0.3, -0.105, 0.055, 0.075, 0.06, jitterColor(CLOTH, 666 + s, 0.1), { segs: 8, noise: 0.12, seed: 666 + s }); // 肩の わき
+        // たすきは **むねの ×だけ**。肩より上へ 通さない ——
+        // 前は y=0.34 から はじめていて、ひもが おでこから はなまで 顔を たてに よこぎった
+        // (頭は y=0.225〜0.615。ここへ かかると すぐ 顔の ひもに 見える)
+        appendTrunk(A, [
+          [s * 0.15, 0.258, 0.045], [s * 0.08, 0.225, 0.125], [0, 0.195, 0.15],
+          [-s * 0.085, 0.165, 0.125], [-s * 0.16, 0.135, 0.05],
+        ], 0.022, 0.02, ROPE, 663 + s, 0); // たすき
+      }
+      // つつみの むすび目は **つつみの うしろがわ**へ。頭の 中(z=-0.14)に あると
+      // 頭ごしに すけて、まゆ間から はなへ 線が おりる「顔の ひも」に 見えた
+      appendBlob(A, 0, 0.39, -0.245, 0.045, 0.038, 0.036, CLOTH_D, { segs: 7, noise: 0.08, seed: 665 });
+      // むねの むすび目(たすきが 交わる ところ)。appendTrunk で 組むのは、
+      // ひもと 同じ 流儀に して 手前に かさなるようにするため
+      appendTrunk(A, [[0, 0.172, 0.152], [0, 0.214, 0.152]], 0.032, 0.026, ROPE_D, 667, 0.16);
+      // 風呂敷の ぬい目は **つつみの うしろの 面に そわせて** 置く。
+      // 前(z=-0.045)に あると おなかを よこぎる みどりの 帯に 見え(ぬい目は fbox なので
+      // からだの 手前に 出る)、まっすぐな 線に すると つつみの まるみから はなれた 玉が 宙に うく
+      for (let i = 0; i < 7; i++) {
+        const bx = -0.13 + (i / 6) * 0.26;
+        const k = Math.sqrt(Math.max(0, 1 - (bx / 0.185) ** 2 - (0.03 / 0.155) ** 2));
+        fbox(A, bx, 0.27, -0.155 - 0.115 * k - 0.016, 0.017, 0.009, 0.009, CLOTH_D);
+      }
+    },
+  },
+};
+
+/**
+ * しまの なかまぬいぐるみ1体。
+ * からだは 5体とも まったく同じ形で、色・耳・口もと・判別記号だけを 表から とる
+ * (「色ちがいの 量産」を さけるため、判別記号は 1体ずつ 手で 組んである)。
+ */
+function buildFriendPlush(scene: Scene, item: ItemId): FurnitureMesh {
+  const spec = FRIEND_PLUSH_SPECS[item];
+  const A = A0();
+  const FUR = Color3.FromHexString(spec.fur);
+  const FUR_D = Color3.FromHexString(spec.furDark);
+  const LIGHT = Color3.FromHexString(spec.light);
+  const P = PLUSH;
+  // ---- あし(前へ 投げ出した すわりポーズ)。足のうらが 床すれすれ(0.026m)----
+  for (const s of [-1, 1]) {
+    appendBlob(A, s * 0.115, P.legY, 0.09, P.legR, P.legR * 0.94, P.legR * 1.3,
+      jitterColor(FUR_D, 600 + s, 0.08), { segs: 8, noise: 0.09, seed: 600 + s, flatBottom: true });
+    appendBlob(A, s * 0.115, P.legY + 0.012, 0.155, P.legR * 0.72, P.legR * 0.62, P.legR * 0.52,
+      jitterColor(LIGHT, 602 + s, 0.06), { segs: 7, noise: 0.08, seed: 602 + s }); // 足のうら(あわい ぬの)
+  }
+  // ---- からだ ----
+  appendBlob(A, 0, P.bodyY, -0.005, P.bodyRx, P.bodyRy, P.bodyRz, FUR,
+    { segs: 12, noise: 0.06, seed: 604, flatBottom: true });
+  appendBlob(A, 0, P.bodyY - 0.005, 0.07, 0.115, 0.105, 0.075, LIGHT, { segs: 10, noise: 0.05, seed: 605 }); // おなか
+  for (const s of [-1, 1]) {
+    appendBlob(A, s * 0.185, 0.19, 0.025, 0.062, 0.1, 0.062, jitterColor(FUR, 606 + s, 0.08),
+      { segs: 8, noise: 0.09, seed: 606 + s }); // うで
+  }
+  if (spec.tail) {
+    // しっぽは **よこへ よけて 先を 上げる**。まっすぐ うしろへ たらすと
+    // 床に ねた ぼうに 見えた(実機の 接写で 確認)
+    const T = Color3.FromHexString(spec.tail.color);
+    const L = spec.tail.len;
+    appendTrunk(A, [
+      [0, 0.115, -0.14],
+      [0.055, 0.1, -0.14 - L * 0.35],
+      [0.12, 0.115, -0.13 - L * 0.66],
+      [0.155, 0.175, -0.11 - L * 0.9],
+    ], spec.tail.r, spec.tail.r * 0.45, T, 608, 0.06);
+  }
+  // ---- 頭(全高の3ぶんの2ちかく。ここが「ぬいぐるみ化」の きも)----
+  appendBlob(A, 0, P.headY, 0, P.headRx, P.headRy, P.headRz, jitterColor(FUR, 609, 0.04),
+    { segs: 13, noise: 0.055, seed: 609 });
+  // 口もと
+  const NOSE = Color3.FromHexString(spec.nose);
+  if (spec.muzzle === 'wide') {
+    appendBlob(A, 0, 0.378, 0.145, 0.088, 0.062, 0.062, LIGHT, { segs: 9, noise: 0.06, seed: 670 });
+    appendBlob(A, 0, 0.398, 0.19, 0.028, 0.021, 0.018, NOSE, { segs: 6, noise: 0.04, seed: 671 });
+    appendSeam(A, [0, 0.36, 0.192], [0, 0.34, 0.185], 2, 0.008, NOSE);
+  } else if (spec.muzzle === 'point') {
+    appendBlob(A, 0, 0.385, 0.155, 0.058, 0.05, 0.085, LIGHT, { segs: 9, noise: 0.06, seed: 672 });
+    appendBlob(A, 0, 0.395, 0.225, 0.022, 0.018, 0.016, NOSE, { segs: 6, noise: 0.04, seed: 673 });
+  } else if (spec.muzzle === 'goat') {
+    appendBlob(A, 0, 0.365, 0.15, 0.072, 0.058, 0.07, LIGHT, { segs: 9, noise: 0.06, seed: 674 });
+    appendBlob(A, 0, 0.392, 0.198, 0.03, 0.02, 0.018, NOSE, { segs: 6, noise: 0.04, seed: 675 });
+  } else {
+    // くちばし(まるく 小さく)。とがらせると ぬいぐるみに 見えない
+    const BEAK = Color3.FromHexString(spec.beak ?? spec.nose);
+    appendBlob(A, 0, 0.39, 0.175, 0.048, 0.04, 0.055, BEAK, { segs: 8, noise: 0.05, seed: 676 });
+    appendSeam(A, [-0.035, 0.383, 0.2], [0.035, 0.383, 0.2], 3, 0.012, jitterColor(BEAK, 677, 0.2));
+  }
+  // 目(こい色の 玉。白目は つけない)
+  const EYE = Color3.FromHexString(spec.eye);
+  for (const s of [-1, 1]) {
+    appendBlob(A, s * P.eyeX, P.eyeY, P.eyeZ, 0.024, 0.027, 0.019, EYE, { segs: 7, noise: 0.03, seed: 678 + s });
+  }
+  // 耳
+  if (spec.ear === 'round') {
+    for (const s of [-1, 1]) {
+      appendBlob(A, s * 0.155, 0.545, -0.025, 0.058, 0.055, 0.038, jitterColor(FUR_D, 680 + s, 0.08), { segs: 8, noise: 0.07, seed: 680 + s });
+      appendBlob(A, s * 0.16, 0.545, 0.005, 0.035, 0.033, 0.022, jitterColor(LIGHT, 682 + s, 0.1), { segs: 7, noise: 0.07, seed: 682 + s });
+    }
+  } else if (spec.ear === 'lop') {
+    for (const s of [-1, 1]) {
+      appendBlob(A, s * 0.205, 0.455, -0.01, 0.085, 0.042, 0.058, jitterColor(FUR, 684 + s, 0.07), { segs: 8, noise: 0.08, seed: 684 + s });
+      appendBlob(A, s * 0.26, 0.415, -0.005, 0.055, 0.03, 0.042, jitterColor(FUR_D, 686 + s, 0.08), { segs: 7, noise: 0.1, seed: 686 + s });
+    }
+  } else if (spec.ear === 'feather') {
+    for (const s of [-1, 1]) {
+      appendBlob(A, s * 0.105, 0.585, -0.02, 0.045, 0.058, 0.04, jitterColor(FUR_D, 688 + s, 0.08), { segs: 7, noise: 0.12, seed: 688 + s });
+      appendBlob(A, s * 0.12, 0.625, -0.03, 0.026, 0.032, 0.024, jitterColor(FUR, 690 + s, 0.1), { segs: 6, noise: 0.16, seed: 690 + s });
+    }
+  } else {
+    appendBlob(A, 0, 0.605, -0.02, 0.03, 0.038, 0.026, jitterColor(FUR_D, 692, 0.08), { segs: 6, noise: 0.16, seed: 692 }); // 頭の てっぺんの毛
+  }
+  // ---- ふち縫い(ぬのを はぎ合わせた あと)。頭の うしろと からだの よこに 1本ずつ ----
+  const SEAM = jitterColor(LIGHT, 694, 0.06);
+  appendSeam(A, [0, 0.612, -0.03], [0, 0.44, -0.185], 5, 0.016, SEAM);
+  for (const s of [-1, 1]) appendSeam(A, [s * 0.17, 0.235, 0.02], [s * 0.16, 0.06, 0.03], 4, 0.015, SEAM);
+  // ---- 判別記号(1つだけ 大きく)----
+  spec.mark(A);
+  return { root: toMesh(scene, item, A, 'keep'), colliderR: spec.colliderR };
 }
 
 /**
@@ -2752,6 +3129,387 @@ export function makeFurnitureMesh(
       face.position.set(0, 0.3, 0.027);
       return { root, colliderR: 0.24 };
     }
+    // ============================================================
+    // v25 ぬいぐるみパック 16しゅるい
+    // ============================================================
+    // ---- しまの なかまぬいぐるみ5(作りは buildFriendPlush 1本にまとめてある)----
+    case 'f_plush_minamo':
+    case 'f_plush_nokto':
+    case 'f_plush_tsumugi':
+    case 'f_plush_roka':
+    case 'f_plush_ten':
+      return buildFriendPlush(scene, item);
+    case 'f_plush_whale': {
+      // くじらの ぬいぐるみ。判別記号は **しおふき**(ぬので できた 3つの しぶき)。
+      // よこに ながい からだ+しっぽの ひれ で「くじら」と ひと目で わかる形にする
+      const A = A0();
+      const BACK = Color3.FromHexString('#6f93b0');
+      const BACK_D = Color3.FromHexString('#557a96');
+      const BELLY = Color3.FromHexString('#dfe8ee');
+      appendBlob(A, 0, 0.19, 0.03, 0.2, 0.175, 0.3, BACK, { segs: 13, noise: 0.06, seed: 400, flatBottom: true }); // からだ
+      appendBlob(A, 0, 0.145, 0.1, 0.15, 0.115, 0.2, BELLY, { segs: 11, noise: 0.05, seed: 401 }); // おなかの ぬの
+      appendBlob(A, 0, 0.2, -0.245, 0.115, 0.1, 0.11, jitterColor(BACK, 402, 0.08), { segs: 9, noise: 0.08, seed: 402 }); // しっぽの つけね
+      for (const s of [-1, 1]) {
+        appendBlob(A, s * 0.115, 0.235, -0.335, 0.105, 0.045, 0.075, BACK_D, { segs: 8, noise: 0.1, seed: 403 + s }); // ひれ(しっぽ)
+        appendBlob(A, s * 0.19, 0.135, 0.09, 0.06, 0.035, 0.09, BACK_D, { segs: 7, noise: 0.1, seed: 405 + s }); // むなびれ
+        appendBlob(A, s * 0.062, 0.255, 0.245, 0.026, 0.028, 0.018, Color3.FromHexString('#2f3f4c'), { segs: 6, noise: 0.04, seed: 407 + s }); // 目
+      }
+      // 口の線(下あごの ぬい目)。よこ長の 点線にする
+      appendSeam(A, [-0.12, 0.115, 0.245], [0.12, 0.115, 0.245], 7, 0.017, BACK_D);
+      // ---- 判別記号: しおふき(ぬのの しぶき3つ)----
+      appendTrunk(A, [[0, 0.35, 0.08], [0, 0.42, 0.08]], 0.03, 0.026, BELLY, 410, 0.05);
+      const SPRAY = Color3.FromHexString('#cfe2ee');
+      appendBlob(A, 0, 0.5, 0.08, 0.055, 0.07, 0.05, SPRAY, { segs: 8, noise: 0.14, seed: 411 });
+      appendBlob(A, -0.075, 0.475, 0.06, 0.045, 0.055, 0.04, jitterColor(SPRAY, 412, 0.08), { segs: 7, noise: 0.16, seed: 412 });
+      appendBlob(A, 0.07, 0.49, 0.1, 0.04, 0.05, 0.038, jitterColor(SPRAY, 413, 0.08), { segs: 7, noise: 0.16, seed: 413 });
+      return { root: toMesh(scene, 'f_plush_whale', A, 'keep'), colliderR: 0.32 };
+    }
+    case 'f_plush_star': {
+      // ほしの クッション。判別記号は **5つの かど**。
+      // 下の2つの かどで 立つ向き(上に1つ・下に2つ)にして、たおれた ざぶとんに 見せない。
+      // かどは ぜんぶ まるく ふくらませる(とがらせると クッションでなく かざりの星になる)
+      const A = A0();
+      const CY = 0.235; // まん中の 高さ。下の かどの さきが 床すれすれ(0.025)に なる
+      const R = 0.26;
+      const CLOTH = Color3.FromHexString('#e2c877');
+      const CLOTH_D = Color3.FromHexString('#c9ab5c');
+      const SEAM = Color3.FromHexString('#f4e8c4');
+      appendBlob(A, 0, CY, 0, 0.125, 0.125, 0.075, CLOTH, { segs: 12, noise: 0.05, seed: 420 }); // まん中の ふくらみ
+      // かどは **細く 長く**する。まるい玉を 5つ ならべると 星に ならず
+      // 「ぶどうの ふさ」に 見えた(実機の 接写で 確認)
+      for (let i = 0; i < 5; i++) {
+        const th = (-54 + i * 72) * (Math.PI / 180);
+        const dx = Math.cos(th);
+        const dy = Math.sin(th);
+        // つけね(太い)から さき(細い)へ 4だん。だんだん 細くして とがりを 出す
+        for (let k = 0; k < 4; k++) {
+          const t = 0.3 + k * 0.235;
+          const w = 0.098 - k * 0.021;
+          appendBlob(A, dx * R * t, CY + dy * R * t, 0, w, w, 0.07 - k * 0.011,
+            jitterColor(CLOTH, 421 + i * 4 + k, 0.06), { segs: 8, noise: 0.07, seed: 421 + i * 4 + k });
+        }
+      }
+      // ふち縫い(前がわの まわりを 点線で1しゅう)
+      for (let i = 0; i < 20; i++) {
+        const th = (i / 20) * Math.PI * 2;
+        const rr = 0.155 + 0.075 * Math.cos(5 * (th + 0.94));
+        fbox(A, Math.cos(th) * rr, CY + Math.sin(th) * rr, 0.062, 0.017, 0.017, 0.012, SEAM);
+      }
+      appendBlob(A, 0, CY, 0.052, 0.032, 0.032, 0.022, CLOTH_D, { segs: 8, noise: 0.05, seed: 431 }); // まん中の くるみボタン
+      return { root: toMesh(scene, 'f_plush_star', A, 'keep'), colliderR: 0.26 };
+    }
+    case 'f_plush_mush': {
+      // きのこの ぬいぐるみ。判別記号は **大きな かさ**。
+      // かさの ぶちは ぜんぶ まるく、白い ふはん点は 数も 大きさも 位置も ふぞろいにする
+      // (左右に2つ そろえると「顔」に見える。教訓1)。顔は つけない
+      //
+      // ここだけ **巻き順を そろえてから 'flip'+faceOutward** で 組む(ほかの ぬいぐるみは 'keep')。
+      // 'keep' のままだと かさ(appendBlob)の 上の面が バックフェースカリングで 消え、
+      // 中の じく・ひだが すけて「赤い ドーナツに 白い つめもの」に 見えた(教訓4)。
+      // かさは 中身の つまった ドームなので、ここは ごまかしが きかない
+      const A = A0();
+      const CAP = Color3.FromHexString('#c4735c');
+      const STEM = Color3.FromHexString('#efe2c4');
+      const GILL = Color3.FromHexString('#dcc9a8');
+      const CAP_RX = 0.245, CAP_RY = 0.155, CAP_CY = 0.275;
+      /** かさの 表がわの 高さ(中心から rr はなれた ところ) */
+      const capTop = (rr: number): number => CAP_CY + Math.sqrt(Math.max(0, 1 - (rr / CAP_RX) ** 2)) * CAP_RY;
+      // ---- appendBlob の ぶん(先に 組む)----
+      appendBlob(A, 0, 0.235, 0, 0.19, 0.035, 0.19, GILL, { segs: 14, noise: 0.05, seed: 441 }); // ひだ
+      // ゆらぎ(noise)は 0.06 → 0.035 に おとす。ふちの 出入りが 大きいと
+      // ふち縫いの 点が かさに もぐって 見えなくなる
+      appendBlob(A, 0, CAP_CY, 0, CAP_RX, CAP_RY, CAP_RX, CAP, { segs: 15, noise: 0.035, seed: 442, bottomDark: 0.3 }); // かさ
+      // 白い ふはん点5つ(大きさ・向き・高さを ぜんぶ ちがえる)。
+      // かさの 表がわに **のせる**(ねもとは うめて、上だけ 出す)
+      const spots: [number, number, number, number][] = [
+        [0.55, 0.115, 0.05, 443], [2.1, 0.185, 0.04, 444], [3.4, 0.09, 0.036, 445],
+        [4.6, 0.165, 0.044, 446], [5.6, 0.06, 0.034, 447],
+      ];
+      for (const [th, rr, sz, sd] of spots) {
+        appendBlob(A, Math.cos(th) * rr, capTop(rr) + 0.002, Math.sin(th) * rr, sz, sz * 0.45, sz,
+          Color3.FromHexString('#f4ece0'), { segs: 7, noise: 0.1, seed: sd });
+      }
+      // ---- appendTrunk/fbox の ぶん(巻き順が 逆どうしなので、あとで そろえる)----
+      const tSolid = A.idx.length;
+      appendTrunk(A, [[0, 0.02, 0], [0, 0.13, 0], [0, 0.24, 0]], 0.105, 0.088, STEM, 440, 0.06); // じく
+      // ふち縫い(かさの ふちを 点線で1しゅう)。いちばん ふとい ところ(赤道)に またがせる
+      for (let i = 0; i < 16; i++) {
+        const th = (i / 16) * Math.PI * 2;
+        fbox(A, Math.cos(th) * 0.248, CAP_CY, Math.sin(th) * 0.248, 0.02, 0.015, 0.02, Color3.FromHexString('#e0a893'));
+      }
+      flipWinding(A, tSolid);
+      return { root: faceOutward(toMesh(scene, 'f_plush_mush', A, 'flip')), colliderR: 0.26 };
+    }
+    case 'f_plush_hotaru': {
+      // ホタルの ぬいぐるみ。判別記号は **おしりの あかり**。
+      // 光る玉は からだの うしろに **はみ出させて** つける(不透明な はこの中に入れない。教訓1)
+      const A = A0();
+      const BODY = Color3.FromHexString('#5a6a4c');
+      const BODY_D = Color3.FromHexString('#465438');
+      const WING = Color3.FromHexString('#7d8a63');
+      const HEAD = Color3.FromHexString('#a8563f'); // ホタルの 赤い むね(ほんものと同じ)
+      appendBlob(A, 0, 0.145, -0.02, 0.145, 0.125, 0.2, BODY, { segs: 11, noise: 0.07, seed: 450, flatBottom: true }); // はら
+      // 6本の みじかい あし(ぬの製なので ずんぐり)。これで 床に とどく
+      for (const s of [-1, 1]) {
+        for (let i = 0; i < 3; i++) {
+          const lz = -0.075 + i * 0.085;
+          appendTrunk(A, [[s * 0.085, 0.095, lz], [s * 0.125, 0.018, lz]], 0.024, 0.019, BODY_D, 448 + i, 0.05);
+          appendBlob(A, s * 0.128, 0.022, lz, 0.028, 0.018, 0.03, jitterColor(BODY_D, 449 + i, 0.1),
+            { segs: 6, noise: 0.08, seed: 449 + i, flatBottom: true });
+        }
+      }
+      for (let i = 0; i < 3; i++) {
+        appendSeam(A, [-0.115, 0.15, -0.1 + i * 0.075], [0.115, 0.15, -0.1 + i * 0.075], 6, 0.016, BODY_D); // ふしの ぬい目
+      }
+      for (const s of [-1, 1]) {
+        appendBlob(A, s * 0.085, 0.235, -0.01, 0.09, 0.045, 0.165, WING, { segs: 9, noise: 0.09, seed: 452 + s }); // 羽
+      }
+      appendBlob(A, 0, 0.245, 0.145, 0.115, 0.095, 0.09, HEAD, { segs: 10, noise: 0.06, seed: 454 }); // 赤い むね
+      appendBlob(A, 0, 0.27, 0.215, 0.085, 0.078, 0.062, jitterColor(HEAD, 455, 0.1), { segs: 9, noise: 0.06, seed: 455 }); // 頭
+      for (const s of [-1, 1]) {
+        appendBlob(A, s * 0.052, 0.285, 0.255, 0.03, 0.032, 0.02, Color3.FromHexString('#33302a'), { segs: 6, noise: 0.04, seed: 456 + s }); // 目
+        appendTrunk(A, [[s * 0.04, 0.315, 0.25], [s * 0.1, 0.4, 0.3]], 0.009, 0.006, Color3.FromHexString('#3f3a33'), 458 + s, 0); // しょっかく
+      }
+      const root = toMesh(scene, 'f_plush_hotaru', A, 'keep');
+      const glowPart = mkGlow(
+        (G) => appendBlob(G, 0, 0.115, -0.195, 0.088, 0.082, 0.08, Color3.FromHexString('#d8f2c0'), { segs: 10, noise: 0.05 }),
+        'mint', root
+      );
+      return { root, glowPart, colliderR: 0.24 };
+    }
+    // ---- おもちゃ5 ----
+    case 'f_toy_train': {
+      // 木の きしゃ。色は よるの うみでんしゃ(src/entities/station.ts)と そろえてある。
+      // 判別記号は **えんとつ+2りょう つなぎ**。まるい 車りんで「木のおもちゃ」に見せる
+      const A = A0();
+      const BODY = Color3.FromHexString('#3e4f5c');
+      const ROOF = Color3.FromHexString('#2b3640');
+      const BRASS = Color3.FromHexString('#a87c3d');
+      const WIN = Color3.FromHexString('#f0dcae');
+      // 車りんは **木の色で 大きく**。ぜんぶを こんいろで 組むと
+      // 「こい色の はこ」に しか 見えなかった(実機の 接写で 確認)ので、
+      // だい・車りん・わくを 木の色にして 上まわりだけ うみでんしゃの こんいろにする
+      const wheel = (wx: number, wz: number, r: number, sd: number): void => {
+        appendBlob(A, wx, r, wz, r, r, 0.026, Color3.FromHexString('#b98d5f'), { segs: 11, noise: 0.03, seed: sd });
+        appendBlob(A, wx, r, wz + Math.sign(wx) * 0.014, r * 0.42, r * 0.42, 0.018, BRASS, { segs: 8, noise: 0.04, seed: sd + 1 });
+      };
+      // きかんしゃ(前・+Z がわ)
+      fboxR(A, 0, 0.125, 0.2, 0.215, 0.075, 0.36, WOOD, {}); // 木の だい
+      fboxR(A, 0, 0.085, 0.2, 0.225, 0.03, 0.37, WOOD_D, {}); // だいの したぶち
+      appendTrunk(A, [[0, 0.175, 0.335], [0, 0.175, 0.115]], 0.09, 0.09, BODY, 460, 0); // まるい ボイラー(よこ向きの つつ)
+      appendTrunk(A, [[0, 0.175, 0.34], [0, 0.175, 0.325]], 0.096, 0.096, BRASS, 459, 0); // 前の わっか
+      fbox(A, 0, 0.25, 0.03, 0.2, 0.175, 0.18, BODY); // うんてん室
+      fbox(A, 0, 0.345, 0.03, 0.235, 0.032, 0.215, ROOF); // やね
+      fbox(A, 0, 0.26, 0.122, 0.13, 0.085, 0.02, WIN); // まど
+      for (const s of [-1, 1]) fbox(A, s * 0.102, 0.26, 0.03, 0.02, 0.085, 0.12, WIN); // よこの まど
+      appendTrunk(A, [[0, 0.24, 0.3], [0, 0.375, 0.3]], 0.045, 0.055, ROOF, 461, 0); // えんとつ
+      appendTrunk(A, [[0, 0.375, 0.3], [0, 0.405, 0.3]], 0.066, 0.062, BRASS, 462, 0); // えんとつの ふち
+      fbox(A, 0, 0.175, 0.385, 0.15, 0.055, 0.022, BRASS); // 前の かざり
+      for (const s of [-1, 1]) {
+        wheel(s * 0.115, 0.29, 0.062, 463);
+        wheel(s * 0.115, 0.08, 0.085, 466);
+      }
+      // 客車(うしろ・-Z がわ)
+      fboxR(A, 0, 0.125, -0.2, 0.205, 0.07, 0.3, WOOD, {});
+      fboxR(A, 0, 0.085, -0.2, 0.215, 0.03, 0.31, WOOD_D, {});
+      fbox(A, 0, 0.24, -0.2, 0.2, 0.185, 0.28, BODY);
+      fbox(A, 0, 0.34, -0.2, 0.23, 0.032, 0.31, ROOF);
+      for (let i = 0; i < 2; i++) {
+        fbox(A, 0, 0.26, -0.11 - i * 0.18, 0.205, 0.085, 0.02, WIN); // まど(前後の面)
+      }
+      for (const s of [-1, 1]) {
+        fbox(A, s * 0.102, 0.26, -0.2, 0.02, 0.085, 0.22, WIN); // よこの まど
+        wheel(s * 0.11, -0.1, 0.062, 469);
+        wheel(s * 0.11, -0.3, 0.062, 471);
+      }
+      fbox(A, 0, 0.125, -0.045, 0.04, 0.032, 0.09, BRASS); // つなぎ
+      return { root: toMesh(scene, 'f_toy_train', A, 'keep'), colliderR: 0.3 };
+    }
+    case 'f_toy_yacht': {
+      // ヨット。判別記号は **風を うけた 大きな ほ**。船体は 木を けずった かたち
+      const A = A0();
+      const HULL = Color3.FromHexString('#a8784f');
+      const HULL_D = Color3.FromHexString('#7d5636');
+      const SAIL = Color3.FromHexString('#f2ece0');
+      const SAIL_D = Color3.FromHexString('#dfd6c2');
+      fbox(A, 0, 0.02, 0, 0.2, 0.04, 0.42, WOOD_D); // だい(たてる ための まくら木)
+      // 船体(まるみの ある3だん)
+      appendBlob(A, 0, 0.115, 0, 0.115, 0.075, 0.32, HULL_D, { segs: 11, noise: 0.05, seed: 480, flatBottom: true });
+      appendBlob(A, 0, 0.175, 0.01, 0.125, 0.055, 0.3, HULL, { segs: 11, noise: 0.05, seed: 481 });
+      appendBlob(A, 0, 0.2, 0.02, 0.105, 0.02, 0.27, Color3.FromHexString('#c9a06b'), { segs: 11, noise: 0.04, seed: 482 }); // デッキ
+      appendBlob(A, 0, 0.155, 0.315, 0.05, 0.075, 0.075, HULL, { segs: 8, noise: 0.06, seed: 483 }); // へさきの ふくらみ
+      appendTrunk(A, [[0, 0.2, -0.02], [0, 0.78, -0.02]], 0.017, 0.011, WOOD_D, 484, 0.04); // マスト
+      appendTrunk(A, [[0, 0.23, 0.05], [0, 0.23, 0.2]], 0.012, 0.01, WOOD_D, 485, 0); // ブーム
+      // ---- 判別記号: 風を はらんだ ほ(まえ・うしろの2まい)----
+      // **うすい板を かさねて 三角の 面**にする。丸い玉を つみ上げると
+      // ぬのに ならず「とうもろこし」に 見えた(実機の 接写で 確認)。
+      // 板ごとに よこ幅を 変え、風で ふくらんだぶん x へ ずらす
+      // 板は **たてに 4わり かさねる**(すきまが 空くと ブラインドに 見えた)。
+      // 板の あつみ(y)0.105 に たいして 1だんの 上がりを 0.062 にしてある
+      for (let i = 0; i < 9; i++) {
+        const t = i / 8;
+        const belly = Math.sin(t * Math.PI) * 0.05; // 風の ふくらみ
+        const d = 0.215 * (1 - t) + 0.035; // ほの おくゆき(下ほど 広い)
+        fboxR(A, belly, 0.28 + t * 0.5, 0.115 - t * 0.055 - d * 0.16, 0.018, 0.105, d,
+          jitterColor(SAIL, 486 + i, 0.04), { y: belly * 1.2 });
+      }
+      for (let i = 0; i < 7; i++) {
+        const t = i / 6;
+        const belly = -Math.sin(t * Math.PI) * 0.028;
+        const d = 0.13 * (1 - t) + 0.03;
+        fboxR(A, belly, 0.3 + t * 0.4, -0.075 - d * 0.4, 0.016, 0.1, d,
+          jitterColor(SAIL_D, 494 + i, 0.04), { y: belly * 1.4 });
+      }
+      fbox(A, 0.03, 0.79, -0.03, 0.05, 0.035, 0.01, Color3.FromHexString('#c05a4a')); // てっぺんの はた
+      return { root: toMesh(scene, 'f_toy_yacht', A, 'keep'), colliderR: 0.24 };
+    }
+    case 'f_toy_kendama': {
+      // けんだま。判別記号は **ひもで ぶらさがった 玉**。
+      // 立てて おけるように、けんの さきを 下にして 台に さす
+      const A = A0();
+      const CUP = Color3.FromHexString('#b8875c');
+      const BALL = Color3.FromHexString('#c05a4a');
+      // 1回目は 小さすぎて「けんだま」に 見えなかった(実機の 接写で 確認)ので、
+      // ぜんたいを 1.5ばいにして、玉と さらを とくに 大きくした
+      appendBlob(A, 0, 0.025, 0, 0.145, 0.025, 0.145, WOOD_D, { segs: 12, noise: 0.04, flatBottom: true, bottomDark: 0.3 }); // 台
+      appendTrunk(A, [[0, 0.045, 0], [0, 0.47, 0]], 0.04, 0.031, WOOD, 500, 0.05); // けん(にぎり)
+      appendTrunk(A, [[0, 0.47, 0], [0, 0.585, 0]], 0.027, 0.014, WOOD_D, 501, 0.03); // 先の とがり
+      // よこの さら(2つ。大きさを 変えて けんだまと わかる形にする)
+      for (const [sx, r] of [[-1, 0.092], [1, 0.074]] as [number, number][]) {
+        appendTrunk(A, [[sx * 0.04, 0.35, 0], [sx * 0.125, 0.35, 0]], 0.03, 0.027, WOOD_D, 502, 0);
+        appendBlob(A, sx * 0.165, 0.368, 0, r, 0.042, r, CUP, { segs: 10, noise: 0.05, seed: 503 });
+        appendBlob(A, sx * 0.165, 0.392, 0, r * 0.76, 0.028, r * 0.76, jitterColor(WOOD_D, 504, 0.1), { segs: 9, noise: 0.05, seed: 504 });
+      }
+      // ---- 判別記号: ひもと 玉(ぶらさがっている)----
+      appendTrunk(A, [[0, 0.455, 0.02], [0.085, 0.36, 0.07], [0.165, 0.27, 0.1]], 0.006, 0.006, Color3.FromHexString('#e2d2ae'), 505, 0);
+      appendBlob(A, 0.185, 0.2, 0.11, 0.082, 0.082, 0.082, BALL, { segs: 12, noise: 0.04, seed: 506 });
+      appendBlob(A, 0.185, 0.275, 0.11, 0.022, 0.016, 0.022, WOOD_D, { segs: 7, noise: 0.05, seed: 507 }); // 玉の あな
+      return { root: toMesh(scene, 'f_toy_kendama', A, 'keep'), colliderR: 0.24 };
+    }
+    case 'f_toy_castle': {
+      // つみきの しろ。判別記号は **まん中の 高い やぐら+門**。
+      // つみきなので 角は そのまま(ぬいぐるみと ちがって かたい あそびもの)。
+      // 色は 木の3色だけ+やねの あお。たかさを 3だんに 分けて「しろ」の かたちを出す
+      const A = A0();
+      const S1 = Color3.FromHexString('#c9a86b');
+      const S2 = Color3.FromHexString('#b08d5a');
+      const ROOF = Color3.FromHexString('#5d7382');
+      const tower = (tx: number, tz: number, h: number, r: number, sd: number): void => {
+        appendTrunk(A, [[tx, 0.04, tz], [tx, 0.04 + h, tz]], r, r * 0.92, jitterColor(S1, sd, 0.08), sd, 0);
+        appendTrunk(A, [[tx, 0.04 + h, tz], [tx, 0.06 + h, tz]], r * 1.18, r * 1.18, S2, sd + 1, 0); // ふち
+        appendBlob(A, tx, 0.115 + h, tz, r * 1.1, 0.075, r * 1.1, ROOF, { segs: 9, noise: 0.04, seed: sd + 2 }); // やね
+        appendBlob(A, tx, 0.185 + h, tz, 0.016, 0.026, 0.016, S2, { segs: 6, noise: 0.05, seed: sd + 3 }); // てっぺんの つまみ
+      };
+      fbox(A, 0, 0.02, 0, 0.62, 0.04, 0.46, S2); // 土台
+      // かべ(左右)と 門のある 前かべ
+      for (const sx of [-0.215, 0.215]) fbox(A, sx, 0.115, 0.19, 0.19, 0.15, 0.075, S1);
+      fbox(A, 0, 0.235, 0.19, 0.62, 0.09, 0.075, S1); // 門の上の はり
+      fbox(A, 0, 0.115, -0.185, 0.56, 0.15, 0.075, jitterColor(S1, 511, 0.06)); // うしろの かべ
+      for (const sz of [-0.06, 0.06]) fbox(A, -0.265, 0.115, sz, 0.075, 0.15, 0.14, jitterColor(S1, 512, 0.06));
+      for (const sz of [-0.06, 0.06]) fbox(A, 0.265, 0.115, sz, 0.075, 0.15, 0.14, jitterColor(S1, 513, 0.06));
+      // はざま(かべの上の でこぼこ)
+      for (let i = 0; i < 5; i++) fbox(A, -0.24 + i * 0.12, 0.3, -0.185, 0.055, 0.045, 0.075, S2);
+      fbox(A, 0, 0.12, 0.19, 0.19, 0.16, 0.08, Color3.FromHexString('#7d5636')); // 門(あなに 見せる こい木)
+      tower(-0.265, 0.19, 0.26, 0.075, 520);
+      tower(0.265, 0.19, 0.26, 0.075, 525);
+      tower(0, -0.185, 0.42, 0.095, 530); // まん中の やぐら(いちばん高い)
+      return { root: toMesh(scene, 'f_toy_castle', A, 'keep'), colliderR: 0.36 };
+    }
+    case 'f_toy_ball': {
+      // ボール。判別記号は **6まいの はぎれ**。
+      // 草を あんだ 玉に ぬのを ぬいつけた かたち。ぬい目の 点線で「手づくり」に見せる
+      // まるい 玉を 1つ 作り、その上に **うすい はぎれ**を のせる。
+      // v25の1回目は はぎれを 大きな玉で 作ったので、まるい ボールでなく
+      // 「色つきの こぶの かたまり」に 見えた(実機の 接写で 確認)
+      const A = A0();
+      const R = 0.185;
+      const CORE = Color3.FromHexString('#c9b06a');
+      const patches = ['#c96f6a', '#6f9a8d', '#dcb56a'];
+      appendBlob(A, 0, R * 0.94, 0, R, R, R, CORE, { segs: 15, noise: 0.03, seed: 540, flatBottom: true });
+      // はぎれ3まい(前・左うしろ・右うしろ)。うすい 円ばんを 球の面に そって はる
+      const faces: [number, number, number][] = [[0, 0.12, 1], [-0.9, 0.18, -0.42], [0.9, 0.18, -0.42]];
+      for (let i = 0; i < faces.length; i++) {
+        const [dx, dy, dz] = faces[i];
+        const len = Math.hypot(dx, dy, dz);
+        const c = jitterColor(Color3.FromHexString(patches[i]), 541 + i, 0.06);
+        appendBlob(A, (dx / len) * R * 0.9, R * 0.94 + (dy / len) * R * 0.9, (dz / len) * R * 0.9,
+          R * 0.62, R * 0.62, R * 0.62, c, { segs: 10, noise: 0.05, seed: 541 + i });
+      }
+      // ぬい目(はぎれの あいだを またぐ 3すじ)。玉の 面に そって ならべる
+      for (let k = 0; k < 3; k++) {
+        const a = (k / 3) * Math.PI * 2 + 0.6;
+        for (let i = 0; i < 11; i++) {
+          const th = -1.2 + (i / 10) * 2.4;
+          fbox(A, Math.cos(a) * Math.sin(th) * R * 1.02, R * 0.94 + Math.cos(th) * R * 1.02,
+            Math.sin(a) * Math.sin(th) * R * 1.02, 0.017, 0.017, 0.017, Color3.FromHexString('#f4efe2'));
+        }
+      }
+      return { root: toMesh(scene, 'f_toy_ball', A, 'keep'), colliderR: 0.2 };
+    }
+    // ---- かざり台2 ----
+    case 'f_plush_shelf': {
+      // ぬいぐるみだな。3だんの たな板に 1つずつ ならべる(中身は makeDisplayContentMesh)。
+      // 「見せたいものを 不透明な はこに 入れない」(教訓1)ので、
+      // よこと 前は あけたまま・うしろだけ うすい 板を 入れて 中身を うき立たせる。
+      // 板を 重ねる所は 上面の高さを ぜんぶ 変えてある(Zファイティングよけ)
+      const A = A0();
+      const MAT = Color3.FromHexString('#c9b06a'); // 草を あんだ しきもの
+      const BACK = Color3.FromHexString('#a07a52');
+      const levels = [0.11, 0.56, 1.01]; // たな板の 中心y(上面は +0.02)
+      for (const sx of [-0.29, 0.29]) {
+        fbox(A, sx, 0.63, 0, 0.055, 1.26, 0.38, WOOD_D); // よこ板
+        fbox(A, sx, 1.268, 0, 0.07, 0.028, 0.4, WOOD); // 上の かさ
+      }
+      fbox(A, 0, 0.63, -0.175, 0.53, 1.22, 0.022, BACK); // うしろ板(うすい)
+      for (let i = 0; i < levels.length; i++) {
+        const y = levels[i];
+        fbox(A, 0, y, 0, 0.54, 0.04, 0.37, WOOD); // たな板(上面 y+0.02)
+        fbox(A, 0, y + 0.031, 0, 0.5, 0.022, 0.33, jitterColor(MAT, 550 + i, 0.1)); // しきもの(上面 y+0.042)
+        for (let k = 0; k < 6; k++) {
+          fbox(A, -0.2 + k * 0.08, y + 0.045, 0, 0.02, 0.008, 0.31, jitterColor(MAT, 556 + i * 6 + k, 0.16)); // あみ目
+        }
+        fbox(A, 0, y - 0.028, 0.175, 0.54, 0.026, 0.035, WOOD_D); // 前の ふち
+      }
+      fbox(A, 0, 0.013, 0, 0.66, 0.026, 0.42, WOOD_D); // ゆか板
+      const shelfRoot = toMesh(scene, 'f_plush_shelf', A, 'keep');
+      // ならべた ぬいぐるみ(すいそうの 魚と まったく同じ流儀で ぶら下げる)
+      for (const inner of makeDisplayContentMeshes(scene, 'f_plush_shelf', contents)) inner.parent = shelfRoot;
+      return { root: shelfRoot, colliderR: 0.36 };
+    }
+    case 'f_toybox': {
+      // おもちゃばこ。判別記号は **あいた ふた**。
+      // こぼれた 小物は **決めうちの 位置**(乱数は つかわない。鉄則)。
+      // 中の おもちゃが 見えるように、ふたは うしろへ 大きく たおす
+      const A = A0();
+      const BOX = Color3.FromHexString('#a8845c');
+      const BOX_D = Color3.FromHexString('#7d6041');
+      const cols = ['#c96f52', '#5d8a9a', '#c9a86b', '#6f9a58', '#a85f6f'];
+      fbox(A, 0, 0.022, 0, 0.62, 0.044, 0.44, BOX_D); // そこ
+      for (const sz of [-0.2, 0.2]) fbox(A, 0, 0.16, sz, 0.62, 0.24, 0.04, BOX);
+      for (const sx of [-0.29, 0.29]) fbox(A, sx, 0.16, 0, 0.04, 0.24, 0.36, jitterColor(BOX, 570, 0.08));
+      for (const sz of [-0.2, 0.2]) fbox(A, 0, 0.288, sz, 0.66, 0.03, 0.06, BOX_D); // 口の ふち
+      for (const sx of [-0.29, 0.29]) fbox(A, sx, 0.288, 0, 0.06, 0.03, 0.4, BOX_D);
+      // ---- 判別記号: うしろへ ひらいた ふた ----
+      fboxR(A, 0, 0.44, -0.35, 0.62, 0.045, 0.42, BOX, { x: 1.15 });
+      fboxR(A, 0, 0.455, -0.34, 0.5, 0.02, 0.34, jitterColor(BOX_D, 571, 0.08), { x: 1.15 });
+      appendBlob(A, 0, 0.235, -0.235, 0.04, 0.03, 0.028, Color3.FromHexString('#a87c3d'), { segs: 8, noise: 0.05, seed: 572 }); // ちょうつがい
+      // 中の つみき(3つ。高さ・向きを ばらす)
+      const inside: [number, number, number, number, number][] = [
+        [-0.16, 0.105, -0.04, 0.12, 0.34], [0.02, 0.1, 0.05, 0.11, 0.95], [0.17, 0.11, -0.05, 0.115, 1.72],
+      ];
+      for (let i = 0; i < inside.length; i++) {
+        const [bx, by, bz, s, ry] = inside[i];
+        fboxR(A, bx, by, bz, s, s, s, jitterColor(Color3.FromHexString(cols[i]), 573 + i, 0.1), { y: ry });
+      }
+      appendBlob(A, -0.05, 0.24, 0.02, 0.075, 0.075, 0.075, Color3.FromHexString(cols[3]), { segs: 10, noise: 0.05, seed: 576 }); // 中の 玉
+      // そとに こぼれた 小物3つ(四角・まる・三角。形が ちがうことが ひと目で わかる)
+      fboxR(A, 0.41, 0.052, 0.14, 0.1, 0.1, 0.1, Color3.FromHexString(cols[0]), { y: 0.62 });
+      appendBlob(A, -0.42, 0.062, 0.1, 0.062, 0.062, 0.062, Color3.FromHexString(cols[1]), { segs: 9, noise: 0.04, seed: 577 });
+      fboxR(A, 0.32, 0.09, -0.22, 0.12, 0.12, 0.095, Color3.FromHexString(cols[2]), { z: 0.785 });
+      appendTrunk(A, [[-0.36, 0.02, -0.2], [-0.36, 0.11, -0.2]], 0.055, 0.012, Color3.FromHexString(cols[4]), 578, 0.05); // こま
+      appendBlob(A, -0.36, 0.125, -0.2, 0.018, 0.028, 0.018, BOX_D, { segs: 6, noise: 0.05, seed: 579 });
+      return { root: toMesh(scene, 'f_toybox', A, 'keep'), colliderR: 0.34 };
+    }
     // ---- v21 ぬしの トロフィー3種(作りは makeTrophyMesh 1本にまとめてある)----
     case 'f_trophy_koi':
     case 'f_trophy_dai':
@@ -2892,13 +3650,24 @@ export function makeDishMesh(scene: Scene, item: ItemId): FurnitureMesh {
  * ぬらないもの:
  *   - 光る部品(共有の発光マテリアル)。色を変えると 光り方が こわれる。
  *   - すいそうの ガラス・水面(半透明の別マテリアル)。
+ *   - v25 ぬいぐるみだなに ならべた ぬいぐるみ(SHELF_CONTENT_PREFIX の えだ)。
+ *     しまの なかまは **色で 見分ける**もの(ロカ=あお白 / ツムギ=生成り)なので、
+ *     たなを ぬったら 中の5人まで 同じ色になる、では 判別記号が 死ぬ。
  */
 const PAINT_STRENGTH = 0.78; // 0=元のまま / 1=まっさらな単色
+/** その部品が「たなに ならべた ぬいぐるみ」の一部か(自分か 先祖の名前で見る) */
+function insideShelfContent(m: Mesh): boolean {
+  for (let n: { name: string; parent: unknown } | null = m; n; n = n.parent as typeof n) {
+    if (n.name.startsWith(SHELF_CONTENT_PREFIX)) return true;
+  }
+  return false;
+}
 export function tintFurnitureMesh(root: Mesh, hex: string): void {
   const c = Color3.FromHexString(hex);
   for (const m of [root, ...root.getChildMeshes()] as Mesh[]) {
     if ((m.material?.name ?? '').startsWith('glow')) continue; // 光る部品は そのまま
     if (m.name.endsWith('_glass') || m.name.endsWith('_water')) continue; // 半透明の部品も そのまま
+    if (insideShelfContent(m)) continue; // たなに ならべた ぬいぐるみは 自分の色のまま
     const src = m.getVerticesData(VertexBuffer.ColorKind);
     if (!src) continue;
     const cols = new Float32Array(src);

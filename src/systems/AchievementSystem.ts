@@ -12,6 +12,7 @@ import { MARKET_VISIT_KEY } from './TrainRideSystem';
 import { FESTIVAL_FLY_KEY } from './FestivalSystem';
 import { BOND_TOTAL_KEY } from './BondEventSystem';
 import { BOSS_FISH, NUSHI_TOTAL_KEY } from './BossFishSystem';
+import { SAP_CATCH_KEY } from './SapTreeSystem';
 
 /** 達成の記録に使う stats のキーの接頭辞 */
 export const ACH_PREFIX = 'ach_';
@@ -306,6 +307,15 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     id: 'a_nushi_all', name: 'ぬしの ぬし',
     desc: 'おなじ 釣り場に かよいつめて、3つの ぬしを ぜんぶ つりあげよう',
     target: BOSS_FISH.length, icon: 'f_trophy_yoru', progress: (s) => statCount(s, NUSHI_TOTAL_KEY),
+  },
+  // ---- v27 じゅえきの木(林の あまい においの木) ----
+  // 数えるのは stats の sap_catch(じゅえきの木で つかまえた のべ数)。
+  // 未達成欄の desc は「どこを さがせばよいか」だけを 言う——
+  // 何が いるか・みつの ことは 書かない(見つけた ときの おどろきを のこすため)。
+  {
+    id: 'a_saptree', name: 'あまい においの木',
+    desc: '林の おくの あまい においの木で 虫を つかまえよう',
+    target: 1, icon: 'b_kabuto', progress: (s) => statCount(s, SAP_CATCH_KEY),
   },
   {
     id: 'a_all_quests', name: 'おねがいマスター', desc: '島のみんなの おねがいを 5つ かなえよう',

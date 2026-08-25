@@ -1,0 +1,28 @@
+PASS
+island.ts の実URL: http://localhost:5222/src/data/island.ts
+じゅえきの木: (-2.5, -35) とまり場=[{"x":-2.5,"z":-34.62,"kind":"sap"},{"x":-2.4,"z":-33.69,"kind":"sap"}]
+  01_tree_day_wide.png
+カメラのズーム: 0.7
+昼の じゅえきの虫: [{"key":1,"bug":"b_kuwa","x":-2.5,"z":-34.62},{"key":2,"bug":"b_kabuto","x":-2.4,"z":-33.69}]
+  02_tree_day.png
+  03_tree_day_close.png (620x420 を3倍解像度で切り出し)
+  04_sap_ooze_day.png (420x300 を3倍解像度で切り出し)
+接写のときの 昼の虫: [{"key":1,"bug":"b_kuwa","x":-2.5,"z":-34.62},{"key":2,"bug":"b_kabuto","x":-2.4,"z":-33.69}]
+  05_beetles_day.png (560x320 を3倍解像度で切り出し)
+夜の じゅえきの虫: [{"key":10,"bug":"b_hirata","x":-2.5,"z":-34.62},{"key":11,"bug":"b_hirata","x":-2.4,"z":-33.69}]
+  06_tree_night.png
+  07_sap_ooze_night.png (420x300 を3倍解像度で切り出し)
+  08_beetles_night.png (560x320 を3倍解像度で切り出し)
+みきの そばの ヒント: 「Eみつを ぬる」
+  09_paint_hint.png
+  10_paint_hint_close.png (700x300 を3倍解像度で切り出し)
+ぬったあと: {"day":1,"honeyDay":1,"nectar":1,"toast":"みつを ぬった! めずらしい虫が くるかも"}
+  11_painted.png
+みつの あとの じゅえきの虫: [{"key":11,"bug":"b_hirata","x":-2.4,"z":-33.69},{"key":15,"bug":"b_giraffa","x":-2.5,"z":-34.62}]
+  12_rare_after_honey.png
+  13_rare_close.png (560x320 を3倍解像度で切り出し)
+ぬったあとの ヒント(1歩さがった位置): 「Eむしあみでつかまえる」
+ずかんのメモ: じゅえきの木あまい においの木には 虫が あつまる。ひるは クワガタ、よるは カブトのなかま。みつを ぬった日は カブトムシや ギラファノコギリクワガタが やってくる。(つかまえた かず 3)
+  14_codex_memo.png
+  15_codex_memo_close.png
+コンソールエラー: 0件 

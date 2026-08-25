@@ -30,6 +30,7 @@ import { trainCardText } from './TrainRideSystem';
 import { GIFT_TOTAL_KEY } from './GiftSystem';
 import { STYLE_CHANGE_KEY } from './BadgeSystem';
 import { sensedNushi } from './BossFishSystem';
+import { heldHoney } from './SapTreeSystem';
 
 /** カードを出す時間帯(この間に 1日1回だけ出る)。就寝は 6時に起きるので かならず入る */
 export const CARD_FROM = 6;
@@ -206,6 +207,17 @@ export const SUGGESTIONS: SuggestionSeed[] = [
     id: 'bug', icon: 'net',
     text: 'むしあみを もって、はらっぱの むしを さがしてみよう',
     when: (s) => hasTool(s, 'net') && codexCount(s, 'b_shiro') + codexCount(s, 'b_ageha') < 2,
+  },
+  // v27 じゅえきの木に みつを ぬる。
+  // 出るのは「むしあみと みつの 両方を 持っている」朝だけ
+  // ——持っていない子に「作れ」と せかす行にしない(カードは お知らせであって 命令ではない)。
+  // 「きょう もう ぬったか」は ここでは見ない: when は 日づけを 受けとらないうえ、
+  // カードが出るのは 朝(6〜11時)の1回きりなので、その時点では まだ ぬっていない。
+  // 持っているか どうかの判断は 1つも 写経せず SapTreeSystem に聞く(このファイルの約束2)
+  {
+    id: 'sap', icon: 'nectar',
+    text: 'じゅえきの木に みつを ぬってみよう。めずらしい虫が くるかも',
+    when: (s) => hasTool(s, 'net') && heldHoney(s) !== null,
   },
   {
     id: 'nightfish', icon: 'nightfish',

@@ -4,11 +4,11 @@
   "area": "island",
   "need": 3,
   "limitSec": 120,
-  "elapsedSec": 33.8,
+  "elapsedSec": 18,
   "total": 3,
   "catches": [
     {
-      "sec": 16.7,
+      "sec": 12.4,
       "total": 1,
       "got": [
         "b_kabuto"
@@ -16,16 +16,16 @@
       "hintSeen": true
     },
     {
-      "sec": 26.7,
+      "sec": 13.5,
       "total": 2,
       "got": [
         "b_kabuto",
-        "b_nokogiri"
+        "b_kuwa"
       ],
       "hintSeen": true
     },
     {
-      "sec": 33.7,
+      "sec": 17.9,
       "total": 3,
       "got": [
         "b_kabuto",
@@ -37,11 +37,12 @@
   ],
   "kinds": [
     "b_kabuto",
-    "b_nokogiri",
-    "b_kuwa"
+    "b_kuwa",
+    "b_nokogiri"
   ],
   "hints": [
-    "E木をきる",
+    "Eツムギと はなす",
+    "Eお店をみる(うる・かう)",
     "Eヒカリゴケをとる",
     "むしが いる! ちかづいて つかまえよう",
     "Eむしあみでつかまえる",
@@ -50,44 +51,44 @@
   "errors": [],
   "log": [
     {
-      "sec": 5.9,
+      "sec": 6.2,
       "label": "ゲーム開始(新規)"
     },
     {
-      "sec": 6.9,
+      "sec": 7.3,
       "label": "支度おわり: island 昼 hour=10.0 虫=1匹 いち=(-3.0,6.0)"
     },
     {
-      "sec": 6.9,
+      "sec": 7.3,
       "label": "いまやること: q_wood_offer 「ツムギの はなしを聞こう」"
     },
     {
-      "sec": 6.9,
-      "label": "ねらう: b_kabuto (8.0,-43.8) 51.0m"
+      "sec": 7.4,
+      "label": "ねらう: b_kuwa (-2.5,-34.6) 40.6m"
     },
     {
-      "sec": 23.6,
+      "sec": 19.7,
       "label": "つかまえた! (1匹目 b_kabuto) ヒントを見てから=true"
     },
     {
-      "sec": 23.6,
-      "label": "ねらう: b_nokogiri (-14.0,-37.8) 22.6m"
+      "sec": 19.7,
+      "label": "ねらう: b_kuwa (-2.5,-34.6) 1.6m"
     },
     {
-      "sec": 33.6,
-      "label": "つかまえた! (2匹目 b_kabuto,b_nokogiri) ヒントを見てから=true"
+      "sec": 20.9,
+      "label": "つかまえた! (2匹目 b_kabuto,b_kuwa) ヒントを見てから=true"
     },
     {
-      "sec": 33.7,
-      "label": "ねらう: b_kuwa (-28.0,-25.8) 20.0m"
+      "sec": 20.9,
+      "label": "ねらう: b_nokogiri (-14.0,-37.8) 12.2m"
     },
     {
-      "sec": 40.6,
+      "sec": 25.3,
       "label": "つかまえた! (3匹目 b_kabuto,b_kuwa,b_nokogiri) ヒントを見てから=true"
     },
     {
-      "sec": 40.7,
-      "label": "PASS: 33.8秒で 3匹(合格は120秒で3匹)"
+      "sec": 25.3,
+      "label": "PASS: 18秒で 3匹(合格は120秒で3匹)"
     }
   ]
 }

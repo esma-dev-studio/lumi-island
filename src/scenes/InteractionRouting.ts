@@ -1,12 +1,15 @@
 // E入力のルーティング: その場で実行できる候補を集め、
 // いまの目的との突き合わせ(ObjectiveInteractionPolicy)→優先度・距離(InteractionResolver)で1つに決める。
-import { BULLETIN_BOARD, PLAZA_BENCHES, POIS } from '../data/island';
+import { BULLETIN_BOARD, PLAZA_BENCHES, POIS, SAP_ACT_R, SAP_TREE } from '../data/island';
 import {
   SIT_REACH, nearestSeat, seatOfFurniture, seatOfPlazaBench, type Seat,
 } from '../systems/SitSystem';
-import { ITEMS, displayCapacity, type ItemId } from '../data/items';
+import { DISPLAY_FURNITURE, ITEMS, displayCapacity, type ItemId } from '../data/items';
 import { BULLETIN_REACH } from '../systems/BulletinSystem';
 import { BUG_CATCH_R, BUG_HINT_R } from '../systems/BugSystem';
+import {
+  SAP_DONE_HINT, SAP_PAINT_HINT, canPaintHoney, heldHoney, paintedToday,
+} from '../systems/SapTreeSystem';
 import { hasTool } from '../game/GameState';
 import { questFor } from '../systems/QuestSystem';
 import { GATHER_RULES, toolReason } from '../systems/GatherSystem';
@@ -82,11 +85,14 @@ function displayCandidate(gs: GameScene, near: PlacedRuntime, px: number, pz: nu
   // 1匹だけ入る すいそう・むしかご(v10からのふるまい): 入っていれば Eで そのまま とりだす。
   // たくさん入る おおきい版: Eは いつでもパネルを開く(1匹ずつ 入れる/とりだす をその場でくり返せる)。
   const takeNow = cap === 1 && contents.length > 0;
+  // v25 「いきもの」「いれる」を じか書きせず、家具の表(DISPLAY_FURNITURE)から とる。
+  // ぬいぐるみだなでは「ぬいぐるみを かざる / ぬいぐるみを とりだす」になる
+  const def = DISPLAY_FURNITURE[kind];
   const hint = takeNow
     ? `<kbd>E</kbd>${ITEMS[contents[0]].name}を とりだす`
     : contents.length >= cap
-      ? '<kbd>E</kbd>いきものを とりだす'
-      : '<kbd>E</kbd>いきものを いれる';
+      ? `<kbd>E</kbd>${def.contentLabel}を とりだす`
+      : `<kbd>E</kbd>${def.contentLabel}を ${def.putLabel}`;
   return {
     id: `disp_${near.data.id}`,
     kind: 'pickup',
@@ -292,6 +298,46 @@ function pushBugCandidate(gs: GameScene, cands: InteractionCandidate[], px: numb
       hint: 'むしが いる! ちかづいて つかまえよう', run: () => {},
     });
   }
+}
+
+/**
+ * v27 じゅえきの木の「みつを ぬる」E候補(島の上だけ・1日1回)。
+ *
+ * 出る条件は「みつ(はなのみつ / あまいみつ)を1つでも持っている」ことだけ。
+ * 持っていない子には **候補そのものを作らない** ——
+ * じゅえきの木には 毎日 カブクワが とまっているので、みつを 知らない子の
+ * 「むしあみで つかまえる」を 1ミリも じゃましない、を 構造で保証する。
+ *
+ * 優先度の使いわけ(ここが この機能で いちばん こわれやすいところ):
+ *   ぬれる   … 虫(32)より1つ強い31。みきから SAP_ACT_R(1.6m)の内がわに
+ *              **わざわざ 近づいた**ときだけ 勝つ。1歩さがれば(1.6m〜2.6m)
+ *              これまでどおり「むしあみでつかまえる」が出る = どちらも 自分で えらべる。
+ *   ぬった後 … いちばん弱い catchNear(70)に落とす。ここを31のままにすると、
+ *              ぬった あとに 木の前へ立つと 表示だけの候補が Eを にぎりつづけ、
+ *              **目の前の カブクワが つかまえられない**(進行不能級の じゃま)。
+ *
+ * kind は 'place'。ObjectiveSystem の preferredKinds に 'place' は ふつう入らないので、
+ * 依頼の誘導中は 自動で かくれる(でんごんばん・庭の花だん・まつりと まったく同じ流儀)。
+ */
+function pushSapCandidate(gs: GameScene, cands: InteractionCandidate[], px: number, pz: number): void {
+  const d = Math.hypot(px - SAP_TREE.x, pz - SAP_TREE.z);
+  if (d >= SAP_ACT_R) return;
+  if (heldHoney(gs.state) === null) return;
+  const day = gs.island.time.day;
+  const can = canPaintHoney(gs.state, day);
+  if (!can && !paintedToday(gs.state, day)) return;
+  cands.push({
+    id: can ? 'sap_paint' : 'sap_done',
+    kind: 'place',
+    targetId: 'saptree',
+    priority: can ? PRIORITY.catch - 1 : PRIORITY.catchNear,
+    distance: d,
+    enabled: true,
+    hint: can ? SAP_PAINT_HINT : SAP_DONE_HINT,
+    run: () => {
+      if (can) gs.paintSapHoney();
+    },
+  });
 }
 
 /**
@@ -643,6 +689,8 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
   // 採取ノード
   pushGatherCandidates(gs, cands, px, pz);
   pushBugCandidate(gs, cands, px, pz);
+  // v27 じゅえきの木に みつを ぬる(みつを持っているときだけ)
+  pushSapCandidate(gs, cands, px, pz);
   // v9 ほりあと(シャベルが要る)。
   // v11.1: kind='dig' は ObjectiveSystem の ALWAYS_ALLOWED に入ったので、依頼の誘導中でも出る。
   // ほりあとは日付が変わると別の場所へ移ってしまう「その日かぎり」のものなので、

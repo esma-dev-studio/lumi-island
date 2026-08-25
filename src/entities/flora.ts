@@ -96,11 +96,14 @@ export function appendBox(
  *   2つの筒を ぴったり重ねたいときに使う: ゆらぎは筒ごとに別の形になるので、
  *   細いほうが太いほうへ もぐりこんで「ちぎれた帯」に見えてしまう(実機で確認)。
  *   さらに ゆらぎは輪のつなぎ目(th=0と2π)で値が食いちがうため、縦に細いすじも出る。
+ *
+ * @param segs 断面の かどの数(既定7)。ふとい みきを 近くで 見せるものは 増やして
+ *   かどを ゆるくする(7角だと 1つのかどで 51度も 折れるので、接写で「板」に 見える)。
  */
 export function appendTrunk(
-  A: Arrays, pts: [number, number, number][], r0: number, r1: number, color: Color3, seed = 1, jitter = 0.3
+  A: Arrays, pts: [number, number, number][], r0: number, r1: number, color: Color3,
+  seed = 1, jitter = 0.3, segs = 7
 ): void {
-  const segs = 7;
   const base = A.pos.length / 3;
   const rows = pts.length;
   for (let i = 0; i < rows; i++) {
@@ -146,6 +149,28 @@ export function getFloraMat(scene: Scene): StandardMaterial {
  * 部品の作り方に合わせてflip/keepを指定する。
  */
 export type Orient = 'auto' | 'flip' | 'keep';
+
+/**
+ * `from` 番目いこうの 三角形の **巻き順** だけ ひっくり返す。
+ *
+ * appendTrunk/appendBox と appendBlob は 巻き順が 逆どうし。ひとつの Mesh に
+ * まぜると、orient(=法線の向き)を どちらに 決めても **かたっぽうが うらがえし**になる:
+ *   - 法線が うらがえった面 → 太陽と 逆に 明るさが 出て、日なたでも どす黒くなる
+ *   - 巻き順が うらがえった面 → backFaceCulling が 手前の面を 消すので、
+ *     おくの面の うら(=光の当たらない がわ)が すけて見える
+ * ひらたい形ほど はっきり出る(教訓4の「中が黒いわっか」と 同じ すじ)。
+ *
+ * なので **まぜる前に appendTrunk がわを appendBlob の巻き順へ そろえて**おき、
+ * さいごに `toMesh(..., 'flip')` + `flipFaces(false)` で ぜんぶ まとめて 外向きにする
+ * (虫のメッシュ bugs.ts が むかしから やっている 決まり文句と 同じ)。
+ */
+export function flipWinding(A: Arrays, from = 0): void {
+  for (let i = from; i + 2 < A.idx.length; i += 3) {
+    const t = A.idx[i + 1];
+    A.idx[i + 1] = A.idx[i + 2];
+    A.idx[i + 2] = t;
+  }
+}
 
 export function toMesh(scene: Scene, name: string, A: Arrays, orient: Orient = 'auto'): Mesh {
   const normals: number[] = [];
@@ -254,6 +279,215 @@ export function makeTree(scene: Scene, seed: number, scale = 1): Mesh {
   appendBlob(A, bend + 0.65 * scale, cy - 0.3 * scale, -0.35 * scale, 0.75 * scale, 0.6 * scale, 0.75 * scale, jitterColor(leaf, seed + 2), { seed: seed + 3, noise: 0.24 });
   appendBlob(A, bend + 0.1 * scale, cy + 0.55 * scale, 0.1 * scale, 0.7 * scale, 0.55 * scale, 0.7 * scale, jitterColor(leaf, seed + 3, 0.12), { seed: seed + 4, noise: 0.22 });
   return toMesh(scene, `tree_${seed}`, A);
+}
+
+// ---- v27 じゅえきの木(林に1本だけの とくべつな木) ----
+//
+// 見わけどころは3つ。遠くからでも「ふつうの木ではない」と分かるようにする:
+//   1. **ふとい みき**(装飾の木の1.5倍ちかく)と、その手前の **切りかぶ**
+//   2. みきと 切りかぶに にじむ **こはく色の しる**(つやのある べつマテリアル)
+//   3. 根もとに 落ちた しるの あと(小さな たまり)
+//
+// にじみを べつメッシュにしてあるのは、つやを みきと 分けるため。
+// **みきの面と 同じ高さには 置かない**: しるの たまは みきの半径より 0.02〜0.05m だけ
+// 外へ出した「玉」なので、板を重ねたときの Zファイティング(教訓1)は 起きない
+// ——玉は みきに めりこんで まじわるので、しるが みきから しみ出して見える。
+const C_SAPTRUNK = Color3.FromHexString('#755233');
+const C_SAPLEAF = Color3.FromHexString('#4e7d45');
+/**
+ * 切りかぶの まわりの こげ茶。**まっ黒(#000000)は この島では 使わない**ので、
+ * みきの茶(#755233)を ひと段階 こくした「あたたかい こげ茶」までに とどめる。
+ */
+const C_SAPBARK = Color3.FromHexString('#5c3d22');
+/**
+ * 切り口(のこぎりで 切った 木の面)。みきより **明るい** 木肌にする。
+ * ここを こくすると、上に とまる 虫が こげ茶×こげ茶で 消える
+ * ——「あの木に カブトムシが いる!」と 気づけるのが この木の しごとなので、
+ * 虫の うしろは かならず 明るくしておく。
+ */
+const C_SAPCUT = Color3.FromHexString('#8a6038');
+
+let sapMat: StandardMaterial | null = null;
+/**
+ * しる(樹液)のマテリアル。こはく色+つよめのハイライトで「ぬれている」を出す。
+ *
+ * diffuseColor を **白**にしてあるのは、色を 頂点カラーに もたせるため
+ * (getFloraMat と まったく同じ流儀)。ここに こはく色を 入れると
+ * 頂点カラー×マテリアル色の 二重がけで まっ茶色に しずむ ——
+ * 最初の実機スクショが まさに それで、しるが「こげ茶の わっか」に 見えていた。
+ * 自己発光は ごく弱く(#1a0f04)に とどめる: 光る家具とは ちがうものなので、
+ * よるに ぼうっと 光らせない——木かげでも 色が しずまないようにするだけ。
+ */
+export function getSapMat(scene: Scene): StandardMaterial {
+  if (!sapMat || sapMat.getScene() !== scene) {
+    sapMat = new StandardMaterial('sapMat', scene);
+    sapMat.diffuseColor = Color3.White();
+    sapMat.specularColor = Color3.FromHexString('#c8a06a');
+    sapMat.specularPower = 22;
+    sapMat.emissiveColor = Color3.FromHexString('#1a0f04');
+    // 裏面を きらない。appendBlob で作った 玉は 巻き順が 内向きなので、
+    // 背面カリングを 入れると **手前の面が 消えて**「まん中が くらい わっか」に 見える
+    // ——木の葉のような 大きな かたまりでは 気づけないが(教訓4)、
+    // こげ茶の みきの前に 置いた 小さな玉では はっきり 出た(実機スクショで確認)。
+    sapMat.backFaceCulling = false;
+  }
+  return sapMat;
+}
+
+let bugMat: StandardMaterial | null = null;
+/**
+ * 虫だけの材質(みんなで つかう floraMat と 分ける)。
+ *
+ * カブト・クワガタは 体の色が もともと こい茶〜黒なので、floraMat(つや無し・
+ * 自己発光なし)だと **こげ茶の みきの前で 黒い かげ**にしか ならない。
+ * 実測: クワガタの体 #35291d に たいして じゅえきの木の みきが #362717 ——
+ * ほとんど おなじ 明るさで、どこに いるのか 分からなかった。
+ *
+ * 効かせかたが 2つあって、役わりが ちがう:
+ *   - emissive: Babylon の標準シェーダーでは **頂点色に かけ算**される。
+ *     色みは そのままで かげ側を 底上げできるが、頂点色より 明るくは ならない
+ *     (上限が 頂点色そのもの)。だから これだけでは 黒い虫は 黒いまま。
+ *   - specular: 頂点色の **そとがわで たし算**される。だから 体の色が どんなに
+ *     こくても、上を向いた 面に かならず 白っぽい つやが のる。
+ *     甲虫は じっさい つやつやなので、見た目にも うそがない。
+ * この2つを 組みあわせて、「体の色は 種のまま・上面だけ ぴかっと 光る」にする。
+ */
+export function getBugMat(scene: Scene): StandardMaterial {
+  if (!bugMat || bugMat.getScene() !== scene) {
+    bugMat = new StandardMaterial('bugMat', scene);
+    bugMat.diffuseColor = Color3.White(); // 色は頂点カラーに持たせる(getFloraMatと同じ流儀)
+    // 甲のつや。**強くしすぎない**: 細い あしは 光る角度を 一気に 通りすぎるので、
+    // #7d6f5c だと あしだけ まっ白な 棒になって プラスチックに 見えた(実機で確認)
+    bugMat.specularColor = Color3.FromHexString('#554b3e');
+    bugMat.specularPower = 20;
+    bugMat.emissiveColor = Color3.FromHexString('#2e2924'); // 夜の木かげで 黒くつぶれない ぶんだけ
+    bugMat.backFaceCulling = true;
+  }
+  return bugMat;
+}
+
+/**
+ * じゅえきの木。みき・葉は ふつうの木と同じ作り方(頂点色+ノイズ)で、
+ * しるだけ べつメッシュ(つやのある こはく色)にして 親子づけする。
+ *
+ * みきの太さは src/data/island.ts の SAP_TREE_R / SAP_STUMP_R(当たり判定)と、
+ * BUG_SPOTS の 'sap' の とまり場の ずれ(0.38m / 0.36m)に そろえてある——
+ * 細くすると 虫が 宙にうき、太くすると 虫が みきに めりこむ。
+ */
+export function makeSapTree(scene: Scene, seed: number, scale = 1): { tree: Mesh; sap: Mesh } {
+  const A = A0();
+  const s = scale;
+  const h = 2.8 * s;
+  // 断面の かどの数。ふつうの木の 7 から 増やしてあるのは、この木だけ
+  // **みきに 顔を 寄せて 見る**から。7角だと ひとつの かどで 51度も 折れるので、
+  // 接写で みきが「板を 立てた もの」に 見えた(差し戻しの スクショで 確認)。
+  const SEGS = 12;
+  // 切りかぶの 上の 半径。ふた(切り口)と ここで そろえる
+  const STUMP_TOP_R = 0.23 * s;
+  const STUMP_TOP_Y = 0.84;
+
+  // ---- ここから appendTrunk の かたまり(あとで 巻き順を appendBlob にそろえる) ----
+  const tSolid = A.idx.length;
+  // ふとい みき。ゆらぎ(jitter)を 0.12 に おさえてあるのは、
+  // ±15%の でこぼこだと 虫の とまり場(半径+0.38m)に みきが 食いこむ日ができるため
+  appendTrunk(
+    A,
+    [[0, 0, 0], [0.05 * s, h * 0.45, 0.03 * s], [0.1 * s, h, 0.05 * s]],
+    0.28 * s, 0.15 * s, C_SAPTRUNK, seed, 0.12, SEGS
+  );
+  // 手前(+z)の 切りかぶ。上が ひらたく 切れていて、切り口から しるが にじむ。
+  // 位置は data/island.ts の SAP_STUMP(dx 0.1 / dz 0.95)と そろえる。
+  // 太くて低いと「はこ」に見える(実機スクショで確認)ので、細めで 高めにする。
+  //
+  // **ゆらぎを 0 にしてある**のは、すぐ上の「ふた」と へりを ぴったり 合わせるため。
+  // ゆらぎは 筒ごとに ちがう形になるので、少しでも 入れると ふたの へりが
+  // 筒から はみ出したり もぐったりして、**よこへ つき出た 板の かど**に 見える
+  // ——差し戻しの スクショ(03/04/05/06/13)で 出ていた あの かどが これ。
+  // appendTrunk の説明にある「灯台の塔と その帯」と まったく 同じ 話。
+  appendTrunk(
+    A,
+    [[0.1, 0, 0.95], [0.11, 0.44, 0.95], [0.12, STUMP_TOP_Y, 0.96]],
+    0.26 * s, STUMP_TOP_R, C_SAPTRUNK, seed + 7, 0, SEGS
+  );
+  // 切り口の **ふた**。appendTrunk は 上下が あいた 筒なので、ふたを しないと
+  // 中の くらがりが すけて「まん中が まっ黒な 皿」に 見える(差し戻しの2点目)。
+  // 筒と 同じ segs・同じ 半径・ゆらぎ0 の 平たい すいで ふさぐと、
+  // へりが 1つの こらずに 重なるので、どの角度からも かどが はみ出さない。
+  appendTrunk(
+    A, [[0.12, STUMP_TOP_Y, 0.96], [0.12, STUMP_TOP_Y + 0.035, 0.96]],
+    STUMP_TOP_R, 0.02 * s, C_SAPCUT, seed + 7, 0, SEGS
+  );
+  // 切り口の へり(木の かわが はがれた ところ)。ひと回り 細い 帯を 内がわへ
+  // 彫りこんで、切りかぶの かどを ゆるめる。**筒より 外へは 出さない**
+  appendTrunk(
+    A, [[0.115, STUMP_TOP_Y - 0.075, 0.955], [0.12, STUMP_TOP_Y, 0.96]],
+    STUMP_TOP_R * 0.965, STUMP_TOP_R * 0.995, C_SAPBARK, seed + 7, 0, SEGS
+  );
+  // appendBlob と 巻き順を そろえる(flipWinding の説明を みること)
+  flipWinding(A, tSolid);
+
+  // 根もと(ふとい みきの まわりに 2つだけ。みきに ぴったり寄せて、ゆらぎも 小さく)。
+  // 大きく・ノイズを強くすると、地面から 平たい「ひれ」が つき出て見える
+  // y を 地面より下にして、地面の かたむきで はんぶん うまった 根に する。
+  //
+  // -0.05 では **まだ 足りなかった**: 地面が 下がっている がわ(木の うしろ右)で
+  // 上のひとかけらだけが 顔を出し、**よこへ つき出た 平たい ひれ**に 見えていた
+  // (差し戻しの スクショに 写っていた「みきの 輪郭から 出た 硬い かど」の もう1つ)。
+  // ひらたい玉(ry が rx の半分)は、顔を出す ぶんが 少ないほど かどが 鋭くなるので、
+  // **もっと 下げる**うえに **まるくする**(ry ≒ rx)。こうすると 万一 出ても
+  // 「地面の ふくらみ」で すみ、かどに ならない。
+  appendBlob(A, -0.2 * s, -0.12 * s, 0.1 * s, 0.15 * s, 0.13 * s, 0.13 * s, C_SAPTRUNK, { seed: seed + 2, noise: 0.1, segs: 9, flatBottom: true });
+  appendBlob(A, 0.14 * s, -0.12 * s, -0.16 * s, 0.12 * s, 0.12 * s, 0.12 * s, C_SAPTRUNK, { seed: seed + 3, noise: 0.1, segs: 9, flatBottom: true });
+  // 葉むら(ふつうの木より ひとまわり大きく、こい みどり)
+  const leaf = jitterColor(C_SAPLEAF, seed);
+  const cy = h + 0.55 * s;
+  appendBlob(A, 0.1 * s, cy, 0.05 * s, 1.6 * s, 1.2 * s, 1.55 * s, leaf, { seed, noise: 0.2 });
+  appendBlob(A, -0.85 * s, cy - 0.45 * s, 0.35 * s, 1.0 * s, 0.8 * s, 0.95 * s, jitterColor(leaf, seed + 1), { seed: seed + 2, noise: 0.24 });
+  appendBlob(A, 0.95 * s, cy - 0.3 * s, -0.4 * s, 0.9 * s, 0.72 * s, 0.88 * s, jitterColor(leaf, seed + 2), { seed: seed + 3, noise: 0.24 });
+  appendBlob(A, 0.15 * s, cy + 0.7 * s, 0.15 * s, 0.85 * s, 0.65 * s, 0.85 * s, jitterColor(leaf, seed + 3, 0.12), { seed: seed + 4, noise: 0.22 });
+  // 巻き順は 上で そろえてあるので、虫のメッシュと 同じ 決まり文句で 外向きにする:
+  // 'flip' で 法線を 外へ、flipFaces(false) で 面の おもてを 外へ。
+  // これを しないと みきが **法線うらがえし**のまま 光を うけて、日なたでも
+  // どす黒く 見える(#755233 の みきが #362717 で 出ていた)。
+  const tree = toMesh(scene, `saptree_${seed}`, A, 'flip');
+  tree.flipFaces(false);
+
+  // ---- しる(にじみ)。みきの南がわ(+z)に かたよせて、虫の とまり場と そろえる ----
+  //
+  // 玉の中心は **みきの外がわ**(半径+0.05〜0.08m)に置く。
+  // みきの中に うずめると、外へ 出るのは うすい かけらだけになり、
+  // 「あまい しるの かたまり」ではなく「オレンジの わっか」に 見える(実機で確認)。
+  const B = A0();
+  const amber = Color3.FromHexString('#c47c26');
+  const amberLit = Color3.FromHexString('#dda042');
+  // ふとい みきの 大きな にじみ(虫の 頭より上)。左右対称に しない
+  appendBlob(B, -0.05, 1.1, 0.32, 0.17, 0.28, 0.1, amberLit, { seed: seed + 11, noise: 0.18, segs: 9 });
+  appendBlob(B, 0.13, 0.9, 0.32, 0.11, 0.19, 0.09, amber, { seed: seed + 12, noise: 0.18, segs: 8 });
+  // したたり(2すじ。虫の とまり場 x=0 の 左右を よけて 流れる)
+  appendBlob(B, -0.16, 0.62, 0.34, 0.07, 0.21, 0.07, amber, { seed: seed + 13, noise: 0.15, segs: 7 });
+  appendBlob(B, 0.15, 0.48, 0.33, 0.06, 0.17, 0.06, amber, { seed: seed + 14, noise: 0.15, segs: 7 });
+  // ---- 虫の うしろの「ぬれた あと」(v27.1) ----
+  // 虫は みきの (x 0 / y 0.50〜0.81 / z 0.28〜0.47) に とまる(実測)。
+  // 上の 2すじは その 左右を よけて 流れるので、**虫の まうしろだけ 木のはだ**が
+  // のこり、こげ茶の 虫が こげ茶の みきに 溶けていた。
+  // z を うすく(0.06)して みきに はりつく「しみ」にすると、玉に 見えないまま
+  // 虫の かげぼうしを 明るい こはくで うけられる。虫より 手前には 出さない。
+  appendBlob(B, 0, 0.66, 0.29, 0.2, 0.2, 0.06, amberLit, { seed: seed + 19, noise: 0.16, segs: 9 });
+  // 切りかぶの 虫(とまり場 x 0.1 / z 1.31)の うしろにも 同じ しみを 置く
+  appendBlob(B, 0.1, 0.6, 1.2, 0.18, 0.19, 0.06, amberLit, { seed: seed + 20, noise: 0.16, segs: 9 });
+  // 根もとに たまった あと(地面すれすれ。ひらたい)
+  appendBlob(B, -0.04, 0.05, 0.45, 0.19, 0.035, 0.14, amberLit, { seed: seed + 15, noise: 0.2, segs: 9, flatBottom: true });
+  // 切りかぶ: 切り口の たまりと、よこへ したたる すじ
+  appendBlob(B, 0.14, 0.85, 0.97, 0.15, 0.045, 0.15, amberLit, { seed: seed + 16, noise: 0.16, segs: 9, flatBottom: true });
+  appendBlob(B, 0.13, 0.58, 1.25, 0.08, 0.19, 0.08, amber, { seed: seed + 17, noise: 0.15, segs: 8 });
+  appendBlob(B, -0.04, 0.34, 1.21, 0.06, 0.13, 0.06, amber, { seed: seed + 18, noise: 0.15, segs: 7 });
+  // 法線は **flip**(appendBlob だけで作った形の 決まり文句)。
+  // ちらばった 玉の あつまりは 重心の判定(auto)が あてにならないので 決めうつ。
+  const sap = toMesh(scene, `sapooze_${seed}`, B, 'flip');
+  sap.material = getSapMat(scene);
+  sap.parent = tree;
+  sap.isPickable = false;
+  return { tree, sap };
 }
 
 // ベリーの木: 実は別メッシュ(採取で消える・夜ほのか発光)
