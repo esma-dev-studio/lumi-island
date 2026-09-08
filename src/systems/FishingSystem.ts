@@ -181,12 +181,12 @@ export class FishingSystem {
     const A = A0();
     appendBlob(A, 0, 0, 0, 0.09, 0.11, 0.09, Color3.FromHexString('#cf8a63'), { segs: 6, noise: 0.03 });
     appendBlob(A, 0, 0.09, 0, 0.055, 0.06, 0.055, Color3.FromHexString('#e8e0cc'), { segs: 5, noise: 0.03 });
-    this.bobber = toMesh(scene, 'bobber', A);
+    this.bobber = toMesh(scene, 'bobber', A, 'keep');
     this.bobber.setEnabled(false);
     // 釣り竿(手に持たせるプロップ)
     const R = A0();
     appendTrunk(R, [[0, 0, 0], [0, 0.55, 0.12], [0, 1.0, 0.38]], 0.018, 0.007, Color3.FromHexString('#6f5438'), 5);
-    this.rod = toMesh(scene, 'rodProp', R);
+    this.rod = toMesh(scene, 'rodProp', R, 'keep');
     this.rod.setEnabled(false);
     // v21 ぬしの すがた。ふつうの魚(ウキ 0.09m)の 6倍ちかい 大きさで、
     // やりとりの あいだ 水面を きっては もぐる。丸い部品だけなので orient は 'flip'
@@ -198,7 +198,7 @@ export class FishingSystem {
     appendBlob(F, 0.52, 0.02, 0, 0.16, 0.12, 0.1, body, { segs: 7, noise: 0.05 }); // 頭
     appendBlob(F, -0.66, 0.06, 0, 0.2, 0.24, 0.05, body, { segs: 6, noise: 0.06 }); // 尾びれ
     appendBlob(F, 0.02, 0.3, 0, 0.24, 0.14, 0.04, body, { segs: 6, noise: 0.06 }); // せびれ
-    this.nushiFish = toMesh(scene, 'nushiFish', F, 'flip');
+    this.nushiFish = toMesh(scene, 'nushiFish', F, 'keep');
     this.nushiFish.isPickable = false;
     this.nushiFish.setEnabled(false);
   }

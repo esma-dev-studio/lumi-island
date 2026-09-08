@@ -11,6 +11,31 @@ import type { Objective } from '../systems/ObjectiveSystem';
  */
 export const SUB_DIST_MIN = 1.8;
 
+/**
+ * いま画面に出ている「いまやること」。
+ *
+ * どの画面も 目標そのものは GameScene → ObjectiveHud.update() でしか 受けとらないので、
+ * 「いまの目標を 知っているのは このクラスだけ」という形を くずさずに
+ * UI側(クラフト画面)へ 渡すための ひとつ穴。表示の文言(headline/label)は 一切さわらない。
+ * touch_audit_v17 F-01: クラフトを開いたとき、目標が名ざしたレシピを
+ * パネル内スクロールで 先頭付近に出すために使う。
+ */
+let shownObjective: Objective | null = null;
+
+/**
+ * いま「いまやること」に出ている目標(まだ1度も出していなければ null)。
+ * 名前を ObjectiveSystem の currentObjective() と 分けてあるのは、
+ * あちらが「計算する」側、こちらが「いま画面に出ている」側だから。
+ */
+export function hudObjective(): Objective | null {
+  return shownObjective;
+}
+
+/** テスト用: 覚えている目標を 捨てる */
+export function resetHudObjective(): void {
+  shownObjective = null;
+}
+
 export class ObjectiveHud {
   private el: HTMLElement;
   private headEl: HTMLElement;
@@ -33,6 +58,7 @@ export class ObjectiveHud {
   }
 
   update(o: Objective, dist: number | null): void {
+    shownObjective = o; // クラフト画面が「いまの目標のレシピ」を引くための唯一の出どころ
     const key = o.id + '|' + o.headline + '|' + o.label + '|' + (o.progress ? `${o.progress.cur}/${o.progress.max}` : '');
     if (key !== this.lastKey) {
       this.lastKey = key;

@@ -332,7 +332,7 @@ export function makeCairn(scene: Scene, seed: number): Mesh {
       jitterColor(Color3.FromHexString('#7a756c'), seed + i, 0.16), { segs: 8, noise: 0.18, flatBottom: true, bottomDark: 0.2 });
     y += h * 1.8;
   }
-  return toMesh(scene, `marketCairn_${seed}`, A, 'flip');
+  return toMesh(scene, `marketCairn_${seed}`, A, 'keep');
 }
 
 /** 屋台のよこに つみあげた 木箱(にぎわいの ための 小もの) */

@@ -4,7 +4,7 @@ import {
   applyBundle, backupBytes, bundleFileName, exportBundleText, listBackups, parseBundle, restoreBackup,
   type BackupInfo, type ImportFail, type SaveSummary,
 } from '../save/SaveSystem';
-import { setSoundEnabled } from '../audio/AudioSystem';
+import { setSoundEnabled, startTitleMusic, stopTitleMusic } from '../audio/AudioSystem';
 import { sfx } from '../audio/AudioSystem';
 import { byInput } from './inputMode';
 import { HELP_KEYBOARD, HELP_TOUCH } from './helpText';
@@ -40,6 +40,10 @@ export class TitleScreen {
     this.el.className = 'title-screen';
     document.getElementById('ui-root')!.appendChild(this.el);
     this.render();
+    // タイトル曲(夜のテーマの静かな変奏)。ブラウザの自動再生制限があるので、
+    // 実際に鳴り出すのは **最初のクリック/キーのあと**(initAudioOnGesture と同じ道すじ)。
+    // 背景(TitleBackdrop)は失敗しても タイトル自体は動くので、音は こちらに付ける。
+    startTitleMusic();
   }
 
   private render(): void {
@@ -94,8 +98,10 @@ export class TitleScreen {
         if (act === 'new') {
           if (saved && !(await this.confirmModal('セーブデータがあります。<br>はじめからにすると消えますが、いいですか?'))) return;
           clearSave();
+          stopTitleMusic(); // 島の曲(時間帯のBGM)に ゆずる
           this.onStart?.('new');
         } else if (act === 'continue') {
+          stopTitleMusic();
           this.onStart?.('continue');
         } else if (act === 'settings' || act === 'help') {
           this.el.querySelectorAll<HTMLElement>('.title-extra').forEach((p) => {
@@ -294,6 +300,7 @@ export class TitleScreen {
   }
 
   dispose(): void {
+    stopTitleMusic(); // 「はじめる」を通らずに閉じた場合の保険
     this.el.remove();
   }
 }

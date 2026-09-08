@@ -55,6 +55,44 @@ export function nextDisplayHint(s: GameState): DisplayHint | null {
 export const COMBO_HINT_FLAG = 'hint_combo';
 export const COMBO_HINT_TEXT = 'クラフトの「くみあわせ」タブで いろいろ ためしてみよう。はずれても なにも なくならないよ';
 
+/**
+ * v17 段階解放の案内文(トースト)を1か所にまとめたもの。
+ *
+ * これまでは byInput(...) の中に じか書きしてあったので、
+ * 読みやすさの機械検査(src/systems/TextStyleCheck.ts)に かけられなかった。
+ * 出る文字列は これまでと同じ——ただし「配置できるよ」の1本だけは
+ * かな中心に書きなおしてある(家具・配置は 許可漢字の外。どのテストも押さえていない文)。
+ *
+ * key   : キーボードのとき(押すキーの名前で言う)
+ * touch : 指のとき(画面のボタンの名前で言う)
+ */
+export const TUTORIAL_TEXTS = {
+  move: {
+    key: '<kbd>WASD</kbd>か<kbd>矢印キー</kbd>で あるいてみよう',
+    touch: 'がめん左下を ゆびで うごかして あるいてみよう。おおきく たおすと はしれるよ',
+  },
+  inventory: {
+    key: '<kbd>Tab</kbd>で「もちもの」が見られるよ',
+    touch: '右上の「もちもの」ボタンで 見られるよ',
+  },
+  codex: {
+    key: '<kbd>Z</kbd>で ずかんが 見られるよ',
+    touch: '右上の「ずかん」ボタンで 見られるよ',
+  },
+  quest: {
+    key: '<kbd>Q</kbd>で おねがいを見られるよ',
+    touch: '右上の「おねがい」ボタンで 見られるよ',
+  },
+  craft: {
+    key: '<kbd>C</kbd>で クラフトができるよ',
+    touch: '右上の「クラフト」ボタンで クラフトができるよ',
+  },
+  place: {
+    key: '「もちもの」の「おく」で かぐを おけるよ',
+    touch: '「もちもの」の「おく」で かぐを おけるよ',
+  },
+} as const;
+
 export interface KeyGates {
   inventory: boolean;
   craft: boolean;
@@ -75,10 +113,7 @@ export class TutorialSystem {
       return {
         id: 'tut_move', headline: 'いまやること',
         // 案内は出すたびに入力手段で決める(タッチならキーの名前は出さない)
-        label: byInput(
-          '<kbd>WASD</kbd>か<kbd>矢印キー</kbd>で あるいてみよう',
-          'がめん左下を ゆびで うごかして あるいてみよう。おおきく たおすと はしれるよ'
-        ),
+        label: byInput(TUTORIAL_TEXTS.move.key, TUTORIAL_TEXTS.move.touch),
         target: { kind: 'none' },
       };
     }
@@ -99,39 +134,27 @@ export class TutorialSystem {
   onFirstItem(): void {
     if (!this.state.flags.unlock_inv) {
       this.state.flags.unlock_inv = true;
-      toast(
-        byInput('<kbd>Tab</kbd>で「もちもの」が見られるよ', '右上の「もちもの」ボタンで 見られるよ'),
-        'wood'
-      );
+      toast(byInput(TUTORIAL_TEXTS.inventory.key, TUTORIAL_TEXTS.inventory.touch), 'wood');
       // ずかんは「もちもの」と同じ解放。案内はこの1回だけ(トーストの並びで下に積まれる)
-      toast(
-        byInput('<kbd>Z</kbd>で ずかんが 見られるよ', '右上の「ずかん」ボタンで 見られるよ'),
-        'moss'
-      );
+      toast(byInput(TUTORIAL_TEXTS.codex.key, TUTORIAL_TEXTS.codex.touch), 'moss');
     }
   }
   onQuestAccepted(): void {
     if (!this.state.flags.unlock_quest) {
       this.state.flags.unlock_quest = true;
-      toast(
-        byInput('<kbd>Q</kbd>で おねがいを見られるよ', '右上の「おねがい」ボタンで 見られるよ'),
-        'lumina'
-      );
+      toast(byInput(TUTORIAL_TEXTS.quest.key, TUTORIAL_TEXTS.quest.touch), 'lumina');
     }
   }
   onCraftUnlocked(): void {
     if (!this.state.flags.unlock_craft) {
       this.state.flags.unlock_craft = true;
-      toast(
-        byInput('<kbd>C</kbd>で クラフトができるよ', '右上の「クラフト」ボタンで クラフトができるよ'),
-        'lumina'
-      );
+      toast(byInput(TUTORIAL_TEXTS.craft.key, TUTORIAL_TEXTS.craft.touch), 'lumina');
     }
   }
   onFirstFurniture(): void {
     if (!this.state.flags.unlock_place) {
       this.state.flags.unlock_place = true;
-      toast('「もちもの」から家具を「おく」で配置できるよ', 'f_lantern');
+      toast(byInput(TUTORIAL_TEXTS.place.key, TUTORIAL_TEXTS.place.touch), 'f_lantern');
     }
   }
   /**

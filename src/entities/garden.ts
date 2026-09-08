@@ -3,14 +3,14 @@
 // 巻き順の約束(教訓4):
 //   - 板・柱・枠のように角ばったものは appendBox だけで組み、toMesh は 'keep'
 //     (appendBox の巻き順はすでに外向き。deco.ts の makeLowFence と同じ流儀)。
-//   - 草花のように丸いものは appendBlob だけで組み、'flip' + faceOutward で
+//   - 草花のように丸いものは appendBlob だけで組み、'keep'(WINDING_RULE)で
 //     法線と巻き順の両方を外向きにそろえる(v9で見つけた「平たい面が真っ黒」の対策)。
 //   - 1つのメッシュに box と blob を混ぜない(混ぜると片方が裏返る)。
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 import { A0, appendBlob, appendBox, applyArrays, getGlowMats, jitterColor, toMesh } from './flora';
-import { faceOutward, makeLowFence } from './deco';
+import { makeLowFence } from './deco';
 import { vnoise } from './terrain';
 import { attachLightPool } from './effects';
 import { GARDEN_FENCE, GARDEN_GATE, GARDEN_PLOTS, PLOT_D, PLOT_W, stageOf } from '../systems/GardenSystem';
@@ -129,7 +129,7 @@ export function makeSprout(scene: Scene, seed: number): Mesh {
         { segs: 5, noise: 0.1, seed: seed + i * 5 + s, bottomDark: 0.08 });
     }
   }
-  return faceOutward(toMesh(scene, `sprout_${seed}`, A, 'flip'));
+  return toMesh(scene, `sprout_${seed}`, A, 'keep');
 }
 
 /** つぼみ: くきがのび、先に閉じたつぼみ */
@@ -158,7 +158,7 @@ export function makeBud(scene: Scene, seed: number): Mesh {
       jitterColor(Color3.FromHexString(FLOWER_HEADS[(i + seed) % 3]), seed + i, 0.1),
       { segs: 5, noise: 0.07, seed: seed + i * 13, bottomDark: 0.1 });
   }
-  return faceOutward(toMesh(scene, `bud_${seed}`, A, 'flip'));
+  return toMesh(scene, `bud_${seed}`, A, 'keep');
 }
 
 /**
@@ -202,7 +202,7 @@ export function makeBloom(scene: Scene, seed: number): { root: Mesh; glow: Mesh 
       segs: 5, noise: 0.05, seed: seed + i, bottomDark: 0,
     });
   }
-  const root = faceOutward(toMesh(scene, `bloom_${seed}`, A, 'flip'));
+  const root = toMesh(scene, `bloom_${seed}`, A, 'keep');
   const glow = new Mesh(`bloomglow_${seed}`, scene);
   applyArrays(glow, G);
   glow.material = getGlowMats(scene).amber;

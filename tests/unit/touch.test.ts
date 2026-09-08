@@ -5,10 +5,16 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   TouchControls,
   hintToLabel,
+  isActionableHint,
+  reasonToLabel,
   stickVector,
+  ACTION_DEBOUNCE_MS,
+  IDLE_LABEL,
+  REASON_FALLBACK,
   STICK_RADIUS,
   type TouchFrame,
 } from '../../src/ui/TouchControls';
+import { PANEL_MORE_TEXT, attachPanelScrollCue, flashPanelRow } from '../../src/ui/panelScroll';
 import {
   PlayerController,
   rotateInputByYaw,
@@ -428,6 +434,86 @@ describe('TouchControls(タッチUI)', () => {
     expect('az' in input).toBe(false);
   });
 
+  // ---- v17.1 touch_audit_v17 の手当て ----
+  it('できない理由のヒントでは 丸ボタンを 淡くし、理由文は のせない(F-03/F-12)', () => {
+    tc.setVisible(true);
+    const btn = q('.touch-action');
+    // 虫あみが 無い(理由の表示だけ。Eでは 何も起きない候補)
+    tc.sync(frame({ hint: 'つかまえるには 虫あみが ひつよう' }));
+    expect(btn.textContent).toBe('つかまえる'); // 短い動詞だけ
+    expect(btn.classList.contains('dim')).toBe(true);
+    btn.dispatchEvent(evt('pointerdown'));
+    expect(calls).toEqual([]); // 淡いあいだは 押しても効かない(これまでどおり)
+    // 配置中の「置けない理由」は いつも「おく」
+    tc.sync(frame({ placementActive: true, hint: 'しぜんの めぐみの ばしょだよ — うごかして ばしょを さがそう' }));
+    expect(btn.textContent).toBe('おく');
+    expect(btn.classList.contains('dim')).toBe(true);
+    // 置ける場所に なったら そのまま押せる
+    tc.sync(frame({ placementActive: true, hint: '<kbd>E</kbd>おく <kbd>R</kbd>まわす' }));
+    expect(btn.textContent).toBe('おく');
+    expect(btn.classList.contains('dim')).toBe(false);
+  });
+
+  it('釣りのようすは 丸ボタンに のこす(F-13)', () => {
+    tc.setVisible(true);
+    const btn = q('.touch-action');
+    tc.sync(frame({ hint: 'まってる… <kbd>Esc</kbd>やめる' }));
+    expect(btn.textContent).toBe('まってる…');
+    expect(btn.classList.contains('dim')).toBe(true); // 押しても何も起きない場面
+    tc.sync(frame({ hint: '<b class="bite">!!</b> <kbd>E</kbd>つりあげる' }));
+    expect(btn.textContent).toBe('!! つりあげる');
+    expect(btn.classList.contains('dim')).toBe(false);
+    // ヒントが 一瞬きえても すぐには「しらべる」に もどさない
+    tc.sync(frame({ hint: '' }));
+    expect(btn.textContent).toBe('!! つりあげる');
+    expect(btn.classList.contains('dim')).toBe(true);
+  });
+
+  it('丸ボタンの連打よけ(F-05)。会話送りは これまでどおり すぐ効く', () => {
+    tc.setVisible(true);
+    const btn = q('.touch-action');
+    tc.sync(frame({ hint: '<kbd>E</kbd>ツムギと はなす' }));
+    btn.dispatchEvent(evt('pointerdown'));
+    btn.dispatchEvent(evt('pointerdown')); // すぐ2回目 = 誤爆
+    expect(calls).toEqual(['interact']);
+    // 会話・達成・見せ場のあいだは 送りたいだけ 送れる
+    tc.sync(frame({ dialogueOpen: true }));
+    btn.dispatchEvent(evt('pointerdown'));
+    btn.dispatchEvent(evt('pointerdown'));
+    expect(calls).toEqual(['interact', 'interact', 'interact']);
+    expect(ACTION_DEBOUNCE_MS).toBeGreaterThan(0);
+  });
+
+  it('パネルを開いているあいだは 左下に「とじる」を出す(F-05)', () => {
+    tc.setVisible(true);
+    const close = q('.touch-close');
+    tc.sync(frame());
+    expect(shown(close)).toBe(false);
+    tc.sync(frame({ panelOpen: true }));
+    expect(shown(close)).toBe(true);
+    close.dispatchEvent(evt('pointerdown'));
+    expect(calls).toEqual(['menu']); // Escと同じ道
+  });
+
+  it('配置中は 右上のパネルボタンを しまう(F-15)', () => {
+    tc.setVisible(true);
+    const gates = { inventory: true, craft: true, quest: true };
+    tc.sync(frame({ gates }));
+    expect(shown(q('[data-el="inv"]'))).toBe(true);
+    tc.sync(frame({ gates, placementActive: true }));
+    for (const el of ['inv', 'craft', 'quest', 'codex']) {
+      expect(shown(q(`[data-el="${el}"]`)), el).toBe(false);
+    }
+    expect(shown(q('[data-el="menu"]'))).toBe(true); // メニュー(=やめる道)は のこす
+  });
+
+  it('ヒントが1つも無いときは これまでどおり「しらべる」を 淡く出す', () => {
+    tc.setVisible(true);
+    tc.sync(frame({ hint: '' }));
+    expect(q('.touch-action').textContent).toBe(IDLE_LABEL);
+    expect(q('.touch-action').classList.contains('dim')).toBe(true);
+  });
+
   it('disposeでDOMもイベントも残さない', () => {
     tc.setVisible(true);
     const spy = vi.spyOn(window, 'removeEventListener');
@@ -437,5 +523,98 @@ describe('TouchControls(タッチUI)', () => {
     window.dispatchEvent(evt('pointerdown', { pointerType: 'touch' }));
     expect(tc.visible).toBe(false); // 破棄後は反応しない
     spy.mockRestore();
+  });
+});
+
+// ---------- v17.1 「押せば動く」ヒントの見わけと、理由の短い言いかえ ----------
+describe('isActionableHint / reasonToLabel(touch_audit_v17 F-03)', () => {
+  it('実行できる候補だけが <kbd>E</kbd> を持つ、という約束で見わける', () => {
+    expect(isActionableHint('<kbd>E</kbd>木をきる')).toBe(true);
+    expect(isActionableHint('<kbd>E</kbd>おく <kbd>R</kbd>まわす')).toBe(true);
+    expect(isActionableHint('つかまえるには 虫あみが ひつよう')).toBe(false);
+    expect(isActionableHint('しぜんの めぐみの ばしょだよ')).toBe(false);
+    expect(isActionableHint('まってる… <kbd>Esc</kbd>やめる')).toBe(false);
+    expect(isActionableHint('')).toBe(false);
+  });
+
+  it('「〜には ○○が ひつよう」は 前の動詞だけにする', () => {
+    expect(reasonToLabel('つかまえるには 虫あみが ひつよう', false)).toBe('つかまえる');
+    expect(reasonToLabel('つりには ツリザオが ひつよう', false)).toBe('つり');
+    expect(reasonToLabel('ほるには シャベルが ひつよう', false)).toBe('ほる');
+    expect(reasonToLabel('うえるには はなが ひつよう', false)).toBe('うえる');
+    expect(reasonToLabel('つみとるには もうすこし まってから', false)).toBe('つみとる');
+  });
+
+  it('配置中は いつも「おく」(置けない理由は 画面下のヒント帯にまかせる)', () => {
+    expect(reasonToLabel('しぜんの めぐみの ばしょだよ', true)).toBe('おく');
+    expect(reasonToLabel('水の上には おけないよ', true)).toBe('おく');
+  });
+
+  it('短いようすの言葉は そのまま、長い理由は「…」にする', () => {
+    expect(reasonToLabel('まってる…', false)).toBe('まってる…');
+    expect(reasonToLabel('つりあげてる…', false)).toBe('つりあげてる…');
+    expect(reasonToLabel('るすみたい。また こよう', false)).toBe(REASON_FALLBACK);
+    expect(reasonToLabel('むしが いる! ちかづいて つかまえよう', false)).toBe(REASON_FALLBACK);
+  });
+});
+
+// ---------- v17.1 パネルの「▼ まだ あるよ」 ----------
+describe('attachPanelScrollCue(touch_audit_v17 F-01/F-02)', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="ui-root"><div class="panel"></div></div>';
+  });
+
+  it('パネルの いちばん後ろに 帯を1つだけ足す(押すものではない)', () => {
+    const panel = document.querySelector('.panel') as HTMLElement;
+    attachPanelScrollCue(panel);
+    attachPanelScrollCue(panel); // 2回呼んでも 増えない
+    const cues = panel.querySelectorAll('.panel-more');
+    expect(cues).toHaveLength(1);
+    expect(cues[0].textContent).toBe(PANEL_MORE_TEXT);
+    expect(panel.lastElementChild).toBe(cues[0]);
+    expect(cues[0].getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('中身が下に のこっているときだけ .on を付ける', () => {
+    const panel = document.querySelector('.panel') as HTMLElement;
+    attachPanelScrollCue(panel);
+    const cue = panel.querySelector('.panel-more') as HTMLElement;
+    // jsdom は 高さを持たないので、スクロール量を 直接 差しかえて 判定だけを見る
+    const set = (scrollH: number, clientH: number, top: number): void => {
+      Object.defineProperty(panel, 'scrollHeight', { value: scrollH, configurable: true });
+      Object.defineProperty(panel, 'clientHeight', { value: clientH, configurable: true });
+      panel.scrollTop = top;
+      panel.dispatchEvent(new Event('scroll'));
+    };
+    set(3000, 600, 0);
+    expect(cue.classList.contains('on')).toBe(true);
+    set(3000, 600, 2400); // いちばん下
+    expect(cue.classList.contains('on')).toBe(false);
+    set(600, 600, 0); // スクロールの要らないパネル
+    expect(cue.classList.contains('on')).toBe(false);
+  });
+
+  it('とじているパネルには 帯を出さない', () => {
+    const panel = document.querySelector('.panel') as HTMLElement;
+    panel.classList.add('hidden');
+    attachPanelScrollCue(panel);
+    const cue = panel.querySelector('.panel-more') as HTMLElement;
+    Object.defineProperty(panel, 'scrollHeight', { value: 3000, configurable: true });
+    Object.defineProperty(panel, 'clientHeight', { value: 600, configurable: true });
+    panel.dispatchEvent(new Event('scroll'));
+    expect(cue.classList.contains('on')).toBe(false);
+  });
+});
+
+describe('flashPanelRow(目当ての行を 光らせる)', () => {
+  it('クラスを付け、しばらくして はずす', () => {
+    vi.useFakeTimers();
+    document.body.innerHTML = '<div class="craft-row"></div>';
+    const row = document.querySelector('.craft-row') as HTMLElement;
+    flashPanelRow(row);
+    expect(row.classList.contains('panel-focus')).toBe(true);
+    vi.advanceTimersByTime(2000);
+    expect(row.classList.contains('panel-focus')).toBe(false);
+    vi.useRealTimers();
   });
 });

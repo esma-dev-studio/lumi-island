@@ -29,6 +29,7 @@ import {
 import { PHOTO_MAX, photoLabel, type Photo } from '../systems/PhotoSystem';
 import { badgeIcon, icon } from './icons';
 import { byInput } from './inputMode';
+import { attachPanelScrollCue } from './panelScroll';
 
 /** 達成マーク。絵文字は使わずSVG(icons.tsと同じ描き方) */
 const CHECK =
@@ -105,6 +106,8 @@ export class CodexUI {
     this.el = document.createElement('div');
     this.el.className = 'panel codex-panel hidden';
     document.getElementById('ui-root')!.appendChild(this.el);
+    // ずかん・バッジ・アルバムは いちばん長い一覧(見えているのは 9%)。下に まだ あることを 帯で見せる
+    attachPanelScrollCue(this.el);
     // クリックは委譲リスナー1本(毎描画のonclick割り当てだと「見えるのに押せない」が起きる)
     this.el.addEventListener('click', (e) => {
       const t = (e.target as HTMLElement).closest(

@@ -20,7 +20,7 @@ import { launchEdge } from './launch_browser.mjs';
 const require = createRequire(import.meta.url);
 const puppeteer = require('puppeteer-core');
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const BASE_URL = process.env.LUMI_BASE ?? 'http://localhost:5206';
+const BASE_URL = process.env.LUMI_BASE ?? 'http://localhost:5224';
 const CHECK = process.argv.includes('--check');
 const OUT_JSON = join(ROOT, '.logs', 'audio_measure.json');
 
@@ -45,6 +45,8 @@ const LOOP_BANDS = {
   rain: { rmsDb: [-58, -30] },
   bed: { rmsDb: [-62, -34] },
   music: { rmsDb: [-64, -32] },
+  /** v28 締めのフレーズ(1〜2秒)。効果音ではないが 前に出る音なので上限を持つ */
+  stinger: { peakDb: [-46, -18] },
 };
 /** バス間の約束(これが崩れると「UI音がBGMより大きい」ような事故になる) */
 const BALANCE = {
@@ -56,6 +58,21 @@ const BALANCE = {
   footBelowUiDb: 2,
   /** いちばん大きい音でも このピークを超えない(dBFS) */
   loudestPeakDb: -12,
+  /**
+   * v28 音楽の居場所。「環境音より すこし上・効果音より下」。
+   *
+   * 上がわ(環境音とのくらべ)は **ピーク同士**で見る。
+   * 音楽は とぎれとぎれの鈴の音、環境音は とぎれない風なので、
+   * RMS(平均)で くらべると 音楽が いつも負ける——「聞こえかた」を表さない。
+   * (足音の実測で学んだのと同じ罠: ノイズ系と単音は 同じ数字でも別の大きさに鳴る)
+   * 下がわ(効果音とのくらべ)は RMS 同士。効果音も とぎれる音なので 同じ土俵になる。
+   */
+  musicPeakAboveBedDb: 1,
+  musicBelowSfxDb: 3,
+  /** 時間帯どうしで 大きさがそろっていること(タイトルは静かな変奏なので少し広め) */
+  musicSpreadDb: 5,
+  /** 締めのフレーズは いちばん大きい効果音を こえない(ピーク同士) */
+  stingerBelowLoudestDb: 0,
 };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -63,9 +80,25 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /** ブラウザの中で走る計測本体(page.evaluate に渡す) */
 /* eslint-disable no-undef */
 async function measureInPage() {
-  const { synth, mix, ambience, zones, MusicBox } = window.__audio;
+  const { synth, mix, ambience, zones, MusicBox, musicPhrase } = window.__audio;
   const SR = 48000;
   const db = (v) => (v > 0 ? 20 * Math.log10(v) : -Infinity);
+
+  /** 好きな区間だけの RMS(休符がほんとうに無音かを測る) */
+  function windowRms(buf, fromSec, toSec) {
+    const d = buf.getChannelData(0);
+    const a = Math.max(0, Math.floor(fromSec * buf.sampleRate));
+    const b = Math.min(d.length, Math.floor(toSec * buf.sampleRate));
+    let sum = 0;
+    let peak = 0;
+    for (let i = a; i < b; i++) {
+      sum += d[i] * d[i];
+      const v = Math.abs(d[i]);
+      if (v > peak) peak = v;
+    }
+    const n = Math.max(1, b - a);
+    return { rmsDb: +db(Math.sqrt(sum / n)).toFixed(2), peakDb: +db(peak).toFixed(2) };
+  }
 
   /**
    * 鳴っている区間だけを見て ピーク/RMS/長さ を出す。
@@ -112,7 +145,24 @@ async function measureInPage() {
     return metrics(buf, skipSec);
   }
 
-  const out = { sfx: {}, loops: {}, mixCase: {}, design: { MIX: mix.MIX } };
+  const out = { sfx: {}, loops: {}, stingers: {}, presets: {}, mixCase: {}, design: { MIX: mix.MIX } };
+
+  /** MusicBox を「時計だけ手で進める」形でオフライン描画する(予約はすべて絶対時刻) */
+  function musicClock(oc) {
+    const c = { t: 0 };
+    return {
+      c,
+      clock: {
+        get currentTime() {
+          return c.t;
+        },
+        createGain: () => oc.createGain(),
+        createOscillator: () => oc.createOscillator(),
+        createDelay: (m) => oc.createDelay(m),
+        createBiquadFilter: () => oc.createBiquadFilter(),
+      },
+    };
+  }
 
   // ---- 効果音(1つずつ) ----
   for (const name of synth.SFX_NAMES) {
@@ -160,53 +210,113 @@ async function measureInPage() {
   };
 
   // ---- 環境音の3層(浜・草地・林・夜・室内) ----
+  const mkBed = (oc, bus) =>
+    new ambience.AmbienceBed(oc, bus.ambient, mix.MIX.bed.snowWind, mix.MIX.bed.snowCutoff);
   const bedCases = [
-    ['bed_beach', { wave: 1, forest: 0, grass: 0 }, mix.MIX.bed.day, false],
-    ['bed_grass', { wave: 0, forest: 0, grass: 1 }, mix.MIX.bed.day, false],
-    ['bed_forest', { wave: 0, forest: 1, grass: 0 }, mix.MIX.bed.day, false],
-    ['bed_mixed', { wave: 0.34, forest: 0.33, grass: 0.33 }, mix.MIX.bed.day, false],
-    ['bed_night', { wave: 0.34, forest: 0.33, grass: 0.33 }, mix.MIX.bed.night, false],
-    ['bed_indoor', { wave: 0.34, forest: 0.33, grass: 0.33 }, mix.MIX.bed.sheltered, true],
+    ['bed_beach', { wave: 1, forest: 0, grass: 0 }, mix.MIX.bed.day, false, 0],
+    ['bed_grass', { wave: 0, forest: 0, grass: 1 }, mix.MIX.bed.day, false, 0],
+    ['bed_forest', { wave: 0, forest: 1, grass: 0 }, mix.MIX.bed.day, false, 0],
+    ['bed_mixed', { wave: 0.34, forest: 0.33, grass: 0.33 }, mix.MIX.bed.day, false, 0],
+    ['bed_night', { wave: 0.34, forest: 0.33, grass: 0.33 }, mix.MIX.bed.night, false, 0],
+    ['bed_indoor', { wave: 0.34, forest: 0.33, grass: 0.33 }, mix.MIX.bed.sheltered, true, 0],
+    // v28 ゆきの日: 3層がこもって下がり、かすかな風が足される
+    // (level は AudioSystem.setAmbient と同じ式で snowDuck をかける)
+    ['bed_snow', { wave: 0.34, forest: 0.33, grass: 0.33 }, mix.MIX.bed.day * mix.MIX.bed.snowDuck, false, 1],
+    ['bed_snow_wind_only', { wave: 0, forest: 0, grass: 0 }, mix.MIX.bed.day, false, 1],
   ];
-  for (const [key, w, level, sheltered] of bedCases) {
+  for (const [key, w, level, sheltered, snow] of bedCases) {
     const m = await render(
       9,
       (oc, bus) => {
-        const b = new ambience.AmbienceBed(oc, bus.ambient);
+        const b = mkBed(oc, bus);
         b.setSheltered(sheltered);
+        b.setSnow(snow, 0.5);
         b.setWeights(w, level, mix.MIX.bed.rampSec);
       },
       4
     );
-    out.loops[key] = { ...m, kind: 'bed', weights: w, level };
+    out.loops[key] = { ...m, kind: 'bed', weights: w, level, snow };
   }
 
-  // ---- 夜のオルゴールBGM ----
+  // ---- オルゴールBGM(時間帯ごとの6つ) ----
   // MusicBox は「currentTime を持つ最小のAudioContext」があれば動く。
   // 予約はすべて絶対時刻なので、時計だけ手で進めれば オフラインでも同じ演奏になる。
-  async function renderMusic(festival) {
-    const seconds = 24;
+  //
+  // 昼のプリセットは フレーズのあとに休符が入るので、**鳴っているあいだ**を測る
+  // (休符まで入れると「音楽が小さくなった」と誤診する)。
+  const SKIP = 6; // フェードイン3秒+助走
+  async function renderMusic(preset) {
+    const p = musicPhrase.generatePhrase(0, preset);
+    const phraseSec = (p.totalBeats - p.restBeats) * p.secPerBeat;
+    const seconds = SKIP + Math.min(phraseSec, 24);
     const oc = new OfflineAudioContext(1, Math.ceil(SR * seconds), SR);
     const bus = mix.buildBusGraph(oc, oc.destination);
-    let simT = 0;
-    const clock = {
-      get currentTime() {
-        return simT;
-      },
-      createGain: () => oc.createGain(),
-      createOscillator: () => oc.createOscillator(),
-      createDelay: (m) => oc.createDelay(m),
-      createBiquadFilter: () => oc.createBiquadFilter(),
-    };
+    const { c, clock } = musicClock(oc);
     const mb = new MusicBox(clock, bus.music, { autoTick: false });
-    mb.setNight(true, 0, festival);
-    for (simT = 0; simT < seconds; simT += 0.05) mb.tick();
+    mb.setSegment(true, preset, 0);
+    for (c.t = 0; c.t < seconds; c.t += 0.05) mb.tick();
     const buf = await oc.startRendering();
-    // フェードイン(3秒)のあとを測る
-    return metrics(buf, 5);
+    return {
+      ...metrics(buf, SKIP),
+      kind: 'music',
+      preset,
+      bpm: p.bpm,
+      notes: p.notes.length,
+      phraseSec: +phraseSec.toFixed(1),
+      restSec: +(p.restBeats * p.secPerBeat).toFixed(1),
+      loopSec: +(p.totalBeats * p.secPerBeat).toFixed(1),
+      midiLo: Math.min(...p.notes.map((n) => n.midi)),
+      midiHi: Math.max(...p.notes.map((n) => n.midi)),
+      gain: p.gain,
+    };
   }
-  out.loops.music_night = { ...(await renderMusic(false)), kind: 'music' };
-  out.loops.music_festival = { ...(await renderMusic(true)), kind: 'music' };
+  for (const preset of ['morning', 'day', 'evening', 'night', 'festival', 'title']) {
+    const m = await renderMusic(preset);
+    out.loops[`music_${preset}`] = m;
+    out.presets[preset] = m;
+  }
+
+  // ---- 「息をする」ことの証拠: 休符の区間が ほんとうに無音か ----
+  // ひるの1周(フレーズ+休符)を丸ごと描いて、休符の中の RMS を測る。
+  {
+    const p = musicPhrase.generatePhrase(0, 'day');
+    const phraseSec = (p.totalBeats - p.restBeats) * p.secPerBeat;
+    const loopSec = p.totalBeats * p.secPerBeat;
+    const oc = new OfflineAudioContext(1, Math.ceil(SR * (loopSec + 2)), SR);
+    const bus = mix.buildBusGraph(oc, oc.destination);
+    const { c, clock } = musicClock(oc);
+    const mb = new MusicBox(clock, bus.music, { autoTick: false });
+    mb.setSegment(true, 'day', 0);
+    for (c.t = 0; c.t < loopSec + 2; c.t += 0.05) mb.tick();
+    const buf = await oc.startRendering();
+    out.mixCase.dayBreath = {
+      phraseSec: +phraseSec.toFixed(1),
+      restSec: +(p.restBeats * p.secPerBeat).toFixed(1),
+      // 鳴っているあいだ(フェードインのあと)と、休符のまん中
+      playing: windowRms(buf, SKIP, phraseSec),
+      resting: windowRms(buf, phraseSec + 4, loopSec - 1),
+    };
+  }
+
+  // ---- 締めのフレーズ(依頼達成・章クリア・バッジ) ----
+  // フェードを通らない道すじなので、**音楽を鳴らしていない状態**で測る
+  // (実際に休符の最中に鳴らしても同じ大きさで出る、を数で確かめる)。
+  for (const kind of ['quest', 'chapter', 'badge']) {
+    const seconds = 6;
+    const oc = new OfflineAudioContext(1, Math.ceil(SR * seconds), SR);
+    const bus = mix.buildBusGraph(oc, oc.destination);
+    const { c, clock } = musicClock(oc);
+    const mb = new MusicBox(clock, bus.music, { autoTick: false });
+    mb.playStinger(kind);
+    for (c.t = 0; c.t < seconds; c.t += 0.05) mb.tick();
+    const buf = await oc.startRendering();
+    out.stingers[kind] = {
+      ...metrics(buf, 0),
+      kind: 'stinger',
+      notes: musicPhrase.STINGERS[kind].notes.length,
+      designSec: musicPhrase.STINGERS[kind].sec,
+    };
+  }
 
   // ---- 最悪の重なり(ここでクリップしなければ、実プレイでもクリップしない) ----
   // 本降りの雨 + 浜の環境音 + BGM + いちばん大きい効果音3つを同時に鳴らす。
@@ -218,23 +328,17 @@ async function measureInPage() {
     synth.clearSynthCache();
     const r = new ambience.RainVoice(oc, bus.ambient, mix.MIX.rainPeak);
     r.setLevel(1, mix.MIX.rainRampSec);
-    const b = new ambience.AmbienceBed(oc, bus.ambient);
+    const b = mkBed(oc, bus);
+    b.setSnow(1, 0.5); // v28 みぞれ(雨+ゆき)の最悪ケース
     b.setWeights({ wave: 0.5, forest: 0.2, grass: 0.3 }, mix.MIX.bed.day, mix.MIX.bed.rampSec);
-    let simT = 0;
-    const clock = {
-      get currentTime() {
-        return simT;
-      },
-      createGain: () => oc.createGain(),
-      createOscillator: () => oc.createOscillator(),
-      createDelay: (m) => oc.createDelay(m),
-      createBiquadFilter: () => oc.createBiquadFilter(),
-    };
+    const { c, clock } = musicClock(oc);
     const mb = new MusicBox(clock, bus.music, { autoTick: false });
-    mb.setNight(true, 3, false);
-    for (simT = 0; simT < seconds; simT += 0.05) mb.tick();
+    mb.setSegment(true, 'night', 3);
+    for (c.t = 0; c.t < seconds; c.t += 0.05) mb.tick();
     // 効果音は「いちばん重なりそうな瞬間」を作る: 開花 + 依頼完了 + クラフト + 足音
-    simT = 0;
+    // v28 章クリアの締め(音楽側)も同じ瞬間に重ねる
+    c.t = 0;
+    mb.playStinger('chapter');
     for (const n of ['bloom', 'quest', 'craft', 'chop', 'step_wood']) {
       synth.renderSfx(n, { ctx: oc, dest: mix.sfxDestination(bus, n) });
     }
@@ -299,6 +403,39 @@ function judge(res) {
     }
     if (m.kind !== 'oneshot' && m.soundingSec <= 0.05) problems.push(`無音: ${key} が鳴っていない`);
   }
+  // v28 締めのフレーズ(1〜2秒)
+  for (const [key, m] of Object.entries(res.stingers ?? {})) {
+    if (m.clipped > 0) problems.push(`クリップ: 締め ${key} で ${m.clipped} サンプルが 0dBFS を超えた`);
+    if (m.soundingSec <= 0.1) problems.push(`無音: 締め ${key} が鳴っていない`);
+    const b = LOOP_BANDS.stinger.peakDb;
+    if (m.peakDb < b[0] || m.peakDb > b[1]) {
+      problems.push(`音量: 締め ${key} のピーク ${m.peakDb}dBFS が設計帯 ${b[0]}〜${b[1]} の外`);
+    }
+    if (m.soundingSec > m.designSec + 3) {
+      problems.push(`長さ: 締め ${key} が ${m.soundingSec}秒(設計 ${m.designSec}秒+余韻)より長い`);
+    }
+  }
+  // v28 「息をする」: 休符の中が ほんとうに無音か(環境音だけの時間になっているか)
+  const breath = res.mixCase.dayBreath;
+  if (breath) {
+    if (!(breath.resting.rmsDb < breath.playing.rmsDb - 20)) {
+      problems.push(
+        `息: ひるの休符が 無音になっていない(休符 ${breath.resting.rmsDb}dBFS / 演奏中 ${breath.playing.rmsDb}dBFS)`
+      );
+    }
+    if (breath.restSec < 20 || breath.restSec > 40) {
+      problems.push(`息: ひるの休符が ${breath.restSec}秒(設計 20〜40秒)`);
+    }
+  }
+  // v28 ゆきの日: こもって・風が足されて・3層だけのときより うるさくならない
+  const snow = res.loops.bed_snow;
+  const plain = res.loops.bed_mixed;
+  if (snow && plain && !(snow.rmsDb <= plain.rmsDb + 1)) {
+    problems.push(`ゆき: 雪の環境音(${snow.rmsDb}dBFS)が ふつうの日(${plain.rmsDb}dBFS)より 1dB以上 大きい`);
+  }
+  if (res.loops.bed_snow_wind_only && res.loops.bed_snow_wind_only.soundingSec <= 0.05) {
+    problems.push('ゆき: 風の層が鳴っていない');
+  }
   if (res.mixCase.worst.clipped > 0) {
     problems.push(`クリップ: 最悪の重なりで ${res.mixCase.worst.clipped} サンプルが 0dBFS を超えた`);
   }
@@ -330,7 +467,41 @@ function judge(res) {
   if (footMed !== null && uiMed !== null && uiMed - footMed < BALANCE.footBelowUiDb) {
     problems.push(`バランス: 足音(${footMed}dB)が UI音(${uiMed}dB)より ${BALANCE.footBelowUiDb}dB 以上 小さくない`);
   }
-  return { problems, uiMed, footMed, playMed };
+
+  // v28 音楽の居場所: 環境音より すこし上(ピーク)・効果音より下(RMS)
+  const musicRows = Object.values(res.loops).filter((m) => m.kind === 'music');
+  const bedRows = Object.values(res.loops).filter((m) => m.kind === 'bed');
+  const musicPeak = median(musicRows.map((m) => m.peakDb));
+  const musicRms = median(musicRows.map((m) => m.rmsDb));
+  const bedRms = median(bedRows.map((m) => m.rmsDb));
+  // 「立っていることが多い場所」を 環境音の代表にする(浜のきわ・室内は はしっこの例)
+  const bedRef = res.loops.bed_mixed ?? null;
+  const sfxRms = median([...Object.values(res.sfx)].filter((m) => m.bus === 'sfx' || m.bus === 'notify').map((m) => m.rmsDb));
+  if (musicPeak !== null && bedRef && musicPeak - bedRef.peakDb < BALANCE.musicPeakAboveBedDb) {
+    problems.push(
+      `バランス: 音楽のピーク(中央値 ${musicPeak}dB)が 環境音(${bedRef.peakDb}dB)より上になっていない=曲が埋もれる`
+    );
+  }
+  if (musicRms !== null && sfxRms !== null && sfxRms - musicRms < BALANCE.musicBelowSfxDb) {
+    problems.push(`バランス: 音楽(${musicRms}dB)が 効果音(RMS中央値 ${sfxRms}dB)より ${BALANCE.musicBelowSfxDb}dB 以上 下でない`);
+  }
+  if (musicRows.length > 1) {
+    const spread = Math.max(...musicRows.map((m) => m.peakDb)) - Math.min(...musicRows.map((m) => m.peakDb));
+    if (spread > BALANCE.musicSpreadDb) {
+      problems.push(`ばらつき: 時間帯どうしの音楽のピーク差が ${spread.toFixed(1)}dB(上限 ${BALANCE.musicSpreadDb}dB)`);
+    }
+  }
+  // 締めのフレーズは いちばん大きい効果音を こえない
+  const loudestSfx = Math.max(...play, ...peaks.ui.map((p) => p.db), ...peaks.foot.map((p) => p.db));
+  for (const [key, m] of Object.entries(res.stingers ?? {})) {
+    if (m.peakDb > loudestSfx + BALANCE.stingerBelowLoudestDb) {
+      problems.push(`バランス: 締め ${key}(${m.peakDb}dBFS)が いちばん大きい効果音(${loudestSfx.toFixed(1)}dBFS)より大きい`);
+    }
+  }
+  return {
+    problems, uiMed, footMed, playMed,
+    musicPeak, musicRms, bedRms, bedRefPeak: bedRef ? bedRef.peakDb : null, sfxRms,
+  };
 }
 
 function report(res) {
@@ -346,6 +517,27 @@ function report(res) {
   console.log('  なまえ                ピークdBFS   RMSdBFS   クリップ');
   for (const [key, m] of Object.entries(res.loops)) {
     console.log(`  ${key.padEnd(20)}${fmt(m.peakDb, 10)}${fmt(m.rmsDb, 10)}${fmt(m.clipped, 10)}`);
+  }
+  console.log('\n=== 時間帯ごとのBGM(音域・テンポ・音数・休符) ===');
+  console.log('  じかんたい   BPM  音数   音域MIDI  フレーズ秒  休符秒  1周秒   ピークdBFS  RMSdBFS');
+  for (const [key, m] of Object.entries(res.presets ?? {})) {
+    console.log(
+      `  ${key.padEnd(11)}${fmt(m.bpm, 4)}${fmt(m.notes, 6)}   ${String(m.midiLo).padStart(3)}〜${String(m.midiHi).padStart(3)}` +
+        `${fmt(m.phraseSec, 11)}${fmt(m.restSec, 8)}${fmt(m.loopSec, 8)}${fmt(m.peakDb, 12)}${fmt(m.rmsDb, 9)}`
+    );
+  }
+  const br = res.mixCase.dayBreath;
+  if (br) {
+    console.log(
+      `  ひるの「息」: 演奏中 RMS ${br.playing.rmsDb} dBFS / 休符 ${br.restSec}秒のあいだ RMS ${br.resting.rmsDb} dBFS(ピーク ${br.resting.peakDb})`
+    );
+  }
+  console.log('\n=== 締めのフレーズ(音楽の側から出す) ===');
+  console.log('  しゅるい      音数  ピークdBFS   RMSdBFS   長さ秒  クリップ');
+  for (const [key, m] of Object.entries(res.stingers ?? {})) {
+    console.log(
+      `  ${key.padEnd(12)}${fmt(m.notes, 5)}${fmt(m.peakDb, 12)}${fmt(m.rmsDb, 10)}${fmt(m.soundingSec, 9)}${fmt(m.clipped, 9)}`
+    );
   }
   console.log('\n=== 最悪の重なり(雨1.0+環境音+BGM+効果音4つ) ===');
   const w = res.mixCase.worst;
@@ -402,14 +594,27 @@ async function main() {
 
   res.runAt = new Date().toISOString();
   res.consoleErrors = errors;
-  const { problems, uiMed, footMed, playMed } = judge(res);
-  res.balance = { uiMedianDb: uiMed, footMedianDb: footMed, playMedianDb: playMed };
+  const { problems, uiMed, footMed, playMed, musicPeak, musicRms, bedRms, bedRefPeak, sfxRms } = judge(res);
+  res.balance = {
+    uiMedianDb: uiMed, footMedianDb: footMed, playMedianDb: playMed,
+    musicPeakDb: musicPeak, musicRmsDb: musicRms, bedRmsDb: bedRms,
+    bedRefPeakDb: bedRefPeak, sfxRmsDb: sfxRms,
+  };
   res.problems = problems;
   writeFileSync(OUT_JSON, JSON.stringify(res, null, 2));
 
   report(res);
   console.log('\n=== バス間のバランス(ピークの中央値) ===');
   console.log(`  効果音 ${playMed} dBFS / UI ${uiMed} dBFS / 足音 ${footMed} dBFS`);
+  console.log('=== 音楽の居場所 ===');
+  console.log(
+    `  ピーク: 音楽 ${musicPeak} dBFS / 環境音(ひろば) ${bedRefPeak} dBFS` +
+      ` → 音楽が ${(musicPeak - bedRefPeak).toFixed(1)}dB 上(=環境音に埋もれない)`
+  );
+  console.log(
+    `  RMS  : 効果音 ${sfxRms} dBFS > 音楽 ${musicRms} dBFS(${(sfxRms - musicRms).toFixed(1)}dB 下)` +
+      ` / 環境音 ${bedRms} dBFS —— 音楽は とぎれとぎれなので RMS は環境音より下に出る`
+  );
   if (errors.length > 0) console.log(`\nconsoleエラー: ${errors.length}件`, errors.slice(0, 5));
   console.log(`\n書き出し: ${OUT_JSON}`);
   if (problems.length === 0) {

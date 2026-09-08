@@ -22,10 +22,13 @@
 }
 
 /* ---- 仮想スティック(左下・押した場所に出る) ---- */
+/* v17.1(touch_audit_v17 F-14)ここだけ 安全領域を 足していなかった。
+   iPadOS のホームインジケータの スワイプ帯(画面下 約20px)に 指を置くと
+   システムの ジェスチャに 取られるので、ほかのタッチUIと 同じだけ ずらす。 */
 .touch-stick-zone {
   position: absolute;
-  left: 0;
-  bottom: 0;
+  left: env(safe-area-inset-left, 0px);
+  bottom: env(safe-area-inset-bottom, 0px);
   width: min(46%, 460px);
   height: min(56%, 430px);
   pointer-events: auto;
@@ -100,8 +103,11 @@
     transform 0.08s,
     opacity 0.12s;
 }
+/* 長いラベル(9文字以上)でも 15px を下まわらせない(touch_audit_v17 F-04)。
+   0.84rem = 15.1px = パネルの中の文字と同じ大きさ。丸の中は 幅100px あるので
+   1行に 6〜7文字、2行で 13文字までは そのまま入る */
 .touch-action.long {
-  font-size: 0.74rem;
+  font-size: 0.84rem;
 }
 .touch-action.dim {
   opacity: 0.35;
@@ -118,14 +124,16 @@
 
 /* ---- v18 エモートボタン(行動ボタンの左どなり・ひとまわり小さい丸) ---- */
 /* 行動ボタン(116px・右22px)と 12px あけて置く: 右 22+116+12 = 150px。
-   高さは 行動ボタンの中心にそろえる(26 + (116-76)/2 = 46px)。
-   親指の届く所で、いちばん大事な「しらべる」より 小さく・静かにする。 */
+   高さは 行動ボタンの中心にそろえる(26 + (116-80)/2 = 44px)。
+   親指の届く所で、いちばん大事な「しらべる」より 小さく・静かにする。
+   v17.1(F-04)文字を 15.1px にしたぶん、丸を 76→80px にして
+   「てをふる」が 1行で 入るようにした(当たり判定は もともと 44px 以上)。 */
 .touch-emote {
   position: absolute;
   right: calc(150px + env(safe-area-inset-right, 0px));
-  bottom: calc(46px + env(safe-area-inset-bottom, 0px));
-  width: 76px;
-  height: 76px;
+  bottom: calc(44px + env(safe-area-inset-bottom, 0px));
+  width: 80px;
+  height: 80px;
   min-width: 44px;
   min-height: 44px;
   border-radius: 50%;
@@ -141,7 +149,8 @@
   color: var(--ink);
   font-family: var(--font);
   font-weight: 700;
-  font-size: 0.6rem;
+  font-size: 0.84rem; /* = 15.1px。パネルの中の文字と同じ大きさにそろえる(F-04) */
+  white-space: nowrap;
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
@@ -171,11 +180,14 @@
   top: calc(62px + env(safe-area-inset-top, 0px));
   right: calc(14px + env(safe-area-inset-right, 0px));
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
+/* v17.1(F-04/F-11)文字を 15.1px にし、min-width を 4文字ぶん(72px)にそろえた。
+   これまでは 文字数で 幅が ちがい、「ずかん」だけ 58px と 細かった。
+   高さ 58px は そのまま(当たり判定 44px 以上)。 */
 .touch-btn {
   pointer-events: auto;
-  min-width: 58px;
+  min-width: 76px;
   min-height: 58px;
   display: flex;
   flex-direction: column;
@@ -189,7 +201,8 @@
   color: var(--ink);
   font-family: var(--font);
   font-weight: 700;
-  font-size: 0.68rem;
+  font-size: 0.84rem; /* = 15.1px(F-04) */
+  white-space: nowrap;
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
@@ -230,5 +243,55 @@
   gap: 6px;
   min-width: 116px;
   min-height: 48px;
-  font-size: 0.82rem;
+  font-size: 0.84rem; /* ほかの指のボタンと同じ 15.1px にそろえる(F-04) */
+}
+
+/* ---- v17.1 パネルを開いているあいだの「とじる」(左下) ---- */
+/*
+ * touch_audit_v17 F-05: 店・メニューが開くと スティックも 丸ボタンも 消えるので、
+ * 出口が 右上の小さな「とじる」1つしか なく、指では 1歩も 動けない時間ができた。
+ * スティックのあった 左下に 大きな「とじる」を置いて、Esc と同じ道へつなぐ。
+ * まん中のパネル(高さは最大76vh・上下中央)とは たて・よこ どちらでも 重ならない。
+ */
+.touch-close {
+  position: absolute;
+  left: calc(22px + env(safe-area-inset-left, 0px));
+  bottom: calc(26px + env(safe-area-inset-bottom, 0px));
+  min-width: 132px;
+  min-height: 56px;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: 0.84rem;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  box-shadow: 0 2px 10px rgba(20, 16, 8, 0.26);
+  transition: transform 0.08s;
+}
+.touch-close svg {
+  width: 20px;
+  height: 20px;
+  color: var(--amber);
+}
+.touch-close.press {
+  transform: scale(0.94);
+  background: var(--amber);
+  color: #fff;
+}
+.touch-close.press svg {
+  color: #fff;
+}
+.touch-close.hidden {
+  display: none;
 }

@@ -20,6 +20,8 @@ import { unknownRecipeHints } from '../systems/DiscoverySystem';
 import { COMBOS } from '../data/combos';
 import { icon } from './icons';
 import { byInput } from './inputMode';
+import { hudObjective } from './ObjectiveHud';
+import { attachPanelScrollCue, flashPanelRow, scrollPanelToRow } from './panelScroll';
 import { sfx } from '../audio/AudioSystem';
 
 type CraftTab = 'recipe' | 'combo';
@@ -83,6 +85,8 @@ export class CraftUI {
     this.el = document.createElement('div');
     this.el.className = 'panel craft-panel hidden';
     document.getElementById('ui-root')!.appendChild(this.el);
+    // 一覧は 25行を こえるので、下に まだ あることを 帯で 見せる(iPadはスクロールバーが 出ない)
+    attachPanelScrollCue(this.el);
     // クリックは委譲で1回だけ付ける(毎描画のonclick割当てだと、描画途中の例外や
     // 再描画競合で「ボタンは見えるのに押せない」状態になり得る。実地報告あり)
     this.el.addEventListener('click', (e) => {
@@ -144,9 +148,36 @@ export class CraftUI {
     if (this.open) {
       this.syncPicked();
       this.render();
-      this.onOpened?.();
     }
     this.el.classList.toggle('hidden', !this.open);
+    // 目当ての行の位置は「画面に出てから」でないと 測れない(display:none では 0)。
+    // だから .hidden を外した あとに スクロールする
+    if (this.open) {
+      this.focusObjectiveRecipe();
+      this.onOpened?.();
+    }
+  }
+
+  /**
+   * いまの目標が レシピを名ざしているなら、その行を パネルの上のほうへ 出して 光らせる。
+   *
+   * touch_audit_v17 F-01: 目標カードが「いしのランプを作ろう」と言っているのに、
+   * クラフトを開いても 一覧の 21%しか 見えず、その行は 画面の外だった。
+   * 動かすのは **パネルの scrollTop だけ**(ページ全体の scrollIntoView は使わない)。
+   */
+  private focusObjectiveRecipe(): void {
+    if (this.tab !== 'recipe') return;
+    const id = hudObjective()?.craftRecipe;
+    if (!id) return;
+    const row = this.el.querySelector<HTMLElement>(`.craft-row[data-recipe="${id}"]`);
+    if (!row) return;
+    // 見出し(くっついたまま)と タブの ぶんだけ 空けて出す。
+    // ここを つめすぎると「レシピ / くみあわせ」のタブが 画面の外へ 出て、
+    // 開いた直後に タブへ 指がとどかなくなる。
+    const h = (sel: string): number =>
+      this.el.querySelector(sel)?.getBoundingClientRect().height ?? 0;
+    scrollPanelToRow(this.el, row, h('.panel-title') + h('.shop-tabs') + 14);
+    flashPanelRow(row);
   }
   close(): void {
     this.open = false;
@@ -258,7 +289,8 @@ export class CraftUI {
       : `<button class="craft-btn" data-id="${r.id}" ${check.ok ? '' : 'disabled'}>つくる</button>`;
     // 目じるしは丸い塗りつぶしのピル(左の色ボーダー+角丸は「(」に見えるので使わない)
     const badge = isNew ? '<span class="craft-new">あたらしい!</span>' : '';
-    return `<div class="craft-row${isNew ? ' is-new' : ''}">
+    // data-recipe は「いまの目標のレシピ」を 引き当てるための 目じるし(表示は 何も変えない)
+    return `<div class="craft-row${isNew ? ' is-new' : ''}" data-recipe="${r.id}">
           <span class="inv-ico">${icon(r.out)}</span>
           <span class="craft-name">${outName}</span>
           ${badge}

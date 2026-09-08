@@ -1,0 +1,145 @@
+{
+  "stats": {
+    "lumitree_day": {
+      "meshes": 4,
+      "tris": 8160
+    },
+    "lumitree_night": {
+      "meshes": 4,
+      "tris": 8160
+    },
+    "lumibud_day": {
+      "meshes": 4,
+      "tris": 5360
+    },
+    "whale": {
+      "meshes": 1,
+      "tris": 1280
+    },
+    "teddy": {
+      "meshes": 1,
+      "tris": 1346
+    },
+    "plush_minamo": {
+      "meshes": 1,
+      "tris": 2584
+    },
+    "plush_nokto": {
+      "meshes": 1,
+      "tris": 2502
+    },
+    "plush_tsumugi": {
+      "meshes": 1,
+      "tris": 2632
+    },
+    "plush_roka": {
+      "meshes": 1,
+      "tris": 2218
+    },
+    "plush_ten": {
+      "meshes": 1,
+      "tris": 2720
+    },
+    "hotaru": {
+      "meshes": 2,
+      "tris": 1492
+    },
+    "stonelamp_night": {
+      "meshes": 2,
+      "tris": 101
+    },
+    "market_lantern_night": {
+      "meshes": 2,
+      "tris": 394
+    },
+    "chochin_night": {
+      "meshes": 1,
+      "tris": 184
+    },
+    "ore": {
+      "meshes": 3,
+      "tris": 136
+    },
+    "grillfish": {
+      "meshes": 1,
+      "tris": 796
+    },
+    "ball": {
+      "meshes": 1,
+      "tris": 1146
+    },
+    "castle": {
+      "meshes": 1,
+      "tris": 720
+    },
+    "miyama": {
+      "meshes": 1,
+      "tris": 1298
+    },
+    "hercules": {
+      "meshes": 1,
+      "tris": 1226
+    }
+  },
+  "logs": [
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:55:16]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:55:18]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:55:23]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:55:28]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:55:30]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:55:32]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:55:34]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[debug] [vite] connecting...",
+    "[log] BJS - [22:55:36]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[debug] [vite] connected.",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:55:38]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:55:45]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:55:47]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:55:48]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:55:51]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:55:54]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:55:57]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:56:00]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:56:03]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[log] BJS - [22:56:07]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:56:08]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[log] BJS - [22:56:11]: Babylon.js v8.56.2 - WebGL2 - Parallel shader compilation"
+  ]
+}

@@ -22,7 +22,7 @@ import {
   makeTwigNode, makeCutGrassNode, makeClayNode, makeGlassFloat, makeGroundPatches, makeSapTree,
 } from '../entities/flora';
 import {
-  scatterDeco, buildPondShore, buildHillDeck, hillDeckRails, deckGroundY, HILL_DECK,
+  scatterDeco, buildNearGrass, buildPondShore, buildHillDeck, hillDeckRails, deckGroundY, HILL_DECK,
   makeRockLedge, makeOutcrop, makeFlagstones, makeLowFence, makeSeabird, type Seabird,
   makeTallGrassNode, makeDigMound,
 } from '../entities/deco';
@@ -686,6 +686,12 @@ export class IslandScene {
     this.sky = new Sky(s);
     // 発光レイヤーに焼くと 星が にじんだ白いまるに つぶれ、負荷も上がる(ビーム・きらめきと同じ理由)
     for (const m of this.sky.meshes) this.dayNight.glow.addExcludedMesh(m);
+    // ---- v28 近景の草のじゅうたん(カメラの注視点まわり8.6m) ----
+    // 空とまったく同じ理由で、**islandMeshes のスナップショットより「あと」**に作る:
+    // 島でも入り江でも 足もとには草が生えていてほしいから。
+    // 部屋・いちば島・でんしゃの中では「置いてよい所」が0になり、メッシュが自分で消える
+    // (置ける場所の規則は entities/deco.ts の nearGrassGroundY が唯一の情報源)。
+    buildNearGrass(s);
     // 時刻の色を決める場所を1か所にするため、空の更新は DayNight からまとめて呼ばれる
     this.dayNight.attachSky(this.sky, () => this.time.day);
 

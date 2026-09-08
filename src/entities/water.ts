@@ -38,6 +38,37 @@ const C_POND_RIM = wcol('#cfcaa6');
 /** 明るみの効き。1段だけに とどめる(0.29より深いところには出ない) */
 const POND_RIM_FALL = 3.4;
 const POND_RIM_MIX = 0.34;
+/**
+ * v28 岸ぎわの水の濃さ(頂点アルファ)。マテリアルの0.86とかけ算で 実効 0.55。
+ * 深場は1.0(実効0.86)なので、岸で底が透けて 中ほどで濃くなる。
+ */
+const POND_A_SHORE = 0.64;
+
+/** 池ローカル座標を「岸線に対する比率」にする(0=中心 1=岸線)。色と濃さの土台 */
+function shoreU(px: number, pz: number): number {
+  const r = Math.hypot(px, pz);
+  if (r < 1e-6) return 0;
+  return r / Math.max(0.5, pondShoreR(Math.atan2(pz, px)));
+}
+
+/**
+ * まわり1.5mのうち、どれだけが本物の水か(0=すぐそこが岸 1=見わたすかぎり水)。
+ *
+ * 池の北〜東は ミナモの小屋の ならしで「岸線の内がわなのに泥の岸」になっている。
+ * 岸線までの比率(shoreU)だけで深さを決めると、そこでは 泥のきわまで
+ * いちばん濃い色になってしまう。**実際に水を描いている範囲**を8方向に見て、
+ * 水ぎわに近いところは浅くする(教訓1「水面は 地面<水面 の述語で切る」の応用)。
+ * メッシュを組むときに1回だけ回る(毎フレームではない)。
+ */
+const EDGE_DIRS: [number, number][] = [
+  [1.5, 0], [-1.5, 0], [0, 1.5], [0, -1.5],
+  [1.06, 1.06], [-1.06, 1.06], [1.06, -1.06], [-1.06, -1.06],
+];
+function edgeOpenness(px: number, pz: number): number {
+  let open = 0;
+  for (const [ox, oz] of EDGE_DIRS) open += pondSurfaceVisibility(POND.x + px + ox, POND.z + pz + oz);
+  return open / EDGE_DIRS.length;
+}
 
 export interface WaterRefs {
   seaMat: StandardMaterial;
@@ -48,6 +79,8 @@ export interface WaterRefs {
   sea: Mesh;
   pond: Mesh; // ごく弱い上下動(IslandScene.update)用
   wave: PondWave;
+  /** v28 海面のさざ波(法線だけ動かす)。updateSeaSurface の中から一緒に進む */
+  seaWave: SeaWave;
   /** v22 波うちぎわの泡の帯と、海面のきらめき(見た目だけ) */
   surf: SeaSurface;
 }
@@ -65,10 +98,14 @@ interface PondWave {
 export function buildWater(scene: Scene): WaterRefs {
   const seaMat = new StandardMaterial('seaMat', scene);
   seaMat.diffuseColor = Color3.FromHexString('#4f8fa8');
-  seaMat.specularColor = new Color3(0.06, 0.08, 0.09);
+  // v28 太陽・月のきらめきが乗る程度の鏡面。強い鏡面・フレネルは真上視点で白飛びするので、
+  // 「面が広い=画面のどこかに必ずハイライトが出る」ことを見こんで ひかえめに置く
+  // (この値は入り江・いちば島の海(makeCoveSea / makeMarketSea)にも同じマテリアルで効く)。
+  seaMat.specularColor = new Color3(0.155, 0.175, 0.185);
+  seaMat.specularPower = 52;
   seaMat.alpha = 0.9;
-  const sea = CreateDisc('sea', { radius: 240, tessellation: 48 }, scene);
-  sea.rotation.x = Math.PI / 2;
+  const seaWave = buildSeaMesh(scene);
+  const sea = seaWave.mesh;
   sea.position.y = SEA_Y;
   sea.material = seaMat;
   sea.isPickable = false;
@@ -159,7 +196,9 @@ export function buildWater(scene: Scene): WaterRefs {
   }
 
   // 岸辺のしつらえ(濡れた土・小石・アシ等)はIslandSceneがdeco.buildPondShoreで置く
-  const refs: WaterRefs = { seaMat, pondMat, pondSurfMat, sea, pond, wave, surf: buildSeaSurface(scene) };
+  const refs: WaterRefs = {
+    seaMat, pondMat, pondSurfMat, sea, pond, wave, seaWave, surf: buildSeaSurface(scene),
+  };
   applyPondTint(refs);
   return refs;
 }
@@ -216,16 +255,198 @@ export function pondSurfaceDepth(x: number, z: number): number {
 // ---- 水面のさざ波(位置と法線を15Hzで更新。上下のボブとは別の「表面のゆらぎ」) ----
 const WAVE_N = 7; // 法線の強調(頂点の動きは小さいまま陰影だけゆらす)
 
+/**
+ * さざ波の3つの成分 [x方向の波数, z方向の波数, 角しんどう数, 振幅]。
+ * v28 で定数から表に出した。海(seaTiltAt)も同じ表を読むので、池と海の波が
+ * 「まったく別のリズム」に見えることがない(海だけ波長と速さを のばして使う)。
+ */
+const WAVE_TERMS: [number, number, number, number][] = [
+  [0.62, 0.31, 0.85, 0.014],
+  [-0.24, 0.93, 1.21, 0.011],
+  [1.31, -0.72, 1.87, 0.005],
+];
+
 function waveAt(x: number, z: number, t: number, out: [number, number, number]): void {
-  const a1 = Math.sin(x * 0.62 + z * 0.31 + t * 0.85);
-  const a2 = Math.sin(x * -0.24 + z * 0.93 + t * 1.21);
-  const a3 = Math.sin(x * 1.31 + z * -0.72 + t * 1.87);
-  out[0] = a1 * 0.014 + a2 * 0.011 + a3 * 0.005; // 高さ
-  const c1 = Math.cos(x * 0.62 + z * 0.31 + t * 0.85);
-  const c2 = Math.cos(x * -0.24 + z * 0.93 + t * 1.21);
-  const c3 = Math.cos(x * 1.31 + z * -0.72 + t * 1.87);
-  out[1] = c1 * 0.014 * 0.62 + c2 * 0.011 * -0.24 + c3 * 0.005 * 1.31; // ∂y/∂x
-  out[2] = c1 * 0.014 * 0.31 + c2 * 0.011 * 0.93 + c3 * 0.005 * -0.72; // ∂y/∂z
+  let h = 0;
+  let dx = 0;
+  let dz = 0;
+  for (let i = 0; i < WAVE_TERMS.length; i++) {
+    const [kx, kz, w, a] = WAVE_TERMS[i];
+    const p = x * kx + z * kz + t * w;
+    h += Math.sin(p) * a;
+    const c = Math.cos(p) * a;
+    dx += c * kx;
+    dz += c * kz;
+  }
+  out[0] = h; // 高さ
+  out[1] = dx; // ∂y/∂x
+  out[2] = dz; // ∂y/∂z
+}
+
+// ===========================================================================
+// v28 海面。
+//
+// これまで: CreateDisc(半径240・分割48)を寝かせただけ。**法線が1本しかない**ので
+// どんな光を当てても のっぺりした1色の面にしかならず、監査で
+// 「B2 砂と海の境目が硬い線・海がべた塗り」と判定された。
+//
+// 直しかた(3つ):
+//   1) **岸の近くだけ細かい放射グリッド**にする(リングの表 SEA_RINGS)。
+//      沖は見えている情報が少ないので、そのまま大きな三角形でよい。
+//   2) 頂点カラーで **浅瀬→深場のグラデーション**。深さは「足もとの地形の高さ」から出す
+//      ——中心からの距離ではない(教訓1: 水面は 地面<水面 の述語で切る)。
+//      浅いところは頂点アルファも薄くして、下の砂(C_SEABED)を透かす
+//      =砂と海の境目が 硬い線でなく 帯になる。
+//   3) 毎フレーム **法線だけ**を波で ゆらす(頂点の位置は動かさない)。
+//      位置を動かさないので updateExtends の罠(外わくが作成時のままで消える)も踏まない。
+// ---------------------------------------------------------------------------
+/** 円周の分割。もとのディスクの tessellation と同じ */
+const SEA_SEG = 48;
+/**
+ * 中心からのリング(m)。島の水ぎわは だいたい r=40〜58 なので、そこだけ 3m きざみにする。
+ * 沖(80m より外)は 目に入るのが 水平線の帯だけなので 一気にとばす。
+ */
+const SEA_RINGS = [0, 22, 33, 39, 43, 46, 49, 52, 55, 58, 61, 65, 70, 76, 84, 100, 140, 240];
+/** このリングより外は 法線を動かさない(遠すぎて 波が1ピクセルにも出ない) */
+const SEA_ANIM_RINGS = 14;
+/** 海の波の 波長のばし(1=池と同じ)。小さいほど 波長が長い=外海の うねりになる */
+const SEA_WAVE_K = 0.34;
+/** 海の波の 進む速さ(1=池と同じ) */
+const SEA_WAVE_W = 0.62;
+/** 海の法線の かたむき。池(WAVE_N=7)より 大きく取らないと 波長をのばしたぶん 平らに見える */
+const SEA_WAVE_N = 26;
+/** この深さで「深い色」になりきる(m) */
+const SEA_DEEP_AT = 2.4;
+/** 浅瀬の色(基準色にかける係数)。砂が透けて わずかに明るく・緑よりに */
+const SEA_C_SHALLOW = [1.1, 1.06, 0.95];
+/** 深場の色(基準色にかける係数)。暗く・青よりに落とす */
+const SEA_C_DEEP = [0.6, 0.73, 0.88];
+/** 浅瀬の濃さ(頂点アルファ)。マテリアルの0.9とかけ算になる */
+const SEA_A_SHALLOW = 0.72;
+
+export interface SeaWave {
+  mesh: Mesh;
+  /**
+   * true のあいだ 法線の更新を止める(見た目はそのまま・止まった水面)。
+   * 性能のA/B(tools/perf_mobile.mjs --off ground2)が同じビルドの中で
+   * 「v28で足したぶん」だけを切るための口。製品の道では だれも立てない。
+   */
+  frozen?: boolean;
+  /** 法線を動かす頂点の数(いちばん内がわの SEA_ANIM_RINGS ぶん) */
+  animN: number;
+  /** 法線を動かす頂点の (x,z) と、岸ぎわの弱め */
+  wx: Float32Array;
+  wz: Float32Array;
+  damp: Float32Array;
+  nrm: Float32Array;
+  t: number;
+}
+
+/** 海の波による法線のかたむき(∂y/∂x, ∂y/∂z)。池の waveAt と同じ3成分の表を読む */
+function seaTiltAt(x: number, z: number, t: number, out: [number, number]): void {
+  let dx = 0;
+  let dz = 0;
+  for (let i = 0; i < WAVE_TERMS.length; i++) {
+    const [kx, kz, w, a] = WAVE_TERMS[i];
+    const c = Math.cos(x * kx * SEA_WAVE_K + z * kz * SEA_WAVE_K + t * w * SEA_WAVE_W) * a;
+    dx += c * kx;
+    dz += c * kz;
+  }
+  out[0] = dx;
+  out[1] = dz;
+}
+
+/** 海面のメッシュ(岸の近くだけ細かい放射グリッド+浅深の頂点カラー) */
+function buildSeaMesh(scene: Scene): SeaWave {
+  const rows = SEA_RINGS.length;
+  const cols = SEA_SEG + 1;
+  const pos: number[] = [];
+  const col: number[] = [];
+  const idx: number[] = [];
+  const animN = SEA_ANIM_RINGS * cols;
+  const wx = new Float32Array(animN);
+  const wz = new Float32Array(animN);
+  const damp = new Float32Array(animN);
+  for (let r = 0; r < rows; r++) {
+    const rr = SEA_RINGS[r];
+    for (let s = 0; s < cols; s++) {
+      const th = (s / SEA_SEG) * Math.PI * 2;
+      const px = Math.cos(th) * rr;
+      const pz = Math.sin(th) * rr;
+      pos.push(px, 0, pz);
+      // 深さ: 足もとの地形が海面からどれだけ下がっているか。
+      // 島の下(r<40)は地面が海面より上=深さ0だが、そこは地形に隠れて見えない
+      const dep = smooth01((SEA_Y - terrainHeight(px, pz)) / SEA_DEEP_AT);
+      // 浅瀬→中ほど→深場の2段。中ほど(dep=0.35)を基準色そのままにする
+      let k0: number, k1: number, k2: number;
+      if (dep < 0.35) {
+        const u = dep / 0.35;
+        k0 = SEA_C_SHALLOW[0] + (1 - SEA_C_SHALLOW[0]) * u;
+        k1 = SEA_C_SHALLOW[1] + (1 - SEA_C_SHALLOW[1]) * u;
+        k2 = SEA_C_SHALLOW[2] + (1 - SEA_C_SHALLOW[2]) * u;
+      } else {
+        const u = (dep - 0.35) / 0.65;
+        k0 = 1 + (SEA_C_DEEP[0] - 1) * u;
+        k1 = 1 + (SEA_C_DEEP[1] - 1) * u;
+        k2 = 1 + (SEA_C_DEEP[2] - 1) * u;
+      }
+      // 潮のむら。波長およそ17mと5m。等高線に見えないよう2段かさねる
+      const v = 1 + (vnoise(px * 0.06 + 71, pz * 0.06 + 19) - 0.5) * 0.1
+        + (vnoise(px * 0.21 + 7, pz * 0.21 + 53) - 0.5) * 0.05;
+      // 濃さ: 浅いほど薄い(下の砂が透ける)= 砂と海の境目が 帯になる
+      const a = SEA_A_SHALLOW + (1 - SEA_A_SHALLOW) * smooth01(dep / 0.5);
+      col.push(k0 * v, k1 * v, k2 * v, a);
+      if (r < SEA_ANIM_RINGS) {
+        const w = r * cols + s;
+        wx[w] = px;
+        wz[w] = pz;
+        // いちばん外の動かすリングは だんだん止める(静かな沖との継ぎめを見せない)
+        damp[w] = r >= SEA_ANIM_RINGS - 2 ? (SEA_ANIM_RINGS - 1 - r) / 2 : 1;
+      }
+    }
+  }
+  // 巻き順は池の水面(makePondSurface)と同じ 行優先・上向き
+  for (let r = 0; r < rows - 1; r++) {
+    for (let s = 0; s < SEA_SEG; s++) {
+      const a = r * cols + s;
+      idx.push(a, a + cols, a + 1, a + 1, a + cols, a + cols + 1);
+    }
+  }
+  const mesh = new Mesh('sea', scene);
+  const vd = new VertexData();
+  vd.positions = pos;
+  vd.indices = idx;
+  vd.colors = col;
+  vd.normals = pos.map((_, i) => (i % 3 === 1 ? 1 : 0)); // 上向き
+  vd.applyToMesh(mesh, true);
+  mesh.hasVertexAlpha = true; // 浅瀬を薄く(池の水面と同じ流儀)
+  // 法線の入れものは**全頂点ぶん**用意して、外がわのリングは上向きのまま置いておく。
+  // (短い配列を updateVerticesData に渡すと、コンテキスト消失からの復帰で
+  //  沖のリングの法線が入らない。長さをそろえておけば その心配がない)
+  const nrm = new Float32Array(rows * cols * 3);
+  for (let i = 0; i < rows * cols; i++) nrm[i * 3 + 1] = 1;
+  const w: SeaWave = { mesh, animN, wx, wz, damp, nrm, t: 0 };
+  updateSeaWave(w, 0);
+  return w;
+}
+
+/** 海面の法線を進める。**位置は1ミリも動かさない**(外わくは作ったときのままでよい) */
+function updateSeaWave(w: SeaWave, dtSec: number): void {
+  w.t += dtSec;
+  const t = w.t;
+  const out: [number, number] = [0, 0];
+  for (let v = 0; v < w.animN; v++) {
+    seaTiltAt(w.wx[v], w.wz[v], t, out);
+    const k = w.damp[v] * SEA_WAVE_N;
+    const nx = -out[0] * k;
+    const nz = -out[1] * k;
+    const inv = 1 / Math.sqrt(nx * nx + 1 + nz * nz);
+    w.nrm[v * 3] = nx * inv;
+    w.nrm[v * 3 + 1] = inv;
+    w.nrm[v * 3 + 2] = nz * inv;
+  }
+  // 更新するのは いちばん内がわの animN 頂点だけ(沖のリングは作ったときの上向きのまま)
+  w.mesh.updateVerticesData(VertexBuffer.NormalKind, w.nrm, false, false);
 }
 
 /**
@@ -255,10 +476,22 @@ function makePondSurface(scene: Scene): PondWave {
       const vis = pondSurfaceVisibility(POND.x + px, POND.z + pz);
       // 岸ぎわは動かさない(土手との隙間を出さない)。実際の水ぎわでも同じように止める
       damp[r * cols + s] = (1 - PRINGF[r] * PRINGF[r]) * wet;
-      // 深さの場: 実際の深さを土台に、ノイズで境目をくずして「楕円の深場」に見せない
+      // 深さの場。
+      //
+      // v28: 土台を「実際の水深」から**岸線までの距離**に変えた。
+      // この池の底は POND_BED_MIN(0.36)で止めてあり、水面(0.42)との差は たった6cm。
+      // つまり wet(=水深/4.5cm)は 岸から数十cm 入ると もう1に張りつくので、
+      // 池のほぼ全面が「いちばん深い色」で塗られ、**濃い緑1色の板**になっていた
+      // (監査 B6_closeup_pond_water)。岸線からの距離なら、6cmしかない池でも
+      // 浅瀬→中ほど→深場の3段が ちゃんと出る。
+      // なお wet は これまでどおり「描く/描かない」と ゆらぎの強さに使う(判定は不変)。
+      const u = shoreU(px, pz);
       const blot = vnoise(px * 0.15 + 12.3, pz * 0.15 + 4.7);
       const fine = vnoise(px * 0.62 + 3.1, pz * 0.62 + 9.4);
-      const d = Math.min(1, Math.max(0, wet * (1.05 + (blot - 0.5) * 0.75) - 0.12));
+      // 岸線からの距離と「まわりがどれだけ水か」の**小さいほう**を取る。
+      // 前者だけだと 泥の岸(北〜東)で 濃くなりすぎ、後者だけだと 池ぜんたいが平らになる
+      const deepBase = Math.min(smooth01((1 - u) / 0.58), edgeOpenness(px, pz));
+      const d = Math.min(1, Math.max(0, deepBase * (1.05 + (blot - 0.5) * 0.5) - 0.05));
       // かげ: 岸寄りの一部だけを不規則に暗くする(木かげ・土手のかげ)
       const shN = vnoise(px * 0.11 + 31.7, pz * 0.11 + 18.2);
       const sh = Math.min(1, Math.max(0, (shN - 0.46) * 2.6)) * Math.min(1, Math.max(0, (1 - wet) * 1.4)) * 0.7;
@@ -272,7 +505,11 @@ function makePondSurface(scene: Scene): PondWave {
       const rim = Math.max(0, 1 - wet * POND_RIM_FALL) * vis * (0.7 + fine * 0.55);
       c = Color3.Lerp(c, C_POND_RIM, Math.min(1, rim) * POND_RIM_MIX);
       const v = 0.93 + fine * 0.14;
-      col.push(c.r * v, c.g * v, c.b * v, (0.72 + d * 0.28) * vis);
+      // v28 濃さ: 岸ぎわ 0.64 → 深場 1.0(マテリアルの0.86とかけ算で 実効 0.55→0.86)。
+      // 岸で薄くすると、下に敷いてある「濡れた岸・池の底(terrainColorのC_WETSAND/C_PONDBED)」が
+      // 透けて見え、水が板ではなく「浅い水」に見える。**vis(land切り)は そのまま掛ける**ので、
+      // 泥の岸では これまでどおり きっちり0(tests/unit/pond_water_edge.test.ts)
+      col.push(c.r * v, c.g * v, c.b * v, (POND_A_SHORE + d * (1 - POND_A_SHORE)) * vis);
     }
   }
   for (let r = 0; r < rows - 1; r++) {
@@ -331,7 +568,9 @@ function updatePondWave(w: PondWave, dtSec: number): void {
  */
 const TINT_MIX = 0.22;
 const REF_LUM = 0.38; // 昼の基準の明るさ
-const SKY_HINT = 0.085; // 空映りのごく弱い照り(強い鏡面にしない)
+// v28 空映りをほんの少しだけ足した(0.085→0.098)。強い鏡面・フレネルは
+// 真上視点で白飛びするので使わないまま。上げ幅は「くもった日でも白い板にならない」範囲
+const SKY_HINT = 0.098;
 export function applyPondTint(w: WaterRefs): void {
   const t = w.pondMat.diffuseColor;
   const lum = Math.max(0.04, t.r * 0.3 + t.g * 0.59 + t.b * 0.11);
@@ -409,16 +648,24 @@ const FOAM_LIFT = 0.07;
 const FOAM_RUNUP = 0.14;
 /** 走らせる距離の上限(m)。これを超えるほど ゆるい所は「いちばん広い帯」でよい */
 const FOAM_RUN_MAX = 6;
-/** 帯の幅 = FOAM_W_BASE + 走った距離 × FOAM_W_GAIN(min/maxでおさえる) */
-const FOAM_W_BASE = 0.5;
-const FOAM_W_GAIN = 0.55;
+/**
+ * 帯の幅 = FOAM_W_BASE + 走った距離 × FOAM_W_GAIN(min/maxでおさえる)。
+ * v28: 砂と海の境目が「硬い1本の線」に見えるという判定を受けて、帯を約3割ひろげた
+ * (ゆるい浜ほど よくきく: 上限 2.6→3.4m)。狭い岸の下限は変えていないので、
+ * 「岸のゆるさで幅が変わる」という性質(tests/unit/ground_water_v22.test.ts)はそのまま。
+ */
+const FOAM_W_BASE = 0.62;
+const FOAM_W_GAIN = 0.72;
 const FOAM_W_MIN = 0.7;
-const FOAM_W_MAX = 2.6;
+const FOAM_W_MAX = 3.4;
 /** 寄せ引きの周期(秒)。ゆっくり——速いと「洗濯機」に見える */
 const WASH_PERIOD = 13.5;
-/** 山の手前(陸がわ)は短く切り、うしろ(沖がわ)へ長く尾をひく=くだけた泡の形 */
-const WASH_FRONT = 0.22;
-const WASH_BACK = 0.74;
+/**
+ * 山の手前(陸がわ)は短く切り、うしろ(沖がわ)へ長く尾をひく=くだけた泡の形。
+ * v28: 前がわを 0.22→0.30 に ゆるめて、砂の上での切れぎわを やわらかくした。
+ */
+const WASH_FRONT = 0.3;
+const WASH_BACK = 0.86;
 /** 山が行き来する範囲(帯の中の位置)。陸へ行きすぎると「乾いた砂の上のしみ」に見える */
 const WASH_FROM = -0.5;
 const WASH_TO = 0.45;
@@ -742,6 +989,10 @@ export function updateSeaSurface(w: WaterRefs, dtSec: number, env: SeaEnv): void
   ss.acc += dtSec;
   if (ss.acc < 1 / FOAM_HZ) return;
   ss.t += ss.acc;
+  // v28 海面のさざ波(法線だけ)。泡・きらめきと同じ12Hzの門の中で進める
+  // ——別の観測点を足すと、島が見えていないあいだも回りつづける口ができてしまう。
+  // 海が画面に出ていないフレーム(部屋・入り江)は IslandScene がここを呼ばない
+  if (!w.seaWave.frozen && w.seaWave.mesh.isEnabled(false)) updateSeaWave(w.seaWave, ss.acc);
   ss.acc = 0;
   const t = ss.t;
   // 雨のときは 泡もきらめきも ひかえめに(既存の天気連携と同じ流儀: 消さずに弱める)

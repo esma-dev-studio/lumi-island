@@ -1,0 +1,2655 @@
+{
+  "mode": "after",
+  "when": "2026-09-08T14:05:32.359Z",
+  "checks": [
+    {
+      "name": "指で触るとタッチUIが出る",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "目標が いしのランプ(r_stonelamp)を 名ざしている",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "目標のレシピの行が 光っている(F-01b)",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "name": "目標のレシピ(いしのランプ)の行が 画面に出ている",
+      "ok": true,
+      "detail": "top=219"
+    },
+    {
+      "name": "下端に「まだ あるよ」の帯が 出ている",
+      "ok": true,
+      "detail": "▼ まだ あるよ"
+    },
+    {
+      "name": "帯が パネルの いちばん下に くっついている",
+      "ok": true,
+      "detail": "gap=19"
+    },
+    {
+      "name": "いちばん下まで はらうと 帯が 消える",
+      "ok": true,
+      "detail": "{\"rest\":0,\"cue\":false}"
+    },
+    {
+      "name": "目標カードが パネルに かぶらない(F-06)",
+      "ok": true,
+      "detail": "{\"x\":14,\"y\":14,\"w\":232,\"h\":153}"
+    },
+    {
+      "name": "トーストが パネルに かぶらない(F-07)",
+      "ok": true,
+      "detail": "{\"x\":826,\"y\":742,\"w\":340,\"h\":66}"
+    },
+    {
+      "name": "左下の「とじる」が パネルに かぶらない(F-05)",
+      "ok": true,
+      "detail": "{\"x\":22,\"y\":738,\"w\":132,\"h\":56}"
+    },
+    {
+      "name": "左下の「とじる」で クラフトが とじる(F-05)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "スクロールしても 見出しの「とじる」が 見えている",
+      "ok": true,
+      "detail": "{\"scrollTop\":459,\"titleTop\":1,\"closeVisible\":true,\"pos\":\"sticky\"}"
+    },
+    {
+      "name": "くみあわせのあと クラフトが とじている",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "置けない理由のとき 丸ボタンは 淡い(F-03)",
+      "ok": true,
+      "detail": "label=おく"
+    },
+    {
+      "name": "丸ボタンに 理由文を 出していない(F-03/F-12)",
+      "ok": true,
+      "detail": "label=おく"
+    },
+    {
+      "name": "配置中は 右上のパネルボタンを しまう(F-15)",
+      "ok": true,
+      "detail": "メニュー"
+    },
+    {
+      "name": "ポーズ画面の見出しに「とじる」がある(F-10)",
+      "ok": true,
+      "detail": "{\"hasClose\":true,\"text\":\"とじる\",\"w\":82,\"h\":44}"
+    },
+    {
+      "name": "その「とじる」で メニューが とじる",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "右上のボタンの 幅が そろっている(F-11)",
+      "ok": true,
+      "detail": "76"
+    },
+    {
+      "name": "案内バーが 画面に出ている(はかれている)",
+      "ok": true,
+      "detail": "{\"cls\":\"rotate-hint\",\"display\":\"flex\",\"bottom\":\"442px\",\"top\":\"691px\"}"
+    },
+    {
+      "name": "たてむきの案内が スティックの帯に かぶらない(F-08)",
+      "ok": true,
+      "detail": "{\"x\":248,\"y\":691,\"w\":324,\"h\":47}"
+    },
+    {
+      "name": "目標カードが 右上のボタン列に かぶらない",
+      "ok": true,
+      "detail": "{\"x\":14,\"y\":14,\"w\":250,\"h\":96}"
+    },
+    {
+      "name": "1マスから 右へ はみ出す 中身 0件",
+      "ok": false,
+      "detail": "もちもの:.inv-slot>.craft-btn.sub(おく) +17px"
+    },
+    {
+      "name": "44px未満の タップ対象 0件(180こ 計測)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "14px未満の 文字 0件(173種 計測)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "console エラー 0件",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "log": [
+    "  OK  指で触るとタッチUIが出る",
+    "  いまやること: ざいりょうが そろったよ! 右上の「クラフト」ボタンで いしのランプを作ろう / craftRecipe=r_stonelamp",
+    "  OK  目標が いしのランプ(r_stonelamp)を 名ざしている",
+    "  shot 01_world_after.png",
+    "  OK  目標のレシピの行が 光っている(F-01b) — count=1",
+    "  shot 02_craft_open_after.png",
+    "  クラフト: {\"scrollH\":3228,\"clientH\":621,\"scrollTop\":459,\"pct\":19,\"rows\":37,\"rowFound\":true,\"rowTop\":219,\"rowVisible\":true,\"focus\":true,\"cue\":true,\"cueText\":\"▼ まだ あるよ\",\"cueGap\":19,\"titleH\":62,\"titleBottom\":63,\"secTop\":80,\"tabsTop\":-386,\"tabsVisible\":false}",
+    "  OK  目標のレシピ(いしのランプ)の行が 画面に出ている — top=219",
+    "  OK  下端に「まだ あるよ」の帯が 出ている — ▼ まだ あるよ",
+    "  OK  帯が パネルの いちばん下に くっついている — gap=19",
+    "  shot 03_craft_bottom_after.png",
+    "  いちばん下: {\"rest\":0,\"cue\":false}",
+    "  OK  いちばん下まで はらうと 帯が 消える — {\"rest\":0,\"cue\":false}",
+    "  shot 04_craft_overlaps_after.png",
+    "  かさなり: {\"panel\":{\"x\":310,\"y\":98,\"w\":560,\"h\":623},\"objh\":{\"x\":14,\"y\":14,\"w\":232,\"h\":153},\"toast\":{\"x\":826,\"y\":742,\"w\":340,\"h\":66},\"close\":{\"x\":22,\"y\":738,\"w\":132,\"h\":56},\"objOverlap\":false,\"toastOverlap\":false,\"closeOverlap\":false}",
+    "  OK  目標カードが パネルに かぶらない(F-06) — {\"x\":14,\"y\":14,\"w\":232,\"h\":153}",
+    "  OK  トーストが パネルに かぶらない(F-07) — {\"x\":826,\"y\":742,\"w\":340,\"h\":66}",
+    "  OK  左下の「とじる」が パネルに かぶらない(F-05) — {\"x\":22,\"y\":738,\"w\":132,\"h\":56}",
+    "  OK  左下の「とじる」で クラフトが とじる(F-05)",
+    "  見出し: {\"scrollTop\":459,\"titleTop\":1,\"closeVisible\":true,\"pos\":\"sticky\"}",
+    "  OK  スクロールしても 見出しの「とじる」が 見えている — {\"scrollTop\":459,\"titleTop\":1,\"closeVisible\":true,\"pos\":\"sticky\"}",
+    "  shot 09_combo_after.png",
+    "  OK  くみあわせのあと クラフトが とじている",
+    "  shot 05_place_reason_after.png",
+    "  はいち: {\"label\":\"おく\",\"dim\":true,\"long\":false,\"font\":15.84,\"hint\":\"×しぜんの めぐみの ばしょだよ — うごかして ばしょを さがそう\",\"hintShown\":true,\"placeHint\":\"しぜんの めぐみの ばしょだよ — うごかして ばしょを さがそう Rまわす Escやめる\",\"tone\":\"ng\",\"menuShown\":[\"メニュー\"]}",
+    "  OK  置けない理由のとき 丸ボタンは 淡い(F-03) — label=おく",
+    "  OK  丸ボタンに 理由文を 出していない(F-03/F-12) — label=おく",
+    "  OK  配置中は 右上のパネルボタンを しまう(F-15) — メニュー",
+    "  shot 06_もちもの_after.png",
+    "  もちもの: {\"sel\":\"panel inv-panel\",\"scrollH\":370,\"clientH\":370,\"pct\":100,\"cue\":false}",
+    "  shot 06_おねがい_after.png",
+    "  おねがい: {\"sel\":\"panel quest-panel\",\"scrollH\":700,\"clientH\":621,\"pct\":89,\"cue\":true}",
+    "  shot 06_ずかん_after.png",
+    "  ずかん: {\"sel\":\"panel codex-panel\",\"scrollH\":6738,\"clientH\":621,\"pct\":9,\"cue\":true}",
+    "  shot 06_ずかん_バッジ_after.png",
+    "  shot 06_ずかん_アルバム_after.png",
+    "  shot 06_店_after.png",
+    "  shot 07_menu_after.png",
+    "  メニュー: {\"hasClose\":true,\"text\":\"とじる\",\"w\":82,\"h\":44}",
+    "  OK  ポーズ画面の見出しに「とじる」がある(F-10) — {\"hasClose\":true,\"text\":\"とじる\",\"w\":82,\"h\":44}",
+    "  OK  その「とじる」で メニューが とじる",
+    "  右上のボタン: [{\"label\":\"もちもの\",\"w\":76,\"h\":58,\"font\":15.12},{\"label\":\"クラフト\",\"w\":76,\"h\":58,\"font\":15.12},{\"label\":\"おねがい\",\"w\":76,\"h\":58,\"font\":15.12},{\"label\":\"ずかん\",\"w\":76,\"h\":58,\"font\":15.12},{\"label\":\"しゃしん\",\"w\":76,\"h\":58,\"font\":15.12},{\"label\":\"メニュー\",\"w\":76,\"h\":58,\"font\":15.12}]",
+    "  OK  右上のボタンの 幅が そろっている(F-11) — 76",
+    "  案内バーのCSS: {\"cls\":\"rotate-hint\",\"display\":\"flex\",\"bottom\":\"442px\",\"top\":\"691px\"}",
+    "  たてむき: {\"hint\":{\"x\":248,\"y\":691,\"w\":324,\"h\":47},\"zone\":{\"x\":0,\"y\":750,\"w\":377,\"h\":430},\"objh\":{\"x\":14,\"y\":14,\"w\":250,\"h\":96},\"menu\":{\"x\":320,\"y\":62,\"w\":486,\"h\":58},\"overlap\":false,\"objMenuOverlap\":false,\"stickLeft\":\"0px\",\"stickBottom\":\"0px\"}",
+    "  shot 08_portrait_after.png",
+    "  OK  案内バーが 画面に出ている(はかれている) — {\"cls\":\"rotate-hint\",\"display\":\"flex\",\"bottom\":\"442px\",\"top\":\"691px\"}",
+    "  OK  たてむきの案内が スティックの帯に かぶらない(F-08) — {\"x\":248,\"y\":691,\"w\":324,\"h\":47}",
+    "  OK  目標カードが 右上のボタン列に かぶらない — {\"x\":14,\"y\":14,\"w\":250,\"h\":96}",
+    "  NG  1マスから 右へ はみ出す 中身 0件 — もちもの:.inv-slot>.craft-btn.sub(おく) +17px",
+    "  OK  44px未満の タップ対象 0件(180こ 計測)",
+    "  OK  14px未満の 文字 0件(173種 計測)",
+    "  OK  console エラー 0件"
+  ],
+  "errors": [],
+  "craft": {
+    "scrollH": 3228,
+    "clientH": 621,
+    "scrollTop": 459,
+    "pct": 19,
+    "rows": 37,
+    "rowFound": true,
+    "rowTop": 219,
+    "rowVisible": true,
+    "focus": true,
+    "cue": true,
+    "cueText": "▼ まだ あるよ",
+    "cueGap": 19,
+    "titleH": 62,
+    "titleBottom": 63,
+    "secTop": 80,
+    "tabsTop": -386,
+    "tabsVisible": false
+  },
+  "bottom": {
+    "rest": 0,
+    "cue": false
+  },
+  "laps": {
+    "panel": {
+      "x": 310,
+      "y": 98,
+      "w": 560,
+      "h": 623
+    },
+    "objh": {
+      "x": 14,
+      "y": 14,
+      "w": 232,
+      "h": 153
+    },
+    "toast": {
+      "x": 826,
+      "y": 742,
+      "w": 340,
+      "h": 66
+    },
+    "close": {
+      "x": 22,
+      "y": 738,
+      "w": 132,
+      "h": 56
+    },
+    "objOverlap": false,
+    "toastOverlap": false,
+    "closeOverlap": false
+  },
+  "place": {
+    "label": "おく",
+    "dim": true,
+    "long": false,
+    "font": 15.84,
+    "hint": "×しぜんの めぐみの ばしょだよ — うごかして ばしょを さがそう",
+    "hintShown": true,
+    "placeHint": "しぜんの めぐみの ばしょだよ — うごかして ばしょを さがそう Rまわす Escやめる",
+    "tone": "ng",
+    "menuShown": [
+      "メニュー"
+    ]
+  },
+  "pause": {
+    "hasClose": true,
+    "text": "とじる",
+    "w": 82,
+    "h": 44
+  },
+  "menuBtns": [
+    {
+      "label": "もちもの",
+      "w": 76,
+      "h": 58,
+      "font": 15.12
+    },
+    {
+      "label": "クラフト",
+      "w": 76,
+      "h": 58,
+      "font": 15.12
+    },
+    {
+      "label": "おねがい",
+      "w": 76,
+      "h": 58,
+      "font": 15.12
+    },
+    {
+      "label": "ずかん",
+      "w": 76,
+      "h": 58,
+      "font": 15.12
+    },
+    {
+      "label": "しゃしん",
+      "w": 76,
+      "h": 58,
+      "font": 15.12
+    },
+    {
+      "label": "メニュー",
+      "w": 76,
+      "h": 58,
+      "font": 15.12
+    }
+  ],
+  "port": {
+    "hint": {
+      "x": 248,
+      "y": 691,
+      "w": 324,
+      "h": 47
+    },
+    "zone": {
+      "x": 0,
+      "y": 750,
+      "w": 377,
+      "h": 430
+    },
+    "objh": {
+      "x": 14,
+      "y": 14,
+      "w": 250,
+      "h": 96
+    },
+    "menu": {
+      "x": 320,
+      "y": 62,
+      "w": 486,
+      "h": 58
+    },
+    "overlap": false,
+    "objMenuOverlap": false,
+    "stickLeft": "0px",
+    "stickBottom": "0px"
+  },
+  "tapFonts": [
+    "craft-btn|15.84",
+    "panel-close|15.12",
+    "shop-tab|15.84",
+    "title-btn|18",
+    "touch-action|15.84",
+    "touch-btn|15.12",
+    "touch-close|15.12",
+    "touch-emote|15.12"
+  ],
+  "measures": [
+    {
+      "where": "世界(タッチUIだけ)",
+      "taps": [
+        {
+          "sel": ".touch-btn",
+          "label": "もちもの",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "クラフト",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "おねがい",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "ずかん",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "しゃしん",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "メニュー",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-emote",
+          "label": "てをふる",
+          "w": 80,
+          "h": 80,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-action.dim",
+          "label": "しらべる",
+          "w": 116,
+          "h": 116,
+          "font": 15.84
+        }
+      ],
+      "fonts": [
+        {
+          "sel": ".hud-chip",
+          "font": 15.84,
+          "text": "1日め ひる 13:14"
+        },
+        {
+          "sel": ".lumina-n",
+          "font": 15.84,
+          "text": "900"
+        },
+        {
+          "sel": ".obj-head",
+          "font": 15.12,
+          "text": "いまやること"
+        },
+        {
+          "sel": ".obj-label",
+          "font": 18,
+          "text": "ざいりょうが そろったよ! 右上"
+        },
+        {
+          "sel": ".obj-sub",
+          "font": 15.12,
+          "text": "0 / 3"
+        },
+        {
+          "sel": "span",
+          "font": 15.12,
+          "text": "もちもの"
+        },
+        {
+          "sel": ".touch-action.dim",
+          "font": 15.84,
+          "text": "しらべる"
+        }
+      ],
+      "scrolls": [],
+      "spills": []
+    },
+    {
+      "where": "クラフト(ひらいた直後)",
+      "taps": [
+        {
+          "sel": ".panel-close",
+          "label": "とじる",
+          "w": 82,
+          "h": 44,
+          "font": 15.12
+        },
+        {
+          "sel": ".shop-tab.on",
+          "label": "レシピ",
+          "w": 86,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".shop-tab",
+          "label": "くみあわせ",
+          "w": 117,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "もちもの",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "クラフト",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "おねがい",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "ずかん",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "メニュー",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-close",
+          "label": "とじる",
+          "w": 132,
+          "h": 56,
+          "font": 15.12
+        }
+      ],
+      "fonts": [
+        {
+          "sel": ".hud-chip",
+          "font": 15.84,
+          "text": "1日め ひる 13:16"
+        },
+        {
+          "sel": ".lumina-n",
+          "font": 15.84,
+          "text": "900"
+        },
+        {
+          "sel": ".obj-head",
+          "font": 15.12,
+          "text": "いまやること"
+        },
+        {
+          "sel": ".obj-label",
+          "font": 18,
+          "text": "ざいりょうが そろったよ! 右上"
+        },
+        {
+          "sel": ".panel-title",
+          "font": 19.44,
+          "text": "クラフト とじる"
+        },
+        {
+          "sel": ".panel-close",
+          "font": 15.12,
+          "text": "とじる"
+        },
+        {
+          "sel": ".shop-tab.on",
+          "font": 15.84,
+          "text": "レシピ"
+        },
+        {
+          "sel": ".shop-tab",
+          "font": 15.84,
+          "text": "くみあわせ"
+        },
+        {
+          "sel": ".craft-sec",
+          "font": 15.12,
+          "text": "どうぐ"
+        },
+        {
+          "sel": ".craft-name",
+          "font": 16.2,
+          "text": "カマ"
+        },
+        {
+          "sel": ".cost.lack",
+          "font": 14.04,
+          "text": "0/2"
+        },
+        {
+          "sel": ".cost.ok",
+          "font": 14.04,
+          "text": "6/1"
+        },
+        {
+          "sel": ".crafted-label",
+          "font": 15.12,
+          "text": "もってる"
+        },
+        {
+          "sel": ".craft-btn",
+          "font": 15.84,
+          "text": "つくる"
+        },
+        {
+          "sel": ".craft-q-lead",
+          "font": 15.12,
+          "text": "つぎの ことを すると、作りかた"
+        },
+        {
+          "sel": ".craft-q-name",
+          "font": 15.12,
+          "text": "???"
+        },
+        {
+          "sel": ".craft-q-hint",
+          "font": 14.04,
+          "text": "うきだまを ひろうと ひらめく"
+        },
+        {
+          "sel": ".panel-more.on",
+          "font": 15.12,
+          "text": "▼ まだ あるよ"
+        },
+        {
+          "sel": "span",
+          "font": 15.12,
+          "text": "もちもの"
+        }
+      ],
+      "scrolls": [
+        {
+          "sel": ".panel.craft-panel",
+          "scrollH": 3228,
+          "clientH": 621,
+          "pct": 19,
+          "cue": true
+        }
+      ],
+      "spills": []
+    },
+    {
+      "where": "くみあわせ",
+      "taps": [
+        {
+          "sel": ".panel-close",
+          "label": "とじる",
+          "w": 82,
+          "h": 44,
+          "font": 15.12
+        },
+        {
+          "sel": ".shop-tab.on",
+          "label": "レシピ",
+          "w": 86,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".shop-tab",
+          "label": "くみあわせ",
+          "w": 117,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "つくる",
+          "w": 84,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "もちもの",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "クラフト",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "おねがい",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "ずかん",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "メニュー",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-close",
+          "label": "とじる",
+          "w": 132,
+          "h": 56,
+          "font": 15.12
+        }
+      ],
+      "fonts": [
+        {
+          "sel": ".hud-chip",
+          "font": 15.84,
+          "text": "1日め ひる 13:19"
+        },
+        {
+          "sel": ".lumina-n",
+          "font": 15.84,
+          "text": "900"
+        },
+        {
+          "sel": ".obj-head",
+          "font": 15.12,
+          "text": "いまやること"
+        },
+        {
+          "sel": ".obj-label",
+          "font": 18,
+          "text": "ざいりょうが そろったよ! 右上"
+        },
+        {
+          "sel": ".panel-title",
+          "font": 19.44,
+          "text": "クラフト とじる"
+        },
+        {
+          "sel": ".panel-close",
+          "font": 15.12,
+          "text": "とじる"
+        },
+        {
+          "sel": ".shop-tab.on",
+          "font": 15.84,
+          "text": "レシピ"
+        },
+        {
+          "sel": ".shop-tab",
+          "font": 15.84,
+          "text": "くみあわせ"
+        },
+        {
+          "sel": ".craft-sec",
+          "font": 15.12,
+          "text": "どうぐ"
+        },
+        {
+          "sel": ".craft-name",
+          "font": 16.2,
+          "text": "カマ"
+        },
+        {
+          "sel": ".cost.lack",
+          "font": 14.04,
+          "text": "0/2"
+        },
+        {
+          "sel": ".cost.ok",
+          "font": 14.04,
+          "text": "6/1"
+        },
+        {
+          "sel": ".crafted-label",
+          "font": 15.12,
+          "text": "もってる"
+        },
+        {
+          "sel": ".craft-btn",
+          "font": 15.84,
+          "text": "つくる"
+        },
+        {
+          "sel": ".craft-q-lead",
+          "font": 15.12,
+          "text": "つぎの ことを すると、作りかた"
+        },
+        {
+          "sel": ".craft-q-name",
+          "font": 15.12,
+          "text": "???"
+        },
+        {
+          "sel": ".craft-q-hint",
+          "font": 14.04,
+          "text": "うきだまを ひろうと ひらめく"
+        },
+        {
+          "sel": ".panel-more.on",
+          "font": 15.12,
+          "text": "▼ まだ あるよ"
+        },
+        {
+          "sel": "span",
+          "font": 15.12,
+          "text": "もちもの"
+        },
+        {
+          "sel": "span",
+          "font": 15.84,
+          "text": "クラフトの「くみあわせ」タブで "
+        }
+      ],
+      "scrolls": [
+        {
+          "sel": ".panel.craft-panel",
+          "scrollH": 3228,
+          "clientH": 621,
+          "pct": 19,
+          "cue": true
+        }
+      ],
+      "spills": []
+    },
+    {
+      "where": "はいち中",
+      "taps": [
+        {
+          "sel": ".touch-btn",
+          "label": "メニュー",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "まわす",
+          "w": 116,
+          "h": 48,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "やめる",
+          "w": 116,
+          "h": 48,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-action.dim",
+          "label": "おく",
+          "w": 116,
+          "h": 116,
+          "font": 15.84
+        }
+      ],
+      "fonts": [
+        {
+          "sel": ".hud-chip",
+          "font": 15.84,
+          "text": "1日め ひる 13:33"
+        },
+        {
+          "sel": ".lumina-n",
+          "font": 15.84,
+          "text": "900"
+        },
+        {
+          "sel": ".hud-hint.show.place.ng",
+          "font": 16.56,
+          "text": "×しぜんの めぐみの ばしょだよ"
+        },
+        {
+          "sel": ".ph-mark.ng",
+          "font": 16.56,
+          "text": "×"
+        },
+        {
+          "sel": ".obj-head",
+          "font": 15.12,
+          "text": "いまやること"
+        },
+        {
+          "sel": ".obj-label",
+          "font": 18,
+          "text": "光る家具を 島に置こう"
+        },
+        {
+          "sel": ".obj-sub",
+          "font": 15.12,
+          "text": "0 / 3"
+        },
+        {
+          "sel": "span",
+          "font": 15.12,
+          "text": "メニュー"
+        },
+        {
+          "sel": ".touch-action.dim",
+          "font": 15.84,
+          "text": "おく"
+        },
+        {
+          "sel": "span",
+          "font": 15.84,
+          "text": "クラフトの「くみあわせ」タブで "
+        }
+      ],
+      "scrolls": [],
+      "spills": []
+    },
+    {
+      "where": "もちもの",
+      "taps": [
+        {
+          "sel": ".panel-close",
+          "label": "とじる",
+          "w": 82,
+          "h": 44,
+          "font": 15.12
+        },
+        {
+          "sel": ".craft-btn.sub",
+          "label": "おく",
+          "w": 70,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "もちもの",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "クラフト",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "おねがい",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "ずかん",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "メニュー",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-close",
+          "label": "とじる",
+          "w": 132,
+          "h": 56,
+          "font": 15.12
+        }
+      ],
+      "fonts": [
+        {
+          "sel": ".hud-chip",
+          "font": 15.84,
+          "text": "1日め ひる 13:35"
+        },
+        {
+          "sel": ".lumina-n",
+          "font": 15.84,
+          "text": "900"
+        },
+        {
+          "sel": ".obj-head",
+          "font": 15.12,
+          "text": "いまやること"
+        },
+        {
+          "sel": ".obj-label",
+          "font": 18,
+          "text": "光る家具を 島に置こう"
+        },
+        {
+          "sel": ".panel-title",
+          "font": 19.44,
+          "text": "もちもの とじる"
+        },
+        {
+          "sel": ".panel-close",
+          "font": 15.12,
+          "text": "とじる"
+        },
+        {
+          "sel": ".inv-name",
+          "font": 14.04,
+          "text": "いし"
+        },
+        {
+          "sel": ".inv-count",
+          "font": 15.84,
+          "text": "×6"
+        },
+        {
+          "sel": ".craft-btn.sub",
+          "font": 15.84,
+          "text": "おく"
+        },
+        {
+          "sel": ".panel-sub",
+          "font": 16.2,
+          "text": "どうぐ"
+        },
+        {
+          "sel": "span",
+          "font": 15.84,
+          "text": "オノ"
+        },
+        {
+          "sel": "span",
+          "font": 15.12,
+          "text": "もちもの"
+        }
+      ],
+      "scrolls": [
+        {
+          "sel": ".panel.inv-panel",
+          "scrollH": 370,
+          "clientH": 370,
+          "pct": 100,
+          "cue": false
+        }
+      ],
+      "spills": [
+        {
+          "box": ".inv-slot",
+          "kid": ".craft-btn.sub",
+          "label": "おく",
+          "over": 17
+        }
+      ]
+    },
+    {
+      "where": "おねがい",
+      "taps": [
+        {
+          "sel": ".panel-close",
+          "label": "とじる",
+          "w": 82,
+          "h": 44,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "もちもの",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "クラフト",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "おねがい",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "ずかん",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "メニュー",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-close",
+          "label": "とじる",
+          "w": 132,
+          "h": 56,
+          "font": 15.12
+        }
+      ],
+      "fonts": [
+        {
+          "sel": ".hud-chip",
+          "font": 15.84,
+          "text": "1日め ひる 13:38"
+        },
+        {
+          "sel": ".lumina-n",
+          "font": 15.84,
+          "text": "900"
+        },
+        {
+          "sel": ".obj-head",
+          "font": 15.12,
+          "text": "いまやること"
+        },
+        {
+          "sel": ".obj-label",
+          "font": 18,
+          "text": "光る家具を 島に置こう"
+        },
+        {
+          "sel": ".panel-title",
+          "font": 19.44,
+          "text": "島のおねがい とじる"
+        },
+        {
+          "sel": ".panel-close",
+          "font": 15.12,
+          "text": "とじる"
+        },
+        {
+          "sel": ".q-title",
+          "font": 16.56,
+          "text": "ルミの木を おこそう (みんな)"
+        },
+        {
+          "sel": "small",
+          "font": 14.4,
+          "text": "(みんな)"
+        },
+        {
+          "sel": ".q-status",
+          "font": 15.12,
+          "text": "ひかる かぐを しまに 3つ お"
+        },
+        {
+          "sel": ".panel-sub",
+          "font": 16.2,
+          "text": "たっせい: 4 / 15"
+        },
+        {
+          "sel": ".panel-count",
+          "font": 14.4,
+          "text": "0 / 3"
+        },
+        {
+          "sel": ".q-new",
+          "font": 15.12,
+          "text": "ツムギに とどけよう"
+        },
+        {
+          "sel": ".bl-reward",
+          "font": 16.56,
+          "text": "20"
+        },
+        {
+          "sel": ".panel-more.on",
+          "font": 15.12,
+          "text": "▼ まだ あるよ"
+        },
+        {
+          "sel": "span",
+          "font": 15.12,
+          "text": "もちもの"
+        },
+        {
+          "sel": "span",
+          "font": 15.84,
+          "text": "クラフトの「くみあわせ」タブで "
+        }
+      ],
+      "scrolls": [
+        {
+          "sel": ".panel.quest-panel",
+          "scrollH": 700,
+          "clientH": 621,
+          "pct": 89,
+          "cue": true
+        }
+      ],
+      "spills": []
+    },
+    {
+      "where": "ずかん",
+      "taps": [
+        {
+          "sel": ".panel-close",
+          "label": "とじる",
+          "w": 82,
+          "h": 44,
+          "font": 15.12
+        },
+        {
+          "sel": ".shop-tab.on",
+          "label": "ずかん",
+          "w": 86,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".shop-tab",
+          "label": "バッジ 0/114",
+          "w": 127,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".shop-tab",
+          "label": "アルバム 0/24",
+          "w": 137,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "もちもの",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "クラフト",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "おねがい",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "ずかん",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "メニュー",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-close",
+          "label": "とじる",
+          "w": 132,
+          "h": 56,
+          "font": 15.12
+        }
+      ],
+      "fonts": [
+        {
+          "sel": ".hud-chip",
+          "font": 15.84,
+          "text": "1日め ひる 13:41"
+        },
+        {
+          "sel": ".lumina-n",
+          "font": 15.84,
+          "text": "900"
+        },
+        {
+          "sel": ".obj-head",
+          "font": 15.12,
+          "text": "いまやること"
+        },
+        {
+          "sel": ".obj-label",
+          "font": 18,
+          "text": "光る家具を 島に置こう"
+        },
+        {
+          "sel": ".panel-title",
+          "font": 19.44,
+          "text": "ずかん とじる"
+        },
+        {
+          "sel": ".panel-close",
+          "font": 15.12,
+          "text": "とじる"
+        },
+        {
+          "sel": ".shop-tab.on",
+          "font": 15.84,
+          "text": "ずかん"
+        },
+        {
+          "sel": ".shop-tab",
+          "font": 15.84,
+          "text": "バッジ 0/114"
+        },
+        {
+          "sel": ".hs-head",
+          "font": 15.48,
+          "text": "おうちの すてき度 0 てん は"
+        },
+        {
+          "sel": "b",
+          "font": 23.4,
+          "text": "0"
+        },
+        {
+          "sel": "small",
+          "font": 14.4,
+          "text": "はじめの おうち"
+        },
+        {
+          "sel": ".hs-part",
+          "font": 15.12,
+          "text": "おいた かぐ 0"
+        },
+        {
+          "sel": "b",
+          "font": 15.12,
+          "text": "0"
+        },
+        {
+          "sel": ".hs-next",
+          "font": 15.12,
+          "text": "あと 30 てんで「にぎやかな "
+        },
+        {
+          "sel": ".panel-sub.first",
+          "font": 16.2,
+          "text": "あつめたもの 0 / 170"
+        },
+        {
+          "sel": ".codex-name",
+          "font": 15.48,
+          "text": "?"
+        },
+        {
+          "sel": ".panel-sub",
+          "font": 16.2,
+          "text": "くみあわせ 0 / 22"
+        },
+        {
+          "sel": ".ach-name",
+          "font": 15.48,
+          "text": "はじめてのおてつだい島のみんなの"
+        },
+        {
+          "sel": ".ach-reward",
+          "font": 15.12,
+          "text": "+30ルミナ"
+        },
+        {
+          "sel": ".ach-state",
+          "font": 15.48,
+          "text": "0/1"
+        },
+        {
+          "sel": ".panel-more.on",
+          "font": 15.12,
+          "text": "▼ まだ あるよ"
+        },
+        {
+          "sel": "span",
+          "font": 15.12,
+          "text": "もちもの"
+        },
+        {
+          "sel": "span",
+          "font": 15.84,
+          "text": "クラフトの「くみあわせ」タブで "
+        }
+      ],
+      "scrolls": [
+        {
+          "sel": ".panel.codex-panel",
+          "scrollH": 6738,
+          "clientH": 621,
+          "pct": 9,
+          "cue": true
+        }
+      ],
+      "spills": []
+    },
+    {
+      "where": "ずかん/バッジ",
+      "taps": [
+        {
+          "sel": ".panel-close",
+          "label": "とじる",
+          "w": 82,
+          "h": 44,
+          "font": 15.12
+        },
+        {
+          "sel": ".shop-tab",
+          "label": "ずかん",
+          "w": 86,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".shop-tab.on",
+          "label": "バッジ 0/114",
+          "w": 127,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".shop-tab",
+          "label": "アルバム 0/24",
+          "w": 137,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "もちもの",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "クラフト",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "おねがい",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "ずかん",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "メニュー",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-close",
+          "label": "とじる",
+          "w": 132,
+          "h": 56,
+          "font": 15.12
+        }
+      ],
+      "fonts": [
+        {
+          "sel": ".hud-chip",
+          "font": 15.84,
+          "text": "1日め ひる 13:41"
+        },
+        {
+          "sel": ".lumina-n",
+          "font": 15.84,
+          "text": "900"
+        },
+        {
+          "sel": ".obj-head",
+          "font": 15.12,
+          "text": "いまやること"
+        },
+        {
+          "sel": ".obj-label",
+          "font": 18,
+          "text": "光る家具を 島に置こう"
+        },
+        {
+          "sel": ".panel-title",
+          "font": 19.44,
+          "text": "ずかん とじる"
+        },
+        {
+          "sel": ".panel-close",
+          "font": 15.12,
+          "text": "とじる"
+        },
+        {
+          "sel": ".shop-tab",
+          "font": 15.84,
+          "text": "ずかん"
+        },
+        {
+          "sel": ".shop-tab.on",
+          "font": 15.84,
+          "text": "バッジ 0/114"
+        },
+        {
+          "sel": ".badge-total",
+          "font": 15.48,
+          "text": "あつめたバッジ 0 / 114"
+        },
+        {
+          "sel": "b",
+          "font": 20.7,
+          "text": "0"
+        },
+        {
+          "sel": ".panel-sub.first",
+          "font": 16.2,
+          "text": "はじめて 0 / 12"
+        },
+        {
+          "sel": "small",
+          "font": 14.4,
+          "text": "0 / 12"
+        },
+        {
+          "sel": ".badge-name",
+          "font": 15.48,
+          "text": "はじめての つり0/1"
+        },
+        {
+          "sel": ".badge-progress",
+          "font": 14.4,
+          "text": "0/1"
+        },
+        {
+          "sel": ".panel-sub",
+          "font": 16.2,
+          "text": "つり 0 / 10"
+        },
+        {
+          "sel": ".panel-more.on",
+          "font": 15.12,
+          "text": "▼ まだ あるよ"
+        },
+        {
+          "sel": "span",
+          "font": 15.12,
+          "text": "もちもの"
+        },
+        {
+          "sel": "span",
+          "font": 15.84,
+          "text": "クラフトの「くみあわせ」タブで "
+        }
+      ],
+      "scrolls": [
+        {
+          "sel": ".panel.codex-panel",
+          "scrollH": 3642,
+          "clientH": 621,
+          "pct": 17,
+          "cue": true
+        }
+      ],
+      "spills": []
+    },
+    {
+      "where": "ずかん/アルバム",
+      "taps": [
+        {
+          "sel": ".panel-close",
+          "label": "とじる",
+          "w": 82,
+          "h": 44,
+          "font": 15.12
+        },
+        {
+          "sel": ".shop-tab",
+          "label": "ずかん",
+          "w": 86,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".shop-tab",
+          "label": "バッジ 0/114",
+          "w": 127,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".shop-tab.on",
+          "label": "アルバム 0/24",
+          "w": 137,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "もちもの",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "クラフト",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "おねがい",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "ずかん",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "メニュー",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-close",
+          "label": "とじる",
+          "w": 132,
+          "h": 56,
+          "font": 15.12
+        }
+      ],
+      "fonts": [
+        {
+          "sel": ".hud-chip",
+          "font": 15.84,
+          "text": "1日め ひる 13:41"
+        },
+        {
+          "sel": ".lumina-n",
+          "font": 15.84,
+          "text": "900"
+        },
+        {
+          "sel": ".obj-head",
+          "font": 15.12,
+          "text": "いまやること"
+        },
+        {
+          "sel": ".obj-label",
+          "font": 18,
+          "text": "光る家具を 島に置こう"
+        },
+        {
+          "sel": ".panel-title",
+          "font": 19.44,
+          "text": "ずかん とじる"
+        },
+        {
+          "sel": ".panel-close",
+          "font": 15.12,
+          "text": "とじる"
+        },
+        {
+          "sel": ".shop-tab",
+          "font": 15.84,
+          "text": "ずかん"
+        },
+        {
+          "sel": ".shop-tab.on",
+          "font": 15.84,
+          "text": "アルバム 0/24"
+        },
+        {
+          "sel": ".panel-sub.first",
+          "font": 16.2,
+          "text": "アルバム 0 / 24まい"
+        },
+        {
+          "sel": "small",
+          "font": 14.4,
+          "text": "0 / 24まい"
+        },
+        {
+          "sel": ".inv-empty",
+          "font": 16.2,
+          "text": "まだ 1まいも ないよ。右上の「"
+        },
+        {
+          "sel": ".panel-sub",
+          "font": 16.2,
+          "text": "いっぱいに なると 古い しゃし"
+        },
+        {
+          "sel": "span",
+          "font": 15.12,
+          "text": "もちもの"
+        },
+        {
+          "sel": "span",
+          "font": 15.84,
+          "text": "クラフトの「くみあわせ」タブで "
+        }
+      ],
+      "scrolls": [
+        {
+          "sel": ".panel.codex-panel",
+          "scrollH": 306,
+          "clientH": 306,
+          "pct": 100,
+          "cue": false
+        }
+      ],
+      "spills": []
+    },
+    {
+      "where": "店",
+      "taps": [
+        {
+          "sel": ".panel-close",
+          "label": "とじる",
+          "w": 82,
+          "h": 44,
+          "font": 15.12
+        },
+        {
+          "sel": ".shop-tab.on",
+          "label": "うる",
+          "w": 70,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".shop-tab",
+          "label": "かう(かぐ・かべ・ゆか)",
+          "w": 208,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "うる",
+          "w": 68,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn.sub",
+          "label": "ぜんぶ",
+          "w": 86,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "うる",
+          "w": 68,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn.sub",
+          "label": "ぜんぶ",
+          "w": 86,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "うる",
+          "w": 68,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn.sub",
+          "label": "ぜんぶ",
+          "w": 86,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "うる",
+          "w": 68,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn.sub",
+          "label": "ぜんぶ",
+          "w": 86,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "うる",
+          "w": 68,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn.sub",
+          "label": "ぜんぶ",
+          "w": 86,
+          "h": 45,
+          "font": 15.84
+        },
+        {
+          "sel": ".craft-btn",
+          "label": "うる",
+          "w": 68,
+          "h": 44,
+          "font": 15.84
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "もちもの",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "クラフト",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "おねがい",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "ずかん",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "メニュー",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-close",
+          "label": "とじる",
+          "w": 132,
+          "h": 56,
+          "font": 15.12
+        }
+      ],
+      "fonts": [
+        {
+          "sel": ".hud-chip",
+          "font": 15.84,
+          "text": "1日め ひる 13:45"
+        },
+        {
+          "sel": ".lumina-n",
+          "font": 15.84,
+          "text": "900"
+        },
+        {
+          "sel": ".obj-head",
+          "font": 15.12,
+          "text": "いまやること"
+        },
+        {
+          "sel": ".obj-label",
+          "font": 18,
+          "text": "光る家具を 島に置こう"
+        },
+        {
+          "sel": ".panel-title",
+          "font": 19.44,
+          "text": "ツムギ工房 900 とじる"
+        },
+        {
+          "sel": ".shop-lumina",
+          "font": 16.2,
+          "text": "900"
+        },
+        {
+          "sel": ".panel-close",
+          "font": 15.12,
+          "text": "とじる"
+        },
+        {
+          "sel": ".shop-tab.on",
+          "font": 15.84,
+          "text": "うる"
+        },
+        {
+          "sel": ".shop-tab",
+          "font": 15.84,
+          "text": "かう(かぐ・かべ・ゆか)"
+        },
+        {
+          "sel": ".craft-name",
+          "font": 16.2,
+          "text": "いし ×6"
+        },
+        {
+          "sel": "small",
+          "font": 14.4,
+          "text": "×6"
+        },
+        {
+          "sel": ".shop-price",
+          "font": 15.84,
+          "text": "8"
+        },
+        {
+          "sel": ".craft-btn",
+          "font": 15.84,
+          "text": "うる"
+        },
+        {
+          "sel": ".craft-btn.sub",
+          "font": 15.84,
+          "text": "ぜんぶ"
+        },
+        {
+          "sel": "span",
+          "font": 15.12,
+          "text": "もちもの"
+        },
+        {
+          "sel": "span",
+          "font": 15.84,
+          "text": "クラフトの「くみあわせ」タブで "
+        }
+      ],
+      "scrolls": [
+        {
+          "sel": ".panel.shop-panel",
+          "scrollH": 540,
+          "clientH": 540,
+          "pct": 100,
+          "cue": false
+        }
+      ],
+      "spills": []
+    },
+    {
+      "where": "メニュー",
+      "taps": [
+        {
+          "sel": ".panel-close",
+          "label": "とじる",
+          "w": 82,
+          "h": 44,
+          "font": 15.12
+        },
+        {
+          "sel": ".title-btn",
+          "label": "つづける",
+          "w": 280,
+          "h": 50,
+          "font": 18
+        },
+        {
+          "sel": ".title-btn.sub",
+          "label": "おと: オン",
+          "w": 280,
+          "h": 52,
+          "font": 18
+        },
+        {
+          "sel": ".title-btn.sub",
+          "label": "そうさほうほう",
+          "w": 280,
+          "h": 52,
+          "font": 18
+        },
+        {
+          "sel": ".title-btn.sub",
+          "label": "セーブしてタイトルへ",
+          "w": 280,
+          "h": 52,
+          "font": 18
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "もちもの",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "クラフト",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "おねがい",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "ずかん",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "メニュー",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-close",
+          "label": "とじる",
+          "w": 132,
+          "h": 56,
+          "font": 15.12
+        }
+      ],
+      "fonts": [
+        {
+          "sel": ".hud-chip",
+          "font": 15.84,
+          "text": "1日め ひる 13:47"
+        },
+        {
+          "sel": ".lumina-n",
+          "font": 15.84,
+          "text": "900"
+        },
+        {
+          "sel": ".obj-head",
+          "font": 15.12,
+          "text": "いまやること"
+        },
+        {
+          "sel": ".obj-label",
+          "font": 18,
+          "text": "光る家具を 島に置こう"
+        },
+        {
+          "sel": ".panel-title",
+          "font": 19.44,
+          "text": "メニュー とじる"
+        },
+        {
+          "sel": ".panel-close",
+          "font": 15.12,
+          "text": "とじる"
+        },
+        {
+          "sel": ".title-btn",
+          "font": 18,
+          "text": "つづける"
+        },
+        {
+          "sel": ".title-btn.sub",
+          "font": 18,
+          "text": "おと: オン"
+        },
+        {
+          "sel": "span",
+          "font": 15.12,
+          "text": "もちもの"
+        },
+        {
+          "sel": "span",
+          "font": 15.84,
+          "text": "クラフトの「くみあわせ」タブで "
+        }
+      ],
+      "scrolls": [
+        {
+          "sel": ".panel.pause-panel",
+          "scrollH": 320,
+          "clientH": 320,
+          "pct": 100,
+          "cue": false
+        }
+      ],
+      "spills": []
+    },
+    {
+      "where": "たてむき",
+      "taps": [
+        {
+          "sel": ".touch-btn",
+          "label": "もちもの",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "クラフト",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "おねがい",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "ずかん",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "しゃしん",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-btn",
+          "label": "メニュー",
+          "w": 76,
+          "h": 58,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-emote",
+          "label": "てをふる",
+          "w": 80,
+          "h": 80,
+          "font": 15.12
+        },
+        {
+          "sel": ".touch-action.dim",
+          "label": "しらべる",
+          "w": 116,
+          "h": 116,
+          "font": 15.84
+        }
+      ],
+      "fonts": [
+        {
+          "sel": ".hud-chip",
+          "font": 15.84,
+          "text": "1日め ひる 14:02"
+        },
+        {
+          "sel": ".lumina-n",
+          "font": 15.84,
+          "text": "900"
+        },
+        {
+          "sel": ".obj-head",
+          "font": 15.12,
+          "text": "いまやること"
+        },
+        {
+          "sel": ".obj-label",
+          "font": 18,
+          "text": "光る家具を 島に置こう"
+        },
+        {
+          "sel": ".obj-sub",
+          "font": 15.12,
+          "text": "0 / 3"
+        },
+        {
+          "sel": "span",
+          "font": 15.12,
+          "text": "もちもの"
+        },
+        {
+          "sel": ".touch-action.dim",
+          "font": 15.84,
+          "text": "しらべる"
+        },
+        {
+          "sel": "span",
+          "font": 15.84,
+          "text": "クラフトの「くみあわせ」タブで "
+        }
+      ],
+      "scrolls": [],
+      "spills": []
+    }
+  ]
+}

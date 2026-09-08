@@ -90,7 +90,14 @@ export async function launchEdge(puppeteer, opts = {}) {
       }
       throw new Error(`Edgeを起動できない(port ${port} が応答しない)`);
     }
-    const browser = await puppeteer.connect({ browserURL: `http://127.0.0.1:${port}`, defaultViewport });
+    // protocolTimeout: CDPの1往復を待つ上限(既定180秒)。複数のエージェントが同時に
+    // ブラウザを走らせていると、screenshot / evaluate の1往復がこれを超えて
+    // 「Runtime.evaluate timed out」で走行ごと落ちる。渡さなければ今までどおり既定。
+    const browser = await puppeteer.connect({
+      browserURL: `http://127.0.0.1:${port}`,
+      defaultViewport,
+      ...(opts.protocolTimeout ? { protocolTimeout: opts.protocolTimeout } : {}),
+    });
     // 起動時の about:blank タブが残っていると、newPage したタブが裏になって rAF が止まる。
     // 新しいページを前面に出し、最初の空タブは1回だけ閉じる
     const origNewPage = browser.newPage.bind(browser);

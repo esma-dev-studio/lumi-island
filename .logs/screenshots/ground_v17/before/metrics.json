@@ -1,0 +1,107 @@
+{
+ "when": "2026-09-08T11:14:34.534Z",
+ "out": ".logs/screenshots/ground_v17/before",
+ "viewport": {
+  "width": 1180,
+  "height": 820,
+  "deviceScaleFactor": 2
+ },
+ "shots": {
+  "01_plaza_day.png": {
+   "note": "ひろばからルミの木を北に見る(引ききり)",
+   "activeMeshes": 111,
+   "totalMeshes": 523,
+   "drawCalls": 434,
+   "activeTriangles": 364520,
+   "activeVerticesSumOfMeshes": 67646,
+   "sceneTotalVertices": 217038,
+   "materials": 67,
+   "textures": 32,
+   "hour": 11.1,
+   "fps": 89
+  },
+  "03_plaza_night.png": {
+   "note": "ひろばからルミの木を北に見る(引ききり)",
+   "activeMeshes": 109,
+   "totalMeshes": 526,
+   "drawCalls": 431,
+   "activeTriangles": 352324,
+   "activeVerticesSumOfMeshes": 64657,
+   "sceneTotalVertices": 217907,
+   "materials": 68,
+   "textures": 32,
+   "hour": 21.09,
+   "fps": 87
+  },
+  "05_pond_fishing.png": {
+   "note": "ミナモの釣り場から池ごしに水面と対岸",
+   "activeMeshes": 27,
+   "totalMeshes": 524,
+   "drawCalls": 269,
+   "activeTriangles": 291940,
+   "activeVerticesSumOfMeshes": 44273,
+   "sceneTotalVertices": 217786,
+   "materials": 68,
+   "textures": 32,
+   "hour": 14.13,
+   "fps": 76
+  },
+  "07_cove_day.png": {
+   "note": "桟橋の付け根から灯台(北西)を見る",
+   "activeMeshes": 63,
+   "totalMeshes": 526,
+   "drawCalls": 127,
+   "activeTriangles": 133420,
+   "activeVerticesSumOfMeshes": 40220,
+   "sceneTotalVertices": 219722,
+   "materials": 68,
+   "textures": 32,
+   "hour": 11.12,
+   "fps": 21
+  },
+  "B1_closeup_grass.png": {
+   "note": "草地を約1.7m先・見おろし",
+   "activeMeshes": 36,
+   "totalMeshes": 530,
+   "drawCalls": 290,
+   "activeTriangles": 289272,
+   "activeVerticesSumOfMeshes": 41864,
+   "sceneTotalVertices": 220931,
+   "materials": 68,
+   "textures": 32,
+   "hour": 12.14,
+   "fps": 28
+  },
+  "B2_closeup_beach_water.png": {
+   "note": "砂浜から波うちぎわを約5m先・低い視点(水ぎわ z=38.0 / 位相4.6)",
+   "activeMeshes": 27,
+   "totalMeshes": 532,
+   "drawCalls": 274,
+   "activeTriangles": 257540,
+   "activeVerticesSumOfMeshes": 38441,
+   "sceneTotalVertices": 221491,
+   "materials": 68,
+   "textures": 32,
+   "hour": 12.26,
+   "fps": 91
+  },
+  "B6_closeup_pond_water.png": {
+   "note": "池の水面を水上から斜め上に",
+   "activeMeshes": 20,
+   "totalMeshes": 533,
+   "drawCalls": 259,
+   "activeTriangles": 262828,
+   "activeVerticesSumOfMeshes": 39982,
+   "sceneTotalVertices": 222174,
+   "materials": 68,
+   "textures": 32,
+   "hour": 12.37,
+   "fps": 126
+  }
+ },
+ "seed": {
+  "day": 27,
+  "weather": "sunny"
+ },
+ "consoleErrors": []
+}

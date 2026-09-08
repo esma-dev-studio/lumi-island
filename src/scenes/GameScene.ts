@@ -111,7 +111,7 @@ import {
 import { TouchControls } from '../ui/TouchControls';
 import { save } from '../save/SaveSystem';
 import { banner, toast } from '../ui/Toast';
-import { sfx, setAmbient, setMusic } from '../audio/AudioSystem';
+import { sfx, musicStinger, setAmbient, setMusic } from '../audio/AudioSystem';
 import { ZoneTracker } from '../audio/ambienceZones';
 import { EmoteState, replyingNpc } from '../systems/EmoteSystem';
 import { sitPose, type Seat } from '../systems/SitSystem';
@@ -758,6 +758,9 @@ export class GameScene {
 
   /** ランタンとばしの見せ場のあと: お祝いのことば(じっせき・バッジは毎秒の判定が拾う) */
   onFestivalLanternFlown(): void {
+    // 見せ場の区切りは 音楽の側から「章の締め」を出す(sfx('quest') より先に呼ぶと、
+    // あとから来る依頼達成の締めは MusicBox 側で間引かれて 重ならない)
+    musicStinger('chapter');
     sfx('quest');
     toast('ほしランタンが そらへ のぼっていった。みんなと きょうの ことを おぼえていよう', 'festival');
     save(this.state);
@@ -934,6 +937,7 @@ export class GameScene {
   onBondEventDone(npcId: string): void {
     const def = bondEventOf(npcId);
     if (!def) return;
+    musicStinger('chapter'); // 見せ場の区切り(音楽の締め)。sfx('quest') より先に呼ぶ
     sfx('quest');
     toast(def.toast, def.reward?.item ?? 'heart');
     if (def.reward) toast(`「${ITEMS[def.reward.item].name}」を 手に入れた!`, def.reward.item);
@@ -1818,6 +1822,7 @@ export class GameScene {
   onLighthouseLit(): void {
     const def = QUEST_BY_ID.q2_light;
     const rewardLines = this.lighthouseRewardLines;
+    musicStinger('chapter'); // 章の区切り(とうだい点灯)。sfx('quest') より先に呼ぶ
     sfx('quest');
     // ロカのよろこびの会話。ふつうの会話と同じ道すじ(カメラ・終わりかた)にそろえる。
     // まず となりへ来てもらう: 灯台のふもと(3.9m先)のままだと二人が画面の左右に離れ、
@@ -2057,8 +2062,11 @@ export class GameScene {
             isFestivalTime(this.island.time.day, this.island.time.hour) &&
             Math.hypot(this.player.x - FESTIVAL_PLAZA.x, this.player.z - FESTIVAL_PLAZA.z) < FESTIVAL_MURMUR_R,
           rain: sheltered ? wx.rain * 0.4 : wx.rain,
+          // v28 ゆきの日は 環境音を こもらせ、かすかな風の層を足す(雪は音を吸う)
+          snow: sheltered ? wx.snow * 0.4 : wx.snow,
         });
-        // 夜のオルゴールBGM(19:00〜翌4:30)。演出中は少し下げて効果音とぶつけない。
+        // オルゴールBGM。あさ・ひる・ゆうがた・よるの4つが 時刻で入れかわる
+        // (v28 まで 夜だけだった=1日の6割が無音楽)。演出中は少し下げて効果音とぶつけない。
         // v16 まつりの時間だけ「まつりの夜のフレーズ」に差しかわる(音楽で 特別な夜だと伝える)
         setMusic(
           this.island.time.day, this.island.time.hour,

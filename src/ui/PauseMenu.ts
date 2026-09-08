@@ -24,6 +24,11 @@ export class PauseMenu {
     this.el = document.createElement('div');
     this.el.className = 'panel pause-panel hidden';
     document.getElementById('ui-root')!.appendChild(this.el);
+    // ここには「▼ まだ あるよ」の帯を 付けない。
+    // ポーズ画面だけは `display: flex` の たて1列で、**パネル自体は 流れない**作り
+    // (中の .title-extra だけが スクロールする。v16.1「つづける」がいつでも押せるように)。
+    // 帯を たすと 1つぶんの 場所を とって パネルまで スクロールしてしまう
+    // (tests/e2e/ui_wave_v161.spec.ts「ポーズ画面ぜんたいは 流れない」が それを 機械検査している)。
   }
 
   show(): void {
@@ -66,7 +71,9 @@ export class PauseMenu {
     const opts = loadOpts();
     const outfit = this.outfitHtml();
     this.el.innerHTML = `
-      <div class="panel-title">メニュー</div>
+      <div class="panel-title">メニュー
+        <span class="panel-close" data-close>${byInput('とじる(Esc)', 'とじる')}</span>
+      </div>
       <div class="pause-list">
         <button class="title-btn" data-act="resume">つづける</button>
         <button class="title-btn sub" data-act="sound">おと: ${opts.sound ? 'オン' : 'オフ'}</button>
@@ -80,6 +87,13 @@ export class PauseMenu {
         </div>
       </div>
     `;
+    // 見出しの「とじる」(ほかのパネルと同じ場所・同じ言葉。touch_audit_v17 F-10)
+    this.el.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => {
+      b.onclick = () => {
+        sfx('close');
+        this.close();
+      };
+    });
     this.el.querySelectorAll<HTMLButtonElement>('[data-outfit]').forEach((b) => {
       b.onclick = () => {
         sfx('ui');

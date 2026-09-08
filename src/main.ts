@@ -21,10 +21,14 @@ let legacyScale = 1 / renderScale;
 
 // ---- 動的解像度スケーリング(DRS) ----
 // 熱によるGPUスロットリング等で「p50は60fpsのままテール(p95/p99)だけが持続的に悪化する」状況を
-// 検知して、3D描画の解像度を一段ずつ下げる(1セッション内は戻さない)。
+// 検知して、3D描画の解像度を一段ずつ下げる。
 // 既存の安全弁は中央値が落ちる端末向けでこの症状では発火しないため、2つを併用する。
 // 文字・ボタンはDOMで別レイヤなので、解像度を下げても読みやすさは落ちない。
+// v27: 軽くなったら戻す(復帰経路)。判定は DynamicResolution が一手に持ち、
+//      下の低fps安全弁も同じ計測(窓p95が45秒つづけて22ms未満)を根拠に段を戻す。
 const dynRes = new DynamicResolution({ baseScale: legacyScale });
+/** ゲームが立ち上がった時刻(ms)。低fps安全弁の助走をここから数える */
+let gameReadyAt = 0;
 
 // hardwareScalingLevel は「大きいほど低解像度」。2つの決定値のうち、より低解像度側(=大きい方)を採る。
 let appliedScale = -1;
@@ -37,16 +41,16 @@ function applyRenderScale(): void {
 applyRenderScale();
 
 let lastFrameEndAt = 0;
-/** フレーム時間を1つDRSへ供給し、段が進んだら実際に解像度を下げる */
+/** フレーム時間を1つDRSへ供給し、段が動いたら実際に解像度を変える */
 function pushFrameSample(ms: number): void {
   const evt = dynRes.addFrame(ms);
   if (!evt) return;
   applyRenderScale();
   console.info(
-    `[dynres] step ${evt.step}/${dynRes.maxStep} scale ${evt.fromScale} -> ${evt.toScale}` +
+    `[dynres] ${evt.dir} step ${evt.step}/${dynRes.maxStep} scale ${evt.fromScale} -> ${evt.toScale}` +
       ` applied=${engine.getHardwareScalingLevel()} p95=${evt.windowP95.toFixed(2)}ms` +
       ` bad=${evt.badBuckets}/${dynRes.windowBuckets} frames=${evt.windowFrames}` +
-      ` t=${Math.round(evt.atMs / 1000)}s`
+      ` t=${Math.round(evt.atMs / 1000)}s reason=${evt.reason}`
   );
 }
 // 計測点は perf_probe と同じ「フレーム終わりから次のフレーム終わりまで」。
@@ -160,22 +164,57 @@ function setupOrientationHint(): () => void {
 const showOrientationHint = setupOrientationHint();
 
 // ---- 低fpsの安全弁(高dpr端末だけ。PCの描画品質は変えない) ----
-// 3秒続けて48fpsを下回ったら実効解像度を1段下げる(1.5 → 1.25 → 1.0)。上げ直しはしない。
+// 3秒続けて48fpsを下回ったら実効解像度を1段下げる(1.5 → 1.25 → 1.0)。
+//
+// v27 でここに2つ足した(実測: 起動10〜12秒の一過性の谷だけで 1.5→1.25 に落ち、
+// fpsが68に戻っても そのセッションは最後まで戻らなかった):
+//   1. 助走 — ゲームが立ち上がってから LEGACY_WARMUP_MS のあいだは降格判定をしない
+//   2. 復帰 — DRSと同じ計測(窓p95が45秒つづけて22ms未満・最後の降格から60秒)で1段戻す。
+//      fpsの瞬間値で数えないのは、実機もヘッドレスも 1秒値が 51〜79 と揺れるため
+//      「45秒連続で良い」が永遠に成立しないから。振動防止も DRS と同じ規則で、
+//      往復が2回起きたらその段に固定する。
+const LEGACY_WARMUP_MS = 20000;
+/** 起動時の実効解像度(=戻せる上限)。ここより上へは戻さない */
+const LEGACY_TOP_SCALE = renderScale;
 function setupAdaptiveResolution(): void {
   if ((window.devicePixelRatio || 1) <= 1.05) return;
   let slowSec = 0;
-  const timer = window.setInterval(() => {
+  let ups = 0; // 戻した回数
+  let roundTrips = 0; // 戻したあとに また落ちた回数
+  let pinned = false; // 往復2回で固定
+  const applyLegacy = (next: number, dir: 'down' | 'up', why: string): void => {
+    renderScale = Math.round(next * 100) / 100;
+    legacyScale = 1 / renderScale;
+    applyRenderScale();
+    dynRes.noteExternalScaleChange(dir); // 変更前のフレームで次の判定をしない
+    slowSec = 0;
+    console.info(
+      `[dynres] ${dir} legacy renderScale -> ${renderScale}` +
+        ` applied=${engine.getHardwareScalingLevel()} reason=${why}`
+    );
+  };
+  window.setInterval(() => {
     if (document.hidden) return;
+    if (gameReadyAt === 0 || performance.now() - gameReadyAt < LEGACY_WARMUP_MS) return;
     const fps = engine.getFps();
     if (!isFinite(fps) || fps <= 0) return;
     slowSec = fps < 48 ? slowSec + 1 : 0;
     if (slowSec >= 3 && renderScale > 1) {
-      renderScale = Math.max(1, Math.round((renderScale - 0.25) * 100) / 100);
-      legacyScale = 1 / renderScale;
-      applyRenderScale();
-      console.log('[lumi] fpsが低いため描画解像度を下げました:', renderScale);
-      slowSec = 0;
-      if (renderScale <= 1) window.clearInterval(timer);
+      if (ups > 0) {
+        roundTrips++;
+        if (roundTrips >= 2) pinned = true;
+      }
+      applyLegacy(Math.max(1, renderScale - 0.25), 'down', `fps ${fps.toFixed(1)} < 48 が3秒連続` + (pinned ? ` / 往復${roundTrips}回のため固定` : ''));
+      return;
+    }
+    if (!pinned && renderScale < LEGACY_TOP_SCALE && dynRes.recoverReady) {
+      ups++;
+      const st = dynRes.getState();
+      applyLegacy(
+        Math.min(LEGACY_TOP_SCALE, renderScale + 0.25),
+        'up',
+        `p95 ${st.windowP95.toFixed(2)}ms < ${dynRes.recoverThresholdMs}ms が${Math.round(st.goodStreakMs / 1000)}秒つづいた`
+      );
     }
   }, 1000);
 }
@@ -189,6 +228,7 @@ async function bootGame(state = newGameState()): Promise<void> {
   const game = new GameScene(engine, { debug, state });
   await game.init();
   dynRes.reset(); // タイトル中・読み込み中のフレームは判定に混ぜない(助走をここから数え直す)
+  gameReadyAt = performance.now(); // 低fps安全弁の助走もここから数える
   engine.runRenderLoop(() => game.render());
   (window as unknown as Record<string, Record<string, unknown>>).__lumi.game = game;
   (window as unknown as Record<string, Record<string, unknown>>).__lumi.ready = true as unknown as Record<string, unknown>;

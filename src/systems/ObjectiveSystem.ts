@@ -172,6 +172,19 @@ function npcName(id: string): string {
 }
 
 /**
+ * 「◯◯を あつめよう」の1文(v17で1か所に集約)。
+ *
+ * 同じ文を 6か所で 書きうつしていた(craftStep / q_wood / q2_boat / q2_shell・q2_starweed /
+ * q3_station / q3_lantern)。これは **UXボットの意味チェッカーが読む文言**
+ * (tools/ux_semantic_check.mjs の OBJ_RULES: /もくざい.*あつめよう/ など)なので、
+ * 1か所でも 書きそこなうと 誘導の分類だけが 静かに ずれる。
+ * 出る文字列は これまでと 1文字も 変わらない(ITEMS の名前 + 'を あつめよう')。
+ */
+export function gatherLabel(item: ItemId): string {
+  return `${ITEMS[item].name}を あつめよう`;
+}
+
+/**
  * レシピ完成までの「次の1歩」を返す。
  * 1) 不足素材があれば最初の1種類を採りに行く(道具が要るなら先に道具レシピへ)
  * 2) 全部そろったらクラフト画面へ
@@ -204,7 +217,7 @@ function craftStep(
   const area = areaOfItem(first.item);
   return {
     ...base, id: `${qid}_mats_${first.item}`, headline: 'いまやること',
-    label: `${ITEMS[first.item].name}を あつめよう`,
+    label: gatherLabel(first.item),
     // 入り江の素材は島のPOIを指さない(採取目標は最寄りノードを指すので target は使われない)
     target: area === 'cove' ? { kind: 'none' } : { kind: 'poi', id: GATHER_POI[first.item] ?? 'meadow' },
     progress: { cur: first.owned, max: first.required },
@@ -221,7 +234,7 @@ function inProgressObjective(state: GameState, q: QuestDef): Objective {
     case 'q_wood':
       return {
         ...base, id: 'q_wood_gather', headline: 'いまやること',
-        label: 'もくざいを あつめよう',
+        label: gatherLabel('wood'),
         target: { kind: 'poi', id: 'forest' },
         progress: { cur: q.count - rem, max: q.count },
         gatherItem: 'wood',
@@ -276,7 +289,7 @@ function inProgressObjective(state: GameState, q: QuestDef): Objective {
       if (have < q.count) {
         return {
           ...base, id: 'q2_boat_wood', headline: 'いまやること',
-          label: 'もくざいを あつめよう',
+          label: gatherLabel('wood'),
           target: { kind: 'poi', id: 'forest' },
           progress: { cur: have, max: q.count },
           gatherItem: 'wood', area: 'island',
@@ -297,7 +310,7 @@ function inProgressObjective(state: GameState, q: QuestDef): Objective {
       const item = q.item!;
       return {
         ...base, id: `${q.id}_gather`, headline: 'いまやること',
-        label: `${ITEMS[item].name}を あつめよう`,
+        label: gatherLabel(item),
         target: { kind: 'none' },
         progress: { cur: q.count - rem, max: q.count },
         gatherItem: item, area: 'cove',
@@ -322,7 +335,7 @@ function inProgressObjective(state: GameState, q: QuestDef): Objective {
         if (have >= need) continue;
         return {
           ...base, id: `q3_station_${item}`, headline: 'いまやること',
-          label: `${ITEMS[item].name}を あつめよう`,
+          label: gatherLabel(item),
           target: { kind: 'poi', id: GATHER_POI[item] ?? 'meadow' },
           progress: { cur: have, max: need },
           gatherItem: item, area: 'island',
@@ -341,7 +354,7 @@ function inProgressObjective(state: GameState, q: QuestDef): Objective {
       const item = q.item!;
       return {
         ...base, id: 'q3_lantern_gather', headline: 'いまやること',
-        label: `${ITEMS[item].name}を あつめよう`,
+        label: gatherLabel(item),
         target: { kind: 'none' },
         progress: { cur: q.count - rem, max: q.count },
         gatherItem: item, area: 'cove',
@@ -561,6 +574,50 @@ function trainObjective(id: string, to: 'island' | 'market'): Objective {
         ),
       };
 }
+
+/**
+ * 「いまやること」が画面に出す **固定の文言**ぜんぶ(v17)。
+ *
+ * なぜ表にするか: ここの文字列は UXボット(tools/ux_semantic_check.mjs)と
+ * 回帰ボットが読んで動くので **書きかえてはいけない**。書きかえてはいけないものほど、
+ * 「いま何が出ているのか」を1か所で見られるようにしておく必要がある。
+ * 文字数・分かち書きの機械検査(src/systems/TextStyleCheck.ts)も この表を通して かける。
+ *
+ * 入っているのは **その場で組み立てない(変数の入らない)文**だけ。
+ * 「もくざいを あつめよう」のように アイテム名が入るものは gatherLabel が作るので、
+ * ここには 書きうつさない(二重持ちにしない)。
+ *
+ * この表が 本体と ずれていないことは tests/unit/text_style_v17.test.ts が
+ * ObjectiveSystem.ts の中身を走査して 機械検査する。
+ */
+export const OBJECTIVE_FIXED_TEXTS: readonly string[] = [
+  // 見出し
+  'いまやること',
+  REPORT_HEADLINE,
+  'クリア!',
+  // 目標の1行
+  '桟橋で サカナをつろう',
+  '高台で こうせきをほろう',
+  'ランタンを 島に置こう(もちもの→おく)',
+  '光る家具を 島に置こう',
+  'とうだいに レンズを つけよう',
+  'キッチンだいを 家の中に おこう(もちもの→おく)',
+  '島で じゆうに くらそう',
+  SAIL_TO_ISLAND_LABEL,
+  SAIL_TO_COVE_LABEL,
+  TRAIN_TO_MARKET_LABEL,
+  TRAIN_TO_ISLAND_LABEL,
+  // 迷子ヒント(キーボード / 指 の2とおり)
+  'じぶんの家の ドアの前で <kbd>E</kbd>を おすと 家に はいれるよ。中のベッドで あさまで ねよう。',
+  'じぶんの家の ドアの前で 右下の 大きいボタンを おすと 家に はいれるよ。中のベッドで あさまで ねよう。',
+  '帰りの さんばしの先で <kbd>E</kbd>を おすと しまへ もどれるよ。',
+  '帰りの さんばしの先で 右下の 大きいボタンを おすと しまへ もどれるよ。',
+  '南の さんばしの ふねの ところで <kbd>E</kbd>を おすと わたれるよ。',
+  '南の さんばしの ふねの ところで 右下の 大きいボタンを おすと わたれるよ。',
+  '駅の ホームで <kbd>E</kbd>を おすと しまへ もどれるよ。かえりの でんしゃは いつでも いる。',
+  '駅の ホームで 右下の 大きいボタンを おすと しまへ もどれるよ。かえりの でんしゃは いつでも いる。',
+  'でんしゃは 2日に1どの よる、9じごろ さんばしの よこの えきに くるよ。ベッドで ねて よるを まとう。',
+];
 
 /**
  * いる場所と目的の場所がちがうときに、「のりば」へ案内しなおす。

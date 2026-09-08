@@ -19,8 +19,9 @@
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
-import { A0, appendBlob, toMesh, jitterColor, getBugMat, getFloraMat, getGlowMats, type Arrays } from './flora';
-import { faceOutward } from './deco';
+import {
+  A0, appendBlob, toMesh, jitterColor, getBugMat, getFloraMat, getGlowMats, ontoSurface, type Arrays,
+} from './flora';
 import { vnoise } from './terrain';
 import type { BugId } from '../systems/BugSystem';
 
@@ -129,7 +130,7 @@ function butterflyWing(scene: Scene, name: string, sx: number, seed: number, kin
       segs: 5, noise: 0.14, seed: seed + 11, bottomDark: 0,
     });
   }
-  const m = faceOutward(toMesh(scene, name, W, 'flip'));
+  const m = toMesh(scene, name, W, 'keep');
   m.isPickable = false;
   return m;
 }
@@ -240,7 +241,7 @@ function cricket(A: Arrays, seed: number, scale = 1): void {
 // 判別記号を種類ごとに「1つだけ」はっきり作る(全部を作りこむと どれも同じに見える):
 //   クワガタ/オオクワガタ = 大きく開いた あご / カマキリ = 前に かまえた かま
 //   トンボ = 細い胴と 4まいの うすい羽 / セミ = 屋根形の羽 / バッタ = 大きな 後ろあし
-// どれも appendBlob だけで組む(toMesh は 'flip' + faceOutward。教訓4)。
+// どれも appendBlob だけで組む(toMesh は 'keep'。巻き順の きまりは flora.ts の WINDING_RULE)。
 // ---------------------------------------------------------------------------
 
 /** 虫の あし(片がわ3本)。長さと角度を すこしずつ変えて「くし」に見せない */
@@ -378,7 +379,7 @@ function dragonflyWing(scene: Scene, name: string, sx: number, seed: number): Me
   appendBlob(W, sx * 0.135, 0.001, 0.03, 0.014, 0.0035, 0.007, C_TONBO_DARK, {
     segs: 5, noise: 0.1, seed: seed + 5, bottomDark: 0,
   });
-  const m = faceOutward(toMesh(scene, name, W, 'flip'));
+  const m = toMesh(scene, name, W, 'keep');
   m.isPickable = false;
   return m;
 }
@@ -640,7 +641,15 @@ function stagVariant(A: Arrays, seed: number, scale: number, v: StagVariant): vo
         { segs: 5, noise: 0.05, seed: seed + 5 + i, bottomDark: 0.18 });
     }
     for (const [tx, tz, tr] of JAW_TEETH[v.jaw]) {
-      appendBlob(A, sx * tx * s, 0.036 * bh * s, (0.09 + (tz - 0.09) * k) * s,
+      // 歯は **あごの 内がわの 面から つき出す**(v28)。
+      // あごの 玉の まん中に 置くと 歯が まるごと あごに のまれる —— v27まで
+      // 手前の面が 巻き順バグで 消えていたので すけて 見えていただけだった。
+      // いちばん 近い あごの ふしを 出どころに して、そこから 外へ 出す
+      let near = arc[0];
+      for (const a of arc) if (Math.abs(a[1] - tz) < Math.abs(near[1] - tz)) near = a;
+      const o = [sx * near[0] * s, 0.036 * bh * s, (0.09 + (near[1] - 0.09) * k) * s];
+      const p = ontoSurface(A, o, [sx * tx * s, 0.036 * bh * s, (0.09 + (tz - 0.09) * k) * s], tr * 0.6 * s);
+      appendBlob(A, p[0], p[1], p[2],
         tr * s, tr * 0.8 * s, tr * s, v.shell,
         { segs: 4, noise: 0.08, seed: seed + 16 + Math.round(tz * 100) + sx, bottomDark: 0.18 });
     }
@@ -674,7 +683,10 @@ function rhinoVariant(A: Arrays, seed: number, scale: number, kind: 'caucasus' |
       const [dx, dz, r] = dots[i];
       const t = 1 - (dx * dx) / (0.058 * 0.058) - (dz * dz) / (0.088 * 0.088);
       const dy = 0.04 + 0.038 * Math.sqrt(Math.max(0.2, t)) * 0.96;
-      appendBlob(A, dx * s, dy * s, dz * s, r * s, r * 0.45 * s, r * s,
+      // v28: 式で 出した 高さでは はしの 点が はねの 中に しずむ(Math.max(0.2,t) の
+      // 打ちどめと ゆがみの ぶん)。**じっさいの はねの 面**に のせなおす
+      const p = ontoSurface(A, [0, 0.04 * s, -0.014 * s], [dx * s, dy * s, dz * s], r * 0.3 * s);
+      appendBlob(A, p[0], p[1], p[2], r * s, r * 0.45 * s, r * s,
         jitterColor(C_HERC_DOT, seed + i * 5, 0.1), { segs: 5, noise: 0.1, seed: seed + i * 5, bottomDark: 0 });
     }
   } else {
@@ -815,7 +827,7 @@ function buildBugMesh(scene: Scene, id: BugId, seed: number): BugMesh {
     case 'b_shiro':
     case 'b_ageha': {
       butterflyBody(A, seed);
-      const root = faceOutward(toMesh(scene, `bug_${id}_${seed}`, A, 'flip'));
+      const root = toMesh(scene, `bug_${id}_${seed}`, A, 'keep');
       root.isPickable = false;
       const kind = id === 'b_shiro' ? 'shiro' : 'ageha';
       const wingL = butterflyWing(scene, `bugWingL_${seed}`, 1, seed + 13, kind);
@@ -826,19 +838,19 @@ function buildBugMesh(scene: Scene, id: BugId, seed: number): BugMesh {
     }
     case 'b_tento': {
       ladybug(A, seed);
-      const root = faceOutward(toMesh(scene, `bug_${id}_${seed}`, A, 'flip'));
+      const root = toMesh(scene, `bug_${id}_${seed}`, A, 'keep');
       root.isPickable = false;
       return { root };
     }
     case 'b_kabuto': {
       beetle(A, seed);
-      const root = faceOutward(toMesh(scene, `bug_${id}_${seed}`, A, 'flip'));
+      const root = toMesh(scene, `bug_${id}_${seed}`, A, 'keep');
       root.isPickable = false;
       return { root };
     }
     case 'b_suzu': {
       cricket(A, seed);
-      const root = faceOutward(toMesh(scene, `bug_${id}_${seed}`, A, 'flip'));
+      const root = toMesh(scene, `bug_${id}_${seed}`, A, 'keep');
       root.isPickable = false;
       return { root };
     }
@@ -846,7 +858,7 @@ function buildBugMesh(scene: Scene, id: BugId, seed: number): BugMesh {
     case 'b_kuwa':
     case 'b_ookuwa': {
       stagBeetle(A, seed, 1, id === 'b_ookuwa');
-      const root = faceOutward(toMesh(scene, `bug_${id}_${seed}`, A, 'flip'));
+      const root = toMesh(scene, `bug_${id}_${seed}`, A, 'keep');
       root.isPickable = false;
       return { root };
     }
@@ -857,7 +869,7 @@ function buildBugMesh(scene: Scene, id: BugId, seed: number): BugMesh {
     case 'b_miyama':
     case 'b_niji': {
       stagVariant(A, seed, 1, STAG_VARIANTS[id]);
-      const root = faceOutward(toMesh(scene, `bug_${id}_${seed}`, A, 'flip'));
+      const root = toMesh(scene, `bug_${id}_${seed}`, A, 'keep');
       root.isPickable = false;
       return { root };
     }
@@ -867,31 +879,31 @@ function buildBugMesh(scene: Scene, id: BugId, seed: number): BugMesh {
     case 'b_hercules': {
       const herc = id === 'b_hercules';
       rhinoVariant(A, seed, herc ? 1.3 : 1.12, herc ? 'hercules' : 'caucasus');
-      const root = faceOutward(toMesh(scene, `bug_${id}_${seed}`, A, 'flip'));
+      const root = toMesh(scene, `bug_${id}_${seed}`, A, 'keep');
       root.isPickable = false;
       return { root };
     }
     case 'b_kama': {
       mantis(A, seed);
-      const root = faceOutward(toMesh(scene, `bug_${id}_${seed}`, A, 'flip'));
+      const root = toMesh(scene, `bug_${id}_${seed}`, A, 'keep');
       root.isPickable = false;
       return { root };
     }
     case 'b_semi': {
       cicada(A, seed);
-      const root = faceOutward(toMesh(scene, `bug_${id}_${seed}`, A, 'flip'));
+      const root = toMesh(scene, `bug_${id}_${seed}`, A, 'keep');
       root.isPickable = false;
       return { root };
     }
     case 'b_batta': {
       grasshopper(A, seed);
-      const root = faceOutward(toMesh(scene, `bug_${id}_${seed}`, A, 'flip'));
+      const root = toMesh(scene, `bug_${id}_${seed}`, A, 'keep');
       root.isPickable = false;
       return { root };
     }
     case 'b_tonbo': {
       dragonflyBody(A, seed);
-      const root = faceOutward(toMesh(scene, `bug_${id}_${seed}`, A, 'flip'));
+      const root = toMesh(scene, `bug_${id}_${seed}`, A, 'keep');
       root.isPickable = false;
       // 羽は4まい(前ばね+後ばね)を左右2つのメッシュにまとめて、rotation.z だけで ふるわせる
       const wingL = dragonflyWing(scene, `bugWingL_${seed}`, 1, seed + 23);
@@ -905,14 +917,14 @@ function buildBugMesh(scene: Scene, id: BugId, seed: number): BugMesh {
     }
     case 'b_hotaru': {
       fireflyBody(A, seed);
-      const root = faceOutward(toMesh(scene, `bug_${id}_${seed}`, A, 'flip'));
+      const root = toMesh(scene, `bug_${id}_${seed}`, A, 'keep');
       root.isPickable = false;
       // 光る おしり。共有の mint マテリアル(ヒカリゴケと同じ黄みどり)にして dispose しない
       const G = A0();
       appendBlob(G, 0, 0, -0.042, 0.019, 0.016, 0.026, Color3.FromHexString('#e8ffc8'), {
         segs: 6, noise: 0.05, seed: seed + 7, bottomDark: 0,
       });
-      const glowPart = faceOutward(toMesh(scene, `bugGlow_${seed}`, G, 'flip'));
+      const glowPart = toMesh(scene, `bugGlow_${seed}`, G, 'keep');
       glowPart.material = getGlowMats(scene).mint;
       glowPart.parent = root;
       glowPart.isPickable = false;
@@ -983,7 +995,7 @@ export const CAGED_WING_GAIN: Readonly<Partial<Record<BugId, number>>> = { b_shi
  * 作り: 球と まったく同じ つなぎ方(輪×だん)のまま、
  *   - 「だん」を x(あつみ)の むきに とる
  *   - 「輪」を outline の 点そのものに する
- * ので、法線の むきの きまり(toMesh 'flip' + faceOutward)は appendBlob と 同じでよい。
+ * ので、法線の むきの きまり(toMesh 'keep')は appendBlob と 同じでよい。
  * PROFILE の まん中(k=1)だけが ふちで、その 前後は **たいらな面**。
  * ふくらませないので、正面から見たとき ぴたりと 外わくの かたちに 見える。
  *
@@ -1032,7 +1044,7 @@ function appendPlate(
       const a = base + r * (n + 1) + s;
       const b = a + 1;
       const c = a + n + 1;
-      A.idx.push(a, b, c, b, c + 1, c);
+      A.idx.push(a, c, b, b, c, c + 1); // ← WINDING_RULE(外向き)。flora.ts の appendBlob と同じ理由で入れかえる
     }
   }
 }
@@ -1155,7 +1167,7 @@ function cagedButterflyWing(scene: Scene, sx: number, seed: number, kind: 'shiro
     M([[-0.033, 0.004], [-0.044, 0.017], [-0.052, -0.002], [-0.039, -0.004]],
       C_AGEHA_BAND, seed + 11, true);
   }
-  const m = faceOutward(toMesh(scene, `${CAGED_WING_NAME}${sx > 0 ? 'L' : 'R'}`, W, 'flip'));
+  const m = toMesh(scene, `${CAGED_WING_NAME}${sx > 0 ? 'L' : 'R'}`, W, 'keep');
   m.isPickable = false;
   return m;
 }
@@ -1200,7 +1212,7 @@ function cagedDragonflyWing(scene: Scene, sx: number, seed: number, len: number)
   appendBlob(W, sx * 0.01, 0.016, -0.012 - len * 0.35, 0.008, 0.004, len,
     jitterColor(C_TONBO_WING, seed + 30 + sx, 0.05),
     { segs: 6, noise: 0.08, seed: seed + 30 + sx, bottomDark: 0.04 });
-  const m = faceOutward(toMesh(scene, `${CAGED_WING_NAME}${sx > 0 ? 'L' : 'R'}`, W, 'flip'));
+  const m = toMesh(scene, `${CAGED_WING_NAME}${sx > 0 ? 'L' : 'R'}`, W, 'keep');
   m.isPickable = false;
   return m;
 }
@@ -1285,7 +1297,7 @@ export function makeCagedBugMesh(scene: Scene, id: BugId, seed: number): Mesh {
       break;
     }
   }
-  const m = faceOutward(toMesh(scene, `cagedBug_${id}`, A, 'flip'));
+  const m = toMesh(scene, `cagedBug_${id}`, A, 'keep');
   m.isPickable = false;
   for (const w of wings) {
     w.parent = m;
@@ -1299,7 +1311,7 @@ export function makeCagedBugMesh(scene: Scene, id: BugId, seed: number): Mesh {
     appendBlob(G, 0, 0, -0.044, 0.028, 0.024, 0.036, Color3.FromHexString('#e8ffc8'), {
       segs: 6, noise: 0.05, seed: seed + 7, bottomDark: 0,
     });
-    const glow = faceOutward(toMesh(scene, `${CAGED_GLOW_NAME}_${seed}`, G, 'flip'));
+    const glow = toMesh(scene, `${CAGED_GLOW_NAME}_${seed}`, G, 'keep');
     glow.material = getGlowMats(scene).mint; // 共有マテリアルなので dispose しない
     glow.parent = m;
     glow.isPickable = false;

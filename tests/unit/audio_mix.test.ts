@@ -35,6 +35,19 @@ describe('効果音とバスの割りあて', () => {
     }
   });
 
+  it('NPCの足音は プレイヤーより小さく・遠ければ鳴らない・間引かれる', () => {
+    const f = MIX.npcFoot;
+    expect(db(f.level)).toBeLessThanOrEqual(-6); // プレイヤーより 6dB 以上小さい
+    expect(f.radius).toBeGreaterThan(0);
+    expect(f.minGapSec).toBeGreaterThan(0.05); // 1秒に8歩まで
+    expect(f.strideM).toBeGreaterThan(0.5);
+    // 距離減衰(AudioSystem.npcFootstep と同じ式)。6mでちょうど0
+    const at = (d: number): number => f.level * (1 - d / f.radius);
+    expect(at(0)).toBeCloseTo(f.level, 9);
+    expect(at(f.radius)).toBeCloseTo(0, 9);
+    expect(at(3)).toBeLessThan(at(1));
+  });
+
   it('バスの上下関係: 効果音 > お知らせ > UI > 足音', () => {
     const sfxGain = MIX.master * MIX.bus.sfx * MIX.sub.sfx;
     const notifyGain = MIX.master * MIX.bus.sfx * MIX.sub.notify;
@@ -59,6 +72,13 @@ describe('効果音とバスの割りあて', () => {
     expect(MIX.bed.night).toBeGreaterThan(MIX.bed.sheltered);
     expect(MIX.bed.rainDuck).toBeGreaterThan(0);
     expect(MIX.bed.rainDuck).toBeLessThan(1);
+  });
+
+  it('ゆきの風は 3層のどれよりも ひかえめ / こもりは屋根の下より弱い', () => {
+    // 風は「かすかな層」。いちばん小さい層(林)より下に置く
+    expect(MIX.bed.snowWind).toBeLessThan(0.55);
+    expect(MIX.bed.snowCutoff).toBeGreaterThan(900); // 屋根の下(900Hz)ほどは こもらせない
+    expect(MIX.bed.snowCutoff).toBeLessThan(16000); // でも ちゃんと こもる
   });
 
   it('音量の変化は かならず ゆっくり(ぶつ切りにしない)', () => {
@@ -175,5 +195,30 @@ describe('音のモジュールは「葉」のまま(どこからでも import �
   it('環境音の受け口は GameScene の1本(場所・空模様を まとめて渡す)', () => {
     const gs = read('src/scenes/GameScene.ts');
     expect(gs).toMatch(/setAmbient\(\{[\s\S]*weights: this\.zones\.update\([\s\S]*rain:/);
+    // v28 ゆきも同じ1本で渡す(WeatherSystem の snow をそのまま)
+    expect(gs).toMatch(/setAmbient\(\{[\s\S]*snow: sheltered \? wx\.snow \* 0\.4 : wx\.snow/);
+  });
+});
+
+describe('足音(地面ごと)', () => {
+  const read = (p: string): string => readFileSync(p, 'utf8');
+
+  it('室内の判定は「別空間の純関数」を見る(座標のマジックナンバーを書かない)', () => {
+    const pc = read('src/systems/PlayerController.ts');
+    expect(pc).toMatch(/import \{ insideHomeFloor \} from '\.\.\/scenes\/HomeInterior'/);
+    expect(pc).toMatch(/import \{ insideNpcHomeFloor \} from '\.\.\/scenes\/NpcInteriors'/);
+    expect(pc).toMatch(/insideHomeFloor\(x, z\) \|\| insideNpcHomeFloor\(x, z\)/);
+    // 足音の選びかたは1つの純関数にまとめてある(プレイヤーとNPCが同じ関数を見る)
+    expect(pc).toMatch(/export function footstepFor\(x: number, z: number\): SfxName/);
+    expect(pc).toMatch(/sfx\(footstepFor\(this\.x, this\.z\)\)/);
+  });
+
+  it('NPCも同じ関数で足音を選び、距離減衰つきで鳴らす', () => {
+    const npc = read('src/systems/NPCSystem.ts');
+    expect(npc).toMatch(/import \{ npcFootstep \} from '\.\.\/audio\/AudioSystem'/);
+    expect(npc).toMatch(/import \{ footstepFor \} from '\.\/PlayerController'/);
+    expect(npc).toMatch(/npcFootstep\(footstepFor\(rt\.x, rt\.z\), Math\.hypot\(rt\.x - px, rt\.z - pz\)\)/);
+    // 見えていない人・別の場所の人は鳴らさない(見た目の出しわけと同じ条件)
+    expect(npc).toMatch(/!rt\.hidden && this\.areaOf\(rt\) === this\.area/);
   });
 });

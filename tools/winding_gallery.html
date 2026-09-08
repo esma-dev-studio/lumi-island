@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>winding gallery (v28)</title>
+<style>
+  html, body { margin: 0; background: #a6def4; }
+  canvas { display: block; width: 900px; height: 700px; }
+</style>
+</head>
+<body>
+<!--
+  巻き順(winding)の before/after を 同じカメラで 見くらべるための ひとりだけのページ。
+
+  ゲーム本体は 通さない: 島を まるごと 立ちあげると 天気・時刻・遮蔽フェード・
+  他のエージェントの HMR が 絵に まざるので、before と after を 同じ条件で
+  くらべられない。ここでは **メッシュを作る関数だけ** を よんで、
+  昼(9時)の 光と 決めうちの カメラで 1体ずつ 撮る。
+
+  つかいかた:  http://localhost:5222/tools/winding_gallery.html?m=tree
+               http://localhost:5222/tools/winding_gallery.html?m=stonelamp&t=night
+  スクショの ツール: tools/shots_winding_v28.mjs / tools/shots_burial_v28.mjs
+
+  v28の うもれ(burial)なおし でも 同じページを つかう(?t=night で 夜)。
+  夜の 光の 値は DayNight.ts の 22時の 行から そのまま とっている。
+-->
+<canvas id="c" width="900" height="700"></canvas>
+<script type="module">
+import { Engine } from '@babylonjs/core/Engines/engine';
+import { Scene } from '@babylonjs/core/scene';
+import { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera';
+import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
+import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
+import { GlowLayer } from '@babylonjs/core/Layers/glowLayer';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
+import { Matrix } from '@babylonjs/core/Maths/math.vector';
+import { makeTree, makeSapTree, makeLumiTree, makeOreNode, getFloraMat, getGlowMats } from '/src/entities/flora.ts';
+import { makeStump, makeTelescope } from '/src/entities/props.ts';
+import { buildLanternBody } from '/src/entities/effects.ts';
+import { makeFurnitureMesh, makeDishMesh } from '/src/entities/furniture.ts';
+import { makeBugMesh } from '/src/entities/bugs.ts';
+
+const q = new URLSearchParams(location.search);
+const NIGHT = q.get('t') === 'night';
+
+const canvas = document.getElementById('c');
+const engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+const scene = new Scene(engine);
+// DayNight.ts の 9時 / 22時の 行と 同じ値
+scene.clearColor = Color4.FromHexString(NIGHT ? '#1b2a48ff' : '#a6def4ff');
+document.body.style.background = NIGHT ? '#1b2a48' : '#a6def4';
+const sun = new DirectionalLight('sun', (NIGHT
+  ? new Vector3(0.25, -1, -0.2) : new Vector3(-0.232, -0.951, -0.35)).normalize(), scene);
+sun.diffuse = Color3.FromHexString(NIGHT ? '#8aa0c8' : '#fff0cf');
+sun.intensity = NIGHT ? 0.52 : 1.9;
+const hemi = new HemisphericLight('hemi', new Vector3(0, 1, 0), scene);
+hemi.diffuse = Color3.FromHexString(NIGHT ? '#57678e' : '#c9e6f2');
+hemi.groundColor = Color3.FromHexString(NIGHT ? '#343c50' : '#8a7a66');
+hemi.intensity = NIGHT ? 0.52 : 0.7;
+if (NIGHT) {
+  // 22時の 発光(DayNight.ts: mint 0.7 / amber 0.8 / blue 0.62、GlowLayer 0.6)
+  const gm = getGlowMats(scene);
+  gm.mint.emissiveColor = Color3.FromHexString('#9fe8c8').scale(0.7);
+  gm.amber.emissiveColor = Color3.FromHexString('#ffd9a0').scale(0.8);
+  gm.blue.emissiveColor = Color3.FromHexString('#a8c8ff').scale(0.62);
+  const glow = new GlowLayer('glow', scene, { mainTextureSamples: 2 });
+  glow.intensity = 0.6;
+}
+
+/** 撮るもの。カメラの角度と、色を実測する点(あれば)を いっしょに持つ */
+// カメラの alpha は **太陽の当たっている がわ** に置く(0.99rad = 光の来る方向)。
+// かげの がわから 撮ると、法線が 裏返っていても どちらも 暗いままで 差が出ない
+// (最初の撮影が それで、みきが before/after とも #37281 台だった)。
+const SUN_SIDE = 0.99;
+const SUBJECTS = {
+  tree: { make: () => [makeTree(scene, 3)], alpha: SUN_SIDE, beta: 1.15, probe: [0, 1.0, 0], probeName: 'みきの色' },
+  saptree: { make: () => { const t = makeSapTree(scene, 5); return [t.tree, t.sap]; }, alpha: SUN_SIDE, beta: 1.15, probe: [0.05, 1.6, 0], probeName: 'みきの色' },
+  lumitree: { make: () => { const t = makeLumiTree(scene); return [t.root, t.fruits, t.buds]; }, alpha: SUN_SIDE, beta: 1.1 },
+  stump: { make: () => [makeStump(scene, 1)], alpha: SUN_SIDE, beta: 1.15, probe: [0, 0.14, 0], probeName: 'きりかぶの色' },
+  telescope: { make: () => [makeTelescope(scene)], alpha: SUN_SIDE, beta: 1.2 },
+  lantern: { make: () => [buildLanternBody(scene, 1)], alpha: SUN_SIDE, beta: 1.35 },
+  teddy: { make: () => { const f = makeFurnitureMesh(scene, 'f_teddy'); return [f.root]; }, alpha: SUN_SIDE, beta: 1.3 },
+  whale: { make: () => { const f = makeFurnitureMesh(scene, 'f_plush_whale'); return [f.root]; }, alpha: SUN_SIDE, beta: 1.25 },
+  dish: { make: () => [makeDishMesh(scene, 'd_grillfish').root], alpha: SUN_SIDE, beta: 1.0 },
+  // ---- v28 うもれ(burial)なおしの 見くらべ ----
+  // ルミの木は IslandScene.applyIslandLevel と 同じ 大きさで 出す
+  // (花=1.2倍・蕾=1.05倍。これが 実際に 見える 姿)
+  lumibloom: {
+    make: () => {
+      const t = makeLumiTree(scene);
+      t.fruits.scaling.setAll(1.2);
+      t.buds.setEnabled(false);
+      return [t.root, t.fruits];
+    }, alpha: SUN_SIDE, beta: 1.1,
+  },
+  lumibud: {
+    make: () => {
+      const t = makeLumiTree(scene);
+      t.buds.scaling.setAll(1.05);
+      t.fruits.setEnabled(false);
+      return [t.root, t.buds];
+    }, alpha: SUN_SIDE, beta: 1.1,
+  },
+  ore: { make: () => { const o = makeOreNode(scene, 3); return [o.rock, o.crystals]; }, alpha: SUN_SIDE, beta: 1.15 },
+  stonelamp: { make: () => { const f = makeFurnitureMesh(scene, 'f_stonelamp'); return [f.root]; }, alpha: SUN_SIDE, beta: 1.25 },
+  marketlantern: { make: () => { const f = makeFurnitureMesh(scene, 'f_market_lantern'); return [f.root]; }, alpha: SUN_SIDE, beta: 1.3 },
+  ball: { make: () => { const f = makeFurnitureMesh(scene, 'f_toy_ball'); return [f.root]; }, alpha: SUN_SIDE, beta: 1.25 },
+  castle: { make: () => { const f = makeFurnitureMesh(scene, 'f_toy_castle'); return [f.root]; }, alpha: SUN_SIDE, beta: 1.2 },
+  hotaru: { make: () => { const f = makeFurnitureMesh(scene, 'f_plush_hotaru'); return [f.root]; }, alpha: SUN_SIDE, beta: 1.25 },
+  miyama: { make: () => [makeBugMesh(scene, 'b_miyama', 1).root], alpha: SUN_SIDE, beta: 1.05 },
+  hercules: { make: () => [makeBugMesh(scene, 'b_hercules', 1).root], alpha: SUN_SIDE, beta: 1.05 },
+};
+// なかまぬいぐるみ5体は 同じ 作りなので まとめて 足す(顔が 見えるよう 正面ぎみに)
+for (const id of ['minamo', 'nokto', 'tsumugi', 'roka', 'ten']) {
+  SUBJECTS['plush_' + id] = {
+    make: () => { const f = makeFurnitureMesh(scene, 'f_plush_' + id); return [f.root]; },
+    alpha: SUN_SIDE, beta: 1.35,
+  };
+}
+
+const name = new URLSearchParams(location.search).get('m') || 'tree';
+const sub = SUBJECTS[name];
+if (!sub) throw new Error('unknown subject: ' + name);
+const meshes = sub.make();
+// 光る部分など、材質を持たない メッシュは 頂点色が出る材質にする(見た目の比較用)
+const all = [];
+for (const m of meshes) {
+  all.push(m);
+  for (const ch of m.getChildMeshes()) all.push(ch);
+}
+// ちょうちん(fesFly)の 材質は effects.ts の中に かくれていて 外から よべないので、
+// 同じ値を ここで 作る(紙ごしの あかり #e8912e)。これが ないと 夜の 絵で
+// 「火が 見えるように なったか」が わからない
+let fesMat = null;
+for (const m of all) {
+  if (m.material) continue;
+  if (m.name.startsWith('fesFly')) {
+    if (!fesMat) {
+      fesMat = new StandardMaterial('fesLanternBody', scene);
+      fesMat.diffuseColor = Color3.FromHexString('#8a6a3d');
+      fesMat.emissiveColor = Color3.FromHexString('#e8912e');
+      fesMat.specularColor = Color3.Black();
+    }
+    m.material = fesMat;
+  } else {
+    m.material = getFloraMat(scene);
+  }
+}
+
+// ---- カメラ: 形の外わくから 決めうち(前後で 形は変えていないので 画角も同じ)----
+let min = new Vector3(1e9, 1e9, 1e9), max = new Vector3(-1e9, -1e9, -1e9);
+for (const m of all) {
+  m.computeWorldMatrix(true);
+  const b = m.getBoundingInfo().boundingBox;
+  min = Vector3.Minimize(min, b.minimumWorld);
+  max = Vector3.Maximize(max, b.maximumWorld);
+}
+const center = min.add(max).scale(0.5);
+const size = max.subtract(min).length();
+const cam = new ArcRotateCamera('cam', sub.alpha, sub.beta, size * 1.35, center, scene);
+cam.fov = 0.7;
+cam.minZ = 0.01;
+
+/**
+ * 世界の1てんを 画面に うつして、そのまわりの 画素の 平均色を 返す。
+ * WebGL の canvas から じかに 読むために preserveDrawingBuffer を つけてある。
+ */
+function sampleWorld(p, half) {
+  const v = Vector3.Project(
+    new Vector3(p[0], p[1], p[2]),
+    Matrix.Identity(),
+    scene.getTransformMatrix(),
+    cam.viewport.toGlobal(engine.getRenderWidth(), engine.getRenderHeight())
+  );
+  const x = Math.round(v.x), y = Math.round(v.y);
+  const off = document.createElement('canvas');
+  off.width = canvas.width; off.height = canvas.height;
+  off.getContext('2d').drawImage(canvas, 0, 0);
+  const d = off.getContext('2d').getImageData(x - half, y - half, half * 2 + 1, half * 2 + 1).data;
+  let r = 0, g = 0, b = 0, n = 0;
+  for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; }
+  const hex = (c) => Math.round(c / n).toString(16).padStart(2, '0');
+  return { hex: '#' + hex(r) + hex(g) + hex(b), x, y, samples: n };
+}
+
+let frames = 0;
+engine.runRenderLoop(() => { scene.render(); frames++; });
+window.__gallery = {
+  ready: false,
+  name,
+  frames: () => frames,
+  probe: () => (sub.probe ? { ...sampleWorld(sub.probe, 3), label: sub.probeName } : null),
+  stats: () => ({ meshes: all.length, tris: all.reduce((s, m) => s + (m.getIndices()?.length ?? 0) / 3, 0) }),
+};
+scene.executeWhenReady(() => { window.__gallery.ready = true; });
+</script>
+</body>
+</html>

@@ -75,7 +75,7 @@
     "cast": {
       "peak": 0.04349,
       "peakDb": -27.23,
-      "rms": 0.006283,
+      "rms": 0.006282,
       "rmsDb": -44.04,
       "clipped": 0,
       "soundingSec": 0.34,
@@ -578,7 +578,8 @@
         "forest": 0,
         "grass": 0
       },
-      "level": 0.13
+      "level": 0.13,
+      "snow": 0
     },
     "bed_grass": {
       "peak": 0.026294,
@@ -595,7 +596,8 @@
         "forest": 0,
         "grass": 1
       },
-      "level": 0.13
+      "level": 0.13,
+      "snow": 0
     },
     "bed_forest": {
       "peak": 0.026485,
@@ -612,7 +614,8 @@
         "forest": 1,
         "grass": 0
       },
-      "level": 0.13
+      "level": 0.13,
+      "snow": 0
     },
     "bed_mixed": {
       "peak": 0.016008,
@@ -629,7 +632,8 @@
         "forest": 0.33,
         "grass": 0.33
       },
-      "level": 0.13
+      "level": 0.13,
+      "snow": 0
     },
     "bed_night": {
       "peak": 0.011082,
@@ -646,7 +650,8 @@
         "forest": 0.33,
         "grass": 0.33
       },
-      "level": 0.09
+      "level": 0.09,
+      "snow": 0
     },
     "bed_indoor": {
       "peak": 0.007415,
@@ -663,41 +668,351 @@
         "forest": 0.33,
         "grass": 0.33
       },
-      "level": 0.06
+      "level": 0.06,
+      "snow": 0
+    },
+    "bed_snow": {
+      "peak": 0.014055,
+      "peakDb": -37.04,
+      "rms": 0.002699,
+      "rmsDb": -51.38,
+      "clipped": 0,
+      "soundingSec": 5,
+      "windowSec": 5,
+      "totalRmsDb": -51.38,
+      "kind": "bed",
+      "weights": {
+        "wave": 0.34,
+        "forest": 0.33,
+        "grass": 0.33
+      },
+      "level": 0.0975,
+      "snow": 1
+    },
+    "bed_snow_wind_only": {
+      "peak": 0.007665,
+      "peakDb": -42.31,
+      "rms": 0.001691,
+      "rmsDb": -55.44,
+      "clipped": 0,
+      "soundingSec": 5,
+      "windowSec": 5,
+      "totalRmsDb": -55.44,
+      "kind": "bed",
+      "weights": {
+        "wave": 0,
+        "forest": 0,
+        "grass": 0
+      },
+      "level": 0.13,
+      "snow": 1
+    },
+    "music_morning": {
+      "peak": 0.01885,
+      "peakDb": -34.49,
+      "rms": 0.002348,
+      "rmsDb": -52.59,
+      "clipped": 0,
+      "soundingSec": 23.029,
+      "windowSec": 24,
+      "totalRmsDb": -52.77,
+      "kind": "music",
+      "preset": "morning",
+      "bpm": 54,
+      "notes": 16,
+      "phraseSec": 40,
+      "restSec": 27.3,
+      "loopSec": 67.3,
+      "midiLo": 74,
+      "midiHi": 88,
+      "gain": 0.19
+    },
+    "music_day": {
+      "peak": 0.018905,
+      "peakDb": -34.47,
+      "rms": 0.00156,
+      "rmsDb": -56.14,
+      "clipped": 0,
+      "soundingSec": 19.035,
+      "windowSec": 24,
+      "totalRmsDb": -57.14,
+      "kind": "music",
+      "preset": "day",
+      "bpm": 72,
+      "notes": 14,
+      "phraseSec": 30,
+      "restSec": 36.1,
+      "loopSec": 66.1,
+      "midiLo": 81,
+      "midiHi": 93,
+      "gain": 0.178
+    },
+    "music_evening": {
+      "peak": 0.018769,
+      "peakDb": -34.53,
+      "rms": 0.002964,
+      "rmsDb": -50.56,
+      "clipped": 0,
+      "soundingSec": 24,
+      "windowSec": 24,
+      "totalRmsDb": -50.56,
+      "kind": "music",
+      "preset": "evening",
+      "bpm": 56,
+      "notes": 20,
+      "phraseSec": 38.6,
+      "restSec": 32.3,
+      "loopSec": 70.8,
+      "midiLo": 72,
+      "midiHi": 86,
+      "gain": 0.213
     },
     "music_night": {
       "peak": 0.018813,
       "peakDb": -34.51,
-      "rms": 0.001788,
-      "rmsDb": -54.95,
+      "rms": 0.001785,
+      "rmsDb": -54.97,
       "clipped": 0,
-      "soundingSec": 19,
-      "windowSec": 19,
-      "totalRmsDb": -54.95,
-      "kind": "music"
+      "soundingSec": 22.91,
+      "windowSec": 24,
+      "totalRmsDb": -55.17,
+      "kind": "music",
+      "preset": "night",
+      "bpm": 62,
+      "notes": 29,
+      "phraseSec": 65.8,
+      "restSec": 0,
+      "loopSec": 65.8,
+      "midiLo": 72,
+      "midiHi": 91,
+      "gain": 0.16
     },
     "music_festival": {
       "peak": 0.017937,
       "peakDb": -34.92,
-      "rms": 0.002254,
-      "rmsDb": -52.94,
+      "rms": 0.002452,
+      "rmsDb": -52.21,
       "clipped": 0,
-      "soundingSec": 19,
-      "windowSec": 19,
-      "totalRmsDb": -52.94,
-      "kind": "music"
+      "soundingSec": 24,
+      "windowSec": 24,
+      "totalRmsDb": -52.21,
+      "kind": "music",
+      "preset": "festival",
+      "bpm": 75.64,
+      "notes": 54,
+      "phraseSec": 53.9,
+      "restSec": 0,
+      "loopSec": 53.9,
+      "midiLo": 79,
+      "midiHi": 93,
+      "gain": 0.16
+    },
+    "music_title": {
+      "peak": 0.011865,
+      "peakDb": -38.51,
+      "rms": 0.001807,
+      "rmsDb": -54.86,
+      "clipped": 0,
+      "soundingSec": 23.187,
+      "windowSec": 24,
+      "totalRmsDb": -55.01,
+      "kind": "music",
+      "preset": "title",
+      "bpm": 52,
+      "notes": 20,
+      "phraseSec": 41.5,
+      "restSec": 10.7,
+      "loopSec": 52.3,
+      "midiLo": 72,
+      "midiHi": 88,
+      "gain": 0.165
+    }
+  },
+  "stingers": {
+    "quest": {
+      "peak": 0.031637,
+      "peakDb": -30,
+      "rms": 0.004081,
+      "rmsDb": -47.79,
+      "clipped": 0,
+      "soundingSec": 2.488,
+      "windowSec": 6,
+      "totalRmsDb": -51.61,
+      "kind": "stinger",
+      "notes": 3,
+      "designSec": 1.4
+    },
+    "chapter": {
+      "peak": 0.025091,
+      "peakDb": -32.01,
+      "rms": 0.004116,
+      "rmsDb": -47.71,
+      "clipped": 0,
+      "soundingSec": 3.084,
+      "windowSec": 6,
+      "totalRmsDb": -50.6,
+      "kind": "stinger",
+      "notes": 6,
+      "designSec": 2
+    },
+    "badge": {
+      "peak": 0.012851,
+      "peakDb": -37.82,
+      "rms": 0.002172,
+      "rmsDb": -53.26,
+      "clipped": 0,
+      "soundingSec": 1.578,
+      "windowSec": 6,
+      "totalRmsDb": -59.06,
+      "kind": "stinger",
+      "notes": 2,
+      "designSec": 1
+    }
+  },
+  "presets": {
+    "morning": {
+      "peak": 0.01885,
+      "peakDb": -34.49,
+      "rms": 0.002348,
+      "rmsDb": -52.59,
+      "clipped": 0,
+      "soundingSec": 23.029,
+      "windowSec": 24,
+      "totalRmsDb": -52.77,
+      "kind": "music",
+      "preset": "morning",
+      "bpm": 54,
+      "notes": 16,
+      "phraseSec": 40,
+      "restSec": 27.3,
+      "loopSec": 67.3,
+      "midiLo": 74,
+      "midiHi": 88,
+      "gain": 0.19
+    },
+    "day": {
+      "peak": 0.018905,
+      "peakDb": -34.47,
+      "rms": 0.00156,
+      "rmsDb": -56.14,
+      "clipped": 0,
+      "soundingSec": 19.035,
+      "windowSec": 24,
+      "totalRmsDb": -57.14,
+      "kind": "music",
+      "preset": "day",
+      "bpm": 72,
+      "notes": 14,
+      "phraseSec": 30,
+      "restSec": 36.1,
+      "loopSec": 66.1,
+      "midiLo": 81,
+      "midiHi": 93,
+      "gain": 0.178
+    },
+    "evening": {
+      "peak": 0.018769,
+      "peakDb": -34.53,
+      "rms": 0.002964,
+      "rmsDb": -50.56,
+      "clipped": 0,
+      "soundingSec": 24,
+      "windowSec": 24,
+      "totalRmsDb": -50.56,
+      "kind": "music",
+      "preset": "evening",
+      "bpm": 56,
+      "notes": 20,
+      "phraseSec": 38.6,
+      "restSec": 32.3,
+      "loopSec": 70.8,
+      "midiLo": 72,
+      "midiHi": 86,
+      "gain": 0.213
+    },
+    "night": {
+      "peak": 0.018813,
+      "peakDb": -34.51,
+      "rms": 0.001785,
+      "rmsDb": -54.97,
+      "clipped": 0,
+      "soundingSec": 22.91,
+      "windowSec": 24,
+      "totalRmsDb": -55.17,
+      "kind": "music",
+      "preset": "night",
+      "bpm": 62,
+      "notes": 29,
+      "phraseSec": 65.8,
+      "restSec": 0,
+      "loopSec": 65.8,
+      "midiLo": 72,
+      "midiHi": 91,
+      "gain": 0.16
+    },
+    "festival": {
+      "peak": 0.017937,
+      "peakDb": -34.92,
+      "rms": 0.002452,
+      "rmsDb": -52.21,
+      "clipped": 0,
+      "soundingSec": 24,
+      "windowSec": 24,
+      "totalRmsDb": -52.21,
+      "kind": "music",
+      "preset": "festival",
+      "bpm": 75.64,
+      "notes": 54,
+      "phraseSec": 53.9,
+      "restSec": 0,
+      "loopSec": 53.9,
+      "midiLo": 79,
+      "midiHi": 93,
+      "gain": 0.16
+    },
+    "title": {
+      "peak": 0.011865,
+      "peakDb": -38.51,
+      "rms": 0.001807,
+      "rmsDb": -54.86,
+      "clipped": 0,
+      "soundingSec": 23.187,
+      "windowSec": 24,
+      "totalRmsDb": -55.01,
+      "kind": "music",
+      "preset": "title",
+      "bpm": 52,
+      "notes": 20,
+      "phraseSec": 41.5,
+      "restSec": 10.7,
+      "loopSec": 52.3,
+      "midiLo": 72,
+      "midiHi": 88,
+      "gain": 0.165
     }
   },
   "mixCase": {
+    "dayBreath": {
+      "phraseSec": 30,
+      "restSec": 36.1,
+      "playing": {
+        "rmsDb": -57.14,
+        "peakDb": -34.47
+      },
+      "resting": {
+        "rmsDb": -635.68,
+        "peakDb": -595.64
+      }
+    },
     "worst": {
-      "peak": 0.164727,
-      "peakDb": -15.66,
-      "rms": 0.011711,
-      "rmsDb": -38.63,
+      "peak": 0.172212,
+      "peakDb": -15.28,
+      "rms": 0.012085,
+      "rmsDb": -38.36,
       "clipped": 0,
       "soundingSec": 14,
       "windowSec": 14,
-      "totalRmsDb": -38.63
+      "totalRmsDb": -38.36
     }
   },
   "design": {
@@ -721,13 +1036,22 @@
         "night": 0.09,
         "sheltered": 0.06,
         "rainDuck": 0.45,
-        "rampSec": 1.6
+        "rampSec": 1.6,
+        "snowWind": 0.2,
+        "snowCutoff": 1800,
+        "snowDuck": 0.75
       },
       "oneShot": {
         "chirp": 0.05,
         "cricket": 0.03,
         "murmur": 0.04,
         "intervalMs": 2600
+      },
+      "npcFoot": {
+        "radius": 6,
+        "level": 0.5,
+        "minGapSec": 0.13,
+        "strideM": 0.95
       }
     }
   },
@@ -813,12 +1137,17 @@
       "grass": 0.632
     }
   ],
-  "runAt": "2026-08-14T04:08:51.912Z",
+  "runAt": "2026-09-08T12:52:07.315Z",
   "consoleErrors": [],
   "balance": {
     "uiMedianDb": -35.16,
     "footMedianDb": -44.69,
-    "playMedianDb": -26.44
+    "playMedianDb": -26.44,
+    "musicPeakDb": -34.51,
+    "musicRmsDb": -52.59,
+    "bedRmsDb": -49.68,
+    "bedRefPeakDb": -35.91,
+    "sfxRmsDb": -41.77
   },
   "problems": []
 }

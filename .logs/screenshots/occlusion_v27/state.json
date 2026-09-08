@@ -1,0 +1,989 @@
+{
+ "when": "2026-09-08T12:14:07.227Z",
+ "viewport": {
+  "width": 1180,
+  "height": 820,
+  "deviceScaleFactor": 2
+ },
+ "shots": [
+  {
+   "compo": "04",
+   "look": "alpha_wide",
+   "file": "04_alpha_wide.png",
+   "note": "林の中から木の密集を北に見る(audit_v17 04 と同じ構図) / v26: 半透明アルファ + 外わく球の判定(before)",
+   "settings": {
+    "mode": "alpha",
+    "aim": "sphere",
+    "segR": 1,
+    "swapped": 0
+   },
+   "faded": [
+    {
+     "name": "tree_1020",
+     "visibility": 0.294066724520481,
+     "keep": 0.294066724520481,
+     "floor": 0.294066724520481
+    }
+   ],
+   "drawCalls": 284,
+   "activeMeshes": 38,
+   "activeTriangles": 309036,
+   "materials": 65,
+   "hardwareScalingLevel": 0.6667,
+   "renderWidth": 1769,
+   "renderHeight": 1229,
+   "fps": 71,
+   "player": {
+    "x": -6,
+    "y": 1.06,
+    "z": -33
+   },
+   "cam": {
+    "x": -3.55,
+    "y": 6.28,
+    "z": -24.43
+   }
+  },
+  {
+   "compo": "04",
+   "look": "dither_wide",
+   "file": "04_dither_wide.png",
+   "note": "林の中から木の密集を北に見る(audit_v17 04 と同じ構図) / ディザだけ(判定はv26のまま)",
+   "settings": {
+    "mode": "dither",
+    "aim": "sphere",
+    "segR": 1,
+    "swapped": 1
+   },
+   "faded": [
+    {
+     "name": "tree_1020",
+     "visibility": 1,
+     "keep": 0.294066724520481,
+     "floor": 0.294066724520481
+    }
+   ],
+   "drawCalls": 286,
+   "activeMeshes": 38,
+   "activeTriangles": 309956,
+   "materials": 65,
+   "hardwareScalingLevel": 0.6667,
+   "renderWidth": 1769,
+   "renderHeight": 1229,
+   "fps": 76,
+   "player": {
+    "x": -6,
+    "y": 1.06,
+    "z": -33
+   },
+   "cam": {
+    "x": -3.55,
+    "y": 6.28,
+    "z": -24.43
+   }
+  },
+  {
+   "compo": "04",
+   "look": "dither_box",
+   "file": "04_dither_box.png",
+   "note": "林の中から木の密集を北に見る(audit_v17 04 と同じ構図) / ディザ + 線分vs外わく箱の判定",
+   "settings": {
+    "mode": "dither",
+    "aim": "box",
+    "segR": 1,
+    "swapped": 2
+   },
+   "faded": [
+    {
+     "name": "tree_1020",
+     "visibility": 1,
+     "keep": 0.294066724520481,
+     "floor": 0.294066724520481
+    },
+    {
+     "name": "saptree_2027",
+     "visibility": 1,
+     "keep": 0.30910751258654995,
+     "floor": 0.30910751258654995
+    }
+   ],
+   "drawCalls": 286,
+   "activeMeshes": 38,
+   "activeTriangles": 309956,
+   "materials": 65,
+   "hardwareScalingLevel": 0.7667,
+   "renderWidth": 1539,
+   "renderHeight": 1069,
+   "fps": 79,
+   "player": {
+    "x": -6,
+    "y": 1.06,
+    "z": -33
+   },
+   "cam": {
+    "x": -3.55,
+    "y": 6.28,
+    "z": -24.43
+   }
+  },
+  {
+   "compo": "04",
+   "look": "hole_box",
+   "file": "04_hole_box.png",
+   "note": "林の中から木の密集を北に見る(audit_v17 04 と同じ構図) / ディザ + 穴 + 外わく箱の判定",
+   "settings": {
+    "mode": "hole",
+    "aim": "box",
+    "segR": 1,
+    "swapped": 2
+   },
+   "faded": [
+    {
+     "name": "tree_1020",
+     "visibility": 1,
+     "keep": 0.294066724520481,
+     "floor": 0.294066724520481
+    },
+    {
+     "name": "saptree_2027",
+     "visibility": 1,
+     "keep": 0.30910751258654995,
+     "floor": 0.30910751258654995
+    }
+   ],
+   "drawCalls": 286,
+   "activeMeshes": 38,
+   "activeTriangles": 309956,
+   "materials": 65,
+   "hardwareScalingLevel": 0.8,
+   "renderWidth": 1475,
+   "renderHeight": 1025,
+   "fps": 56,
+   "player": {
+    "x": -6,
+    "y": 1.06,
+    "z": -33
+   },
+   "cam": {
+    "x": -3.55,
+    "y": 6.28,
+    "z": -24.43
+   }
+  },
+  {
+   "compo": "04",
+   "look": "hole_ray",
+   "file": "04_hole_ray.png",
+   "note": "林の中から木の密集を北に見る(audit_v17 04 と同じ構図) / ディザ + 穴 + レイで仕上げた判定(after・既定)",
+   "settings": {
+    "mode": "hole",
+    "aim": "ray",
+    "segR": 1,
+    "swapped": 1
+   },
+   "faded": [
+    {
+     "name": "tree_1020",
+     "visibility": 1,
+     "keep": 0.294066724520481,
+     "floor": 0.294066724520481
+    }
+   ],
+   "drawCalls": 286,
+   "activeMeshes": 38,
+   "activeTriangles": 309956,
+   "materials": 65,
+   "hardwareScalingLevel": 0.8,
+   "renderWidth": 1475,
+   "renderHeight": 1025,
+   "fps": 50,
+   "player": {
+    "x": -6,
+    "y": 1.06,
+    "z": -33
+   },
+   "cam": {
+    "x": -3.55,
+    "y": 6.28,
+    "z": -24.43
+   }
+  },
+  {
+   "compo": "04",
+   "look": "off",
+   "file": "04_off.png",
+   "note": "林の中から木の密集を北に見る(audit_v17 04 と同じ構図) / 遮蔽なし(対照区)",
+   "settings": {
+    "mode": "off",
+    "aim": "ray",
+    "segR": 1,
+    "swapped": 0
+   },
+   "faded": [],
+   "drawCalls": 286,
+   "activeMeshes": 38,
+   "activeTriangles": 309956,
+   "materials": 65,
+   "hardwareScalingLevel": 0.8,
+   "renderWidth": 1475,
+   "renderHeight": 1025,
+   "fps": 59,
+   "player": {
+    "x": -6,
+    "y": 1.06,
+    "z": -33
+   },
+   "cam": {
+    "x": -3.55,
+    "y": 6.28,
+    "z": -24.43
+   }
+  },
+  {
+   "compo": "05",
+   "look": "alpha_wide",
+   "file": "05_alpha_wide.png",
+   "note": "木の真うしろに立つ(カメラとプレイヤーの あいだに 木の みきと 葉が 入る) / v26: 半透明アルファ + 外わく球の判定(before)",
+   "settings": {
+    "mode": "alpha",
+    "aim": "sphere",
+    "segR": 1,
+    "swapped": 0
+   },
+   "faded": [
+    {
+     "name": "tree_1025",
+     "visibility": 0.12,
+     "keep": 0.12,
+     "floor": 0.12
+    }
+   ],
+   "drawCalls": 254,
+   "activeMeshes": 23,
+   "activeTriangles": 287896,
+   "materials": 65,
+   "hardwareScalingLevel": 0.8,
+   "renderWidth": 1475,
+   "renderHeight": 1025,
+   "fps": 98,
+   "player": {
+    "x": -10.03,
+    "y": 0.41,
+    "z": -42.52
+   },
+   "cam": {
+    "x": -10.03,
+    "y": 4.33,
+    "z": -35.92
+   }
+  },
+  {
+   "compo": "05",
+   "look": "dither_wide",
+   "file": "05_dither_wide.png",
+   "note": "木の真うしろに立つ(カメラとプレイヤーの あいだに 木の みきと 葉が 入る) / ディザだけ(判定はv26のまま)",
+   "settings": {
+    "mode": "dither",
+    "aim": "sphere",
+    "segR": 1,
+    "swapped": 1
+   },
+   "faded": [
+    {
+     "name": "tree_1025",
+     "visibility": 1,
+     "keep": 0.12,
+     "floor": 0.12
+    }
+   ],
+   "drawCalls": 256,
+   "activeMeshes": 23,
+   "activeTriangles": 288816,
+   "materials": 65,
+   "hardwareScalingLevel": 0.8,
+   "renderWidth": 1475,
+   "renderHeight": 1025,
+   "fps": 73,
+   "player": {
+    "x": -10.03,
+    "y": 0.41,
+    "z": -42.52
+   },
+   "cam": {
+    "x": -10.03,
+    "y": 4.33,
+    "z": -35.92
+   }
+  },
+  {
+   "compo": "05",
+   "look": "dither_box",
+   "file": "05_dither_box.png",
+   "note": "木の真うしろに立つ(カメラとプレイヤーの あいだに 木の みきと 葉が 入る) / ディザ + 線分vs外わく箱の判定",
+   "settings": {
+    "mode": "dither",
+    "aim": "box",
+    "segR": 1,
+    "swapped": 2
+   },
+   "faded": [
+    {
+     "name": "tree_1004",
+     "visibility": 1,
+     "keep": 0.3391270909883237,
+     "floor": 0.3391270909883237
+    },
+    {
+     "name": "tree_1025",
+     "visibility": 1,
+     "keep": 0.12,
+     "floor": 0.12
+    }
+   ],
+   "drawCalls": 256,
+   "activeMeshes": 23,
+   "activeTriangles": 288816,
+   "materials": 65,
+   "hardwareScalingLevel": 1,
+   "renderWidth": 1180,
+   "renderHeight": 820,
+   "fps": 115,
+   "player": {
+    "x": -10.03,
+    "y": 0.41,
+    "z": -42.52
+   },
+   "cam": {
+    "x": -10.03,
+    "y": 4.33,
+    "z": -35.92
+   }
+  },
+  {
+   "compo": "05",
+   "look": "hole_box",
+   "file": "05_hole_box.png",
+   "note": "木の真うしろに立つ(カメラとプレイヤーの あいだに 木の みきと 葉が 入る) / ディザ + 穴 + 外わく箱の判定",
+   "settings": {
+    "mode": "hole",
+    "aim": "box",
+    "segR": 1,
+    "swapped": 2
+   },
+   "faded": [
+    {
+     "name": "tree_1004",
+     "visibility": 1,
+     "keep": 0.3391270909883237,
+     "floor": 0.3391270909883237
+    },
+    {
+     "name": "tree_1025",
+     "visibility": 1,
+     "keep": 0.12,
+     "floor": 0.12
+    }
+   ],
+   "drawCalls": 256,
+   "activeMeshes": 23,
+   "activeTriangles": 288816,
+   "materials": 65,
+   "hardwareScalingLevel": 1,
+   "renderWidth": 1180,
+   "renderHeight": 820,
+   "fps": 94,
+   "player": {
+    "x": -10.03,
+    "y": 0.41,
+    "z": -42.52
+   },
+   "cam": {
+    "x": -10.03,
+    "y": 4.33,
+    "z": -35.92
+   }
+  },
+  {
+   "compo": "05",
+   "look": "hole_ray",
+   "file": "05_hole_ray.png",
+   "note": "木の真うしろに立つ(カメラとプレイヤーの あいだに 木の みきと 葉が 入る) / ディザ + 穴 + レイで仕上げた判定(after・既定)",
+   "settings": {
+    "mode": "hole",
+    "aim": "ray",
+    "segR": 1,
+    "swapped": 1
+   },
+   "faded": [
+    {
+     "name": "tree_1025",
+     "visibility": 1,
+     "keep": 0.12,
+     "floor": 0.12
+    }
+   ],
+   "drawCalls": 256,
+   "activeMeshes": 23,
+   "activeTriangles": 288816,
+   "materials": 65,
+   "hardwareScalingLevel": 1,
+   "renderWidth": 1180,
+   "renderHeight": 820,
+   "fps": 94,
+   "player": {
+    "x": -10.03,
+    "y": 0.41,
+    "z": -42.52
+   },
+   "cam": {
+    "x": -10.03,
+    "y": 4.33,
+    "z": -35.92
+   }
+  },
+  {
+   "compo": "05",
+   "look": "off",
+   "file": "05_off.png",
+   "note": "木の真うしろに立つ(カメラとプレイヤーの あいだに 木の みきと 葉が 入る) / 遮蔽なし(対照区)",
+   "settings": {
+    "mode": "off",
+    "aim": "ray",
+    "segR": 1,
+    "swapped": 0
+   },
+   "faded": [],
+   "drawCalls": 256,
+   "activeMeshes": 23,
+   "activeTriangles": 288816,
+   "materials": 65,
+   "hardwareScalingLevel": 1,
+   "renderWidth": 1180,
+   "renderHeight": 820,
+   "fps": 77,
+   "player": {
+    "x": -10.03,
+    "y": 0.41,
+    "z": -42.52
+   },
+   "cam": {
+    "x": -10.03,
+    "y": 4.33,
+    "z": -35.92
+   }
+  },
+  {
+   "compo": "06",
+   "look": "alpha_wide",
+   "file": "06_alpha_wide.png",
+   "note": "木と木のあいだを横切る(2本のまん中に立つ) / v26: 半透明アルファ + 外わく球の判定(before)",
+   "settings": {
+    "mode": "alpha",
+    "aim": "sphere",
+    "segR": 1,
+    "swapped": 0
+   },
+   "faded": [
+    {
+     "name": "tree_1000",
+     "visibility": 0.15625178510095317,
+     "keep": 0.15625178510095317,
+     "floor": 0.15625178510095317
+    },
+    {
+     "name": "tree_1025",
+     "visibility": 0.29601114889969804,
+     "keep": 0.29601114889969804,
+     "floor": 0.29601114889969804
+    }
+   ],
+   "drawCalls": 276,
+   "activeMeshes": 35,
+   "activeTriangles": 296872,
+   "materials": 65,
+   "hardwareScalingLevel": 1,
+   "renderWidth": 1180,
+   "renderHeight": 820,
+   "fps": 84,
+   "player": {
+    "x": -8.93,
+    "y": 0.48,
+    "z": -41.95
+   },
+   "cam": {
+    "x": -17.54,
+    "y": 5.88,
+    "z": -37.06
+   }
+  },
+  {
+   "compo": "06",
+   "look": "dither_wide",
+   "file": "06_dither_wide.png",
+   "note": "木と木のあいだを横切る(2本のまん中に立つ) / ディザだけ(判定はv26のまま)",
+   "settings": {
+    "mode": "dither",
+    "aim": "sphere",
+    "segR": 1,
+    "swapped": 2
+   },
+   "faded": [
+    {
+     "name": "tree_1000",
+     "visibility": 1,
+     "keep": 0.15625178510095317,
+     "floor": 0.15625178510095317
+    },
+    {
+     "name": "tree_1025",
+     "visibility": 1,
+     "keep": 0.29601114889969804,
+     "floor": 0.29601114889969804
+    }
+   ],
+   "drawCalls": 280,
+   "activeMeshes": 35,
+   "activeTriangles": 298712,
+   "materials": 65,
+   "hardwareScalingLevel": 1,
+   "renderWidth": 1180,
+   "renderHeight": 820,
+   "fps": 72,
+   "player": {
+    "x": -8.93,
+    "y": 0.48,
+    "z": -41.95
+   },
+   "cam": {
+    "x": -17.54,
+    "y": 5.88,
+    "z": -37.06
+   }
+  },
+  {
+   "compo": "06",
+   "look": "dither_box",
+   "file": "06_dither_box.png",
+   "note": "木と木のあいだを横切る(2本のまん中に立つ) / ディザ + 線分vs外わく箱の判定",
+   "settings": {
+    "mode": "dither",
+    "aim": "box",
+    "segR": 1,
+    "swapped": 2
+   },
+   "faded": [
+    {
+     "name": "tree_1000",
+     "visibility": 1,
+     "keep": 0.15625178510095317,
+     "floor": 0.15625178510095317
+    },
+    {
+     "name": "tree_1025",
+     "visibility": 1,
+     "keep": 0.29601114889969804,
+     "floor": 0.29601114889969804
+    }
+   ],
+   "drawCalls": 280,
+   "activeMeshes": 35,
+   "activeTriangles": 298712,
+   "materials": 65,
+   "hardwareScalingLevel": 1,
+   "renderWidth": 1180,
+   "renderHeight": 820,
+   "fps": 80,
+   "player": {
+    "x": -8.93,
+    "y": 0.48,
+    "z": -41.95
+   },
+   "cam": {
+    "x": -17.54,
+    "y": 5.88,
+    "z": -37.06
+   }
+  },
+  {
+   "compo": "06",
+   "look": "hole_box",
+   "file": "06_hole_box.png",
+   "note": "木と木のあいだを横切る(2本のまん中に立つ) / ディザ + 穴 + 外わく箱の判定",
+   "settings": {
+    "mode": "hole",
+    "aim": "box",
+    "segR": 1,
+    "swapped": 2
+   },
+   "faded": [
+    {
+     "name": "tree_1000",
+     "visibility": 1,
+     "keep": 0.15625178510095317,
+     "floor": 0.15625178510095317
+    },
+    {
+     "name": "tree_1025",
+     "visibility": 1,
+     "keep": 0.29601114889969804,
+     "floor": 0.29601114889969804
+    }
+   ],
+   "drawCalls": 280,
+   "activeMeshes": 35,
+   "activeTriangles": 298712,
+   "materials": 65,
+   "hardwareScalingLevel": 1,
+   "renderWidth": 1180,
+   "renderHeight": 820,
+   "fps": 77,
+   "player": {
+    "x": -8.93,
+    "y": 0.48,
+    "z": -41.95
+   },
+   "cam": {
+    "x": -17.54,
+    "y": 5.88,
+    "z": -37.06
+   }
+  },
+  {
+   "compo": "06",
+   "look": "hole_ray",
+   "file": "06_hole_ray.png",
+   "note": "木と木のあいだを横切る(2本のまん中に立つ) / ディザ + 穴 + レイで仕上げた判定(after・既定)",
+   "settings": {
+    "mode": "hole",
+    "aim": "ray",
+    "segR": 1,
+    "swapped": 1
+   },
+   "faded": [
+    {
+     "name": "tree_1000",
+     "visibility": 1,
+     "keep": 0.15625178510095317,
+     "floor": 0.15625178510095317
+    }
+   ],
+   "drawCalls": 280,
+   "activeMeshes": 35,
+   "activeTriangles": 298712,
+   "materials": 65,
+   "hardwareScalingLevel": 1,
+   "renderWidth": 1180,
+   "renderHeight": 820,
+   "fps": 83,
+   "player": {
+    "x": -8.93,
+    "y": 0.48,
+    "z": -41.95
+   },
+   "cam": {
+    "x": -17.54,
+    "y": 5.88,
+    "z": -37.06
+   }
+  },
+  {
+   "compo": "06",
+   "look": "off",
+   "file": "06_off.png",
+   "note": "木と木のあいだを横切る(2本のまん中に立つ) / 遮蔽なし(対照区)",
+   "settings": {
+    "mode": "off",
+    "aim": "ray",
+    "segR": 1,
+    "swapped": 0
+   },
+   "faded": [],
+   "drawCalls": 280,
+   "activeMeshes": 35,
+   "activeTriangles": 298712,
+   "materials": 65,
+   "hardwareScalingLevel": 1,
+   "renderWidth": 1180,
+   "renderHeight": 820,
+   "fps": 86,
+   "player": {
+    "x": -8.93,
+    "y": 0.48,
+    "z": -41.95
+   },
+   "cam": {
+    "x": -17.54,
+    "y": 5.88,
+    "z": -37.06
+   }
+  },
+  {
+   "compo": "07",
+   "look": "alpha_wide",
+   "file": "07_alpha_wide.png",
+   "note": "カメラが樹冠のふちに埋まる(カメラの高さを 葉のかたまりに合わせる) / v26: 半透明アルファ + 外わく球の判定(before)",
+   "settings": {
+    "mode": "alpha",
+    "aim": "sphere",
+    "segR": 1,
+    "swapped": 0
+   },
+   "faded": [
+    {
+     "name": "tree_1004",
+     "visibility": 0.19353966083201785,
+     "keep": 0.19353966083201785,
+     "floor": 0.19353966083201785
+    },
+    {
+     "name": "tree_1025",
+     "visibility": 0.12,
+     "keep": 0.12,
+     "floor": 0.12
+    }
+   ],
+   "drawCalls": 248,
+   "activeMeshes": 21,
+   "activeTriangles": 283960,
+   "materials": 65,
+   "hardwareScalingLevel": 1,
+   "renderWidth": 1180,
+   "renderHeight": 820,
+   "fps": 88,
+   "player": {
+    "x": -8.83,
+    "y": 0.34,
+    "z": -45.96
+   },
+   "cam": {
+    "x": -8.83,
+    "y": 4.52,
+    "z": -40.02
+   }
+  },
+  {
+   "compo": "07",
+   "look": "dither_wide",
+   "file": "07_dither_wide.png",
+   "note": "カメラが樹冠のふちに埋まる(カメラの高さを 葉のかたまりに合わせる) / ディザだけ(判定はv26のまま)",
+   "settings": {
+    "mode": "dither",
+    "aim": "sphere",
+    "segR": 1,
+    "swapped": 2
+   },
+   "faded": [
+    {
+     "name": "tree_1004",
+     "visibility": 1,
+     "keep": 0.19353966083201785,
+     "floor": 0.19353966083201785
+    },
+    {
+     "name": "tree_1025",
+     "visibility": 1,
+     "keep": 0.12,
+     "floor": 0.12
+    }
+   ],
+   "drawCalls": 252,
+   "activeMeshes": 21,
+   "activeTriangles": 285800,
+   "materials": 65,
+   "hardwareScalingLevel": 1,
+   "renderWidth": 1180,
+   "renderHeight": 820,
+   "fps": 86,
+   "player": {
+    "x": -8.83,
+    "y": 0.34,
+    "z": -45.96
+   },
+   "cam": {
+    "x": -8.83,
+    "y": 4.52,
+    "z": -40.02
+   }
+  },
+  {
+   "compo": "07",
+   "look": "dither_box",
+   "file": "07_dither_box.png",
+   "note": "カメラが樹冠のふちに埋まる(カメラの高さを 葉のかたまりに合わせる) / ディザ + 線分vs外わく箱の判定",
+   "settings": {
+    "mode": "dither",
+    "aim": "box",
+    "segR": 1,
+    "swapped": 2
+   },
+   "faded": [
+    {
+     "name": "tree_1004",
+     "visibility": 1,
+     "keep": 0.19353966083201785,
+     "floor": 0.19353966083201785
+    },
+    {
+     "name": "tree_1025",
+     "visibility": 1,
+     "keep": 0.12,
+     "floor": 0.12
+    }
+   ],
+   "drawCalls": 252,
+   "activeMeshes": 21,
+   "activeTriangles": 285800,
+   "materials": 65,
+   "hardwareScalingLevel": 1,
+   "renderWidth": 1180,
+   "renderHeight": 820,
+   "fps": 92,
+   "player": {
+    "x": -8.83,
+    "y": 0.34,
+    "z": -45.96
+   },
+   "cam": {
+    "x": -8.83,
+    "y": 4.52,
+    "z": -40.02
+   }
+  },
+  {
+   "compo": "07",
+   "look": "hole_box",
+   "file": "07_hole_box.png",
+   "note": "カメラが樹冠のふちに埋まる(カメラの高さを 葉のかたまりに合わせる) / ディザ + 穴 + 外わく箱の判定",
+   "settings": {
+    "mode": "hole",
+    "aim": "box",
+    "segR": 1,
+    "swapped": 2
+   },
+   "faded": [
+    {
+     "name": "tree_1004",
+     "visibility": 1,
+     "keep": 0.19353966083201785,
+     "floor": 0.19353966083201785
+    },
+    {
+     "name": "tree_1025",
+     "visibility": 1,
+     "keep": 0.12,
+     "floor": 0.12
+    }
+   ],
+   "drawCalls": 252,
+   "activeMeshes": 21,
+   "activeTriangles": 285800,
+   "materials": 65,
+   "hardwareScalingLevel": 1,
+   "renderWidth": 1180,
+   "renderHeight": 820,
+   "fps": 87,
+   "player": {
+    "x": -8.83,
+    "y": 0.34,
+    "z": -45.96
+   },
+   "cam": {
+    "x": -8.83,
+    "y": 4.52,
+    "z": -40.02
+   }
+  },
+  {
+   "compo": "07",
+   "look": "hole_ray",
+   "file": "07_hole_ray.png",
+   "note": "カメラが樹冠のふちに埋まる(カメラの高さを 葉のかたまりに合わせる) / ディザ + 穴 + レイで仕上げた判定(after・既定)",
+   "settings": {
+    "mode": "hole",
+    "aim": "ray",
+    "segR": 1,
+    "swapped": 2
+   },
+   "faded": [
+    {
+     "name": "tree_1004",
+     "visibility": 1,
+     "keep": 0.19353966083201785,
+     "floor": 0.19353966083201785
+    },
+    {
+     "name": "tree_1025",
+     "visibility": 1,
+     "keep": 0.12,
+     "floor": 0.12
+    }
+   ],
+   "drawCalls": 252,
+   "activeMeshes": 21,
+   "activeTriangles": 285800,
+   "materials": 65,
+   "hardwareScalingLevel": 1,
+   "renderWidth": 1180,
+   "renderHeight": 820,
+   "fps": 70,
+   "player": {
+    "x": -8.83,
+    "y": 0.34,
+    "z": -45.96
+   },
+   "cam": {
+    "x": -8.83,
+    "y": 4.52,
+    "z": -40.02
+   }
+  },
+  {
+   "compo": "07",
+   "look": "off",
+   "file": "07_off.png",
+   "note": "カメラが樹冠のふちに埋まる(カメラの高さを 葉のかたまりに合わせる) / 遮蔽なし(対照区)",
+   "settings": {
+    "mode": "off",
+    "aim": "ray",
+    "segR": 1,
+    "swapped": 0
+   },
+   "faded": [],
+   "drawCalls": 252,
+   "activeMeshes": 21,
+   "activeTriangles": 285800,
+   "materials": 65,
+   "hardwareScalingLevel": 1,
+   "renderWidth": 1180,
+   "renderHeight": 820,
+   "fps": 83,
+   "player": {
+    "x": -8.83,
+    "y": 0.34,
+    "z": -45.96
+   },
+   "cam": {
+    "x": -8.83,
+    "y": 4.52,
+    "z": -40.02
+   }
+  }
+ ],
+ "forestTrees": 28,
+ "pick": {
+  "big": {
+   "n": "tree_1025",
+   "x": -10.03,
+   "z": -40.02,
+   "r": 3.71
+  },
+  "near": {
+   "n": "tree_1004",
+   "x": -7.84,
+   "z": -43.87,
+   "r": 2.7,
+   "d": 4.429288881976423
+  }
+ },
+ "errors": []
+}

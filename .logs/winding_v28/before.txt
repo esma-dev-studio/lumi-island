@@ -1,0 +1,194 @@
+[bjs] sphere ComputeNormals outward= [33m152[39m inward= [33m1[39m SIGN= [33m-1[39m
+    bad: v63@(0.06,-0.00,-0.00) out0/in80/flat0 
+appendBox                      parts=  1 tris=   12 out=   12 in=    0 flat=   0 ratio=1.000 mism=0
+appendTrunk                    parts=  1 tris=   16 out=   16 in=    0 flat=   0 ratio=1.000 mism=0
+appendShellFan(up)             parts=  1 tris=   70 out=   49 in=   18 flat=   3 ratio=0.731 mism=0 <<<< NG
+appendShellFan(down)           parts=  1 tris=   70 out=   38 in=   16 flat=  16 ratio=0.704 mism=0 <<<< NG
+    bad: v70@(-0.01,2.98,-0.04) out0/in90/flat0 | v70@(-0.73,2.61,0.30) out0/in90/flat0 | v70@(0.61,2.70,-0.36) out0/in90/flat0 | v70@(0.04,3.57,0.11) out0/in90/flat0 
+makeTree(11)                   parts=  5 tris=  460 out=   28 in=  360 flat=   0 ratio=0.072 mism=300 <<<< NG
+    bad: v70@(0.30,3.03,0.10) out0/in90/flat0 | v70@(-0.44,2.63,0.31) out0/in90/flat0 | v70@(0.94,2.68,-0.36) out0/in90/flat0 | v70@(0.36,3.55,0.10) out0/in90/flat0 
+makeSapTree.tree               parts=  9 tris=  792 out=  684 in=    0 flat=   0 ratio=1.000 mism=0
+makeSapTree.sap                parts= 10 tris=  942 out=    0 in=  778 flat=   0 ratio=0.000 mism=604 <<<< NG
+    bad: v70@(-0.04,1.10,0.32) out0/in90/flat0 | v63@(0.14,0.90,0.32) out0/in80/flat0 | v48@(-0.16,0.61,0.34) out0/in56/flat0 | v48@(0.15,0.48,0.33) out0/in56/flat0 (+6)
+makeLumiTree.root              parts= 10 tris=  544 out=  111 in=  360 flat=   1 ratio=0.236 mism=388 <<<< NG
+    bad: v70@(0.09,4.91,0.00) out0/in90/flat0 | v70@(-1.23,4.29,0.45) out0/in90/flat0 | v70@(1.32,4.32,-0.40) out0/in90/flat0 | v70@(0.22,5.73,0.29) out0/in90/flat0 
+makeLumiTree.fruits            parts= 84 tris= 3472 out=    0 in= 2604 flat=   0 ratio=0.000 mism=2434 <<<< NG
+    bad: v30@(1.52,5.41,0.08) out0/in30/flat0 | v30@(1.43,5.41,0.04) out0/in30/flat0 | v30@(1.44,5.41,-0.06) out0/in30/flat0 | v30@(1.54,5.41,-0.08) out0/in30/flat0 (+80)
+makeLumiTree.buds              parts= 14 tris=  672 out=    0 in=  504 flat=   0 ratio=0.000 mism=464 <<<< NG
+    bad: v35@(1.50,5.41,-0.00) out0/in36/flat0 | v35@(1.17,4.45,0.56) out0/in36/flat0 | v35@(0.85,4.92,1.07) out0/in36/flat0 | v35@(0.37,4.19,1.60) out0/in36/flat0 (+10)
+makeBerryTree.tree             parts=  5 tris=  460 out=   28 in=  360 flat=   0 ratio=0.072 mism=300 <<<< NG
+    bad: v70@(-0.11,2.48,-0.06) out0/in90/flat0 | v70@(-0.69,2.13,0.24) out0/in90/flat0 | v70@(0.40,2.23,-0.28) out0/in90/flat0 | v70@(-0.04,2.90,0.07) out0/in90/flat0 
+makeBerryTree.berries          parts=  9 tris=  432 out=    0 in=  324 flat=   0 ratio=0.000 mism=298 <<<< NG
+    bad: v35@(-0.56,2.84,-0.66) out0/in36/flat0 | v35@(-0.01,2.48,-0.97) out0/in36/flat0 | v35@(0.60,2.40,-0.73) out0/in36/flat0 | v35@(1.14,2.69,-0.22) out0/in36/flat0 (+5)
+makeRock                       parts=  2 tris=  144 out=    0 in=  116 flat=   0 ratio=0.000 mism=95 <<<< NG
+    bad: v63@(0.05,0.39,-0.00) out0/in80/flat0 | v35@(0.52,0.23,0.31) out0/in36/flat0 
+makeOreNode.rock               parts=  1 tris=   96 out=    0 in=   80 flat=   0 ratio=0.000 mism=62 <<<< NG
+    bad: v63@(0.05,0.44,-0.00) out0/in80/flat0 
+makeOreNode.crystals           parts=  4 tris=   20 out=   20 in=    0 flat=   0 ratio=1.000 mism=28 <<<< NG
+makeGrassNode                  parts=  7 tris=  280 out=    0 in=  210 flat=   0 ratio=0.000 mism=202 <<<< NG
+    bad: v30@(-0.29,0.19,0.04) out0/in30/flat0 | v30@(-0.26,0.22,-0.25) out0/in30/flat0 | v30@(0.04,0.21,-0.37) out0/in30/flat0 | v30@(0.36,0.20,-0.23) out0/in30/flat0 (+3)
+makeMoss                       parts=  4 tris=  192 out=    0 in=  144 flat=   0 ratio=0.000 mism=135 <<<< NG
+    bad: v35@(0.03,0.05,-0.00) out0/in36/flat0 | v35@(-0.14,0.05,-0.34) out0/in36/flat0 | v35@(0.35,0.05,-0.15) out0/in36/flat0 | v35@(0.19,0.05,0.37) out0/in36/flat0 
+makeFlowerNode                 parts= 27 tris= 1008 out=    0 in=  756 flat=   0 ratio=0.000 mism=717 <<<< NG
+    bad: v25@(0.08,0.09,-0.19) out0/in24/flat0 | v25@(0.11,0.23,-0.22) out0/in24/flat0 | v25@(0.12,0.07,-0.18) out0/in24/flat0 | v30@(0.09,0.33,-0.20) out0/in30/flat0 (+23)
+makeMushroomNode               parts= 13 tris=  780 out=    0 in=  614 flat=   0 ratio=0.000 mism=528 <<<< NG
+    bad: v63@(0.02,0.04,-0.00) out0/in80/flat0 | v30@(0.11,0.07,0.08) out0/in30/flat0 | v48@(0.12,0.15,0.08) out0/in56/flat0 | v48@(0.12,0.17,0.08) out0/in56/flat0 (+9)
+makeShellNode                  parts=  2 tris=  280 out=  256 in=   22 flat=   2 ratio=0.921 mism=0
+makeTwigNode                   parts=  9 tris=  108 out=  108 in=    0 flat=   0 ratio=1.000 mism=0
+makeCutGrassNode               parts= 19 tris=  790 out=    0 in=  596 flat=   0 ratio=0.000 mism=556 <<<< NG
+    bad: v30@(-0.23,0.11,0.03) out0/in30/flat0 | v30@(-0.38,0.26,0.05) out0/in30/flat0 | v30@(-0.26,0.14,-0.17) out0/in30/flat0 | v30@(-0.33,0.33,-0.21) out0/in30/flat0 (+15)
+makeClayNode                   parts=  6 tris=  332 out=    0 in=  258 flat=   0 ratio=0.000 mism=229 <<<< NG
+    bad: v70@(0.03,0.04,-0.00) out0/in90/flat0 | v35@(0.13,0.11,-0.08) out0/in36/flat0 | v35@(0.02,0.13,0.18) out0/in36/flat0 | v35@(-0.15,0.12,-0.08) out0/in36/flat0 (+2)
+makeGlassFloat                 parts= 19 tris=  762 out=    0 in=  590 flat=   0 ratio=0.000 mism=537 <<<< NG
+    bad: v88@(0.01,0.15,-0.00) out0/in120/flat0 | v48@(-0.04,0.25,0.03) out0/in56/flat0 | v25@(0.16,0.15,-0.00) out0/in24/flat0 | v25@(0.13,0.25,0.03) out0/in24/flat0 (+15)
+makeStarShard                  parts=  3 tris=   36 out=   36 in=    0 flat=   0 ratio=1.000 mism=0
+makeBucketRod                  parts=  3 tris=  124 out=   25 in=   80 flat=   3 ratio=0.238 mism=94 <<<< NG
+    bad: v63@(0.01,0.30,-0.00) out0/in80/flat0 
+makeTelescope                  parts=  5 tris=  126 out=   56 in=   56 flat=   0 ratio=0.500 mism=110 <<<< NG
+    bad: v48@(0.30,1.05,-0.22) out0/in56/flat0 
+makeStump                      parts=  2 tris=  110 out=   14 in=   80 flat=   0 ratio=0.149 mism=0 <<<< NG
+    bad: v63@(0.03,0.28,-0.00) out0/in80/flat0 
+makeFestivalStand              parts= 21 tris=  418 out=  142 in=  144 flat=  84 ratio=0.497 mism=0 <<<< NG
+    bad: v35@(-0.23,0.68,-0.14) out0/in36/flat0 | v35@(0.03,0.69,-0.14) out0/in36/flat0 | v35@(-0.23,0.68,0.06) out0/in36/flat0 | v35@(0.03,0.69,0.06) out0/in36/flat0 
+makeFestivalPole               parts=  7 tris=  228 out=   14 in=  150 flat=  14 ratio=0.085 mism=0 <<<< NG
+    bad: v30@(0.13,0.07,0.18) out0/in30/flat0 | v30@(-0.13,0.06,0.17) out0/in30/flat0 | v30@(-0.20,0.06,-0.08) out0/in30/flat0 | v30@(0.02,0.07,-0.22) out0/in30/flat0 (+1)
+makeFestivalLantern            parts= 13 tris=  714 out=  210 in=  256 flat= 248 ratio=0.451 mism=0 <<<< NG
+    bad: v40@(0.13,-0.00,-0.00) out24/in32/flat0 | v40@(0.09,-0.00,0.09) out24/in32/flat0 | v40@(0.00,-0.00,0.13) out20/in32/flat4 | v40@(-0.09,-0.00,0.09) out20/in32/flat4 (+4)
+makeFestivalGarland            parts= 12 tris=  218 out=  112 in=   84 flat=  22 ratio=0.571 mism=0 <<<< NG
+makeMessageBottle              parts=  3 tris=   70 out=   70 in=    0 flat=   0 ratio=1.000 mism=0
+makeLogPile                    parts=  3 tris=   42 out=    0 in=    0 flat=  42 ratio=1.000 mism=0
+makeCrate                      parts=  5 tris=   60 out=   60 in=    0 flat=   0 ratio=1.000 mism=0
+makeDriftwood                  parts=  2 tris=   56 out=   29 in=   17 flat=  10 ratio=0.630 mism=48 <<<< NG
+    bad: v32@(0.06,0.12,0.03) out15/in17/flat10 
+makeBulletinBoard              parts= 15 tris=  184 out=  184 in=    0 flat=   0 ratio=1.000 mism=0
+makeBoat.root                  parts=  6 tris=  836 out=  370 in=  402 flat=  40 ratio=0.479 mism=0 <<<< NG
+    bad: v35@(0.01,-0.06,-1.64) out0/in36/flat0 | v35@(0.01,-0.08,1.62) out0/in36/flat0 
+makeRubble                     parts=  2 tris=  178 out=    0 in=  146 flat=   0 ratio=0.000 mism=115 <<<< NG
+    bad: v70@(0.05,0.39,0.00) out0/in90/flat0 | v48@(0.52,0.23,0.30) out0/in56/flat0 
+makeCovePier                   parts= 18 tris=  232 out=  232 in=    0 flat=   0 ratio=1.000 mism=0
+makeLighthouse                 parts= 18 tris=  248 out=  248 in=    0 flat=   0 ratio=1.000 mism=0
+makeLightShell.root            parts=  8 tris=  456 out=    0 in=  360 flat=   0 ratio=0.000 mism=309 <<<< NG
+    bad: v70@(0.11,0.10,0.13) out0/in90/flat0 | v30@(0.26,0.10,0.15) out0/in30/flat0 | v30@(0.20,0.10,0.23) out0/in30/flat0 | v30@(0.10,0.10,0.26) out0/in30/flat0 (+4)
+makeLightShell.inner           parts=  2 tris=  140 out=    0 in=  112 flat=   0 ratio=0.000 mism=93 <<<< NG
+    bad: v48@(0.11,0.11,0.13) out0/in56/flat0 | v48@(-0.15,0.09,-0.01) out0/in56/flat0 
+makeStarweed.root              parts=  9 tris=  238 out=  202 in=    2 flat=  34 ratio=0.990 mism=0
+makeStarweed.tips              parts=  8 tris=  320 out=    0 in=  240 flat=   0 ratio=0.000 mism=228 <<<< NG
+    bad: v30@(0.23,0.51,0.19) out0/in30/flat0 | v30@(0.03,0.49,0.28) out0/in30/flat0 | v30@(-0.17,0.45,0.20) out0/in30/flat0 | v30@(-0.28,0.47,0.02) out0/in30/flat0 (+4)
+    bad: v30@(0.26,1.01,2.06) out0/in30/flat0 | v48@(2.47,0.68,1.33) out0/in56/flat0 
+makeBench                      parts=  4 tris=   48 out=   48 in=    0 flat=   0 ratio=1.000 mism=0
+makeLamp.mesh                  parts=  8 tris=   98 out=   98 in=    0 flat=   0 ratio=1.000 mism=0
+makeLamp.globe                 parts=  1 tris=   48 out=    0 in=   36 flat=   0 ratio=0.000 mism=34 <<<< NG
+    bad: v35@(0.01,1.77,0.30) out0/in36/flat0 
+makeStoneRing                  parts= 10 tris=  400 out=    0 in=  300 flat=   0 ratio=0.000 mism=282 <<<< NG
+    bad: v30@(2.62,0.11,-0.00) out0/in30/flat0 | v30@(2.13,0.11,1.53) out0/in30/flat0 | v30@(0.83,0.11,2.47) out0/in30/flat0 | v30@(-0.78,0.11,2.47) out0/in30/flat0 (+6)
+makeMarketStall                parts= 21 tris=  270 out=  224 in=    0 flat=  46 ratio=1.000 mism=0
+makeCairn                      parts=  4 tris=  384 out=    0 in=  320 flat=   0 ratio=0.000 mism=248 <<<< NG
+    bad: v63@(0.02,0.11,-0.02) out0/in80/flat0 | v63@(0.02,0.31,-0.02) out0/in80/flat0 | v63@(0.03,0.49,0.00) out0/in80/flat0 | v63@(0.01,0.68,-0.01) out0/in80/flat0 
+makeMarketCrates               parts=  6 tris=   72 out=   72 in=    0 flat=   0 ratio=1.000 mism=0
+makeTrainCarInterior.root      parts=120 tris= 1524 out= 1012 in=  280 flat= 232 ratio=0.783 mism=0 <<<< NG
+    bad: v16@(-1.09,2.02,-2.20) out0/in14/flat0 | v16@(-1.09,2.02,-0.00) out0/in14/flat0 | v16@(-1.09,2.02,2.20) out0/in14/flat0 | v16@(1.09,2.02,-2.20) out0/in14/flat0 (+16)
+makeSeabird.root               parts=  5 tris=  324 out=    0 in=  258 flat=   0 ratio=0.000 mism=219 <<<< NG
+    bad: v63@(0.01,-0.00,-0.00) out0/in80/flat0 | v48@(0.01,0.04,-0.02) out0/in56/flat0 | v48@(0.00,0.05,0.27) out0/in56/flat0 | v30@(0.00,0.04,0.37) out0/in30/flat0 (+1)
+makeSeabird.wingL              parts=  2 tris=  118 out=    0 in=   92 flat=   0 ratio=0.000 mism=81 <<<< NG
+    bad: v48@(0.43,0.02,-0.02) out0/in56/flat0 | v35@(0.73,0.01,-0.07) out0/in36/flat0 
+makeTallGrassNode              parts= 48 tris= 1872 out= 1412 in=    0 flat=   0 ratio=1.000 mism=0
+makeDigMound                   parts= 12 tris=  596 out=  470 in=    0 flat=   0 ratio=1.000 mism=0
+makeLowFence                   parts=  4 tris=   48 out=   48 in=    0 flat=   0 ratio=1.000 mism=0
+makeRockLedge                  parts=  3 tris=  288 out=    0 in=  240 flat=   0 ratio=0.000 mism=186 <<<< NG
+    bad: v63@(-0.04,0.02,-0.01) out0/in80/flat0 | v63@(0.07,0.21,-0.15) out0/in80/flat0 | v63@(-0.10,0.40,-0.25) out0/in80/flat0 
+makeOutcrop                    parts=  2 tris=  178 out=    0 in=  146 flat=   0 ratio=0.000 mism=116 <<<< NG
+    bad: v70@(0.05,0.18,-0.00) out0/in90/flat0 | v48@(0.46,0.32,-0.30) out0/in56/flat0 
+makeFlagstones                 parts=  7 tris=  336 out=    0 in=  252 flat=   0 ratio=0.000 mism=235 <<<< NG
+    bad: v35@(0.87,0.04,-1.10) out0/in36/flat0 | v35@(-0.94,0.04,0.42) out0/in36/flat0 | v35@(-0.33,0.04,1.16) out0/in36/flat0 | v35@(0.82,0.04,-0.66) out0/in36/flat0 (+3)
+makeSnowDrift                  parts=  2 tris=  332 out=  288 in=    0 flat=   0 ratio=1.000 mism=0
+    bad: v30@(-0.31,0.40,0.00) out0/in30/flat0 | v30@(-0.10,0.40,-0.00) out0/in30/flat0 | v30@(0.11,0.40,-0.00) out0/in30/flat0 | v30@(0.32,0.40,-0.00) out0/in30/flat0 
+f_teddy                        parts= 20 tris= 1346 out=   50 in= 1058 flat=   0 ratio=0.045 mism=0 <<<< NG
+    bad: v88@(0.01,0.26,-0.01) out0/in120/flat0 | v70@(0.01,0.22,0.10) out0/in90/flat0 | v63@(-0.14,0.08,0.09) out0/in80/flat0 | v63@(-0.20,0.29,0.03) out0/in80/flat0 (+12)
+f_snowman                      parts= 16 tris= 1342 out=   54 in= 1098 flat=   0 ratio=0.047 mism=0 <<<< NG
+    bad: v117@(0.02,0.07,-0.00) out0/in168/flat0 | v165@(0.01,0.27,-0.00) out0/in252/flat0 | v165@(0.01,0.62,-0.00) out0/in252/flat0 | v35@(-0.07,0.66,0.18) out0/in36/flat0 (+8)
+f_plush_whale                  parts= 20 tris= 1280 out=   98 in=  988 flat=   0 ratio=0.090 mism=0 <<<< NG
+    bad: v140@(0.01,0.22,0.03) out0/in208/flat0 | v108@(0.01,0.14,0.10) out0/in154/flat0 | v70@(0.01,0.20,-0.25) out0/in90/flat0 | v63@(-0.11,0.24,-0.34) out0/in80/flat0 (+8)
+f_plush_hotaru                 parts= 39 tris= 1352 out=  244 in=  916 flat=   0 ratio=0.210 mism=0 <<<< NG
+    bad: v108@(0.01,0.17,-0.02) out0/in154/flat0 | v16@(-0.10,0.06,-0.07) out0/in14/flat0 | v35@(-0.13,0.03,-0.08) out0/in36/flat0 | v16@(-0.10,0.06,0.01) out0/in14/flat0 (+15)
+f_plush_hotaru.glow            parts=  1 tris=  140 out=    0 in=  120 flat=   0 ratio=0.000 mism=87 <<<< NG
+    bad: v88@(0.00,0.12,-0.20) out0/in120/flat0 
+f_camel_doll                   parts= 21 tris=  856 out=  144 in=  580 flat=   0 ratio=0.199 mism=0 <<<< NG
+    bad: v88@(0.01,0.36,0.00) out0/in120/flat0 | v63@(-0.09,0.54,-0.00) out0/in80/flat0 | v63@(0.10,0.55,-0.00) out0/in80/flat0 | v63@(0.35,0.75,-0.00) out0/in80/flat0 (+7)
+f_plush_star                   parts= 42 tris= 2448 out=  240 in= 1848 flat=   0 ratio=0.115 mism=0 <<<< NG
+    bad: v117@(0.01,0.23,-0.00) out0/in168/flat0 | v63@(0.05,0.17,-0.00) out0/in80/flat0 | v63@(0.09,0.12,0.00) out0/in80/flat0 | v63@(0.12,0.07,0.00) out0/in80/flat0 (+18)
+f_mushstool                    parts= 10 tris= 1260 out=   28 in= 1072 flat=   0 ratio=0.025 mism=0 <<<< NG
+    bad: v117@(0.01,0.31,0.00) out0/in168/flat0 | v165@(0.01,0.39,0.00) out0/in252/flat0 | v165@(0.01,0.40,0.00) out0/in252/flat0 | v63@(0.11,0.45,0.06) out0/in80/flat0 (+4)
+f_aroma_lamp                   parts= 10 tris=  618 out=   54 in=  468 flat=   0 ratio=0.103 mism=0 <<<< NG
+    bad: v88@(0.01,0.21,-0.00) out0/in120/flat0 | v88@(0.00,0.24,-0.00) out0/in120/flat0 | v88@(0.00,0.49,-0.00) out0/in120/flat0 | v35@(0.00,0.31,0.10) out0/in36/flat0 (+2)
+f_aroma_lamp.glow              parts=  1 tris=   96 out=    0 in=   80 flat=   0 ratio=0.000 mism=62 <<<< NG
+    bad: v63@(0.00,0.33,-0.00) out0/in80/flat0 
+f_toy_kendama                  parts= 12 tris= 1034 out=   28 in=  828 flat=  40 ratio=0.033 mism=0 <<<< NG
+    bad: v117@(0.01,0.03,-0.00) out0/in168/flat0 | v88@(-0.16,0.37,-0.00) out0/in120/flat0 | v70@(-0.16,0.39,-0.00) out0/in90/flat0 | v88@(0.17,0.37,-0.00) out0/in120/flat0 (+4)
+f_houseplant                   parts= 21 tris=  938 out=  162 in=  624 flat=   6 ratio=0.206 mism=0 <<<< NG
+    bad: v88@(0.01,0.30,0.00) out0/in120/flat0 | v48@(0.16,1.06,0.04) out0/in56/flat0 | v48@(0.01,0.94,0.13) out0/in56/flat0 | v48@(-0.11,1.00,0.07) out0/in56/flat0 (+6)
+f_toy_yacht                    parts= 24 tris=  868 out=  230 in=  542 flat=  14 ratio=0.298 mism=0 <<<< NG
+    bad: v108@(0.01,0.13,0.00) out0/in154/flat0 | v108@(0.01,0.17,0.01) out0/in154/flat0 | v108@(0.00,0.20,0.02) out0/in154/flat0 | v63@(0.00,0.15,0.31) out0/in80/flat0 
+f_wallclock                    parts= 27 tris= 1128 out=  266 in=  766 flat=   0 ratio=0.258 mism=0 <<<< NG
+    bad: v165@(0.00,0.73,0.08) out0/in252/flat0 | v165@(0.00,0.73,0.09) out0/in252/flat0 | v63@(0.00,0.73,0.10) out0/in80/flat0 | v16@(0.00,0.50,0.05) out0/in14/flat0 (+1)
+f_toybox                       parts= 18 tris=  598 out=  198 in=  334 flat=   0 ratio=0.372 mism=0 <<<< NG
+    bad: v63@(0.00,0.23,-0.24) out0/in80/flat0 | v88@(-0.05,0.24,0.02) out0/in120/flat0 | v70@(-0.42,0.06,0.10) out0/in90/flat0 | v35@(-0.36,0.12,-0.20) out0/in36/flat0 
+f_bigvase                      parts= 28 tris= 1032 out=  168 in=  648 flat=   0 ratio=0.206 mism=0 <<<< NG
+    bad: v30@(0.13,1.12,0.10) out0/in30/flat0 | v30@(0.10,1.12,0.04) out0/in30/flat0 | v30@(0.15,1.12,0.00) out0/in30/flat0 | v30@(0.20,1.12,0.04) out0/in30/flat0 (+17)
+f_stool                        parts=  6 tris=  468 out=   42 in=  336 flat=  42 ratio=0.111 mism=0 <<<< NG
+    bad: v117@(0.01,0.44,-0.00) out0/in168/flat0 | v117@(0.01,0.47,0.00) out0/in168/flat0 
+f_kitchen                      parts= 12 tris=  304 out=  108 in=  156 flat=   0 ratio=0.409 mism=0 <<<< NG
+    bad: v70@(-0.21,0.80,0.02) out0/in90/flat0 | v30@(-0.22,0.88,0.02) out0/in30/flat0 | v35@(0.31,0.79,-0.12) out0/in36/flat0 
+f_station_clock                parts= 10 tris=  608 out=   84 in=  456 flat=   0 ratio=0.156 mism=0 <<<< NG
+    bad: v117@(0.00,0.50,0.07) out0/in168/flat0 | v117@(0.00,0.50,0.08) out0/in168/flat0 | v88@(0.00,0.22,0.05) out0/in120/flat0 
+f_smalldesk                    parts= 20 tris=  432 out=  216 in=  180 flat=   0 ratio=0.545 mism=0 <<<< NG
+    bad: v70@(0.00,0.55,0.24) out0/in90/flat0 | v70@(0.24,0.72,-0.02) out0/in90/flat0 
+f_toy_ball                     parts= 35 tris= 1146 out=  396 in=  660 flat=   0 ratio=0.375 mism=0 <<<< NG
+    bad: v192@(0.01,0.21,0.00) out0/in300/flat0 | v88@(0.01,0.19,0.17) out0/in120/flat0 | v88@(-0.14,0.20,-0.07) out0/in120/flat0 | v88@(0.15,0.20,-0.07) out0/in120/flat0 
+f_starmobile                   parts= 12 tris=  290 out=   98 in=  144 flat=   0 ratio=0.405 mism=0 <<<< NG
+    bad: v35@(-0.29,0.58,0.00) out0/in36/flat0 | v35@(-0.10,0.42,0.00) out0/in36/flat0 | v35@(0.12,0.52,0.00) out0/in36/flat0 | v35@(0.30,0.36,-0.00) out0/in36/flat0 
+f_starmobile.glow              parts=  1 tris=   70 out=    0 in=   56 flat=   0 ratio=0.000 mism=47 <<<< NG
+    bad: v48@(0.00,0.63,-0.00) out0/in56/flat0 
+f_terrarium                    parts=  5 tris=  160 out=   52 in=   90 flat=   0 ratio=0.366 mism=0 <<<< NG
+    bad: v70@(0.01,0.14,-0.00) out0/in90/flat0 
+f_terrarium.glow               parts=  3 tris=  248 out=    0 in=  202 flat=   0 ratio=0.000 mism=163 <<<< NG
+    bad: v70@(0.00,0.19,0.00) out0/in90/flat0 | v48@(-0.03,0.21,0.02) out0/in56/flat0 | v48@(0.04,0.22,-0.02) out0/in56/flat0 
+f_far_map                      parts= 17 tris=  460 out=  144 in=  240 flat=  28 ratio=0.375 mism=0 <<<< NG
+    bad: v63@(-0.11,0.72,0.01) out0/in80/flat0 | v63@(0.13,0.50,0.01) out0/in80/flat0 | v63@(-0.05,0.33,0.01) out0/in80/flat0 
+f_travel_map                   parts= 31 tris=  976 out=  244 in=  570 flat=  48 ratio=0.300 mism=0 <<<< NG
+    bad: v63@(-0.09,0.84,0.01) out0/in80/flat0 | v63@(0.14,0.71,0.01) out0/in80/flat0 | v63@(-0.13,0.60,0.01) out0/in80/flat0 | v63@(0.10,0.47,0.01) out0/in80/flat0 (+3)
+f_blocks                       parts= 12 tris=  228 out=  132 in=   80 flat=   0 ratio=0.623 mism=0 <<<< NG
+    bad: v63@(0.24,0.05,-0.20) out0/in80/flat0 
+f_roundlamp                    parts=  5 tris=  248 out=   56 in=  168 flat=   0 ratio=0.250 mism=0 <<<< NG
+    bad: v117@(0.01,0.03,-0.00) out0/in168/flat0 
+f_roundlamp.glow               parts=  1 tris=  140 out=    0 in=  120 flat=   0 ratio=0.000 mism=87 <<<< NG
+    bad: v88@(0.01,0.55,-0.00) out0/in120/flat0 
+f_exotic_jar                   parts= 16 tris=  542 out=  136 in=  316 flat=   0 ratio=0.301 mism=0 <<<< NG
+    bad: v30@(0.25,0.40,-0.00) out0/in30/flat0 | v30@(0.19,0.37,0.16) out0/in30/flat0 | v30@(0.04,0.33,0.24) out0/in30/flat0 | v30@(-0.12,0.40,0.21) out0/in30/flat0 (+7)
+f_bead_curtain                 parts= 50 tris= 2020 out=   64 in= 1404 flat=  84 ratio=0.044 mism=0 <<<< NG
+    bad: v35@(-0.36,0.95,0.00) out0/in36/flat0 | v35@(-0.36,0.87,-0.00) out0/in36/flat0 | v35@(-0.36,0.78,-0.00) out0/in36/flat0 | v35@(-0.36,0.69,-0.00) out0/in36/flat0 (+35)
+f_blue_lantern                 parts= 15 tris=  254 out=  168 in=   72 flat=   0 ratio=0.700 mism=0 <<<< NG
+    bad: v48@(0.00,0.56,0.00) out0/in56/flat0 | v24@(0.00,0.58,-0.00) out12/in16/flat0 
+f_blue_lantern.glow            parts=  1 tris=   96 out=    0 in=   80 flat=   0 ratio=0.000 mism=62 <<<< NG
+    bad: v63@(0.00,0.26,-0.00) out0/in80/flat0 
+f_starbox                      parts= 13 tris=  244 out=  120 in=   80 flat=  26 ratio=0.600 mism=0 <<<< NG
+    bad: v63@(0.23,0.10,0.07) out0/in80/flat0 
+f_starbox.glow                 parts=  1 tris=   12 out=   12 in=    0 flat=   0 ratio=1.000 mism=0
+f_shellframe                   parts= 18 tris=  984 out=  840 in=  120 flat=   4 ratio=0.875 mism=0 <<<< NG
+    bad: v88@(0.08,0.36,0.01) out0/in120/flat0 
+f_bigwind                      parts= 20 tris= 1076 out=  776 in=  258 flat=  18 ratio=0.750 mism=0 <<<< NG
+    bad: v117@(0.01,0.93,0.10) out0/in168/flat0 | v16@(0.08,0.81,0.13) out0/in14/flat0 | v16@(0.00,0.79,0.18) out0/in14/flat0 | v16@(-0.08,0.76,0.13) out0/in14/flat0 (+3)
+f_toy_train                    parts= 37 tris= 2436 out=  232 in= 1872 flat=  24 ratio=0.110 mism=0 <<<< NG
+    bad: v108@(-0.11,0.06,0.29) out0/in154/flat0 | v63@(-0.11,0.06,0.28) out0/in80/flat0 | v108@(-0.11,0.09,0.08) out0/in154/flat0 | v63@(-0.11,0.09,0.07) out0/in80/flat0 (+12)
+f_toy_castle                   parts= 25 tris=  732 out=  258 in=  384 flat=   0 ratio=0.402 mism=0 <<<< NG
+    bad: v70@(-0.26,0.37,0.19) out0/in90/flat0 | v35@(-0.26,0.45,0.19) out0/in36/flat0 | v70@(0.27,0.38,0.19) out0/in90/flat0 | v35@(0.27,0.44,0.19) out0/in36/flat0 (+2)
+f_plush_mush                   parts= 24 tris= 1180 out= 1052 in=    0 flat=   0 ratio=1.000 mism=0
+d_grillfish                    parts= 10 tris=  796 out=   12 in=  650 flat=   0 ratio=0.018 mism=0 <<<< NG
+    bad: v117@(0.01,0.02,-0.00) out0/in168/flat0 | v117@(0.01,0.03,-0.00) out0/in168/flat0 | v48@(-0.07,0.06,0.00) out0/in56/flat0 | v48@(-0.02,0.06,0.00) out0/in56/flat0 (+5)
+d_berrypie                     parts=  8 tris=  744 out=   24 in=  612 flat=   0 ratio=0.038 mism=0 <<<< NG
+    bad: v117@(0.01,0.02,-0.00) out0/in168/flat0 | v117@(0.01,0.03,-0.00) out0/in168/flat0 | v117@(0.01,0.08,-0.00) out0/in168/flat0 | v35@(0.03,0.13,0.05) out0/in36/flat0 (+2)
+d_shellsoup                    parts=  5 tris=  620 out=  108 in=  436 flat=  12 ratio=0.199 mism=0 <<<< NG
+    bad: v117@(0.01,0.07,-0.00) out0/in168/flat0 | v63@(0.00,0.02,-0.00) out0/in80/flat0 | v117@(0.01,0.10,-0.00) out0/in168/flat0 
+d_nightgrill                   parts=  6 tris=  606 out=   12 in=  504 flat=   0 ratio=0.023 mism=0 <<<< NG
+    bad: v117@(0.01,0.02,-0.00) out0/in168/flat0 | v117@(0.01,0.03,-0.00) out0/in168/flat0 | v48@(-0.07,0.08,0.03) out0/in56/flat0 | v48@(0.00,0.08,0.00) out0/in56/flat0 (+1)
+d_mushsoup                     parts=  6 tris=  624 out=    0 in=  524 flat=   0 ratio=0.000 mism=0 <<<< NG
+    bad: v117@(0.01,0.07,-0.00) out0/in168/flat0 | v63@(0.00,0.02,-0.00) out0/in80/flat0 | v117@(0.01,0.10,-0.00) out0/in168/flat0 | v35@(0.05,0.11,0.02) out0/in36/flat0 (+2)

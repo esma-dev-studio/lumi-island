@@ -608,14 +608,30 @@ describe('第2章の伏線(第1章の雑談に1本ずつ)', () => {
     }
   });
 
-  it('第1章の5件の文言は1文字も変わっていない(受注・進行・達成)', () => {
-    expect(QUEST_BY_ID.q_wood.offer[0]).toBe('いらっしゃい。あなたが新しく来た子ね。わたしはツムギ。この工房で家具を作っているの。');
+  // v17: 第1章の**文面**は 第2〜3章と同じ「かな中心+分かち書き」に書きなおした
+  // (子どもが いちばん先に読む文が いちばん読みにくい、という監査の指摘。
+  //  読みやすさの検査は src/systems/TextStyleCheck.ts / tests/unit/text_style_v17.test.ts)。
+  // **構造**(条件・数量・報酬・objective)は これまでどおり 1つも変えていない。
+  it('第1章の5件は 構造を変えず、進行文だけ かな中心に書きなおしてある', () => {
+    // 「いまやること」が そのまま使う文言(ObjectiveSystem が同じ文を作る)は 不動
     expect(QUEST_BY_ID.q_wood.progress).toBe('もくざいを あつめよう');
-    expect(QUEST_BY_ID.q_fish.progress).toBe('サカナを 1匹 つろう');
     expect(QUEST_BY_ID.q_ore.progress).toBe('ルミナこうせきを ほろう');
-    expect(QUEST_BY_ID.q_lantern.progress).toBe('ランタンを作って 島に置こう');
-    expect(QUEST_BY_ID.q_lumi.progress).toBe('光る家具を 島に3つ置こう');
-    expect(QUEST_BY_ID.q_lumi.done[0]).toBe('…見て! ルミの木が光ってる!');
+    // 書きなおした進行文(依頼パネル・会話でだけ出る。目標表示には使われない)
+    expect(QUEST_BY_ID.q_fish.progress).toBe('サカナを 1ぴき つろう');
+    expect(QUEST_BY_ID.q_lantern.progress).toBe('ランタンを つくって しまに おこう');
+    expect(QUEST_BY_ID.q_lumi.progress).toBe('ひかる かぐを しまに 3つ おこう');
+    // 意味チェッカーの分類は 書きなおしの前後で 変わらない
+    expect(categorizeObjective(QUEST_BY_ID.q_fish.progress)).toBe('fish');
+    expect(categorizeObjective(QUEST_BY_ID.q_wood.progress)).toBe('gatherWood');
+    expect(categorizeObjective(QUEST_BY_ID.q_ore.progress)).toBe('gatherOre');
+    // 見せ場の1行(ルミの木が光る)は 意味も 語順も そのまま
+    expect(QUEST_BY_ID.q_lumi.done[0]).toBe('……見て! ルミの木が 光ってる!');
+    // 構造は不動
+    expect(QUEST_BY_ID.q_wood.count).toBe(5);
+    expect(QUEST_BY_ID.q_wood.reward.tool).toBe('pickaxe');
+    expect(QUEST_BY_ID.q_fish.count).toBe(1);
+    expect(QUEST_BY_ID.q_ore.count).toBe(3);
+    expect(QUEST_BY_ID.q_lumi.count).toBe(3);
   });
 });
 

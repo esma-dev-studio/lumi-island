@@ -1,0 +1,44 @@
+{
+ "when": "2026-09-08T13:03:09.250Z",
+ "port": "5225",
+ "on": {
+  "drawCalls": 330,
+  "activeMeshes": 62,
+  "activeVerticesSumOfMeshes": 53143,
+  "activeTrianglesSumOfMeshes": 83678,
+  "activeTriangles": 322588,
+  "sceneTotalVertices": 211495,
+  "textures": 25,
+  "materials": 65,
+  "nearGrass": {
+   "enabled": true,
+   "count": 6
+  },
+  "seaVerts": 882
+ },
+ "off": {
+  "drawCalls": 328,
+  "activeMeshes": 61,
+  "activeVerticesSumOfMeshes": 53115,
+  "activeTrianglesSumOfMeshes": 83664,
+  "activeTriangles": 322420,
+  "sceneTotalVertices": 211963,
+  "textures": 25,
+  "materials": 65,
+  "nearGrass": {
+   "enabled": false,
+   "count": 6
+  },
+  "seaVerts": 882
+ },
+ "meshesOnlyWhenOn": [
+  "decoNearGrass"
+ ],
+ "diff": {
+  "drawCalls": 2,
+  "activeMeshes": 1,
+  "activeVertices": 28,
+  "activeTriangles": 168,
+  "textures": 0
+ }
+}

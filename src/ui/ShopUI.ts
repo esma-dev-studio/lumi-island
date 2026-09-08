@@ -4,6 +4,7 @@ import { invRemove, invAddRecorded, invCount } from '../game/GameState';
 import { ITEMS, SHOP_STOCK, type ItemId } from '../data/items';
 import { icon } from './icons';
 import { byInput } from './inputMode';
+import { attachPanelScrollCue } from './panelScroll';
 import { toast } from './Toast';
 import { sfx } from '../audio/AudioSystem';
 
@@ -17,6 +18,8 @@ export class ShopUI {
     this.el = document.createElement('div');
     this.el.className = 'panel shop-panel hidden';
     document.getElementById('ui-root')!.appendChild(this.el);
+    // うる/かうの一覧は 品ぞろえで のびる。下に まだ あることを 帯で見せる
+    attachPanelScrollCue(this.el);
     // クリックは委譲で1回だけ(描画途中の例外・再描画競合への免疫。CraftUIと同方針)
     this.el.addEventListener('click', (e) => {
       const t = (e.target as HTMLElement).closest(

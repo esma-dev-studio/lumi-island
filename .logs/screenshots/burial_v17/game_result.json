@@ -1,0 +1,15 @@
+{
+  "result": "ok",
+  "log": [
+    "ルミの木: {\"id\":\"lumiTree\",\"name\":\"ルミの木\",\"x\":0,\"z\":-7}",
+    "  game_lumitree_day_bud.png",
+    "  game_lumitree_day_bloom.png",
+    "  game_lumitree_night_bloom.png",
+    "  game_lumitree_night_bud.png",
+    "いしのランプ(はじめ): {\"began\":true}",
+    "いしのランプ(おいた): {\"placed\":true}",
+    "  game_stonelamp_night.png",
+    "  game_stonelamp_night_close.png"
+  ],
+  "errors": []
+}

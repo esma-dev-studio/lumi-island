@@ -13,6 +13,7 @@ import {
 } from '../systems/MarketStock';
 import { icon } from './icons';
 import { byInput } from './inputMode';
+import { attachPanelScrollCue } from './panelScroll';
 import { toast } from './Toast';
 import { sfx } from '../audio/AudioSystem';
 
@@ -37,6 +38,8 @@ export class MarketUI {
     this.el = document.createElement('div');
     this.el.className = 'panel shop-panel hidden';
     document.getElementById('ui-root')!.appendChild(this.el);
+    // しゅうがわりの しなものは 数が 多い。下に まだ あることを 帯で見せる
+    attachPanelScrollCue(this.el);
     // クリックは委譲で1回だけ(ShopUI・CraftUI と同方針)
     this.el.addEventListener('click', (e) => {
       const t = (e.target as HTMLElement).closest('[data-close], [data-buy]') as HTMLElement | null;

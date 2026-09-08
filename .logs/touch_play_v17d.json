@@ -1,0 +1,2248 @@
+{
+ "when": "2026-09-08T10:54:21.761Z",
+ "shots": [
+  {
+   "n": 201,
+   "file": "201_panel_inv.png",
+   "scene": "panel_inv",
+   "action": "右上「もちもの」をタップ",
+   "result": "パネルが開いた"
+  },
+  {
+   "n": 202,
+   "file": "202_panel_quest.png",
+   "scene": "panel_quest",
+   "action": "右上「おねがい」をタップ",
+   "result": "パネルが開いた"
+  },
+  {
+   "n": 203,
+   "file": "203_panel_codex.png",
+   "scene": "panel_codex",
+   "action": "右上「ずかん」をタップ",
+   "result": "パネルが開いた"
+  },
+  {
+   "n": 204,
+   "file": "204_panel_codex_codex.png",
+   "scene": "panel_codex_codex",
+   "action": "タブ「codex」をタップ",
+   "result": "タブが切りかわった"
+  },
+  {
+   "n": 205,
+   "file": "205_panel_codex_badge.png",
+   "scene": "panel_codex_badge",
+   "action": "タブ「badge」をタップ",
+   "result": "タブが切りかわった"
+  },
+  {
+   "n": 206,
+   "file": "206_panel_codex_album.png",
+   "scene": "panel_codex_album",
+   "action": "タブ「album」をタップ",
+   "result": "タブが切りかわった"
+  },
+  {
+   "n": 207,
+   "file": "207_panel_menu.png",
+   "scene": "panel_menu",
+   "action": "右上「メニュー」をタップ",
+   "result": "パネルが開いた"
+  },
+  {
+   "n": 208,
+   "file": "208_double_tap.png",
+   "scene": "double_tap",
+   "action": "キャンバス中央をダブルタップ",
+   "result": "変化なし=true"
+  },
+  {
+   "n": 209,
+   "file": "209_long_press.png",
+   "scene": "long_press",
+   "action": "キャンバスを1.4秒 長押し",
+   "result": "選択0文字"
+  },
+  {
+   "n": 210,
+   "file": "210_long_press_panel.png",
+   "scene": "long_press_panel",
+   "action": "メニューの見出しを1.4秒 長押し",
+   "result": "選択0文字"
+  },
+  {
+   "n": 211,
+   "file": "211_pause_help.png",
+   "scene": "pause_help",
+   "action": "「そうさほうほう」をタップ",
+   "result": "タッチ版の説明"
+  },
+  {
+   "n": 212,
+   "file": "212_pinch.png",
+   "scene": "pinch",
+   "action": "2本指をひろげる(ピンチアウト)",
+   "result": "変化なし=true"
+  },
+  {
+   "n": 213,
+   "file": "213_camera_drag.png",
+   "scene": "camera_drag",
+   "action": "画面右側を左へドラッグ(180px)",
+   "result": "ヨー 0.00→-0.90"
+  },
+  {
+   "n": 214,
+   "file": "214_portrait_game.png",
+   "scene": "portrait_game",
+   "action": "たてむきに変える(屋外プレイ中)",
+   "result": "レイアウトを確認"
+  },
+  {
+   "n": 215,
+   "file": "215_portrait_menu.png",
+   "scene": "portrait_menu",
+   "action": "たてむきで「メニュー」をタップ",
+   "result": "パネルの収まり"
+  },
+  {
+   "n": 216,
+   "file": "216_portrait_inv.png",
+   "scene": "portrait_inv",
+   "action": "たてむきで「もちもの」",
+   "result": "パネルの収まり"
+  },
+  {
+   "n": 217,
+   "file": "217_portrait_title.png",
+   "scene": "portrait_title",
+   "action": "たてむきでタイトルを開く",
+   "result": "レイアウトを確認"
+  },
+  {
+   "n": 218,
+   "file": "218_portrait_title_help.png",
+   "scene": "portrait_title_help",
+   "action": "たてむきで「そうさほうほう」",
+   "result": "パネルの収まり"
+  },
+  {
+   "n": 219,
+   "file": "219_landscape_title_help.png",
+   "scene": "landscape_title_help",
+   "action": "よこむきに戻す(そうさほうほうは開いたまま)",
+   "result": "スクロール量を確認"
+  }
+ ],
+ "measures": [
+  {
+   "where": "パネル: もちもの",
+   "shot": 201,
+   "rows": [
+    {
+     "sel": ".panel-close",
+     "label": "とじる",
+     "w": 81.7,
+     "h": 44,
+     "x": 767,
+     "y": 305,
+     "fs": 15.1,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "もちもの",
+     "w": 63,
+     "h": 58,
+     "x": 895,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "おねがい",
+     "w": 63,
+     "h": 58,
+     "x": 966,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "ずかん",
+     "w": 58,
+     "h": 58,
+     "x": 1037,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 1103,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".obj-hud",
+     "x": 14,
+     "y": 14,
+     "w": 250,
+     "h": 93,
+     "scrollH": 91,
+     "clientH": 91,
+     "overflowY": "visible",
+     "touchAction": "auto",
+     "outside": false
+    },
+    {
+     "sel": ".panel.inv-panel",
+     "x": 310,
+     "y": 286,
+     "w": 560,
+     "h": 249,
+     "scrollH": 247,
+     "clientH": 247,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    },
+    {
+     "sel": ".touch-menu",
+     "x": 895,
+     "y": 62,
+     "w": 271,
+     "h": 58,
+     "scrollH": 58,
+     "clientH": 58,
+     "overflowY": "visible",
+     "touchAction": "none",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "パネル: おねがい",
+   "shot": 202,
+   "rows": [
+    {
+     "sel": ".panel-close",
+     "label": "とじる",
+     "w": 81.7,
+     "h": 44,
+     "x": 767,
+     "y": 117,
+     "fs": 15.1,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "もちもの",
+     "w": 63,
+     "h": 58,
+     "x": 895,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "おねがい",
+     "w": 63,
+     "h": 58,
+     "x": 966,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "ずかん",
+     "w": 58,
+     "h": 58,
+     "x": 1037,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 1103,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".obj-hud",
+     "x": 14,
+     "y": 14,
+     "w": 250,
+     "h": 93,
+     "scrollH": 91,
+     "clientH": 91,
+     "overflowY": "visible",
+     "touchAction": "auto",
+     "outside": false
+    },
+    {
+     "sel": ".panel.quest-panel",
+     "x": 310,
+     "y": 98,
+     "w": 560,
+     "h": 623,
+     "scrollH": 625,
+     "clientH": 621,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    },
+    {
+     "sel": ".touch-menu",
+     "x": 895,
+     "y": 62,
+     "w": 271,
+     "h": 58,
+     "scrollH": 58,
+     "clientH": 58,
+     "overflowY": "visible",
+     "touchAction": "none",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "パネル: ずかん",
+   "shot": 203,
+   "rows": [
+    {
+     "sel": ".panel-close",
+     "label": "とじる",
+     "w": 81.7,
+     "h": 44,
+     "x": 782,
+     "y": 117,
+     "fs": 15.1,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".shop-tab.on",
+     "label": "ずかん",
+     "w": 85.5,
+     "h": 45,
+     "x": 316,
+     "y": 171,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".shop-tab",
+     "label": "バッジ 0/114",
+     "w": 127.3,
+     "h": 45,
+     "x": 406,
+     "y": 171,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".shop-tab",
+     "label": "アルバム 0/24",
+     "w": 137.3,
+     "h": 45,
+     "x": 537,
+     "y": 171,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "もちもの",
+     "w": 63,
+     "h": 58,
+     "x": 895,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "おねがい",
+     "w": 63,
+     "h": 58,
+     "x": 966,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "ずかん",
+     "w": 58,
+     "h": 58,
+     "x": 1037,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 1103,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".obj-hud",
+     "x": 14,
+     "y": 14,
+     "w": 250,
+     "h": 93,
+     "scrollH": 91,
+     "clientH": 91,
+     "overflowY": "visible",
+     "touchAction": "auto",
+     "outside": false
+    },
+    {
+     "sel": ".panel.codex-panel",
+     "x": 295,
+     "y": 98,
+     "w": 590,
+     "h": 623,
+     "scrollH": 6670,
+     "clientH": 621,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    },
+    {
+     "sel": ".touch-menu",
+     "x": 895,
+     "y": 62,
+     "w": 271,
+     "h": 58,
+     "scrollH": 58,
+     "clientH": 58,
+     "overflowY": "visible",
+     "touchAction": "none",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "パネル: ずかん / タブ codex",
+   "shot": 204,
+   "rows": [
+    {
+     "sel": ".panel-close",
+     "label": "とじる",
+     "w": 81.7,
+     "h": 44,
+     "x": 782,
+     "y": 117,
+     "fs": 15.1,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".shop-tab.on",
+     "label": "ずかん",
+     "w": 85.5,
+     "h": 45,
+     "x": 316,
+     "y": 171,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".shop-tab",
+     "label": "バッジ 0/114",
+     "w": 127.3,
+     "h": 45,
+     "x": 406,
+     "y": 171,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".shop-tab",
+     "label": "アルバム 0/24",
+     "w": 137.3,
+     "h": 45,
+     "x": 537,
+     "y": 171,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "もちもの",
+     "w": 63,
+     "h": 58,
+     "x": 895,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "おねがい",
+     "w": 63,
+     "h": 58,
+     "x": 966,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "ずかん",
+     "w": 58,
+     "h": 58,
+     "x": 1037,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 1103,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".obj-hud",
+     "x": 14,
+     "y": 14,
+     "w": 250,
+     "h": 93,
+     "scrollH": 91,
+     "clientH": 91,
+     "overflowY": "visible",
+     "touchAction": "auto",
+     "outside": false
+    },
+    {
+     "sel": ".panel.codex-panel",
+     "x": 295,
+     "y": 98,
+     "w": 590,
+     "h": 623,
+     "scrollH": 6670,
+     "clientH": 621,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    },
+    {
+     "sel": ".touch-menu",
+     "x": 895,
+     "y": 62,
+     "w": 271,
+     "h": 58,
+     "scrollH": 58,
+     "clientH": 58,
+     "overflowY": "visible",
+     "touchAction": "none",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "パネル: ずかん / タブ badge",
+   "shot": 205,
+   "rows": [
+    {
+     "sel": ".panel-close",
+     "label": "とじる",
+     "w": 81.7,
+     "h": 44,
+     "x": 782,
+     "y": 117,
+     "fs": 15.1,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".shop-tab",
+     "label": "ずかん",
+     "w": 85.5,
+     "h": 45,
+     "x": 316,
+     "y": 171,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".shop-tab.on",
+     "label": "バッジ 0/114",
+     "w": 127.3,
+     "h": 45,
+     "x": 406,
+     "y": 171,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".shop-tab",
+     "label": "アルバム 0/24",
+     "w": 137.3,
+     "h": 45,
+     "x": 537,
+     "y": 171,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "もちもの",
+     "w": 63,
+     "h": 58,
+     "x": 895,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "おねがい",
+     "w": 63,
+     "h": 58,
+     "x": 966,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "ずかん",
+     "w": 58,
+     "h": 58,
+     "x": 1037,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 1103,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".obj-hud",
+     "x": 14,
+     "y": 14,
+     "w": 250,
+     "h": 93,
+     "scrollH": 91,
+     "clientH": 91,
+     "overflowY": "visible",
+     "touchAction": "auto",
+     "outside": false
+    },
+    {
+     "sel": ".panel.codex-panel",
+     "x": 295,
+     "y": 98,
+     "w": 590,
+     "h": 623,
+     "scrollH": 3560,
+     "clientH": 621,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    },
+    {
+     "sel": ".touch-menu",
+     "x": 895,
+     "y": 62,
+     "w": 271,
+     "h": 58,
+     "scrollH": 58,
+     "clientH": 58,
+     "overflowY": "visible",
+     "touchAction": "none",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "パネル: ずかん / タブ album",
+   "shot": 206,
+   "rows": [
+    {
+     "sel": ".panel-close",
+     "label": "とじる",
+     "w": 81.7,
+     "h": 44,
+     "x": 782,
+     "y": 275,
+     "fs": 15.1,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".shop-tab",
+     "label": "ずかん",
+     "w": 85.5,
+     "h": 45,
+     "x": 316,
+     "y": 329,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".shop-tab",
+     "label": "バッジ 0/114",
+     "w": 127.3,
+     "h": 45,
+     "x": 406,
+     "y": 329,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".shop-tab.on",
+     "label": "アルバム 0/24",
+     "w": 137.3,
+     "h": 45,
+     "x": 537,
+     "y": 329,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "もちもの",
+     "w": 63,
+     "h": 58,
+     "x": 895,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "おねがい",
+     "w": 63,
+     "h": 58,
+     "x": 966,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "ずかん",
+     "w": 58,
+     "h": 58,
+     "x": 1037,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 1103,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".obj-hud",
+     "x": 14,
+     "y": 14,
+     "w": 250,
+     "h": 93,
+     "scrollH": 91,
+     "clientH": 91,
+     "overflowY": "visible",
+     "touchAction": "auto",
+     "outside": false
+    },
+    {
+     "sel": ".panel.codex-panel",
+     "x": 295,
+     "y": 256,
+     "w": 590,
+     "h": 308,
+     "scrollH": 306,
+     "clientH": 306,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    },
+    {
+     "sel": ".touch-menu",
+     "x": 895,
+     "y": 62,
+     "w": 271,
+     "h": 58,
+     "scrollH": 58,
+     "clientH": 58,
+     "overflowY": "visible",
+     "touchAction": "none",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "パネル: メニュー",
+   "shot": 207,
+   "rows": [
+    {
+     "sel": ".title-btn",
+     "label": "つづける",
+     "w": 280,
+     "h": 50,
+     "x": 450,
+     "y": 315,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "おと: オン",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 373,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "そうさほうほう",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 433,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "セーブしてタイトルへ",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 493,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "もちもの",
+     "w": 63,
+     "h": 58,
+     "x": 895,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "おねがい",
+     "w": 63,
+     "h": 58,
+     "x": 966,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "ずかん",
+     "w": 58,
+     "h": 58,
+     "x": 1037,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 1103,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".obj-hud",
+     "x": 14,
+     "y": 14,
+     "w": 250,
+     "h": 93,
+     "scrollH": 91,
+     "clientH": 91,
+     "overflowY": "visible",
+     "touchAction": "auto",
+     "outside": false
+    },
+    {
+     "sel": ".panel.pause-panel",
+     "x": 310,
+     "y": 257,
+     "w": 560,
+     "h": 307,
+     "scrollH": 305,
+     "clientH": 305,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    },
+    {
+     "sel": ".touch-menu",
+     "x": 895,
+     "y": 62,
+     "w": 271,
+     "h": 58,
+     "scrollH": 58,
+     "clientH": 58,
+     "overflowY": "visible",
+     "touchAction": "none",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "ポーズメニュー",
+   "shot": 210,
+   "rows": [
+    {
+     "sel": ".title-btn",
+     "label": "つづける",
+     "w": 280,
+     "h": 50,
+     "x": 450,
+     "y": 315,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "おと: オン",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 373,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "そうさほうほう",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 433,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "セーブしてタイトルへ",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 493,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "もちもの",
+     "w": 63,
+     "h": 58,
+     "x": 895,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "おねがい",
+     "w": 63,
+     "h": 58,
+     "x": 966,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "ずかん",
+     "w": 58,
+     "h": 58,
+     "x": 1037,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 1103,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".obj-hud",
+     "x": 14,
+     "y": 14,
+     "w": 250,
+     "h": 93,
+     "scrollH": 91,
+     "clientH": 91,
+     "overflowY": "visible",
+     "touchAction": "auto",
+     "outside": false
+    },
+    {
+     "sel": ".panel.pause-panel",
+     "x": 310,
+     "y": 257,
+     "w": 560,
+     "h": 307,
+     "scrollH": 305,
+     "clientH": 305,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    },
+    {
+     "sel": ".touch-menu",
+     "x": 895,
+     "y": 62,
+     "w": 271,
+     "h": 58,
+     "scrollH": 58,
+     "clientH": 58,
+     "overflowY": "visible",
+     "touchAction": "none",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "ポーズ/そうさほうほう",
+   "shot": 211,
+   "rows": [
+    {
+     "sel": ".title-btn",
+     "label": "つづける",
+     "w": 280,
+     "h": 50,
+     "x": 450,
+     "y": 156,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "おと: オン",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 214,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "そうさほうほう",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 274,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "セーブしてタイトルへ",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 334,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "もちもの",
+     "w": 63,
+     "h": 58,
+     "x": 895,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "おねがい",
+     "w": 63,
+     "h": 58,
+     "x": 966,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "ずかん",
+     "w": 58,
+     "h": 58,
+     "x": 1037,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 1103,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".obj-hud",
+     "x": 14,
+     "y": 14,
+     "w": 250,
+     "h": 93,
+     "scrollH": 91,
+     "clientH": 91,
+     "overflowY": "visible",
+     "touchAction": "auto",
+     "outside": false
+    },
+    {
+     "sel": ".panel.pause-panel",
+     "x": 295,
+     "y": 98,
+     "w": 590,
+     "h": 623,
+     "scrollH": 621,
+     "clientH": 621,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    },
+    {
+     "sel": ".title-extra",
+     "x": 316,
+     "y": 404,
+     "w": 548,
+     "h": 298,
+     "scrollH": 757,
+     "clientH": 296,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    },
+    {
+     "sel": ".touch-menu",
+     "x": 895,
+     "y": 62,
+     "w": 271,
+     "h": 58,
+     "scrollH": 58,
+     "clientH": 58,
+     "overflowY": "visible",
+     "touchAction": "none",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "カメラ回転後",
+   "shot": 213,
+   "rows": [
+    {
+     "sel": ".touch-btn",
+     "label": "もちもの",
+     "w": 63,
+     "h": 58,
+     "x": 824,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "おねがい",
+     "w": 63,
+     "h": 58,
+     "x": 895,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "ずかん",
+     "w": 58,
+     "h": 58,
+     "x": 966,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "しゃしん",
+     "w": 63,
+     "h": 58,
+     "x": 1032,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 1103,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-emote",
+     "label": "てをふる",
+     "w": 76,
+     "h": 76,
+     "x": 954,
+     "y": 698,
+     "fs": 10.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-action.dim",
+     "label": "しらべる",
+     "w": 116,
+     "h": 116,
+     "x": 1042,
+     "y": 678,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".obj-hud",
+     "x": 14,
+     "y": 14,
+     "w": 250,
+     "h": 93,
+     "scrollH": 91,
+     "clientH": 91,
+     "overflowY": "visible",
+     "touchAction": "auto",
+     "outside": false
+    },
+    {
+     "sel": ".touch-menu",
+     "x": 824,
+     "y": 62,
+     "w": 342,
+     "h": 58,
+     "scrollH": 58,
+     "clientH": 58,
+     "overflowY": "visible",
+     "touchAction": "none",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "たてむき/屋外プレイ",
+   "shot": 214,
+   "rows": [
+    {
+     "sel": ".touch-btn",
+     "label": "もちもの",
+     "w": 63,
+     "h": 58,
+     "x": 464,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "おねがい",
+     "w": 63,
+     "h": 58,
+     "x": 535,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "ずかん",
+     "w": 58,
+     "h": 58,
+     "x": 606,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "しゃしん",
+     "w": 63,
+     "h": 58,
+     "x": 672,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 743,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-emote",
+     "label": "てをふる",
+     "w": 76,
+     "h": 76,
+     "x": 594,
+     "y": 1058,
+     "fs": 10.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-action.dim",
+     "label": "しらべる",
+     "w": 116,
+     "h": 116,
+     "x": 682,
+     "y": 1038,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".rotate-hint",
+     "label": "よこむきに すると あそびやすいよ",
+     "w": 323.7,
+     "h": 47,
+     "x": 248,
+     "y": 957,
+     "fs": 17.1,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".obj-hud",
+     "x": 14,
+     "y": 14,
+     "w": 250,
+     "h": 93,
+     "scrollH": 91,
+     "clientH": 91,
+     "overflowY": "visible",
+     "touchAction": "auto",
+     "outside": false
+    },
+    {
+     "sel": ".touch-menu",
+     "x": 464,
+     "y": 62,
+     "w": 342,
+     "h": 58,
+     "scrollH": 58,
+     "clientH": 58,
+     "overflowY": "visible",
+     "touchAction": "none",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "たてむき/メニュー",
+   "shot": 215,
+   "rows": [
+    {
+     "sel": ".title-btn",
+     "label": "つづける",
+     "w": 280,
+     "h": 50,
+     "x": 270,
+     "y": 495,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "おと: オン",
+     "w": 280,
+     "h": 52,
+     "x": 270,
+     "y": 553,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "そうさほうほう",
+     "w": 280,
+     "h": 52,
+     "x": 270,
+     "y": 613,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "セーブしてタイトルへ",
+     "w": 280,
+     "h": 52,
+     "x": 270,
+     "y": 673,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "もちもの",
+     "w": 63,
+     "h": 58,
+     "x": 535,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "おねがい",
+     "w": 63,
+     "h": 58,
+     "x": 606,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "ずかん",
+     "w": 58,
+     "h": 58,
+     "x": 677,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 743,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".rotate-hint",
+     "label": "よこむきに すると あそびやすいよ",
+     "w": 323.7,
+     "h": 47,
+     "x": 248,
+     "y": 957,
+     "fs": 17.1,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".obj-hud",
+     "x": 14,
+     "y": 14,
+     "w": 250,
+     "h": 93,
+     "scrollH": 91,
+     "clientH": 91,
+     "overflowY": "visible",
+     "touchAction": "auto",
+     "outside": false
+    },
+    {
+     "sel": ".panel.pause-panel",
+     "x": 130,
+     "y": 437,
+     "w": 560,
+     "h": 307,
+     "scrollH": 305,
+     "clientH": 305,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    },
+    {
+     "sel": ".touch-menu",
+     "x": 535,
+     "y": 62,
+     "w": 271,
+     "h": 58,
+     "scrollH": 58,
+     "clientH": 58,
+     "overflowY": "visible",
+     "touchAction": "none",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "たてむき/もちもの",
+   "shot": 216,
+   "rows": [
+    {
+     "sel": ".panel-close",
+     "label": "とじる",
+     "w": 81.7,
+     "h": 44,
+     "x": 587,
+     "y": 485,
+     "fs": 15.1,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "もちもの",
+     "w": 63,
+     "h": 58,
+     "x": 535,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "おねがい",
+     "w": 63,
+     "h": 58,
+     "x": 606,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "ずかん",
+     "w": 58,
+     "h": 58,
+     "x": 677,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 743,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".obj-hud",
+     "x": 14,
+     "y": 14,
+     "w": 250,
+     "h": 93,
+     "scrollH": 91,
+     "clientH": 91,
+     "overflowY": "visible",
+     "touchAction": "auto",
+     "outside": false
+    },
+    {
+     "sel": ".panel.inv-panel",
+     "x": 130,
+     "y": 466,
+     "w": 560,
+     "h": 249,
+     "scrollH": 247,
+     "clientH": 247,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    },
+    {
+     "sel": ".touch-menu",
+     "x": 535,
+     "y": 62,
+     "w": 271,
+     "h": 58,
+     "scrollH": 58,
+     "clientH": 58,
+     "overflowY": "visible",
+     "touchAction": "none",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "たてむき/タイトル",
+   "shot": 217,
+   "rows": [
+    {
+     "sel": ".title-btn",
+     "label": "はじめから",
+     "w": 280,
+     "h": 50,
+     "x": 270,
+     "y": 532,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn",
+     "label": "つづきから",
+     "w": 280,
+     "h": 50,
+     "x": 270,
+     "y": 591,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "せってい",
+     "w": 280,
+     "h": 52,
+     "x": 270,
+     "y": 650,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "そうさほうほう",
+     "w": 280,
+     "h": 52,
+     "x": 270,
+     "y": 711,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": []
+  },
+  {
+   "where": "たてむき/そうさほうほう",
+   "shot": 218,
+   "rows": [
+    {
+     "sel": ".title-btn",
+     "label": "はじめから",
+     "w": 280,
+     "h": 50,
+     "x": 270,
+     "y": 168,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn",
+     "label": "つづきから",
+     "w": 280,
+     "h": 50,
+     "x": 270,
+     "y": 227,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "せってい",
+     "w": 280,
+     "h": 52,
+     "x": 270,
+     "y": 286,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "そうさほうほう",
+     "w": 280,
+     "h": 52,
+     "x": 270,
+     "y": 347,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".title-extra",
+     "x": 150,
+     "y": 417,
+     "w": 520,
+     "h": 710,
+     "scrollH": 826,
+     "clientH": 708,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "よこむき/タイトル そうさほうほう",
+   "shot": 219,
+   "rows": [
+    {
+     "sel": ".title-btn",
+     "label": "はじめから",
+     "w": 280,
+     "h": 50,
+     "x": 450,
+     "y": 168,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn",
+     "label": "つづきから",
+     "w": 280,
+     "h": 50,
+     "x": 450,
+     "y": 227,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "せってい",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 286,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "そうさほうほう",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 347,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".title-extra",
+     "x": 330,
+     "y": 417,
+     "w": 520,
+     "h": 350,
+     "scrollH": 826,
+     "clientH": 348,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "k": "クラフトボタン",
+   "v": "木を1本きった時点では未解放"
+  },
+  {
+   "k": "おねがいパネルの指スクロール",
+   "v": "scrollTop=4"
+  },
+  {
+   "k": "メニューパネルの とじる",
+   "v": "title bar に [data-close]/.panel-close が無い(「つづける」で閉じる)"
+  },
+  {
+   "k": "ダブルタップ前後",
+   "v": "{\"sx\":0,\"sy\":0,\"scale\":1,\"w\":1180,\"h\":820} → {\"sx\":0,\"sy\":0,\"scale\":1,\"w\":1180,\"h\":820}"
+  },
+  {
+   "k": "長押し(キャンバス)の選択文字数",
+   "v": "0"
+  },
+  {
+   "k": "長押し(パネルの文字)の選択文字数",
+   "v": "0"
+  },
+  {
+   "k": "ポーズのそうさほうほうに W A S D が出るか",
+   "v": "false"
+  },
+  {
+   "k": "2本指ピンチ後",
+   "v": "{\"sx\":0,\"sy\":0,\"scale\":1,\"w\":1180,\"h\":820}"
+  },
+  {
+   "k": "キャンバス横ドラッグでヨー",
+   "v": "0.000 → -0.900"
+  },
+  {
+   "k": "スティック帯を横ドラッグしたときのヨー",
+   "v": "0.000 → 0.000"
+  },
+  {
+   "k": "たてむきの案内(.rotate-hint)",
+   "v": "よこむきに すると あそびやすいよ / 248,957 324x47"
+  },
+  {
+   "k": "たてむき/そうさほうほうのスクロール",
+   "v": "{\"scrollH\":826,\"clientH\":708,\"y\":417,\"h\":710}"
+  }
+ ],
+ "errors": [],
+ "log": [
+  "== 第4走 開始 ==",
+  "  ゲーム開始 → もちもの/ずかんを解放するため 木を1本きる",
+  "  もちもの: {\"wood\":2}",
+  "■ パネルの計測",
+  "  [shot 201] panel_inv / 右上「もちもの」をタップ → パネルが開いた",
+  "  [measure] パネル: もちもの: 5こ / 44px未満 0 / 14px未満 4 / 当たらない 0",
+  "  - クラフト は まだ出ていない",
+  "  [shot 202] panel_quest / 右上「おねがい」をタップ → パネルが開いた",
+  "  [measure] パネル: おねがい: 5こ / 44px未満 0 / 14px未満 4 / 当たらない 0",
+  "  おねがい: 指ではらってスクロール scrollTop=4",
+  "  [shot 203] panel_codex / 右上「ずかん」をタップ → パネルが開いた",
+  "  [measure] パネル: ずかん: 8こ / 44px未満 0 / 14px未満 4 / 当たらない 0",
+  "  [shot 204] panel_codex_codex / タブ「codex」をタップ → タブが切りかわった",
+  "  [measure] パネル: ずかん / タブ codex: 8こ / 44px未満 0 / 14px未満 4 / 当たらない 0",
+  "  [shot 205] panel_codex_badge / タブ「badge」をタップ → タブが切りかわった",
+  "  [measure] パネル: ずかん / タブ badge: 8こ / 44px未満 0 / 14px未満 4 / 当たらない 0",
+  "  [shot 206] panel_codex_album / タブ「album」をタップ → タブが切りかわった",
+  "  [measure] パネル: ずかん / タブ album: 8こ / 44px未満 0 / 14px未満 4 / 当たらない 0",
+  "  [shot 207] panel_menu / 右上「メニュー」をタップ → パネルが開いた",
+  "  [measure] パネル: メニュー: 8こ / 44px未満 0 / 14px未満 4 / 当たらない 0",
+  "  ! メニュー のパネルに「とじる」が無い",
+  "■ ダブルタップ / 長押し / ピンチ",
+  "  ダブルタップ {\"sx\":0,\"sy\":0,\"scale\":1,\"w\":1180,\"h\":820} → {\"sx\":0,\"sy\":0,\"scale\":1,\"w\":1180,\"h\":820} / 変化なし=true",
+  "  [shot 208] double_tap / キャンバス中央をダブルタップ → 変化なし=true",
+  "  長押し(キャンバス): 選択0文字",
+  "  [shot 209] long_press / キャンバスを1.4秒 長押し → 選択0文字",
+  "  長押し(パネル): 選択0文字",
+  "  [shot 210] long_press_panel / メニューの見出しを1.4秒 長押し → 選択0文字",
+  "  [measure] ポーズメニュー: 8こ / 44px未満 0 / 14px未満 4 / 当たらない 0",
+  "  [shot 211] pause_help / 「そうさほうほう」をタップ → タッチ版の説明",
+  "  [measure] ポーズ/そうさほうほう: 8こ / 44px未満 0 / 14px未満 4 / 当たらない 0",
+  "  そうさほうほう(ポーズ)に W A S D: false",
+  "  ピンチ後 {\"sx\":0,\"sy\":0,\"scale\":1,\"w\":1180,\"h\":820} / ダブルタップ前と同じ=true",
+  "  [shot 212] pinch / 2本指をひろげる(ピンチアウト) → 変化なし=true",
+  "■ 指でカメラを回す",
+  "  ヨー 0.000 → -0.900",
+  "  [shot 213] camera_drag / 画面右側を左へドラッグ(180px) → ヨー 0.00→-0.90",
+  "  [measure] カメラ回転後: 7こ / 44px未満 0 / 14px未満 6 / 当たらない 0",
+  "  もどしたヨー 0.000",
+  "  スティック帯ドラッグ ヨー 0.000 → 0.000",
+  "■ たてむき 820x1180",
+  "  [shot 214] portrait_game / たてむきに変える(屋外プレイ中) → レイアウトを確認",
+  "  [measure] たてむき/屋外プレイ: 8こ / 44px未満 0 / 14px未満 6 / 当たらない 0",
+  "  .rotate-hint: よこむきに すると あそびやすいよ / 248,957 324x47",
+  "  [shot 215] portrait_menu / たてむきで「メニュー」をタップ → パネルの収まり",
+  "  [measure] たてむき/メニュー: 9こ / 44px未満 0 / 14px未満 4 / 当たらない 0",
+  "  [shot 216] portrait_inv / たてむきで「もちもの」 → パネルの収まり",
+  "  [measure] たてむき/もちもの: 5こ / 44px未満 0 / 14px未満 4 / 当たらない 0",
+  "  [shot 217] portrait_title / たてむきでタイトルを開く → レイアウトを確認",
+  "  [measure] たてむき/タイトル: 4こ / 44px未満 0 / 14px未満 0 / 当たらない 0",
+  "  [shot 218] portrait_title_help / たてむきで「そうさほうほう」 → パネルの収まり",
+  "  [measure] たてむき/そうさほうほう: 4こ / 44px未満 0 / 14px未満 0 / 当たらない 0",
+  "  たてむきのそうさほうほう: {\"scrollH\":826,\"clientH\":708,\"y\":417,\"h\":710}",
+  "  [shot 219] landscape_title_help / よこむきに戻す(そうさほうほうは開いたまま) → スクロール量を確認",
+  "  [measure] よこむき/タイトル そうさほうほう: 4こ / 44px未満 0 / 14px未満 0 / 当たらない 0",
+  "",
+  "consoleエラー: 0件"
+ ]
+}

@@ -1,5 +1,9 @@
 :root {
   --paper: rgba(246, 241, 230, 0.92);
+  /* v17.1 くっつく見出し(.panel-title / .craft-sec / .panel-more)の下じき。
+     --paper は すこし すけるので、下を 流れる行の文字が すけて 読みにくかった。
+     色は --paper と 同じで、すけない ぶんだけ ちがう。 */
+  --paper-solid: #f6f1e6;
   --ink: #4a3b2c;
   --ink-soft: #7a6a56;
   --line: #d8cdb9;
@@ -348,18 +352,64 @@ html.touch-ui .chat-bubble { font-size: 0.92rem; max-width: min(340px, 52vw); }
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
   box-shadow: 0 6px 24px rgba(30, 24, 12, 0.22);
-  padding: 14px 16px; min-width: 380px; max-width: 560px; overflow-y: auto;
+  --panel-pad-t: 14px;
+  /* 見出し(.panel-title)の 高さ。くっついた見出しの すぐ下に 節見出しを ならべるための値。
+     マウスの画面は 上パディング14 + 1行ぶん20 = 34px。指の画面は「とじる」が
+     min-height:44px を持つので 18 + 44 = 62px(html.touch-ui .panel で 上書きする)。 */
+  --panel-title-h: 34px;
+  padding: var(--panel-pad-t) 16px 14px; min-width: 380px; max-width: 560px; overflow-y: auto;
   max-height: min(76vh, calc(var(--app-h, 100vh) - var(--sa-t) - var(--sa-b) - 36px));
   touch-action: pan-y; /* パネル内は指でスクロールできる(ページ全体は動かない) */
   -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
 }
 .panel.hidden { display: none; }
-.panel-title { font-weight: 900; font-size: 1.02rem; letter-spacing: 0.04em; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+/* v17.1 見出し(と右はしの「とじる」)は スクロールしても 上に のこす。
+   クラフトの一覧は 3200px あり、目当てのレシピまで スクロールすると
+   「とじる」も タブも 画面の外へ 出てしまう(指では 出口が 見えなくなる)。
+   上のパディングぶんを 自分で 持って くっつくので、行が 見出しの上に すけない。 */
+.panel-title {
+  position: sticky; top: calc(-1 * var(--panel-pad-t, 14px)); z-index: 3;
+  margin-top: calc(-1 * var(--panel-pad-t, 14px)); padding-top: var(--panel-pad-t, 14px);
+  background: var(--paper-solid);
+  font-weight: 900; font-size: 1.02rem; letter-spacing: 0.04em; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
+}
 .panel-close { font-size: 0.74rem; font-weight: 700; color: var(--ink-soft); cursor: pointer; border: 1px solid var(--line); border-radius: 4px; padding: 2px 8px; }
 .panel-close:hover { border-color: var(--amber); color: var(--amber); }
 .panel-sub { font-weight: 700; font-size: 0.84rem; color: var(--ink-soft); margin: 12px 0 6px; border-top: 1px solid var(--line); padding-top: 10px; }
 /* v13 見出しの横にそえる数(おおきなすいそう・むしかごの「2 / 3ひき」)。見出しより弱く見せる */
 .panel-count { font-weight: 700; font-size: 0.8rem; color: var(--ink-soft); letter-spacing: 0; }
+
+/* ---- v17.1 「▼ まだ あるよ」の帯(スクロールできるパネルの下端) ---- */
+/*
+ * touch_audit_v17 F-01/F-02: iPad は スクロールバーを ふだん 隠すので、
+ * クラフト(見えているのは 21%)・ずかん(9%)は「下に まだ ある」ことが
+ * 画面から 1つも 分からなかった。行が 半端に 切れていることだけが 手がかりだった。
+ *
+ * ・position: sticky なので、いちばん下まで スクロールすると 流れの位置に 落ちつく。
+ * ・高さぶんの マイナスの上マージンで **場所を 1pxも とらない**
+ *   (中身が 短いパネルに すきまを 作らない)。
+ * ・出し入れは panelScroll.ts が .on の 付けはずしで 決める。押すものではない。
+ */
+.panel-more {
+  position: sticky; bottom: 0; z-index: 2;
+  /* マイナスの上マージンで 場所を 1pxも とらない(下マージンだと
+     くっつく位置が 帯の高さぶん 上に ずれる) */
+  height: 44px; margin-top: -44px;
+  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 3px;
+  font-size: 0.8rem; font-weight: 900; letter-spacing: 0.06em; color: var(--amber);
+  pointer-events: none;
+  background: linear-gradient(rgba(246, 241, 230, 0), var(--paper-solid) 62%);
+  opacity: 0; transition: opacity 0.16s;
+}
+.panel-more.on { opacity: 1; }
+
+/* v17.1 目当ての行を しばらく 光らせる(クラフトを開いたとき、目標のレシピの行) */
+.panel-focus { animation: panel-focus-flash 1.8s ease-out; }
+@keyframes panel-focus-flash {
+  0% { background: #fbe6c2; box-shadow: 0 0 0 3px rgba(201, 138, 61, 0.55); }
+  70% { background: #fdf3e0; box-shadow: 0 0 0 3px rgba(201, 138, 61, 0.28); }
+  100% { background: transparent; box-shadow: 0 0 0 3px rgba(201, 138, 61, 0); }
+}
 
 /* ---- インベントリ ---- */
 /* 列は minmax(0,1fr)。ふつうの 1fr だと 列が「中身の最小幅」より せまくなれず、
@@ -405,9 +455,12 @@ html.touch-ui .chat-bubble { font-size: 0.92rem; max-width: min(340px, 52vw); }
    40をこえたレシピを たどれるように、スクロールしても見出しが上に残る(position: sticky)。
    .panel が スクロールする箱なので、その上ばりに くっつく。 */
 .craft-sec {
-  position: sticky; top: -14px; z-index: 1; /* -14px = .panel の上パディングぶん(すきま無くくっつける) */
+  /* v17.1 見出し(.panel-title)も くっつくようになったので、その すぐ下に ならべる。
+     もとは top:-14px(= .panel の上パディングぶん)で いちばん上に くっついていたが、
+     いまは 見出しの うしろに かくれてしまう。 */
+  position: sticky; top: calc(var(--panel-title-h, 34px) - 1px); z-index: 1;
   margin: 8px 0 0; padding: 6px 2px 5px;
-  background: var(--paper);
+  background: var(--paper-solid);
   border-bottom: 1px solid var(--line);
   font-weight: 900; font-size: 0.76rem; letter-spacing: 0.06em; color: var(--ink-soft);
 }
@@ -923,7 +976,7 @@ html.touch-ui { font-size: 18px; } /* rem基準を上げ、子どもが読める
 /* --- HUD --- */
 html.touch-ui .hud-chip { font-size: 0.88rem; padding: 7px 14px; }
 html.touch-ui .obj-hud { min-width: 250px; max-width: 40vw; padding: 10px 16px; }
-html.touch-ui .obj-head { font-size: 0.72rem; }
+html.touch-ui .obj-head { font-size: 0.84rem; } /* v17.1 F-04: 12.96px → 15.1px */
 html.touch-ui .obj-label { font-size: 1rem; }
 html.touch-ui .obj-sub { font-size: 0.84rem; }
 /* 小物レーンは右下。指の画面では 行動ボタン(高さ116・下26)と はいちボタンの列
@@ -948,7 +1001,7 @@ html.touch-ui .dlg-text { font-size: 1rem; line-height: 1.8; }
 html.touch-ui .dlg-next { font-size: 0.84rem; }
 
 /* --- パネル(もちもの・クラフト・お店・おねがい・ポーズ) --- */
-html.touch-ui .panel { min-width: min(560px, 88vw); max-width: min(680px, 92vw); padding: 18px 20px; }
+html.touch-ui .panel { --panel-pad-t: 18px; --panel-title-h: 62px; min-width: min(560px, 88vw); max-width: min(680px, 92vw); padding: 18px 20px; }
 html.touch-ui .panel-title { font-size: 1.08rem; }
 html.touch-ui .panel-sub { font-size: 0.9rem; }
 /* タップ対象は最低44x44px */
@@ -980,6 +1033,53 @@ html.touch-ui .badge-cell { min-height: 52px; font-size: 0.86rem; }
 html.touch-ui .combo-cell, html.touch-ui .combo-slot { min-height: 52px; font-size: 0.86rem; }
 html.touch-ui .combo-lead { font-size: 0.86rem; }
 html.touch-ui .combo-grid { grid-template-columns: repeat(auto-fill, minmax(10em, 1fr)); }
+/* v17.1 「▼ まだ あるよ」の帯も 指の画面では ひとまわり大きく(文字は 15.1px) */
+html.touch-ui .panel-more { height: 50px; margin-top: -50px; font-size: 0.84rem; }
+/* v17.1 F-04 そうさほうほうの節見出し(13.3px)も 15px 以上にそろえる */
+html.touch-ui .help-sec { font-size: 0.84rem; }
+html.touch-ui .title-credit { font-size: 0.84rem; }
+/* v17.1 F-04 の総点検で見つかった「パネルの中の 14px未満」。
+   パネルの本文(15.1〜18px)より 小さい そえ書きが 12.9〜13.8px のまま のこっていた。
+   ここは 押すものではないが、いちばん字の小さい所が 子どもの読める下限を 下まわらないようにする。
+   マウスの画面(html に touch-ui が 付かない)は 1pxも 変えない。 */
+html.touch-ui .craft-sec,
+html.touch-ui .crafted-label,
+html.touch-ui .craft-q-lead,
+html.touch-ui .hs-part,
+html.touch-ui .hs-next,
+html.touch-ui .ach-reward { font-size: 0.84rem; }
+html.touch-ui .panel small { font-size: 0.8rem; }
+/* もちものの名前だけは 14.04px にとどめる。ここは「4文字ぶん(4em)の幅を かならず のこす」
+   決まりがあり(すぐ上の .inv-name の注記)、字を大きくするほど 1マスの中の
+   絵+名前+個数+ボタンが 入らなくなる。読める下限は こえたまま、幅の伸びを 最小にする。 */
+html.touch-ui .inv-name { font-size: 0.78rem; }
+
+/* --- v17.1 パネルを開いているあいだの よけ方(touch_audit_v17 F-06 / F-07) --- */
+/*
+ * :has() で「#ui-root の直下に 出ているパネルが 1枚でもあるか」を CSS だけで 見る。
+ * JSで body にクラスを付ける手も あるが、パネルの開け閉めは 12か所に 散っているので
+ * 見落としが 出る。ここなら 増えたパネルも 自動で 対象になる。
+ * (Safari 15.4+ / Chromium 105+。使えない環境では これまでどおりの置き場所になるだけ)
+ */
+@media (orientation: landscape) {
+  /* F-06 「いまやること」カード(最大40vw=472px)が まん中のパネルの左上に かぶっていた。
+     パネルの左端は いちばん広いときで (100vw-680px)/2 なので、その手前で 止める。
+     「→ Nm」は パネルを見ているあいだ 使い道がないので しまう(高さも へって かぶりにくい)。 */
+  html.touch-ui #ui-root:has(> .panel:not(.hidden)) > .obj-hud {
+    min-width: 0;
+    max-width: max(150px, min(232px, calc(50vw - 354px)));
+  }
+  html.touch-ui #ui-root:has(> .panel:not(.hidden)) > .obj-hud .obj-sub { display: none !important; }
+}
+/* F-07 小物トーストが 開いているパネルに かぶっていた(押せなくはないが 読めない)。
+   パネルは 上下中央・高さ 最大76vh なので、下の 12vh は かならず あいている。
+   新しいものが 下に 積まれるので、あふれたら 古いものから 上に消える。 */
+html.touch-ui #ui-root:has(> .panel:not(.hidden)) > .toast-box {
+  bottom: calc(var(--sa-b) + 12px);
+  max-height: calc(12vh - 24px);
+  justify-content: flex-end;
+  overflow: hidden;
+}
 
 /* --- タイトル --- */
 html.touch-ui .title-inner { max-width: 520px; }
@@ -993,7 +1093,13 @@ html.touch-ui .tx-col .title-btn.tx-wide { font-size: 0.92rem; padding: 12px 8px
 
 /* --- たてむき --- */
 @media (orientation: portrait) {
-  html.touch-ui .obj-hud { max-width: 58vw; }
+  /* v17.1 右上のボタン列(6つ×76px + すきま6px×5 + 右14px = 500px)より 左で とめる。
+     ラベルが長い日に カードの右はしが ボタン列に かぶるのを 構造的に なくす
+     (touch_audit_v17 §6 の「条件つきの注意」。F-11 で ボタンを そろえたぶん 列が広くなった) */
+  html.touch-ui .obj-hud {
+    min-width: min(250px, calc(100vw - 500px));
+    max-width: min(58vw, calc(100vw - 500px));
+  }
   html.touch-ui .dialogue { width: min(640px, 90vw); }
   html.touch-ui .panel { min-width: min(560px, 92vw); }
   /* たてむきの2列も minmax(0,1fr)。ふつうの 1fr では 中身の最小幅より せまくなれず、
@@ -1014,9 +1120,13 @@ html.touch-ui .tx-col .title-btn.tx-wide { font-size: 0.92rem; padding: 12px 8px
   animation: rotate-hint-in 0.24s ease-out;
 }
 .rotate-hint.hidden { display: none; }
-/* たてむきは上が「いまやること」+時計+メニューで埋まるので、下の空きへ出す */
+/* たてむきは上が「いまやること」+時計+メニューで埋まるので、下の空きへ出す。
+   v17.1(touch_audit_v17 F-08)下 176px だと 仮想スティックの帯
+   (左下・高さ min(56%,430px))に かぶり、しかも この案内は クリックで消えるので、
+   遊びはじめの数秒だけ「案内が消えるだけで スティックが出ない」場所が できていた。
+   スティックの帯の すぐ上(帯の高さ+12px)に 出して、重なりを 構造的に なくす。 */
 @media (orientation: portrait) {
-  .rotate-hint { top: auto; bottom: calc(var(--sa-b) + 176px); }
+  .rotate-hint { top: auto; bottom: calc(var(--sa-b) + min(56%, 430px) + 12px); }
 }
 @keyframes rotate-hint-in {
   from { opacity: 0; transform: translate(-50%, -10px); }

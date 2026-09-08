@@ -5,6 +5,7 @@ import { ITEMS, TOOLS, isCookedFood, isDecor, isPlaceable, type ItemId } from '.
 import { DISH_EFFECT, EFFECTS } from '../systems/CookingEffects';
 import { icon } from './icons';
 import { byInput } from './inputMode';
+import { attachPanelScrollCue } from './panelScroll';
 import { sfx } from '../audio/AudioSystem';
 
 export class InventoryUI {
@@ -28,6 +29,8 @@ export class InventoryUI {
     this.el = document.createElement('div');
     this.el.className = 'panel inv-panel hidden';
     document.getElementById('ui-root')!.appendChild(this.el);
+    // 持ちものが ふえると 一覧は 画面より 長くなる。下に まだ あることを 帯で見せる
+    attachPanelScrollCue(this.el);
     // クリックは委譲で1回だけ(描画途中の例外・再描画競合への免疫。CraftUIと同方針)
     this.el.addEventListener('click', (e) => {
       const t = (e.target as HTMLElement).closest(

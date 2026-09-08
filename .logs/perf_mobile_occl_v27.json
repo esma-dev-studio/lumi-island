@@ -1,0 +1,94 @@
+{
+ "tag": "occl_v27",
+ "when": "2026-09-08T13:07:46.237Z",
+ "commit": "3139eef",
+ "device": "1024x768 / dpr2 / hasTouch / isMobile=true",
+ "browser": "Microsoft Edge ヘッドレス(vsyncなし)",
+ "gpu": {
+  "renderer": "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x00009A49) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "vendor": "Google Inc. (Intel)",
+  "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+  "dpr": 2
+ },
+ "cpuThrottlingRate": 1,
+ "sampleSec": 6,
+ "settleSec": 3,
+ "repeat": 1,
+ "budgetP95": 33,
+ "stallMs": 500,
+ "off": [],
+ "note": "場面ごとに 1 周まわし、p50/p95 は周回の中央値。500ms を超えたフレームは分布から外して stalls に数える(ホスト側の取られで、描画の重さではないため)。",
+ "warmup": {
+  "sec": 25,
+  "hardwareScalingLevel": 1,
+  "settled": true,
+  "note": "安全弁が底(1.0)に着くまで4倍でしぼって待った区間。計測対象外。ここを過ぎてから --rate の倍率に戻す。"
+ },
+ "scenes": [
+  {
+   "id": "day_run",
+   "label": "昼の島を走る",
+   "passes": 1,
+   "p50": 8.9,
+   "p95": 14.3,
+   "p99": 20.8,
+   "max": 47.2,
+   "p95All": [
+    14.3
+   ],
+   "p50All": [
+    8.9
+   ],
+   "stallsAll": [
+    0
+   ],
+   "drawCalls": 308,
+   "activeMeshes": 50,
+   "budgetP95": 33,
+   "ok": true
+  }
+ ],
+ "runs": [
+  {
+   "id": "day_run",
+   "label": "昼の島を走る",
+   "pass": 1,
+   "frames": 648,
+   "p50": 8.9,
+   "p95": 14.3,
+   "p99": 20.8,
+   "max": 47.2,
+   "avg": 9.57,
+   "stalls": 0,
+   "stallMax": -1,
+   "movingTicks": "6/6",
+   "stats": {
+    "drawCalls": 308,
+    "activeMeshes": 50,
+    "totalMeshes": 537,
+    "activeVertices": -1,
+    "materials": 66,
+    "textures": 25,
+    "particles": 0,
+    "lights": 4,
+    "shadowList": 148,
+    "shadowListOn": 108,
+    "shadowEnabled": true,
+    "heapMB": 96,
+    "hwScale": 1,
+    "renderScale": 1,
+    "dynResStep": 0,
+    "hour": 11.4,
+    "day": 1,
+    "indoor": false,
+    "inCove": false,
+    "px": 5.9,
+    "pz": 2.2,
+    "touchUI": true
+   }
+  }
+ ],
+ "consoleErrors": 0,
+ "errorSamples": [],
+ "pass": true
+}

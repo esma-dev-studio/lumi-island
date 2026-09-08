@@ -125,7 +125,11 @@ describe('おくりものを渡す', () => {
     expect(s.npcs.tsumugi.friendship).toBe(2);
     expect(s.inventory.flower).toBe(1);
     expect(r.lines[0]).toContain('のばな'); // {item}がアイテム名に置きかわる
-    expect(r.lines).toEqual(NPC_BY_ID.tsumugi.giftLines.love.map((l) => l.replace('{item}', 'のばな')));
+    // v17: のばなには そのもの専用の反応(giftLinesByItem)がついたので、そちらが出る。
+    // なかよし度の増えかた(love=+2)は これまでどおり tier のまま
+    expect(r.lines).toEqual(
+      NPC_BY_ID.tsumugi.giftLinesByItem!.flower!.map((l) => l.replace('{item}', 'のばな'))
+    );
   });
 
   it('よろこぶものは +1 で、「うれしい」の文になる', () => {
@@ -134,7 +138,8 @@ describe('おくりものを渡す', () => {
     expect(r.tier).toBe('like');
     expect(s.npcs.tsumugi.friendship).toBe(1);
     expect(s.inventory.wood).toBeUndefined(); // 最後の1つは消える
-    expect(r.lines[0]).toBe(NPC_BY_ID.tsumugi.giftLines.like[0].replace('{item}', 'もくざい'));
+    // v17: もくざいにも 専用の反応がついた(tier は like のまま)
+    expect(r.lines[0]).toBe(NPC_BY_ID.tsumugi.giftLinesByItem!.wood![0].replace('{item}', 'もくざい'));
   });
 
   it('それ以外は +1 で、「ありがとう」の文になる', () => {

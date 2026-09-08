@@ -1,9 +1,10 @@
 // 動的解像度スケーリング(DRS)の回帰テスト。
-// 守りたいのは次の4点:
+// 守りたいのは次の5点:
 //   1. 窓p95(直近10秒)の計算が、全フレームを並べ替えた真値と一致する(ヒストグラム化で狂わない)
-//   2. 持続的にテールが悪化したときだけ段が進み、クールダウン・上限・一方向が効く
+//   2. 持続的にテールが悪化したときだけ段が進み、クールダウン・上限が効く
 //   3. 健全なプレイ(p95が基準25msの内側)では絶対に発火しない
-//   4. main.ts の配線(毎フレーム供給・既存の安全弁との共存・console証跡)が外れない
+//   4. v27 復帰経路: 一過性ヒッチで落ちない / 継続的な重さで落ちる / 回復で戻る / 振動で固定
+//   5. main.ts の配線(毎フレーム供給・既存の安全弁との共存・console証跡)が外れない
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { DynamicResolution, percentileOf, DYNRES_DEFAULTS } from '../../src/perf/DynamicResolution';
@@ -75,6 +76,29 @@ describe('DRSの既定値', () => {
     expect(DYNRES_DEFAULTS.thresholdMs).toBeGreaterThan(25);
   });
 
+  it('助走は20秒(窓10秒+連続3秒より長い=助走中のヒッチが1つも判定に残らない)', () => {
+    expect(DYNRES_DEFAULTS.warmupMs).toBe(20000);
+    const judgeSpanMs = DYNRES_DEFAULTS.bucketMs * (DYNRES_DEFAULTS.windowBuckets + DYNRES_DEFAULTS.sustainEvals);
+    expect(DYNRES_DEFAULTS.warmupMs).toBeGreaterThan(judgeSpanMs);
+  });
+
+  it('復帰の条件は「22ms未満が45秒」かつ「最後の降格から60秒」・往復2回で固定', () => {
+    expect(DYNRES_DEFAULTS.recoverThresholdMs).toBe(22);
+    expect(DYNRES_DEFAULTS.recoverHoldMs).toBe(45000);
+    expect(DYNRES_DEFAULTS.recoverAfterMs).toBe(60000);
+    expect(DYNRES_DEFAULTS.oscillationLimit).toBe(2);
+    // 復帰のしきい値は「1段戻して画素が増えても 降格しきい値を超えない」水準であること。
+    // 1段の倍率は stepFactors[0]=1.15 なので 22 × 1.15 = 25.3ms < 28ms
+    const worst = DYNRES_DEFAULTS.recoverThresholdMs * DYNRES_DEFAULTS.stepFactors[0];
+    expect(worst).toBeLessThan(DYNRES_DEFAULTS.thresholdMs);
+    // 耐久テストの基準(p95 ≦ 25ms)より内側 = 「健全」と呼べる水準
+    expect(DYNRES_DEFAULTS.recoverThresholdMs).toBeLessThan(25);
+    // 復帰の待ち(45秒)は降格の判定に必要な時間(13秒)よりずっと長い = 戻すほうが慎重
+    expect(DYNRES_DEFAULTS.recoverHoldMs).toBeGreaterThan(
+      DYNRES_DEFAULTS.bucketMs * (DYNRES_DEFAULTS.windowBuckets + DYNRES_DEFAULTS.sustainEvals) * 3
+    );
+  });
+
   it('段のスケールは基準×1.15/1.3/1.45', () => {
     const pc = new DynamicResolution({ baseScale: 1 });
     expect([0, 1, 2, 3].map((s) => pc.scaleForStep(s))).toEqual([1, 1.15, 1.3, 1.45]);
@@ -140,57 +164,190 @@ describe('窓p95の計算', () => {
 describe('段の進み方', () => {
   it('35msが続くと段が進み、クールダウン中は進まず、3段で止まる', () => {
     const d = new DynamicResolution({ baseScale: 1 });
-    feedConst(d, 35, 12); // 助走5秒+窓7秒。まだ窓が成立しない
+    feedConst(d, 35, 25); // 助走20秒+窓5秒。まだ窓が成立しない
     expect(d.step).toBe(0);
 
-    feedConst(d, 35, 13); // 通算25秒(発火は約17秒)
+    feedConst(d, 35, 15); // 通算40秒(発火は約33秒)
     expect(d.step).toBe(1);
     expect(d.scale).toBe(1.15);
 
-    feedConst(d, 35, 5); // 通算30秒。クールダウン(15秒)の途中なので進まない
+    feedConst(d, 35, 5); // 通算45秒。クールダウン(15秒)の途中なので進まない
     expect(d.step).toBe(1);
     expect(d.getState().cooldownLeftMs).toBeGreaterThan(0);
 
-    feedConst(d, 35, 15); // 通算45秒
+    feedConst(d, 35, 20); // 通算65秒
     expect(d.step).toBe(2);
     expect(d.scale).toBe(1.3);
 
-    feedConst(d, 35, 555); // 通算600秒(10分ぶん)
+    feedConst(d, 35, 555); // 通算620秒(10分ぶん)
     expect(d.step).toBe(3);
     expect(d.scale).toBe(1.45);
 
     const s = d.getState();
     expect(s.events).toHaveLength(3); // 上限を超えて発火しない
     expect(s.events.map((e) => e.step)).toEqual([1, 2, 3]);
+    expect(s.events.map((e) => e.dir)).toEqual(['down', 'down', 'down']);
     expect(s.events.map((e) => e.toScale)).toEqual([1.15, 1.3, 1.45]);
     for (const e of s.events) {
       expect(e.windowP95).toBeGreaterThan(28);
       expect(e.badBuckets).toBeGreaterThanOrEqual(6);
+      expect(e.reason).toMatch(/p95 .* > 28ms/); // ログに出す理由が入っている
     }
     // 発火の間隔はクールダウン(15秒)以上あく
     expect(s.events[1].atMs - s.events[0].atMs).toBeGreaterThanOrEqual(15000);
     expect(s.events[2].atMs - s.events[1].atMs).toBeGreaterThanOrEqual(15000);
-  });
-
-  it('段は戻らない(改善しても解像度を上げ直さない)', () => {
-    const d = new DynamicResolution({ baseScale: 1 });
-    feedConst(d, 35, 30);
-    expect(d.step).toBe(1);
-    const scale = d.scale;
-    feedConst(d, 16.6, 600); // 10分ずっと健全でも戻さない
-    expect(d.step).toBe(1);
-    expect(d.scale).toBe(scale);
-    expect(d.getState().events).toHaveLength(1);
-    expect(d.windowP95).toBeLessThan(20);
+    // ずっと重いまま=一度も戻していないので往復は0
+    expect(s.roundTrips.every((n) => n === 0)).toBe(true);
+    expect(s.pinnedStep).toBe(0);
   });
 
   it('境界のすぐ上(29ms)なら進み、すぐ下(27ms)では進まない', () => {
     const over = new DynamicResolution();
-    feedConst(over, 29, 30);
+    feedConst(over, 29, 40);
     expect(over.step).toBe(1);
     const under = new DynamicResolution();
     feedConst(under, 27, 300);
     expect(under.step).toBe(0);
+  });
+});
+
+describe('v27 復帰経路', () => {
+  // 助走20秒+窓10秒+連続3秒 = 起動から約33秒で1回めの降格(実測32.2秒)。
+  // 2回め以降は 窓がすでに埋まっているので「悪い区間6つ+連続3回」の約8秒(実測7.5秒)。
+  // どちらも 次の降格(+クールダウン15秒)には届かない長さにして、1回で1段だけ動かす。
+  const heavyFirst = (d: DynamicResolution): void => feedConst(d, 35, 40);
+  const heavyAgain = (d: DynamicResolution): void => feedConst(d, 35, 15);
+  const calm = (d: DynamicResolution, sec = 140): void => feedConst(d, 16.6, sec);
+
+  it('起動直後の一過性ヒッチ(実測 fps 10/10/3.5)では落ちない', () => {
+    const d = new DynamicResolution({ baseScale: 1 });
+    feedConst(d, 16.6, 9); // 0〜9秒 健全
+    feedConst(d, 100, 2); // 10〜12秒 fps10相当
+    feedConst(d, 285, 1); // 12秒 fps3.5相当
+    feedConst(d, 16.6, 200); // 以降ずっと健全
+    const s = d.getState();
+    expect(s.step).toBe(0);
+    expect(s.events).toHaveLength(0);
+    expect(s.scale).toBe(1);
+  });
+
+  it('助走が明けたあとの一過性ヒッチ(3秒)でも落ちない', () => {
+    const d = new DynamicResolution({ baseScale: 1 });
+    feedConst(d, 16.6, 40);
+    feedConst(d, 45, 3); // 3秒だけ重い
+    expect(d.getState().badBuckets).toBeLessThan(6);
+    feedConst(d, 16.6, 60);
+    expect(d.step).toBe(0);
+    expect(d.getState().events).toHaveLength(0);
+  });
+
+  it('継続的な重さでは落ち、そのあと軽くなれば1段だけ戻る', () => {
+    const d = new DynamicResolution({ baseScale: 1 });
+    heavyFirst(d);
+    expect(d.step).toBe(1);
+    const downAt = d.getState().events[0].atMs;
+
+    calm(d, 50); // 45秒の「良い時間」がたまる前は まだ戻らない
+    expect(d.step).toBe(1);
+
+    calm(d, 120);
+    const s = d.getState();
+    expect(s.step).toBe(0);
+    expect(s.scale).toBe(1);
+    expect(s.events).toHaveLength(2);
+    expect(s.events[1].dir).toBe('up');
+    expect(s.events[1].fromScale).toBe(1.15);
+    expect(s.events[1].toScale).toBe(1);
+    expect(s.events[1].reason).toMatch(/p95 .* < 22ms/);
+    // 復帰は「最後の降格から60秒」「良い状態が45秒」の両方を満たしてから
+    expect(s.events[1].atMs - downAt).toBeGreaterThanOrEqual(60000);
+    // 1回の判定で戻すのは1段だけ(その後さらに軽くても段0より上はない)
+    calm(d, 200);
+    expect(d.getState().events).toHaveLength(2);
+    expect(d.step).toBe(0);
+  });
+
+  it('戻したあとの再降格は通常判定のまま(窓も連続回数も短くしない)', () => {
+    const d = new DynamicResolution({ baseScale: 1 });
+    heavyFirst(d);
+    calm(d, 170);
+    expect(d.step).toBe(0);
+    const upAt = d.getState().events[1].atMs;
+    const heavyFrom = d.getState().elapsedMs;
+    heavyAgain(d);
+    const s = d.getState();
+    expect(s.step).toBe(1);
+    const reDown = s.events[2];
+    // 戻した直後に落とすための近道は作っていない: 再降格にも
+    // 「悪い区間6つ以上」+「連続3回」の 通常条件が そのまま要る
+    expect(reDown.badBuckets).toBeGreaterThanOrEqual(DYNRES_DEFAULTS.badBucketsMin);
+    expect(reDown.atMs - heavyFrom).toBeGreaterThanOrEqual(
+      DYNRES_DEFAULTS.bucketMs * DYNRES_DEFAULTS.badBucketsMin
+    );
+    expect(reDown.atMs).toBeGreaterThan(upAt + DYNRES_DEFAULTS.cooldownMs);
+    expect(s.roundTrips[1]).toBe(1);
+    expect(s.pinnedStep).toBe(0); // 1往復ではまだ固定しない
+  });
+
+  it('往復が2回起きたらその段に固定して、以後は軽くても戻さない', () => {
+    const d = new DynamicResolution({ baseScale: 1 });
+    heavyFirst(d); // 1回め: 段1へ
+    calm(d, 170); // 戻る(段0)
+    heavyAgain(d); // 2回め: 段1へ(往復1)
+    calm(d, 170); // 戻る(段0)
+    heavyAgain(d); // 3回め: 段1へ(往復2 → 固定)
+    let s = d.getState();
+    expect(s.step).toBe(1);
+    expect(s.roundTrips[1]).toBe(2);
+    expect(s.pinnedStep).toBe(1);
+    const events = s.events.length;
+
+    calm(d, 400); // どれだけ軽くても もう戻さない
+    s = d.getState();
+    expect(s.step).toBe(1);
+    expect(s.scale).toBe(1.15);
+    expect(s.events).toHaveLength(events);
+    expect(s.events.filter((e) => e.dir === 'up')).toHaveLength(2);
+    // 固定の理由がログに残る
+    expect(s.events.filter((e) => e.reason.includes('固定'))).toHaveLength(1);
+  });
+
+  it('健全なだけのセッションでは 段0のまま up も down も起きない', () => {
+    const d = new DynamicResolution({ baseScale: 1 });
+    feedConst(d, 16.6, 400);
+    const s = d.getState();
+    expect(s.step).toBe(0);
+    expect(s.events).toHaveLength(0);
+    expect(s.goodStreakMs).toBeGreaterThan(45000); // 条件は満たすが、戻す段がない
+  });
+
+  it('recoverReady は「45秒の良い時間 + 降格から60秒」で立つ(低fps安全弁が読む)', () => {
+    const d = new DynamicResolution({ baseScale: 1 });
+    expect(d.recoverReady).toBe(false);
+    // 助走20秒+窓10秒 のあとから「良い時間」が積み上がる
+    feedConst(d, 16.6, 60);
+    expect(d.getState().goodStreakMs).toBeLessThan(45000);
+    expect(d.recoverReady).toBe(false); // 良い時間がまだ45秒に足りない
+    feedConst(d, 16.6, 30);
+    expect(d.recoverReady).toBe(true);
+    // 外(低fps安全弁)が段を動かしたら、計測は最初からやり直す
+    d.noteExternalScaleChange('down');
+    expect(d.recoverReady).toBe(false);
+    expect(d.getState().goodStreakMs).toBe(0);
+    feedConst(d, 16.6, 50);
+    expect(d.getState().sinceLastDownMs).toBeLessThan(60000);
+    expect(d.recoverReady).toBe(false); // 降格から60秒たっていない
+    feedConst(d, 16.6, 30);
+    expect(d.getState().sinceLastDownMs).toBeGreaterThanOrEqual(60000);
+    expect(d.recoverReady).toBe(true);
+  });
+
+  it('重いあいだは「良い時間」が積み上がらない(0に戻る)', () => {
+    const d = new DynamicResolution({ baseScale: 1, thresholdMs: 1e6 });
+    feedConst(d, 16.6, 60);
+    expect(d.getState().goodStreakMs).toBeGreaterThan(30000);
+    feedConst(d, 35, 3);
+    expect(d.getState().goodStreakMs).toBe(0);
   });
 });
 
@@ -214,19 +371,9 @@ describe('誤発火の防止', () => {
     expect(d.getState().badBuckets).toBe(0);
   });
 
-  it('数秒だけのもたつきでは発火しない(窓p95が跳ねても区間数が足りない)', () => {
-    const d = new DynamicResolution();
-    feedConst(d, 16.6, 30);
-    feedConst(d, 45, 3); // 3秒だけ重い
-    expect(d.getState().badBuckets).toBeLessThan(6);
-    feedConst(d, 16.6, 60);
-    expect(d.step).toBe(0);
-    expect(d.getState().events).toHaveLength(0);
-  });
-
   it('回復したあとはクールダウン明けに追い打ちをしない(古いデータで進めない)', () => {
     const d = new DynamicResolution();
-    feedConst(d, 35, 30); // 段1まで進める(クールダウン中)
+    feedConst(d, 35, 40); // 段1まで進める(クールダウン中)
     expect(d.step).toBe(1);
     feedConst(d, 16.6, 20); // クールダウンが明ける前後で回復
     const s = d.getState();
@@ -236,8 +383,8 @@ describe('誤発火の防止', () => {
   });
 
   it('起動直後の助走ぶんは判定に入れない', () => {
-    const d = new DynamicResolution(); // 助走5秒
-    feedConst(d, 100, 4); // 初回シェーダコンパイル相当の重いフレーム
+    const d = new DynamicResolution(); // 助走20秒
+    feedConst(d, 100, 18); // 初回シェーダコンパイル相当の重いフレーム
     const s = d.getState();
     expect(s.frames).toBe(0);
     expect(s.windowBuckets).toBe(0);
@@ -259,7 +406,7 @@ describe('誤発火の防止', () => {
 describe('状態の取得とreset', () => {
   it('現在の段・スケール・直近窓p95・発火履歴が読める', () => {
     const d = new DynamicResolution({ baseScale: 1 });
-    feedConst(d, 35, 30);
+    feedConst(d, 35, 40);
     const s = d.getState();
     expect(s.step).toBe(1);
     expect(s.maxStep).toBe(3);
@@ -267,16 +414,19 @@ describe('状態の取得とreset', () => {
     expect(s.scale).toBe(1.15);
     expect(s.thresholdMs).toBe(28);
     expect(s.frames).toBeGreaterThan(0);
-    expect(s.elapsedMs).toBeGreaterThan(29000);
-    expect(s.events[0]).toMatchObject({ step: 1, fromScale: 1, toScale: 1.15 });
+    expect(s.elapsedMs).toBeGreaterThan(39000);
+    expect(s.sinceLastDownMs).toBeGreaterThanOrEqual(0);
+    expect(s.events[0]).toMatchObject({ step: 1, dir: 'down', fromScale: 1, toScale: 1.15 });
     // 返す履歴はコピー(外から書き換えても内部が壊れない)
     s.events.length = 0;
+    s.roundTrips[1] = 99;
     expect(d.getState().events).toHaveLength(1);
+    expect(d.getState().roundTrips[1]).toBe(0);
   });
 
-  it('resetは窓と助走をやり直すが、進んだ段は保持する', () => {
+  it('resetは窓と助走をやり直すが、進んだ段と往復の履歴は保持する', () => {
     const d = new DynamicResolution();
-    feedConst(d, 35, 30);
+    feedConst(d, 35, 40);
     expect(d.step).toBe(1);
     d.reset();
     const s = d.getState();
@@ -284,6 +434,7 @@ describe('状態の取得とreset', () => {
     expect(s.windowBuckets).toBe(0);
     expect(s.windowP95).toBe(-1);
     expect(s.warmupLeftMs).toBeGreaterThan(0);
+    expect(s.goodStreakMs).toBe(0);
     expect(s.events).toHaveLength(1);
   });
 });
@@ -301,12 +452,28 @@ describe('main.tsへの組み込み', () => {
     expect(main).toContain('engine.setHardwareScalingLevel(level)');
   });
 
-  it('段が変わったらconsole.infoで1行残す(耐久テストの証跡)', () => {
-    expect(main).toMatch(/console\.info\(\s*`\[dynres\]/);
+  it('段が変わったらconsole.infoで1行残す(耐久テストの証跡・上下と理由つき)', () => {
+    expect(main).toMatch(/console\.info\(\s*`\[dynres\] \$\{evt\.dir\}/);
+    expect(main).toContain('reason=${evt.reason}');
   });
 
   it('状態を読み取るフックを公開する', () => {
     expect(main).toContain('__lumiDynRes');
     expect(main).toContain('state: () => dynRes.getState()');
+  });
+
+  it('低fps安全弁にも助走がある(起動直後のヒッチで落とさない)', () => {
+    expect(main).toContain('LEGACY_WARMUP_MS');
+    expect(main).toMatch(/performance\.now\(\) - gameReadyAt < LEGACY_WARMUP_MS/);
+    expect(main).toContain('gameReadyAt = performance.now()');
+  });
+
+  it('低fps安全弁もDRSと同じ計測で段を戻す(復帰経路がある)', () => {
+    expect(main).toContain('dynRes.recoverReady');
+    expect(main).toContain('LEGACY_TOP_SCALE');
+    expect(main).toMatch(/dynRes\.noteExternalScaleChange\(dir\)/);
+    // 往復2回で固定する(振動防止)
+    expect(main).toMatch(/roundTrips >= 2/);
+    expect(main).toMatch(/\[dynres\] \$\{dir\} legacy renderScale/);
   });
 });

@@ -90,6 +90,8 @@ const browser = await launchEdge(puppeteer, {
     '--disable-frame-rate-limit',
   ],
   defaultViewport: { width: 1024, height: 768 },
+  // 並行作業中は CDP の1往復が既定の180秒を超えて走行ごと落ちることがある
+  protocolTimeout: 420000,
 });
 const page = await browser.newPage();
 const errors = [];
@@ -298,6 +300,23 @@ async function applyOff(names) {
         for (const m of s.meshes) if (/^(seaFoam|seaGlint|groundPatches)$/.test(m.name)) m.setEnabled(false);
         const w = g.island.water.surf;
         if (w) w.acc = -1e9;
+        done.push(n);
+      }
+      // v28 「地面と水面の平面感をなくす」で足したぶんだけを切る。
+      // --off sky / --off ground と まったく同じ考えかたで、**同じビルド・同じ機械**の
+      // A/B にできる(切った状態が v27 の描画そのもの)。切るのは3つ:
+      //   1) 近景の草のじゅうたん(thin instance 1メッシュ+12Hzのゆれ)
+      //   2) 地面の質感テクスチャ(diffuseTexture を外して 明るさの補正も もどす)
+      //   3) 海面のさざ波(法線の毎フレーム更新。頂点は もともと動かない)
+      else if (n === 'ground2') {
+        for (const m of s.meshes) if (/^decoNearGrass$/.test(m.name)) m.setEnabled(false);
+        const t = s.getMeshByName('terrain');
+        if (t && t.material && t.material.diffuseTexture) {
+          t.material.diffuseTexture = null;
+          t.material.diffuseColor.set(1, 1, 1);
+        }
+        const sw = g.island.water.seaWave;
+        if (sw) sw.frozen = true; // 海は描いたまま、法線の更新だけ止める(見えかたの差は小さい)
         done.push(n);
       }
     }

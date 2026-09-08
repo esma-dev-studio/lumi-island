@@ -1,0 +1,898 @@
+{
+ "when": "2026-09-08T10:29:35.925Z",
+ "viewport": {
+  "VW": 1180,
+  "VH": 820
+ },
+ "shots": [
+  {
+   "n": 1,
+   "file": "01_title.png",
+   "scene": "title",
+   "action": "(なにも押さない)起動直後",
+   "result": "タイトルが出た"
+  },
+  {
+   "n": 2,
+   "file": "02_title_help.png",
+   "scene": "title_help",
+   "action": "「そうさほうほう」をタップ",
+   "result": "そうさ説明パネルが開いた"
+  },
+  {
+   "n": 3,
+   "file": "03_title_settings.png",
+   "scene": "title_settings",
+   "action": "「せってい」をタップ",
+   "result": "せっていパネルが開いた"
+  },
+  {
+   "n": 4,
+   "file": "04_game_start.png",
+   "scene": "game_start",
+   "action": "「はじめから」をタップ",
+   "result": "ゲーム開始。タッチUIの出方を確認"
+  },
+  {
+   "n": 5,
+   "file": "05_stick_walk.png",
+   "scene": "stick_walk",
+   "action": "左下を押して上へ倒す(touchstart→move)",
+   "result": "スティックが出て、前へ歩く"
+  },
+  {
+   "n": 6,
+   "file": "06_near_target.png",
+   "scene": "near_target",
+   "action": "npc:tsumugi に近づいた",
+   "result": "丸ボタン=「ツムギと はなす」 dim=false"
+  },
+  {
+   "n": 7,
+   "file": "07_dialogue.png",
+   "scene": "dialogue",
+   "action": "会話中(右下の丸ボタン=つぎへ)",
+   "result": "ツムギの はなしを聞こう"
+  },
+  {
+   "n": 8,
+   "file": "08_play_end.png",
+   "scene": "play_end",
+   "action": "通しプレイの区切り",
+   "result": "いまやること / もくざいを あつめよう"
+  },
+  {
+   "n": 9,
+   "file": "09_panel_quest.png",
+   "scene": "panel_quest",
+   "action": "右上「おねがい」をタップ",
+   "result": "パネルが開いた"
+  },
+  {
+   "n": 10,
+   "file": "10_panel_menu.png",
+   "scene": "panel_menu",
+   "action": "右上「メニュー」をタップ",
+   "result": "パネルが開いた"
+  }
+ ],
+ "measures": [
+  {
+   "where": "タイトル",
+   "shot": 1,
+   "rows": [
+    {
+     "sel": ".title-btn",
+     "label": "はじめから",
+     "w": 280,
+     "h": 50,
+     "x": 450,
+     "y": 352,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn",
+     "label": "つづきから",
+     "w": 280,
+     "h": 50,
+     "x": 450,
+     "y": 411,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "せってい",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 470,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "そうさほうほう",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 531,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": []
+  },
+  {
+   "where": "タイトル/そうさほうほう",
+   "shot": 2,
+   "rows": [
+    {
+     "sel": ".title-btn",
+     "label": "はじめから",
+     "w": 280,
+     "h": 50,
+     "x": 450,
+     "y": 168,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn",
+     "label": "つづきから",
+     "w": 280,
+     "h": 50,
+     "x": 450,
+     "y": 227,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "せってい",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 286,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "そうさほうほう",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 347,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".title-extra",
+     "x": 330,
+     "y": 417,
+     "w": 520,
+     "h": 350,
+     "scrollH": 826,
+     "clientH": 348,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "タイトル/せってい",
+   "shot": 3,
+   "rows": [
+    {
+     "sel": ".title-btn",
+     "label": "はじめから",
+     "w": 280,
+     "h": 50,
+     "x": 450,
+     "y": 168,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn",
+     "label": "つづきから",
+     "w": 280,
+     "h": 50,
+     "x": 450,
+     "y": 227,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "せってい",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 286,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "そうさほうほう",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 347,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "オン",
+     "w": 80.9,
+     "h": 44,
+     "x": 752,
+     "y": 434,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.danger",
+     "label": "けす",
+     "w": 80.9,
+     "h": 44,
+     "x": 752,
+     "y": 486,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub.tx-wide",
+     "label": "セーブを ファイルに ほぞん",
+     "w": 486,
+     "h": 50,
+     "x": 347,
+     "y": 588,
+     "fs": 16.6,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub.tx-wide",
+     "label": "ファイルから よみこむ",
+     "w": 486,
+     "h": 50,
+     "x": 347,
+     "y": 645,
+     "fs": 16.6,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub.tx-wide",
+     "label": "まえの データに もどす",
+     "w": 486,
+     "h": 50,
+     "x": 347,
+     "y": 702,
+     "fs": 16.6,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".title-extra",
+     "x": 330,
+     "y": 417,
+     "w": 520,
+     "h": 350,
+     "scrollH": 379,
+     "clientH": 348,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "ゲーム開始直後(屋外)",
+   "shot": 4,
+   "rows": [
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 1103,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-emote",
+     "label": "てをふる",
+     "w": 76,
+     "h": 76,
+     "x": 954,
+     "y": 698,
+     "fs": 10.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-action.dim",
+     "label": "しらべる",
+     "w": 116,
+     "h": 116,
+     "x": 1042,
+     "y": 678,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": []
+  },
+  {
+   "where": "歩行中(スティック表示)",
+   "shot": 5,
+   "rows": [
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 1103,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-emote",
+     "label": "てをふる",
+     "w": 76,
+     "h": 76,
+     "x": 954,
+     "y": 698,
+     "fs": 10.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-action.long",
+     "label": "お店をみる(うる・かう)",
+     "w": 116,
+     "h": 116,
+     "x": 1042,
+     "y": 678,
+     "fs": 13.3,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": []
+  },
+  {
+   "where": "目的地の手前(tsumugi)",
+   "shot": 6,
+   "rows": [
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 1103,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-emote",
+     "label": "てをふる",
+     "w": 76,
+     "h": 76,
+     "x": 954,
+     "y": 698,
+     "fs": 10.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-action",
+     "label": "ツムギと はなす",
+     "w": 116,
+     "h": 116,
+     "x": 1042,
+     "y": 678,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": []
+  },
+  {
+   "where": "会話中",
+   "shot": 7,
+   "rows": [
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 1103,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-action",
+     "label": "つぎへ",
+     "w": 116,
+     "h": 116,
+     "x": 1042,
+     "y": 678,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".dialogue",
+     "x": 270,
+     "y": 637,
+     "w": 640,
+     "h": 153,
+     "scrollH": 151,
+     "clientH": 151,
+     "overflowY": "visible",
+     "touchAction": "auto",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "通しプレイ終了時(屋外)",
+   "shot": 8,
+   "rows": [
+    {
+     "sel": ".touch-btn",
+     "label": "おねがい",
+     "w": 63,
+     "h": 58,
+     "x": 1032,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 1103,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-emote",
+     "label": "てをふる",
+     "w": 76,
+     "h": 76,
+     "x": 954,
+     "y": 698,
+     "fs": 10.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-action.dim",
+     "label": "しらべる",
+     "w": 116,
+     "h": 116,
+     "x": 1042,
+     "y": 678,
+     "fs": 15.8,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": []
+  },
+  {
+   "where": "パネル: おねがい",
+   "shot": 9,
+   "rows": [
+    {
+     "sel": ".panel-close",
+     "label": "とじる",
+     "w": 81.7,
+     "h": 44,
+     "x": 767,
+     "y": 117,
+     "fs": 15.1,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "おねがい",
+     "w": 63,
+     "h": 58,
+     "x": 1032,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 1103,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".panel.quest-panel",
+     "x": 310,
+     "y": 98,
+     "w": 560,
+     "h": 623,
+     "scrollH": 625,
+     "clientH": 621,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    }
+   ]
+  },
+  {
+   "where": "パネル: メニュー",
+   "shot": 10,
+   "rows": [
+    {
+     "sel": ".title-btn",
+     "label": "つづける",
+     "w": 280,
+     "h": 50,
+     "x": 450,
+     "y": 315,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "おと: オン",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 373,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "そうさほうほう",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 433,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".title-btn.sub",
+     "label": "セーブしてタイトルへ",
+     "w": 280,
+     "h": 52,
+     "x": 450,
+     "y": 493,
+     "fs": 18,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "おねがい",
+     "w": 63,
+     "h": 58,
+     "x": 1032,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    },
+    {
+     "sel": ".touch-btn",
+     "label": "メニュー",
+     "w": 63,
+     "h": 58,
+     "x": 1103,
+     "y": 62,
+     "fs": 12.2,
+     "pe": "auto",
+     "hit": true,
+     "blocker": "",
+     "outside": false
+    }
+   ],
+   "panels": [
+    {
+     "sel": ".panel.pause-panel",
+     "x": 310,
+     "y": 257,
+     "w": 560,
+     "h": 307,
+     "scrollH": 305,
+     "clientH": 305,
+     "overflowY": "auto",
+     "touchAction": "pan-y",
+     "outside": false
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "k": "html.touch-ui",
+   "v": "true"
+  },
+  {
+   "k": "pointer:coarse",
+   "v": "true"
+  },
+  {
+   "k": "タイトルのそうさほうほう(先頭200字)",
+   "v": " うごく 左下を ゆびで うごかすあるく おおきく うごかすはしる がめんを ゆびで なぞるカメラを まわす ゆび2本で ひろげる・ちぢめるズーム(よる・ひく) さわって つかう 右下の 大きいボタンしらべる・とる・はなす 「てをふる」ボタンてをふる(つづけて もう一度で よろこぶ) 「まわす」ボタン(はいち中)まわす 右上の「しゃしん」しゃしんを とる(フォトモード) しらべると できること ベ"
+  },
+  {
+   "k": "そうさほうほう本文",
+   "v": "うごく 左下を ゆびで うごかすあるく おおきく うごかすはしる がめんを ゆびで なぞるカメラを まわす ゆび2本で ひろげる・ちぢめるズーム(よる・ひく) さわって つかう 右下の 大きいボタンしらべる・とる・はなす 「てをふる」ボタンてをふる(つづけて もう一度で よろこぶ) 「まわす」ボタン(はいち中)まわす 右上の「しゃしん」しゃしんを とる(フォトモード) しらべると できること ベンチの そばで 大きいボタンすわる(もう一度で たつ) たてふだの そばで 大きいボタンでんごんばん(きょうの おてつだい) おいた かぐの そばで 大きいボタンいろみずで いろを ぬる 「うごかす」ボタンその場で うごかす(もちかえらずに おきなおす) しゃしんたての そばで 大きいボタンとった しゃしんを かざる がめんを ひらく 右上の「もちもの」もちもの 右上の「クラフト」クラフト(レシピ / くみあわせ) 右上の「おねがい」おねがい 右上の「ずかん」ずかん(バッジ・てがみも ここ) 右上の「メニュー」とじる・メニュー"
+  },
+  {
+   "k": "起動直後にタッチUIが出ているか",
+   "v": "true"
+  },
+  {
+   "k": "スティックで動いた距離(m)",
+   "v": "8.71"
+  },
+  {
+   "k": "もちものボタン",
+   "v": "通しプレイ終了時点で未解放/非表示"
+  },
+  {
+   "k": "クラフトボタン",
+   "v": "通しプレイ終了時点で未解放/非表示"
+  },
+  {
+   "k": "ずかんボタン",
+   "v": "通しプレイ終了時点で未解放/非表示"
+  },
+  {
+   "k": "メニューの閉じ",
+   "v": "「とじる」を押しても閉じない"
+  }
+ ],
+ "errors": [],
+ "log": [
+  "■ 1. タイトル(よこ 1180x820)",
+  "  [shot 1] title / (なにも押さない)起動直後 → タイトルが出た",
+  "  [measure] タイトル: 4こ / 44px未満 0 / 14px未満の字 0 / 当たらない 0",
+  "■ 2. そうさほうほう(タッチ版か)",
+  "  [shot 2] title_help / 「そうさほうほう」をタップ → そうさ説明パネルが開いた",
+  "  [measure] タイトル/そうさほうほう: 4こ / 44px未満 0 / 14px未満の字 0 / 当たらない 0",
+  "■ 3. せってい",
+  "  [shot 3] title_settings / 「せってい」をタップ → せっていパネルが開いた",
+  "  [measure] タイトル/せってい: 9こ / 44px未満 0 / 14px未満の字 0 / 当たらない 0",
+  "■ 4. はじめから",
+  "  [shot 4] game_start / 「はじめから」をタップ → ゲーム開始。タッチUIの出方を確認",
+  "  目標: いまやること / がめん左下を ゆびで うごかして あるいてみよう。おおきく たおすと はしれるよ",
+  "  [measure] ゲーム開始直後(屋外): 3こ / 44px未満 0 / 14px未満の字 2 / 当たらない 0",
+  "■ 5. 仮想スティックで歩く",
+  "  [shot 5] stick_walk / 左下を押して上へ倒す(touchstart→move) → スティックが出て、前へ歩く",
+  "  [measure] 歩行中(スティック表示): 3こ / 44px未満 0 / 14px未満の字 3 / 当たらない 0",
+  "  移動: 8.71m (-3.0,6.0) → (-3.0,-2.7)",
+  "■ 6. 目標にしたがって通しプレイ",
+  "  ▶ いまやること / ツムギの はなしを聞こう (q_wood_offer)",
+  "  [shot 6] near_target / npc:tsumugi に近づいた → 丸ボタン=「ツムギと はなす」 dim=false",
+  "  [measure] 目的地の手前(tsumugi): 3こ / 44px未満 0 / 14px未満の字 2 / 当たらない 0",
+  "  [shot 7] dialogue / 会話中(右下の丸ボタン=つぎへ) → ツムギの はなしを聞こう",
+  "  [measure] 会話中: 2こ / 44px未満 0 / 14px未満の字 1 / 当たらない 0",
+  "  ▶ いまやること / もくざいを あつめよう (q_wood_gather)",
+  "  … node:wood へ 14秒で 着かない(のこり 18.9m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.3m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.3m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.3m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.3m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.3m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.3m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.3m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.3m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.2m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.3m)",
+  "  … node:wood へ 14秒で 着かない(のこり 15.3m)",
+  "  終了時: day=3 hour=9.2 目標=もくざいを あつめよう 家具=0 quests={\"q_wood\":\"open\",\"q_fish\":\"locked\",\"q_ore\":\"locked\",\"q_lantern\":\"locked\",\"q_lumi\":\"locked\",\"q2_boat\":\"locked\",\"q2_meet\":\"locked\",\"q2_shell\":\"locked\",\"q2_starweed\":\"locked\",\"q2_lens\":\"locked\",\"q2_light\":\"locked\",\"q3_station\":\"locked\",\"q3_lantern\":\"locked\",\"q3_gift\":\"locked\",\"q3_taste\":\"locked\"}",
+  "  [shot 8] play_end / 通しプレイの区切り → いまやること / もくざいを あつめよう",
+  "  [measure] 通しプレイ終了時(屋外): 4こ / 44px未満 0 / 14px未満の字 3 / 当たらない 0",
+  "■ 7. 各パネルの計測",
+  "  - もちもの ボタンは まだ出ていない(未解放)",
+  "  - クラフト ボタンは まだ出ていない(未解放)",
+  "  [shot 9] panel_quest / 右上「おねがい」をタップ → パネルが開いた",
+  "  [measure] パネル: おねがい: 3こ / 44px未満 0 / 14px未満の字 2 / 当たらない 0",
+  "  - ずかん ボタンは まだ出ていない(未解放)",
+  "  [shot 10] panel_menu / 右上「メニュー」をタップ → パネルが開いた",
+  "  [measure] パネル: メニュー: 6こ / 44px未満 0 / 14px未満の字 2 / 当たらない 0",
+  "  ! メニュー が 指で閉じられない",
+  "FAILED: タップ対象が無い: .pause-panel [data-act=\"resume\"]",
+  "Error: タップ対象が無い: .pause-panel [data-act=\"resume\"]\n    at tapSel (file:///C:/Users/2016k/AppData/Local/Temp/claude/C--Users-2016k-Caoude-------90-Private-----------3D---/4fd5a527-2a91-432e-9210-5fb53628c540/scratchpad/touch_play_v17.mjs:207:19)\n    at async tapSelIf (file:///C:/Users/2016k/AppData/Local/Temp/claude/C--Users-2016k-Caoude-------90-Private-----------3D---/4fd5a527-2a91-432e-9210-5fb53628c540/scratchpad/touch_play_v17.mjs:215:3)\n    at async file:///C:/Users/2016k/AppData/Local/Temp/claude/C--Users-2016k-Caoude-------90-Private-----------3D---/4fd5a527-2a91-432e-9210-5fb53628c540/scratchpad/touch_play_v17.mjs:620:7"
+ ]
+}

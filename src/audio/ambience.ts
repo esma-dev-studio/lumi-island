@@ -148,6 +148,12 @@ export class RainVoice {
  */
 export const BED_LOOP_SEC = { wave: 7.3, grass: 5.9, forest: 4.7 } as const;
 
+/**
+ * ゆきの日の風のループ長(秒)。3層のどれとも 割り切れない長さにして、
+ * 4本が そろって うねる瞬間を 作らない。
+ */
+export const SNOW_LOOP_SEC = 9.1;
+
 /** なみ: よせて かえす うねり。ゆっくりした2つの周期を重ねて 単調さを消す */
 function makeWaveBuffer(ctx: BaseAudioContext): AudioBuffer {
   const sr = ctx.sampleRate;
@@ -215,6 +221,28 @@ function makeForestBuffer(ctx: BaseAudioContext): AudioBuffer {
   return buf;
 }
 
+/**
+ * ゆきの日の風: 息の長い「ふぅ…」。雪は音を吸うので、高い成分はほとんど無く、
+ * 20秒ちかい ゆっくりした山だけが 残る(ざわざわした葉ずれとは別のもの)。
+ */
+function makeSnowWindBuffer(ctx: BaseAudioContext): AudioBuffer {
+  const sr = ctx.sampleRate;
+  const len = Math.floor(sr * SNOW_LOOP_SEC);
+  const buf = ctx.createBuffer(1, len, sr);
+  const d = buf.getChannelData(0);
+  let a = 0;
+  for (let i = 0; i < len; i++) {
+    a = smooth(a, synthRandom() * 2 - 1, 0.9); // 深く積分 = ほとんど低い成分だけ
+    const t = i / len;
+    // 山は1周期と3周期。3周期のほうを浅くして「たまに強く吹く」形にする
+    const gust =
+      0.45 + 0.4 * (0.5 - 0.5 * Math.cos(Math.PI * 2 * t)) + 0.15 * (0.5 - 0.5 * Math.cos(Math.PI * 6 * t + 0.4));
+    d[i] = a * 3.2 * gust;
+  }
+  seamless(d, Math.floor(sr * 0.15));
+  return buf;
+}
+
 type BedKey = keyof typeof BED_LOOP_SEC;
 
 interface BedVoice {
@@ -249,10 +277,20 @@ export class AmbienceBed {
   private tone: BiquadFilterNode;
   private masterLevel = 0;
   private sheltered = false;
+  /** ゆきの強さ 0〜1(こもり具合と 風の層の高さを決める) */
+  private snow = 0;
+  private snowVoice: BedVoice;
 
+  /**
+   * @param snowPeak ゆきの日の風の層の高さ(MIX.bed.snowWind をそのまま渡す)
+   * @param snowCut  ゆきが いちばん強いときの ローパス(MIX.bed.snowCutoff)
+   *   —— 音量の数字は mix.ts にしか置かない(RainVoice の peakGain と同じ流儀)
+   */
   constructor(
     private ctx: BaseAudioContext,
-    dest: AudioNode
+    dest: AudioNode,
+    private snowPeak: number,
+    private snowCut: number
   ) {
     const c = ctx;
     this.tone = c.createBiquadFilter();
@@ -283,6 +321,21 @@ export class AmbienceBed {
       return { src, filt, gain, target: 0 };
     };
     this.voices = { wave: mk('wave'), grass: mk('grass'), forest: mk('forest') };
+    // ゆきの日だけ鳴る4本目。3層とちがって「場所の重み」では動かず、ゆきの強さだけで動く
+    {
+      const src = c.createBufferSource();
+      src.buffer = makeSnowWindBuffer(c);
+      src.loop = true;
+      const filt = c.createBiquadFilter();
+      filt.type = 'lowpass';
+      filt.frequency.value = 420;
+      filt.Q.value = 0.5;
+      const gain = c.createGain();
+      gain.gain.value = 0;
+      src.connect(filt).connect(gain).connect(this.tone);
+      src.start();
+      this.snowVoice = { src, filt, gain, target: 0 };
+    }
   }
 
   /**
@@ -313,20 +366,47 @@ export class AmbienceBed {
   setSheltered(on: boolean): void {
     if (on === this.sheltered) return;
     this.sheltered = on;
+    this.applyTone();
+  }
+
+  /**
+   * ゆきの強さを伝える(0=ゆきでない 1=しっかり降っている)。毎フレーム呼んでよい。
+   * 雪は音を吸うので、3層ぜんぶを こもらせ、かわりに かすかな風の層を足す。
+   * 屋根の下の こもり(900Hz)とは **強いほう(低いほう)を採る**ので、
+   * 「雪の日に家へ入ったら 前より明るくなった」は 起きない。
+   */
+  setSnow(level: number, ramp = 2): void {
+    const want = Math.max(0, Math.min(1, level));
+    if (Math.abs(want - this.snow) < 0.01) return;
+    this.snow = want;
+    const t0 = this.ctx.currentTime;
+    const g = this.snowVoice.gain.gain;
+    this.snowVoice.target = this.snowPeak * want;
+    g.cancelScheduledValues(t0);
+    g.setValueAtTime(g.value, t0);
+    g.linearRampToValueAtTime(this.snowVoice.target, t0 + ramp);
+    this.applyTone();
+  }
+
+  /** こもり具合(屋根の下と ゆきの 低いほうを採る) */
+  private applyTone(): void {
+    const open = 16000;
+    const snowCut = this.snow > 0 ? open + (this.snowCut - open) * this.snow : open;
+    const cut = Math.min(this.sheltered ? 900 : open, snowCut);
     const t0 = this.ctx.currentTime;
     this.tone.frequency.cancelScheduledValues(t0);
-    this.tone.frequency.setTargetAtTime(on ? 900 : 16000, t0, 0.5);
+    this.tone.frequency.setTargetAtTime(cut, t0, 0.5);
   }
 
   stop(): void {
-    for (const k of ['wave', 'grass', 'forest'] as BedKey[]) {
+    for (const v of [this.voices.wave, this.voices.grass, this.voices.forest, this.snowVoice]) {
       try {
-        this.voices[k].src.stop();
+        v.src.stop();
       } catch {
         // すでに止まっている
       }
-      this.voices[k].src.disconnect();
-      this.voices[k].gain.disconnect();
+      v.src.disconnect();
+      v.gain.disconnect();
     }
     this.out.disconnect();
   }
@@ -336,6 +416,9 @@ export class AmbienceBed {
       level: this.masterLevel,
       out: this.out.gain.value,
       sheltered: this.sheltered,
+      snow: this.snow,
+      snowWind: this.snowVoice.gain.gain.value,
+      cutoff: this.tone.frequency.value,
       wave: this.voices.wave.gain.gain.value,
       grass: this.voices.grass.gain.gain.value,
       forest: this.voices.forest.gain.gain.value,
@@ -343,6 +426,7 @@ export class AmbienceBed {
         wave: this.voices.wave.target,
         grass: this.voices.grass.target,
         forest: this.voices.forest.target,
+        snowWind: this.snowVoice.target,
       },
     };
   }

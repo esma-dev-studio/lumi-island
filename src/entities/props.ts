@@ -39,7 +39,7 @@ export function makeLogPile(scene: Scene): Mesh {
   log(0, 0.11, -0.12, 1.15, 0.11, 1);
   log(0, 0.11, 0.12, 1.1, 0.11, 2);
   log(0.05, 0.3, 0, 1.05, 0.11, 3);
-  return toMesh(scene, 'logPile', A);
+  return toMesh(scene, 'logPile', A, 'keep');
 }
 
 /** 木箱(工房前) */
@@ -49,7 +49,7 @@ export function makeCrate(scene: Scene): Mesh {
   for (const y of [0.04, 0.48]) fbox(A, 0, y, 0, 0.56, 0.05, 0.56, WOOD_D);
   fbox(A, 0, 0.26, 0.265, 0.05, 0.44, 0.03, WOOD_D);
   fbox(A, 0, 0.26, -0.265, 0.05, 0.44, 0.03, WOOD_D);
-  return toMesh(scene, 'crate', A);
+  return toMesh(scene, 'crate', A, 'keep');
 }
 
 /** バケツと立てかけた竿(ミナモの釣り場) */
@@ -60,7 +60,7 @@ export function makeBucketRod(scene: Scene): Mesh {
   appendBlob(A, 0, 0.3, 0, 0.185, 0.02, 0.185, Color3.FromHexString('#42586b'), { segs: 8, noise: 0.02 });
   // 竿(ななめに立てかけ)
   appendTrunk(A, [[0.3, 0, 0.1], [0.62, 1.05, -0.08]], 0.02, 0.008, WOOD_D, 7);
-  return toMesh(scene, 'bucketRod', A);
+  return toMesh(scene, 'bucketRod', A, 'keep');
 }
 
 /** 望遠鏡(ノクトの観測場所): 三脚+筒 */
@@ -72,7 +72,7 @@ export function makeTelescope(scene: Scene): Mesh {
   }
   appendTrunk(A, [[-0.14, 0.68, 0.1], [0.3, 1.05, -0.22]], 0.075, 0.058, Color3.FromHexString('#4a4038'), 15);
   appendBlob(A, 0.3, 1.05, -0.22, 0.062, 0.062, 0.02, Color3.FromHexString('#8aa8d9'), { segs: 7, noise: 0.02 });
-  return toMesh(scene, 'telescope', A);
+  return toMesh(scene, 'telescope', A, 'keep');
 }
 
 /** 流木(浜辺) */
@@ -84,7 +84,7 @@ export function makeDriftwood(scene: Scene, seed = 1): Mesh {
     0.1, 0.045, jitterColor(PALE, seed), seed
   );
   appendTrunk(A, [[0.3, 0.1, -0.02], [0.55, 0.34, -0.18]], 0.045, 0.02, jitterColor(PALE, seed + 1), seed + 2);
-  return toMesh(scene, `driftwood_${seed}`, A);
+  return toMesh(scene, `driftwood_${seed}`, A, 'keep');
 }
 
 /** 切りかぶ(林) */
@@ -92,7 +92,7 @@ export function makeStump(scene: Scene, seed = 1): Mesh {
   const A = A0();
   appendTrunk(A, [[0, 0, 0], [0.02, 0.28, 0]], 0.2, 0.17, jitterColor(WOOD, seed), seed);
   appendBlob(A, 0.02, 0.28, 0, 0.17, 0.02, 0.17, Color3.FromHexString('#c9ab7e'), { segs: 8, noise: 0.05 });
-  return toMesh(scene, `stump_${seed}`, A);
+  return toMesh(scene, `stump_${seed}`, A, 'keep');
 }
 
 // ---------------------------------------------------------------------------
@@ -139,7 +139,7 @@ export function makeBulletinBoard(scene: Scene): Mesh {
     // 紙どめの びょう(上のはしに1つ)
     fbox(A, nx, ny + nh / 2 - 0.03, -0.05, 0.04, 0.04, 0.02, C_BOARD_PIN);
   }
-  return toMesh(scene, 'bulletinBoard', A);
+  return toMesh(scene, 'bulletinBoard', A, 'keep');
 }
 
 // ---------------------------------------------------------------------------
@@ -374,7 +374,7 @@ export function makeFestivalStand(scene: Scene): Mesh {
   // 立て札(「ほしランタン」の 小さな板。字は書かない=かな以外の見た目を出さない)
   appendTrunk(A, [[0.36, top, -0.2], [0.36, top + 0.3, -0.2]], 0.022, 0.02, C_FES_POLE, 41, 0);
   fbox(A, 0.36, top + 0.36, -0.2, 0.3, 0.16, 0.02, C_BOARD_NOTE);
-  const mesh = toMesh(scene, 'fesStand', A);
+  const mesh = toMesh(scene, 'fesStand', A, 'keep');
   // 見本の ちょうちん(火が入っている)を 天板の むこう側に 立てる
   const lantern = makeFestivalLantern(scene, 55, 0.15, 0.3);
   lantern.parent = mesh;

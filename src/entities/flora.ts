@@ -1,6 +1,7 @@
 // 植生・岩・鉱石・ルミの木: 頂点カラー+ノイズ変形で「同じ形の使い回し」に見せない
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
+import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
@@ -20,10 +21,27 @@ export function jitterColor(c: Color3, seed: number, amt = 0.08): Color3 {
   return new Color3(Math.min(1, c.r * f), Math.min(1, c.g * f), Math.min(1, c.b * f));
 }
 
-// 変形球を追加(木の葉・岩・ドームの素)
+/**
+ * 変形球を追加(木の葉・岩・ドームの素)。
+ *
+ * **巻き順は「外向きの決まり」(WINDING_RULE)にそろえてある。** リング(r)は
+ * 上(phi=0)から下(phi=π)へ ならぶので、appendTrunk(下から上へ)とは
+ * だんの進む向きが 逆——だから三角形の 2ばんめと 3ばんめを 入れかえて
+ * (a,c,b)/(b,c,d) の順で はる。ここを (a,b,c)/(b,d,c) に もどすと、
+ * この関数で作った玉だけが **裏返る**(v28まで実際に そうなっていた)。
+ *
+ * @param opts.basis 玉を かたむけて 置くための 直交基底 [ex, ey, ez](世界での 向き)。
+ *   ry の 向きが ey になる。**かならず 右手系**(ez = ex × ey)で わたすこと ——
+ *   左手系を わたすと 行列式が 負になって 巻き順が 裏返る(WINDING_RULE やぶり)。
+ *   ルミの木の 花が 葉の 面に そって ねる ときに つかう。
+ */
 export function appendBlob(
   A: Arrays, cx: number, cy: number, cz: number, rx: number, ry: number, rz: number,
-  color: Color3, opts: { noise?: number; seed?: number; segs?: number; bottomDark?: number; flatBottom?: boolean } = {}
+  color: Color3,
+  opts: {
+    noise?: number; seed?: number; segs?: number; bottomDark?: number; flatBottom?: boolean;
+    basis?: readonly [readonly number[], readonly number[], readonly number[]];
+  } = {}
 ): void {
   const segs = opts.segs ?? 9;
   const rings = Math.max(4, Math.round(segs * 0.7));
@@ -40,7 +58,17 @@ export function appendBlob(
       const n = 1 + (vnoise(dx * 2.3 + seed * 17, dz * 2.3 + dy * 1.7 + seed * 31) - 0.5) * noise * 2;
       let y = dy * ry * n;
       if (opts.flatBottom && y < -ry * 0.25) y = -ry * 0.25 - (Math.abs(y) - ry * 0.25) * 0.15;
-      A.pos.push(cx + dx * rx * n, cy + y, cz + dz * rz * n);
+      const lx = dx * rx * n, lz = dz * rz * n;
+      const B = opts.basis;
+      if (B) {
+        A.pos.push(
+          cx + B[0][0] * lx + B[1][0] * y + B[2][0] * lz,
+          cy + B[0][1] * lx + B[1][1] * y + B[2][1] * lz,
+          cz + B[0][2] * lx + B[1][2] * y + B[2][2] * lz
+        );
+      } else {
+        A.pos.push(cx + lx, cy + y, cz + lz);
+      }
       const dark = 1 - (opts.bottomDark ?? 0.22) * Math.max(0, -dy);
       const cf = 0.93 + vnoise(dx * 5 + seed, dz * 5 + seed) * 0.14;
       A.col.push(color.r * dark * cf, color.g * dark * cf, color.b * dark * cf, 1);
@@ -52,9 +80,170 @@ export function appendBlob(
       const b = a + 1;
       const c = a + segs + 1;
       const d = c + 1;
-      A.idx.push(a, b, c, b, d, c);
+      A.idx.push(a, c, b, b, c, d); // ← WINDING_RULE(外向き)。appendTrunk と だんの向きが逆なので入れかえる
     }
   }
+}
+
+/**
+ * ============================================================================
+ * 「うもれ(burial)の きまり」—— 小部品を かたまりの **表面へ 出す** ための道具
+ * ============================================================================
+ *
+ * v28で 巻き順を 外向きに そろえるまでは、手前の面が 背面カリングで 消えていたので
+ * **かたまりの 中に うめた 小部品が すけて 見えて**いた。巻き順を 直したとたん、
+ * 目・口・花・結晶・光る玉が いっせいに 正しく かくれて 消えた(教訓1の
+ * 「発光オブジェクトを不透明な箱の中に入れない」と まったく 同じ しくみ)。
+ *
+ * そこで 小部品の 位置は「だいたい この へん」と 手で 書くのを やめて、
+ * **親の玉の 表面を 計算して そこへ のせる**。appendBlob の ゆがみ(noise)を
+ * そのまま 使うので、玉が どう ゆがんでも 部品は かならず 面の 外に出る。
+ * 検査は tests/unit/burial_v28.test.ts。
+ */
+export interface BlobShape {
+  /** 中心 */
+  c: [number, number, number];
+  /** 3軸の半径 */
+  r: [number, number, number];
+  /** appendBlob に わたした noise(既定 0.16) */
+  noise?: number;
+  /** appendBlob に わたした seed(既定 1) */
+  seed?: number;
+}
+
+/** appendBlob と まったく同じ ゆがみ。向き d は 単位ベクトル */
+function blobNoise(b: BlobShape, dx: number, dy: number, dz: number): number {
+  const noise = b.noise ?? 0.16;
+  const seed = b.seed ?? 1;
+  return 1 + (vnoise(dx * 2.3 + seed * 17, dz * 2.3 + dy * 1.7 + seed * 31) - 0.5) * noise * 2;
+}
+
+/**
+ * 玉の 表面の点と、そこの 外向き法線。
+ *
+ * 向きは **たまご座標**(各軸を 半径で わった 空間)で 正規化する。
+ * appendBlob は その空間の 単位球を r 倍して 作っているので、これが
+ * 「玉の どこか」を あらわす 正しい パラメータになる。
+ * 法線は だ円体の こうばい (dx/rx, dy/ry, dz/rz) の 向き。
+ *
+ * ※ flatBottom の 下がわ(y < -ry*0.25)は 平らに つぶしてあるので ここでは 見ない。
+ *   この道具は「上・よこへ 出す」ために つかう。
+ */
+export function blobSurface(b: BlobShape, d: [number, number, number]): {
+  p: [number, number, number];
+  n: [number, number, number];
+} {
+  const [rx, ry, rz] = b.r;
+  const len = Math.hypot(d[0], d[1], d[2]) || 1;
+  const dx = d[0] / len, dy = d[1] / len, dz = d[2] / len;
+  const k = blobNoise(b, dx, dy, dz);
+  const nx = dx / rx, ny = dy / ry, nz = dz / rz;
+  const nl = Math.hypot(nx, ny, nz) || 1;
+  return {
+    p: [b.c[0] + dx * rx * k, b.c[1] + dy * ry * k, b.c[2] + dz * rz * k],
+    n: [nx / nl, ny / nl, nz / nl],
+  };
+}
+
+/**
+ * 小部品の 中心を、玉の **表面 + out** へ うつす。
+ *
+ * p の「玉から見た 向き」は そのまま = 元のデザインの 配置を 変えない。
+ * out は ふつう 小部品の 半径の 0.5〜0.7 —— これで 部品の 6〜8わりが 面の外に出る
+ * (中心を 面の 上ちょうどに 置くと ちょうど半分 うまり、玉の ゆがみで 消える)。
+ */
+export function onBlob(b: BlobShape, p: [number, number, number], out: number): [number, number, number] {
+  const d: [number, number, number] = [
+    (p[0] - b.c[0]) / b.r[0], (p[1] - b.c[1]) / b.r[1], (p[2] - b.c[2]) / b.r[2],
+  ];
+  if (Math.hypot(d[0], d[1], d[2]) < 1e-9) return [p[0], p[1], p[2]]; // まん中は 向きが 決まらない
+  const s = blobSurface(b, d);
+  return [s.p[0] + s.n[0] * out, s.p[1] + s.n[1] * out, s.p[2] + s.n[2] * out];
+}
+
+/**
+ * o から u の 向きへ レイを とばして、**いちばん 外がわで 面と ぶつかる**までの きょり。
+ *
+ * ここだけは 計算式の 玉ではなく **じっさいに 作った 三角形**を 見る。
+ * appendBlob は 玉を 多角形に きざむので、面の まん中は 計算式の 面より
+ * 内がわにも 外がわにも ずれる(ゆがみが 大きいほど ずれる)。
+ * 「かたまりの 外に 出す」ためには この ずれこみまで 見ないと 意味がない
+ * —— じっさい ルミの木で 計算式の 面に のせたら まだ 葉に かくれた。
+ *
+ * ぶつからなければ 0(= 出す必要がない)。Möller–Trumbore。
+ */
+export function rayExit(
+  pos: ArrayLike<number>, idx: ArrayLike<number>, o: readonly number[], u: readonly number[]
+): number {
+  const l = Math.hypot(u[0], u[1], u[2]) || 1;
+  const ux = u[0] / l, uy = u[1] / l, uz = u[2] / l;
+  let far = 0;
+  for (let i = 0; i < idx.length; i += 3) {
+    const a = idx[i] * 3, b = idx[i + 1] * 3, c = idx[i + 2] * 3;
+    const e1x = pos[b] - pos[a], e1y = pos[b + 1] - pos[a + 1], e1z = pos[b + 2] - pos[a + 2];
+    const e2x = pos[c] - pos[a], e2y = pos[c + 1] - pos[a + 1], e2z = pos[c + 2] - pos[a + 2];
+    const px = uy * e2z - uz * e2y, py = uz * e2x - ux * e2z, pz = ux * e2y - uy * e2x;
+    const det = e1x * px + e1y * py + e1z * pz;
+    if (Math.abs(det) < 1e-12) continue; // レイと 平行
+    const inv = 1 / det;
+    const tx = o[0] - pos[a], ty = o[1] - pos[a + 1], tz = o[2] - pos[a + 2];
+    const v = (tx * px + ty * py + tz * pz) * inv;
+    if (v < 0 || v > 1) continue;
+    const qx = ty * e1z - tz * e1y, qy = tz * e1x - tx * e1z, qz = tx * e1y - ty * e1x;
+    const w = (ux * qx + uy * qy + uz * qz) * inv;
+    if (w < 0 || v + w > 1) continue;
+    const t = (e2x * qx + e2y * qy + e2z * qz) * inv;
+    if (t > far) far = t;
+  }
+  return far;
+}
+
+/**
+ * すでに つみあげた かたまりの **表面へ** 小部品の 中心を おし出す。
+ *
+ * v28で 巻き順を 外向きに そろえるまでは 手前の面が 背面カリングで 消えていたので、
+ * かたまりの 中に うめた 目・口・ぬい目・斑点が すけて 見えていた。
+ * 巻き順を 直したとたん、それらが 正しく かくれて 消えた —— 位置を 手で 書くのを やめて
+ * **じっさいに 作った 面**から 出す。
+ *
+ * @param o   おし出す もとの 点(ふつうは 親の 玉の まん中)
+ * @param p   もとの 位置。**o から見た 向きだけ**を つかう = ならびは 変わらない
+ * @param out 面から どれだけ 外へ 出すか。ふつう 小部品の 半径の 0.5〜0.7
+ */
+export function ontoSurface(
+  A: Arrays, o: readonly number[], p: readonly number[], out: number
+): [number, number, number] {
+  const d = [p[0] - o[0], p[1] - o[1], p[2] - o[2]];
+  const L = Math.hypot(d[0], d[1], d[2]);
+  if (L < 1e-9) return [p[0], p[1], p[2]];
+  const n = [d[0] / L, d[1] / L, d[2] / L];
+  const t = rayExit(A.pos, A.idx, o, n);
+  // 面に ぶつからなければ もとの まま(かたまりの 外に もともと ある)
+  if (t <= 0) return [p[0], p[1], p[2]];
+  return [o[0] + n[0] * (t + out), o[1] + n[1] * (t + out), o[2] + n[2] * (t + out)];
+}
+
+/**
+ * 面の上に ものを のせるための 直交基底 [ex, ey, ez]。**ey が 外向き**。
+ * appendBlob の basis に そのまま わたせるよう ez = ex × ey の **右手系**で 返す
+ * (左手系だと 巻き順が 裏返る)。
+ */
+export function surfaceFrame(n: readonly number[]): [number[], number[], number[]] {
+  const l = Math.hypot(n[0], n[1], n[2]) || 1;
+  const ey = [n[0] / l, n[1] / l, n[2] / l];
+  // ey と 平行でない ものさし を えらぶ(まうえ向きの ときは X軸)
+  const g = Math.abs(ey[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0];
+  const cx = g[1] * ey[2] - g[2] * ey[1];
+  const cy = g[2] * ey[0] - g[0] * ey[2];
+  const cz = g[0] * ey[1] - g[1] * ey[0];
+  const cl = Math.hypot(cx, cy, cz) || 1;
+  const ex = [cx / cl, cy / cl, cz / cl];
+  const ez = [
+    ex[1] * ey[2] - ex[2] * ey[1],
+    ex[2] * ey[0] - ex[0] * ey[2],
+    ex[0] * ey[1] - ex[1] * ey[0],
+  ];
+  return [ex, ey, ez];
 }
 
 // 直方体(板・柱・敷石)。Y回転つき。巻き順はComputeNormalsで外向きになる向き
@@ -99,6 +288,15 @@ export function appendBox(
  *
  * @param segs 断面の かどの数(既定7)。ふとい みきを 近くで 見せるものは 増やして
  *   かどを ゆるくする(7角だと 1つのかどで 51度も 折れるので、接写で「板」に 見える)。
+ *
+ * @param pts 下から上へ ならべても、上から下へ ならべても よい。
+ *   **輪は かならず XZ平面**に はるので、pts が 下へ すすむ筒は だんの向きが
+ *   さかさまになり、そのままだと 巻き順が 裏返る(WINDING_RULE やぶり)。
+ *   ちょうちんの ほね・天井から さがる つりわ・つぼの とっ手が じっさい それで、
+ *   v28の 向き検査で 見つかった。ここで **pts の 上下だけを 見て 巻き順を そろえる**ので、
+ *   呼ぶがわは 点の ならべ順を 気にしなくてよい。
+ *   (はじめと おわりの y が おなじ「よこ向きの筒」は 輪が 進む向きと 平行になり、
+ *    そもそも 筒として つぶれている —— ガーランドの ひものような 細い ひもだけに使う)
  */
 export function appendTrunk(
   A: Arrays, pts: [number, number, number][], r0: number, r1: number, color: Color3,
@@ -106,6 +304,7 @@ export function appendTrunk(
 ): void {
   const base = A.pos.length / 3;
   const rows = pts.length;
+  const goesDown = pts[rows - 1][1] < pts[0][1];
   for (let i = 0; i < rows; i++) {
     const t = i / (rows - 1);
     const r = r0 + (r1 - r0) * t;
@@ -124,7 +323,9 @@ export function appendTrunk(
       const b = a + 1;
       const c = a + segs + 1;
       const d = c + 1;
-      A.idx.push(a, b, c, b, d, c);
+      // WINDING_RULE(外向き)。下へすすむ筒は だんの向きが 逆なので 入れかえる
+      if (goesDown) A.idx.push(a, c, b, b, c, d);
+      else A.idx.push(a, b, c, b, d, c);
     }
   }
 }
@@ -141,61 +342,52 @@ export function getFloraMat(scene: Scene): StandardMaterial {
 }
 
 /**
- * 法線の向きの決め方。
- * - auto: 重心から見て内向きが多数なら反転(ひとかたまりの形にだけ有効)
- * - flip: 必ず反転(appendBlobだけで作った形。ComputeNormalsだと内向きになる)
- * - keep: そのまま(appendTrunk/appendBoxだけで作った形。すでに外向き)
- * 別々の場所に置いた部品をひとつのMeshにまとめる場合、重心の判定は当てにならないので
- * 部品の作り方に合わせてflip/keepを指定する。
+ * ============================================================================
+ * 巻き順(winding)の きまり —— **島じゅうで これ1つだけ**(v28)
+ * ============================================================================
+ *
+ * すべての生成ヘルパー(appendBlob / appendTrunk / appendBox / fbox / fboxR /
+ * appendRing / appendPlate / appendShellFan / appendBlade …)は、
+ * **Babylon の `VertexData.ComputeNormals` が そのまま 外向きの法線を返す**
+ * 巻き順で 三角形を はる。これを WINDING_RULE と呼ぶ。
+ * (Babylon の 組みこみメッシュ CreateSphere などと まったく同じ きまり。
+ *  tests/unit/winding_v28.test.ts が 組みこみ球で この向きを 実測して確かめている)
+ *
+ * これが そろっていると:
+ *   - 法線は ComputeNormals の まま 使えばよい(反転はしない = 'keep')
+ *   - backFaceCulling が 消すのは いつも「内がわの面」= 見えているのは 手前の面
+ * の2つが 同時に 成り立つ。
+ *
+ * **v28以前は appendBlob 系だけが 逆巻き**で、1つのメッシュに appendTrunk と
+ * まぜると どちらかが かならず 裏返っていた:
+ *   - 法線が 裏返った面 → 太陽と 逆に 明るさが 出て、日なたでも どす黒くなる
+ *     (じゅえきの木の みきが #755233 なのに #362717 で 出ていた)
+ *   - 巻き順が 裏返った面 → backFaceCulling が 手前の面を 消すので、
+ *     おくの面の うら(=光の当たらない がわ)が すけて見える
+ * 対症療法(flipWinding / faceOutward / toMesh 'flip' / 'auto')は ぜんぶ やめて、
+ * **ヘルパーの出力を 1つの きまりに そろえる**ことで 根本から なくした。
  */
-export type Orient = 'auto' | 'flip' | 'keep';
 
 /**
- * `from` 番目いこうの 三角形の **巻き順** だけ ひっくり返す。
+ * toMesh に わたす 向きの 指定。
  *
- * appendTrunk/appendBox と appendBlob は 巻き順が 逆どうし。ひとつの Mesh に
- * まぜると、orient(=法線の向き)を どちらに 決めても **かたっぽうが うらがえし**になる:
- *   - 法線が うらがえった面 → 太陽と 逆に 明るさが 出て、日なたでも どす黒くなる
- *   - 巻き順が うらがえった面 → backFaceCulling が 手前の面を 消すので、
- *     おくの面の うら(=光の当たらない がわ)が すけて見える
- * ひらたい形ほど はっきり出る(教訓4の「中が黒いわっか」と 同じ すじ)。
- *
- * なので **まぜる前に appendTrunk がわを appendBlob の巻き順へ そろえて**おき、
- * さいごに `toMesh(..., 'flip')` + `flipFaces(false)` で ぜんぶ まとめて 外向きにする
- * (虫のメッシュ bugs.ts が むかしから やっている 決まり文句と 同じ)。
+ * **'keep' しか ない**のは わざと。ヘルパーが みんな WINDING_RULE に そろった
+ * いま、法線を 反転する 正しい理由は 1つも ない。むかしは 'flip'(かならず反転)と
+ * 'auto'(重心から 数えて 多数決)が あって、
+ *   - 'auto' は「別々の場所に ちらばった部品」で 判定が でたらめになる
+ *     (makeStump は 外4:内4 の 同点だった = いつ 裏返っても おかしくない)
+ *   - 'flip' は 法線だけを 直すので、巻き順は 裏返ったまま になる
+ * という 2つの 事故のもとだった。型を 1つに しぼることで
+ * **tsc が 'auto'/'flip' を 書けなくする**(機械での 再発ぼうし)。
+ * 引数を 省略できなくしてあるのも 同じ理由で、メッシュ1つ1つに
+ * 「この形は 外向きの きまりで 作った」と 書かせるため。
  */
-export function flipWinding(A: Arrays, from = 0): void {
-  for (let i = from; i + 2 < A.idx.length; i += 3) {
-    const t = A.idx[i + 1];
-    A.idx[i + 1] = A.idx[i + 2];
-    A.idx[i + 2] = t;
-  }
-}
+export type Orient = 'keep';
 
-export function toMesh(scene: Scene, name: string, A: Arrays, orient: Orient = 'auto'): Mesh {
+export function toMesh(scene: Scene, name: string, A: Arrays, orient: Orient): Mesh {
+  void orient; // 'keep' しかない = ComputeNormals の向きを そのまま つかう
   const normals: number[] = [];
   VertexData.ComputeNormals(A.pos, A.idx, normals);
-  let flip = orient === 'flip';
-  if (orient === 'auto') {
-    let cx = 0, cy = 0, cz = 0;
-    const n = A.pos.length / 3;
-    for (let i = 0; i < A.pos.length; i += 3) {
-      cx += A.pos[i];
-      cy += A.pos[i + 1];
-      cz += A.pos[i + 2];
-    }
-    cx /= n; cy /= n; cz /= n;
-    let outward = 0, inward = 0;
-    for (let i = 0; i < A.pos.length; i += 33) {
-      const d = (A.pos[i] - cx) * normals[i] + (A.pos[i + 1] - cy) * normals[i + 1] + (A.pos[i + 2] - cz) * normals[i + 2];
-      if (d > 0) outward++;
-      else inward++;
-    }
-    flip = inward > outward;
-  }
-  if (flip) {
-    for (let i = 0; i < normals.length; i++) normals[i] = -normals[i];
-  }
   const vd = new VertexData();
   vd.positions = A.pos;
   vd.indices = A.idx;
@@ -208,22 +400,15 @@ export function toMesh(scene: Scene, name: string, A: Arrays, orient: Orient = '
   return mesh;
 }
 
-// 既存メッシュへ配列を適用(法線の向き補正込み)
+/**
+ * 既存メッシュへ配列を適用。
+ * toMesh と まったく同じ きまり(WINDING_RULE = ComputeNormals そのまま)。
+ * v28まで ここには「重心から見て内向きが多数なら反転」という auto 判定が入っていたが、
+ * ちらばった部品では あてにならないので やめた(toMesh の Orient の説明を みること)。
+ */
 export function applyArrays(mesh: Mesh, A: Arrays): void {
   const normals: number[] = [];
   VertexData.ComputeNormals(A.pos, A.idx, normals);
-  let cx = 0, cy = 0, cz = 0;
-  const n = A.pos.length / 3 || 1;
-  for (let i = 0; i < A.pos.length; i += 3) {
-    cx += A.pos[i]; cy += A.pos[i + 1]; cz += A.pos[i + 2];
-  }
-  cx /= n; cy /= n; cz /= n;
-  let outward = 0, inward = 0;
-  for (let i = 0; i < A.pos.length; i += 33) {
-    const d = (A.pos[i] - cx) * normals[i] + (A.pos[i + 1] - cy) * normals[i + 1] + (A.pos[i + 2] - cz) * normals[i + 2];
-    if (d > 0) outward++; else inward++;
-  }
-  if (inward > outward) for (let i = 0; i < normals.length; i++) normals[i] = -normals[i];
   const vd = new VertexData();
   vd.positions = A.pos;
   vd.indices = A.idx;
@@ -278,7 +463,7 @@ export function makeTree(scene: Scene, seed: number, scale = 1): Mesh {
   appendBlob(A, bend - 0.7 * scale, cy - 0.4 * scale, 0.3 * scale, 0.8 * scale, 0.65 * scale, 0.8 * scale, jitterColor(leaf, seed + 1), { seed: seed + 2, noise: 0.24 });
   appendBlob(A, bend + 0.65 * scale, cy - 0.3 * scale, -0.35 * scale, 0.75 * scale, 0.6 * scale, 0.75 * scale, jitterColor(leaf, seed + 2), { seed: seed + 3, noise: 0.24 });
   appendBlob(A, bend + 0.1 * scale, cy + 0.55 * scale, 0.1 * scale, 0.7 * scale, 0.55 * scale, 0.7 * scale, jitterColor(leaf, seed + 3, 0.12), { seed: seed + 4, noise: 0.22 });
-  return toMesh(scene, `tree_${seed}`, A);
+  return toMesh(scene, `tree_${seed}`, A, 'keep');
 }
 
 // ---- v27 じゅえきの木(林に1本だけの とくべつな木) ----
@@ -325,10 +510,14 @@ export function getSapMat(scene: Scene): StandardMaterial {
     sapMat.specularColor = Color3.FromHexString('#c8a06a');
     sapMat.specularPower = 22;
     sapMat.emissiveColor = Color3.FromHexString('#1a0f04');
-    // 裏面を きらない。appendBlob で作った 玉は 巻き順が 内向きなので、
-    // 背面カリングを 入れると **手前の面が 消えて**「まん中が くらい わっか」に 見える
-    // ——木の葉のような 大きな かたまりでは 気づけないが(教訓4)、
-    // こげ茶の みきの前に 置いた 小さな玉では はっきり 出た(実機スクショで確認)。
+    // 裏面を きらない。
+    // v28で appendBlob の 巻き順を 外向きに そろえたので、いまは 背面カリングを
+    // 入れても 手前の面は 消えない(むかしは 内向きの巻き順のせいで 手前の面が 消え、
+    // 「まん中が くらい わっか」に 見えていた——木の葉のような 大きな かたまりでは
+    // 気づけないが、こげ茶の みきの前に 置いた 小さな玉では はっきり 出た)。
+    // それでも 両面のままに してあるのは、しるが **みきに めりこんだ うすい しみ**で、
+    // 見る角度によっては 裏の面ごしに しみの ふちが 出てくるため。
+    // v28の 見た目を 1ミリも 動かさないためにも、ここは 変えない。
     sapMat.backFaceCulling = false;
   }
   return sapMat;
@@ -386,8 +575,9 @@ export function makeSapTree(scene: Scene, seed: number, scale = 1): { tree: Mesh
   const STUMP_TOP_R = 0.23 * s;
   const STUMP_TOP_Y = 0.84;
 
-  // ---- ここから appendTrunk の かたまり(あとで 巻き順を appendBlob にそろえる) ----
-  const tSolid = A.idx.length;
+  // ---- みき・切りかぶ(appendTrunk)----
+  // v28で ヘルパーの巻き順が 1つに そろったので、ここで 巻き順を そろえ直す
+  // 手あて(flipWinding)は 要らなくなった。appendTrunk も appendBlob も 外向き。
   // ふとい みき。ゆらぎ(jitter)を 0.12 に おさえてあるのは、
   // ±15%の でこぼこだと 虫の とまり場(半径+0.38m)に みきが 食いこむ日ができるため
   appendTrunk(
@@ -423,9 +613,6 @@ export function makeSapTree(scene: Scene, seed: number, scale = 1): { tree: Mesh
     A, [[0.115, STUMP_TOP_Y - 0.075, 0.955], [0.12, STUMP_TOP_Y, 0.96]],
     STUMP_TOP_R * 0.965, STUMP_TOP_R * 0.995, C_SAPBARK, seed + 7, 0, SEGS
   );
-  // appendBlob と 巻き順を そろえる(flipWinding の説明を みること)
-  flipWinding(A, tSolid);
-
   // 根もと(ふとい みきの まわりに 2つだけ。みきに ぴったり寄せて、ゆらぎも 小さく)。
   // 大きく・ノイズを強くすると、地面から 平たい「ひれ」が つき出て見える
   // y を 地面より下にして、地面の かたむきで はんぶん うまった 根に する。
@@ -445,12 +632,11 @@ export function makeSapTree(scene: Scene, seed: number, scale = 1): { tree: Mesh
   appendBlob(A, -0.85 * s, cy - 0.45 * s, 0.35 * s, 1.0 * s, 0.8 * s, 0.95 * s, jitterColor(leaf, seed + 1), { seed: seed + 2, noise: 0.24 });
   appendBlob(A, 0.95 * s, cy - 0.3 * s, -0.4 * s, 0.9 * s, 0.72 * s, 0.88 * s, jitterColor(leaf, seed + 2), { seed: seed + 3, noise: 0.24 });
   appendBlob(A, 0.15 * s, cy + 0.7 * s, 0.15 * s, 0.85 * s, 0.65 * s, 0.85 * s, jitterColor(leaf, seed + 3, 0.12), { seed: seed + 4, noise: 0.22 });
-  // 巻き順は 上で そろえてあるので、虫のメッシュと 同じ 決まり文句で 外向きにする:
-  // 'flip' で 法線を 外へ、flipFaces(false) で 面の おもてを 外へ。
-  // これを しないと みきが **法線うらがえし**のまま 光を うけて、日なたでも
+  // みき(appendTrunk)も 葉・根(appendBlob)も 同じ 外向きの きまりなので、
+  // 'keep' 1つで 両方 正しく 外を 向く(v28。むかしは flipWinding+'flip'+flipFaces の3手)。
+  // これを まちがえると みきが **法線うらがえし**のまま 光を うけて、日なたでも
   // どす黒く 見える(#755233 の みきが #362717 で 出ていた)。
-  const tree = toMesh(scene, `saptree_${seed}`, A, 'flip');
-  tree.flipFaces(false);
+  const tree = toMesh(scene, `saptree_${seed}`, A, 'keep');
 
   // ---- しる(にじみ)。みきの南がわ(+z)に かたよせて、虫の とまり場と そろえる ----
   //
@@ -483,7 +669,7 @@ export function makeSapTree(scene: Scene, seed: number, scale = 1): { tree: Mesh
   appendBlob(B, -0.04, 0.34, 1.21, 0.06, 0.13, 0.06, amber, { seed: seed + 18, noise: 0.15, segs: 7 });
   // 法線は **flip**(appendBlob だけで作った形の 決まり文句)。
   // ちらばった 玉の あつまりは 重心の判定(auto)が あてにならないので 決めうつ。
-  const sap = toMesh(scene, `sapooze_${seed}`, B, 'flip');
+  const sap = toMesh(scene, `sapooze_${seed}`, B, 'keep');
   sap.material = getSapMat(scene);
   sap.parent = tree;
   sap.isPickable = false;
@@ -522,31 +708,51 @@ export function makeRock(scene: Scene, seed: number, scale = 1): Mesh {
       seed: seed + 5, noise: 0.28, segs: 6, flatBottom: true, bottomDark: 0.3,
     });
   }
-  return toMesh(scene, `rock_${seed}`, A);
+  return toMesh(scene, `rock_${seed}`, A, 'keep');
 }
 
+/**
+ * 鉱石。結晶は **岩の面から つき出す**(v28)。
+ * v27まで 根もとの わを 岩の まん中の 高さ(y=0.15)に 置いていたので、
+ * 巻き順を 直して 岩の 手前の面が ちゃんと 出るようになったら 結晶の 8わりが
+ * 岩の 中に かくれた。岩の 表面を 計算して そこから 生やす。
+ */
 export function makeOreNode(scene: Scene, seed: number): { rock: Mesh; crystals: Mesh } {
   const rock = makeRock(scene, seed, 1.1);
   const crystals = new Mesh(`crystals_${seed}`, scene);
   const A = A0();
+  // 岩の **じっさいの 面**を レイで さがす(makeRock の 形が 変わっても ついてくる)
+  const rp = rock.getVerticesData(VertexBuffer.PositionKind);
+  const ri = rock.getIndices();
+  const CORE = [0, 0.33, 0]; // makeRock(scale=1.1) の 本体の まん中
   for (let i = 0; i < 4; i++) {
     const th = (i / 4) * Math.PI * 2 + seed * 2;
-    const cx = Math.cos(th) * 0.3;
-    const cz = Math.sin(th) * 0.28;
     const hgt = 0.5 + vnoise(i + seed, seed) * 0.4;
     const r = 0.1 + vnoise(i * 2, seed) * 0.05;
-    const base = A.pos.length / 3;
+    // 岩の 上のほうの 面に 生える(まうえ〜ななめ上)
+    const up = 0.7 + vnoise(i * 3, seed + 2) * 0.7;
+    const d = [Math.cos(th), up, Math.sin(th)];
+    const dl = Math.hypot(d[0], d[1], d[2]);
+    const n = [d[0] / dl, d[1] / dl, d[2] / dl];
+    const t = rp && ri ? rayExit(rp, ri, CORE, n) : 0.6;
+    const [ex, ey, ez] = surfaceFrame(n);
+    // 根もとの わは 面より すこし 内がわ(0.05m)= 岩に ささって 見える
+    const b0 = [0, 1, 2].map((k) => CORE[k] + n[k] * (t - 0.05));
     const tilt = (vnoise(i, seed * 3) - 0.5) * 0.5;
-    // 六角柱すい(クリスタル)
-    for (let s = 0; s <= 5; s++) {
-      const a = (s / 5) * Math.PI * 2;
-      A.pos.push(cx + Math.cos(a) * r, 0.15, cz + Math.sin(a) * r);
+    const base = A.pos.length / 3;
+    // 六角柱すい(クリスタル)。わは 面に そって はり、先は 面の 外向きへ のばす
+    for (let k = 0; k <= 5; k++) {
+      const a = (k / 5) * Math.PI * 2;
+      const co = Math.cos(a) * r, si = Math.sin(a) * r;
+      A.pos.push(b0[0] + ex[0] * co + ez[0] * si, b0[1] + ex[1] * co + ez[1] * si, b0[2] + ex[2] * co + ez[2] * si);
       A.col.push(0.72, 0.85, 0.95, 1);
     }
-    A.pos.push(cx + tilt, 0.15 + hgt, cz + tilt * 0.6);
+    A.pos.push(
+      b0[0] + ey[0] * hgt + ex[0] * tilt, b0[1] + ey[1] * hgt + ex[1] * tilt, b0[2] + ey[2] * hgt + ex[2] * tilt
+    );
     A.col.push(0.85, 0.95, 1, 1);
     const tip = base + 6;
-    for (let s = 0; s < 5; s++) A.idx.push(base + s, base + s + 1, tip);
+    for (let k = 0; k < 5; k++) A.idx.push(base + k, base + k + 1, tip);
   }
   applyArrays(crystals, A);
   crystals.material = getGlowMats(scene).blue;
@@ -566,7 +772,7 @@ export function makeGrassNode(scene: Scene, seed: number): Mesh {
       segs: 5, noise: 0.18, seed: seed + i, bottomDark: 0.35,
     });
   }
-  return toMesh(scene, `grassnode_${seed}`, A);
+  return toMesh(scene, `grassnode_${seed}`, A, 'keep');
 }
 
 // ---- ヒカリゴケ(夜に光る) ----
@@ -626,7 +832,7 @@ export function makeFlowerNode(scene: Scene, seed: number): Mesh {
     });
   }
   // appendBlobだけで組んだ形なので法線はflip(auto判定は部品が散っていると当てにならない)
-  return toMesh(scene, `flowernode_${seed}`, A, 'flip');
+  return toMesh(scene, `flowernode_${seed}`, A, 'keep');
 }
 
 // ---- きのこ(林の木もとの採取ノード): かさ+じくを2〜3本 ----
@@ -663,7 +869,7 @@ export function makeMushroomNode(scene: Scene, seed: number): Mesh {
       segs: 6, noise: 0.14, seed: seed + i * 11, bottomDark: 0.2,
     });
   }
-  return toMesh(scene, `mushnode_${seed}`, A, 'flip');
+  return toMesh(scene, `mushnode_${seed}`, A, 'keep');
 }
 
 // ---- かいがら(浜べの採取ノード): ホタテ形の扇を2枚 ----
@@ -784,7 +990,7 @@ export function makeCutGrassNode(scene: Scene, seed: number): Mesh {
   appendBlob(A, 0, 0.08, 0, 0.22, 0.08, 0.2, jitterColor(C_CUTGRASS, seed + 21, 0.1), {
     segs: 7, noise: 0.2, seed: seed + 21, flatBottom: true, bottomDark: 0.3,
   });
-  return toMesh(scene, `cutgrassnode_${seed}`, A);
+  return toMesh(scene, `cutgrassnode_${seed}`, A, 'keep');
 }
 
 // ---- ねんど(池の泥岸の採取ノード): 濡れた土のしみ+ねんどの塊 ----
@@ -813,7 +1019,7 @@ export function makeClayNode(scene: Scene, seed: number): Mesh {
       jitterColor(Color3.FromHexString('#8a7358'), seed + i + 7, 0.1),
       { segs: 5, noise: 0.2, seed: seed + i + 41, bottomDark: 0.1 });
   }
-  return toMesh(scene, `claynode_${seed}`, A, 'flip');
+  return toMesh(scene, `claynode_${seed}`, A, 'keep');
 }
 
 // ---- うきだま(朝の浜に流れつくレア素材): ガラスの玉+あみ ----
@@ -850,7 +1056,7 @@ export function makeGlassFloat(scene: Scene, seed: number): Mesh {
   appendBlob(A, 0, cy + R * 1.16, 0, 0.036, 0.03, 0.036, Color3.FromHexString('#b8a377'), {
     segs: 5, noise: 0.12, seed: seed + 9, bottomDark: 0.2,
   });
-  return toMesh(scene, `glassfloat_${seed}`, A, 'flip');
+  return toMesh(scene, `glassfloat_${seed}`, A, 'keep');
 }
 
 // ---- ほしのかけら(夜だけ現れるレア素材): 小さな結晶。淡い青白に発光する ----
@@ -1004,40 +1210,94 @@ export function makeLumiTree(scene: Scene): { root: Mesh; fruits: Mesh; buds: Me
     );
   }
   const leaf = Color3.FromHexString('#5f9a80');
-  appendBlob(A, 0, 4.9, 0, 2.0, 1.5, 2.0, leaf, { seed: 91, noise: 0.18 });
-  appendBlob(A, -1.3, 4.3, 0.45, 1.15, 0.9, 1.15, jitterColor(leaf, 3), { seed: 92, noise: 0.22 });
-  appendBlob(A, 1.25, 4.35, -0.4, 1.1, 0.85, 1.1, jitterColor(leaf, 4), { seed: 93, noise: 0.22 });
-  appendBlob(A, 0.15, 5.75, 0.3, 1.1, 0.8, 1.1, jitterColor(leaf, 5, 0.1), { seed: 94, noise: 0.2 });
-  const root = toMesh(scene, 'lumiTree', A);
+  // 葉の かたまり。**花と蕾を のせる 面**でもあるので 形は ここ 1か所で 持つ
+  // (数字を 2か所に 書くと、葉を なおしたとき 花だけ 中に とり残される)
+  const canopy: BlobShape[] = [
+    { c: [0, 4.9, 0], r: [2.0, 1.5, 2.0], seed: 91, noise: 0.18 },
+    { c: [-1.3, 4.3, 0.45], r: [1.15, 0.9, 1.15], seed: 92, noise: 0.22 },
+    { c: [1.25, 4.35, -0.4], r: [1.1, 0.85, 1.1], seed: 93, noise: 0.22 },
+    { c: [0.15, 5.75, 0.3], r: [1.1, 0.8, 1.1], seed: 94, noise: 0.2 },
+  ];
+  const leafCols = [leaf, jitterColor(leaf, 3), jitterColor(leaf, 4), jitterColor(leaf, 5, 0.1)];
+  canopy.forEach((b, i) => {
+    appendBlob(A, b.c[0], b.c[1], b.c[2], b.r[0], b.r[1], b.r[2], leafCols[i], { seed: b.seed, noise: b.noise });
+  });
+  const root = toMesh(scene, 'lumiTree', A, 'keep');
 
-  // 枝先の位置(蕾と花で共有)。「白い球の追加」に見せないため、
-  // 開花は球ではなく5弁の花びらロゼット、開花前は閉じた蕾として別メッシュで持つ。
-  const tips: [number, number, number][] = [];
+  /**
+   * 枝先の位置(蕾と花で共有)。「白い球の追加」に見せないため、
+   * 開花は球ではなく5弁の花びらロゼット、開花前は閉じた蕾として別メッシュで持つ。
+   *
+   * **葉の かたまりの 外がわの 面に のせる**(v28)。
+   * v28で 巻き順を 外向きに そろえるまでは 手前の面が 消えていたので、葉の 中に
+   * うめた 花が すけて 見えていた。巻き順を 直したとたん 14本 ぜんぶ かくれて
+   * 島の シンボルから 花が 消えた —— 教訓1「発光を 不透明な箱に 入れない」と 同じ。
+   *
+   * IslandScene.applyIslandLevel は 花を **1.2倍**・蕾を **1.05倍** に 拡大して見せる。
+   * 拡大は 木の ねもと(=このメッシュの原点)を 中心に かかるので、
+   * ここでは **見せる大きさで 面の上に くるように** その ぶんだけ 割って 置く。
+   * (メッシュ名・数・親子は そのまま = SequenceDirector の 開花演出は さわらない)
+   */
+  const FRUIT_SCALE = 1.2;
+  const BUD_SCALE = 1.05;
+  const CORE: [number, number, number] = [0, 4.9, 0]; // 葉の かたまりの まん中
+  /**
+   * 葉の 面までの きょり。花は 半径 spread の ひろがりを 持つので、
+   * **その ひろがりぶん**の レイを 打って いちばん 遠い 出口に そろえる。
+   * まん中の 1本だけ 見ると、となりの 葉の こぶに 花びらが もぐる(実測で そうなった)。
+   */
+  const canopyExit = (n: readonly number[], spread: number): number => {
+    let t = rayExit(A.pos, A.idx, CORE, n);
+    const [ex, , ez] = surfaceFrame(n);
+    const t0 = t;
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      const co = Math.cos(a) * spread, si = Math.sin(a) * spread;
+      const d = [n[0] * t0 + ex[0] * co + ez[0] * si, n[1] * t0 + ex[1] * co + ez[1] * si, n[2] * t0 + ex[2] * co + ez[2] * si];
+      t = Math.max(t, rayExit(A.pos, A.idx, CORE, d));
+    }
+    return t;
+  };
+  const tips: { n: [number, number, number]; flower: number; bud: number }[] = [];
   for (let i = 0; i < 14; i++) {
     const th = (i / 14) * Math.PI * 2;
     const rr = 1.2 + vnoise(i, 9) * 0.85;
     const fy = 4.1 + vnoise(i * 2, 5) * 1.7;
-    tips.push([Math.cos(th) * rr, fy, Math.sin(th) * rr]);
+    // 向きは 元の 枝先の 位置から とる(ならびは 変えない)。y だけ すこし 上へ ふって、
+    // 葉の 下がわに まわりこんで 見えなくなるのを ふせぐ
+    const d = [Math.cos(th) * rr, (fy - CORE[1]) * 0.85 + 0.5, Math.sin(th) * rr];
+    const L = Math.hypot(d[0], d[1], d[2]);
+    const n: [number, number, number] = [d[0] / L, d[1] / L, d[2] / L];
+    tips.push({ n, flower: canopyExit(n, 0.24), bud: canopyExit(n, 0.07) });
   }
 
-  // 花: 5枚の平たい花びら+あたたかい色の芯(上向きロゼット)
+  // 花: 5枚の平たい花びら+あたたかい色の芯(葉の面に そって ねかせたロゼット)
   const fruits = new Mesh('lumiFruits', scene);
   const F = A0();
   const petal = Color3.FromHexString('#e6f2e9');
   const heart = Color3.FromHexString('#ffe9b8');
   for (let i = 0; i < tips.length; i++) {
-    const [tx, ty, tz] = tips[i];
+    const { n, flower } = tips[i];
+    const [ex, ey, ez] = surfaceFrame(n);
+    const basis = [ex, ey, ez] as const;
+    const o = [0, 1, 2].map((k) => (CORE[k] + n[k] * (flower + 0.05)) / FRUIT_SCALE);
     const phi0 = vnoise(i, 77) * Math.PI * 2;
     for (let k = 0; k < 5; k++) {
       const phi = phi0 + (k / 5) * Math.PI * 2;
       const px = Math.cos(phi), pz = Math.sin(phi);
       appendBlob(
-        F, tx + px * 0.085, ty + 0.004, tz + pz * 0.085,
+        F,
+        o[0] + ex[0] * px * 0.085 + ey[0] * 0.004 + ez[0] * pz * 0.085,
+        o[1] + ex[1] * px * 0.085 + ey[1] * 0.004 + ez[1] * pz * 0.085,
+        o[2] + ex[2] * px * 0.085 + ey[2] * 0.004 + ez[2] * pz * 0.085,
         0.062 + Math.abs(px) * 0.05, 0.026, 0.062 + Math.abs(pz) * 0.05,
-        jitterColor(petal, i * 5 + k, 0.05), { segs: 5, noise: 0.05, seed: i * 7 + k, bottomDark: 0 }
+        jitterColor(petal, i * 5 + k, 0.05), { segs: 5, noise: 0.05, seed: i * 7 + k, bottomDark: 0, basis }
       );
     }
-    appendBlob(F, tx, ty + 0.028, tz, 0.038, 0.045, 0.038, heart, { segs: 6, noise: 0.03, seed: i, bottomDark: 0 });
+    appendBlob(
+      F, o[0] + ey[0] * 0.028, o[1] + ey[1] * 0.028, o[2] + ey[2] * 0.028,
+      0.038, 0.045, 0.038, heart, { segs: 6, noise: 0.03, seed: i, bottomDark: 0, basis }
+    );
   }
   applyArrays(fruits, F);
   fruits.material = getGlowMats(scene).mint;
@@ -1048,9 +1308,11 @@ export function makeLumiTree(scene: Scene): { root: Mesh; fruits: Mesh; buds: Me
   const buds = new Mesh('lumiBuds', scene);
   const B = A0();
   for (let i = 0; i < tips.length; i++) {
-    const [tx, ty, tz] = tips[i];
-    appendBlob(B, tx, ty, tz, 0.055, 0.095, 0.055, jitterColor(Color3.FromHexString('#a9cdb6'), i, 0.08), {
-      segs: 6, noise: 0.05, seed: 40 + i, bottomDark: 0.15,
+    const { n, bud } = tips[i];
+    const basis = surfaceFrame(n) as unknown as readonly [readonly number[], readonly number[], readonly number[]];
+    const o = [0, 1, 2].map((k) => (CORE[k] + n[k] * (bud + 0.075)) / BUD_SCALE); // しずくの 先を 外へ 向ける
+    appendBlob(B, o[0], o[1], o[2], 0.055, 0.095, 0.055, jitterColor(Color3.FromHexString('#a9cdb6'), i, 0.08), {
+      segs: 6, noise: 0.05, seed: 40 + i, bottomDark: 0.15, basis,
     });
   }
   applyArrays(buds, B);

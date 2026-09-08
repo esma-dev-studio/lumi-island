@@ -43,10 +43,31 @@ describe('池の水面メッシュ(見た目)が実水域に合っている', ()
     expect(bad.map((v) => `(${v.x.toFixed(1)},${v.z.toFixed(1)}) a=${v.alpha.toFixed(2)}`)).toEqual([]);
   });
 
-  it('本物の水の上は これまでどおりの濃さで描く(0.7以上)', () => {
+  // v28: 濃さを「一定」から「岸で薄く・中ほどで濃い」に変えた。
+  //   岸ぎわ 0.64(実効 0.86×0.64 = 0.55)→ 深場 1.0(実効 0.86)。
+  //   岸で下の砂・泥が透けることが「池が板に見えない」ことの本体なので、
+  //   ここは「どこでも0.7以上」ではなく **profile(岸<中ほど)** を固定する。
+  //   水がある所を必ず描く/陸には描かない、という約束は下のテストのまま。
+  const POND_A_SHORE = 0.64;
+  it('本物の水の上は「岸で薄く・中ほどで濃い」で描く(いちばん薄いところでも0.64)', () => {
     const wet = surfaceVertices().filter((v) => v.ground < POND.waterY - 0.01);
     expect(wet.length).toBeGreaterThan(200); // 池の水はちゃんと広い
-    expect(wet.filter((v) => v.alpha < 0.7)).toEqual([]);
+    expect(wet.filter((v) => v.alpha < POND_A_SHORE - 1e-3)).toEqual([]);
+    // 岸線の内がわ4割より中は ほぼ満濃度、岸線ちかくは はっきり薄い(=透ける)
+    const uOf = (v: { x: number; z: number }): number =>
+      Math.hypot(v.x - POND.x, v.z - POND.z) /
+      pondShoreR(Math.atan2(v.z - POND.z, v.x - POND.x));
+    const inner = wet.filter((v) => uOf(v) < 0.4);
+    const rim = wet.filter((v) => uOf(v) > 0.92);
+    expect(inner.length).toBeGreaterThan(20);
+    expect(rim.length).toBeGreaterThan(20);
+    const avg = (a: { alpha: number }[]): number => a.reduce((s, v) => s + v.alpha, 0) / a.length;
+    // まん中は ほぼ満濃度。ただし北〜東の泥の岸ぎわは 中ほどでも「水ぎわが近い=浅い」ので
+    // いちばん薄い1点で見ると 0.93 まで落ちる。平均で見て「まん中は濃い」を固定する
+    expect(Math.min(...inner.map((v) => v.alpha))).toBeGreaterThan(0.85);
+    expect(avg(inner)).toBeGreaterThan(0.95);
+    expect(Math.max(...rim.map((v) => v.alpha))).toBeLessThan(0.9);
+    expect(avg(inner) - avg(rim)).toBeGreaterThan(0.2);
   });
 
   it('北東(ミナモの小屋がわ)の泥の岸からは、水面がごっそり消えている', () => {
@@ -76,13 +97,22 @@ describe('池の水面メッシュ(見た目)が実水域に合っている', ()
   });
 
   it('水ぎわのぼやけの帯は「地面の高さ 水面+3cm〜+9cm」だけに出る', () => {
-    // 濃さが 0 と 満濃度 のあいだの頂点=水ぎわのぼやけ。地形のこう配は水ぎわで約0.4m/mなので
-    // この6cmの帯は、横に見ると15cmほど。格子1マス(約0.6m)より細い
+    // v28: 濃さ(頂点アルファ)は 深さのグラデーションぶんも持つようになったので、
+    // 「中途はんぱなアルファ = ぼやけの帯」では もう切り分けられない。
+    // 帯そのもの(描く濃さ pondSurfaceVisibility が 0でも1でもない所)を直接しらべる。
+    // 地形のこう配は水ぎわで約0.4m/mなので、この6cmの帯は 横に見ると15cmほど。
+    let band = 0;
     for (const v of surfaceVertices()) {
-      if (v.alpha <= 0.001 || v.alpha >= 0.71) continue;
+      const vis = pondSurfaceVisibility(v.x, v.z);
+      if (vis <= 0.001 || vis >= 0.999) continue;
+      band++;
       expect(v.ground, `(${v.x.toFixed(1)},${v.z.toFixed(1)})`).toBeGreaterThan(POND.waterY + 0.02);
       expect(v.ground).toBeLessThan(POND.waterY + 0.09);
+      // 帯の中では 描く濃さも ちゃんと中途はんぱ(=じわっと消える)になっている
+      expect(v.alpha).toBeGreaterThan(0);
+      expect(v.alpha).toBeLessThan(1);
     }
+    expect(band).toBeGreaterThan(0); // 帯そのものが存在する(消えていないことの裏づけ)
   });
 
   it('少しの重なり: 水面より3cmまで高い地面には まだ水面がかぶる(すき間を作らない)', () => {

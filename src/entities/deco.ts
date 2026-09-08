@@ -6,8 +6,12 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { Scene } from '@babylonjs/core/scene';
-import { vnoise, terrainHeight, pathDist, pondShoreR } from './terrain';
+import {
+  vnoise, terrainHeight, pathDist, pondShoreR, walkableGround,
+  insideCoveArea, coveWalkable, coveGroundY, coveLocal, onCovePier, COVE_SEA_Y,
+} from './terrain';
 import { POND, POIS, BUILDINGS } from '../data/island';
+import { GARDEN_AREA } from '../systems/GardenSystem';
 import { A0, type Arrays, appendBlob, appendBox, appendTrunk, toMesh, jitterColor, C_ROCK } from './flora';
 
 type DecoKey = 'thin' | 'wide' | 'leaf' | 'flowerA' | 'flowerB' | 'fallen' | 'pebble' | 'bush';
@@ -150,6 +154,306 @@ export function scatterDeco(scene: Scene, visible: () => boolean = () => true): 
   });
 }
 
+// ============================================================
+// v28 近景の草のじゅうたん
+//
+// 監査 B1_closeup_grass で「至近距離でも地面が無地の平面」と判定された。
+// 島じゅうにまく散布デコ(125クラスタ≒500本)は 引きの画のための密度で、
+// 足もと1〜2mには ほとんど何も無い。そこで「カメラの注視点のまわり十数mだけ」を
+// 草株で埋める、移動する じゅうたんを1枚 足す。
+//
+// 決まりごと:
+//   ・位置は**世界座標の格子ハッシュ**で決める。移動しても同じ場所に同じ草が生え、
+//     行ったり来たりしても 草が わき出したり 消えたりしない(乱数を使わない)。
+//   ・置かないところ: 道・広場・砂浜・水・池のふち・建物の足もと・お庭。
+//     判定は既存の純関数(walkableGround / pathDist / pondShoreR)を そのまま使う。
+//   ・1メッシュの thin instance なので **ドローコールは +1**。
+//   ・別空間(部屋・入り江・いちば島)では島ごと消えるので、何も足さない。
+// ============================================================
+/**
+ * じゅうたんの半径(m)。この外は 今までどおり 散布デコにまかせる。
+ * 「広く薄く」より「せまく濃く」。半径13.5m・1平方mに0.5株で試したら、
+ * 接写(B1)の足もとが すかすかのままだった(実機で確認)ので、
+ * 半径を 8.6m に しぼって 1平方mあたり約1.1株にしてある。
+ */
+const NEAR_R = 8.6;
+/** 格子の間隔(m)。1マスに多くて1株 */
+const NEAR_CELL = 0.82;
+/** 置くマスの割合(ハッシュのしきい値)。1にすると 等間隔の畑に見える */
+const NEAR_FILL = 0.74;
+/** インスタンスの上限。風のゆれも この数だけ回る */
+const NEAR_MAX = 280;
+/** 注視点がこれだけ動いたら まき直す(m) */
+const NEAR_MOVE = 1.1;
+/** まき直しの上限(Hz)。走っていても これ以上は まき直さない */
+const NEAR_HZ = 6;
+/** ふちのフェード幅(m)。外へ行くほど背を低くして「四角く生えそろった縁」を出さない */
+const NEAR_FADE = 2.4;
+
+interface NearInst {
+  x: number;
+  y: number;
+  z: number;
+  s: number;
+  sy: number;
+  rotY: number;
+  phase: number;
+}
+
+export interface NearGrass {
+  mesh: Mesh;
+  /** 注視点についていく(毎フレーム。中身は移動量とHzで間引かれる) */
+  follow: (dtSec: number) => void;
+  /** 風のゆれ(12Hzの間引きの中から呼ばれる) */
+  sway: (t: number) => void;
+  /** 検証・撮影ハーネス用(読むだけで副作用はない) */
+  shown: { count: number; cx: number; cz: number };
+}
+
+/** 格子1マスぶんの決定論ハッシュ(vnoise は整数点では格子の値そのものを返す) */
+const cellHash = (ix: number, iz: number, k: number): number => vnoise(ix + k * 131, iz + k * 977);
+
+/**
+ * 入り江(別空間)で草を置いてよい高さの下限(海面から)。
+ * 入り江の地面は 海面+1.42m まで上がる(terrain.ts COVE_RISE)。
+ * 下のほうは 波うちぎわの砂なので、上がりきった「ほしくさの野原」だけに敷く。
+ */
+const NEAR_COVE_MIN = 0.95;
+/** 入り江で草を置かない場所(入り江ローカル座標): こわれた灯台の丘 */
+const NEAR_COVE_SKIP = { lx: -6.9, lz: -3.2, r: 4.4 };
+
+/**
+ * その1点に近景の草を置いてよいか。置いてよければ 根もとの高さ、だめなら null。
+ *
+ * **見た目だけ**の規則で、歩ける・水・釣れるの判定はいっさい動かさない
+ * (既存の純関数 walkableGround / pathDist / pondShoreR / coveWalkable を読むだけ)。
+ * 島と入り江(別空間)で見る関数を切りかえるのは、屋内・入り江の接地高さを
+ * IslandScene.groundY が切りかえているのと まったく同じ流儀。
+ */
+export function nearGrassGroundY(x: number, z: number): number | null {
+  // ---- 入り江(第2章の舞台。cove.ts は別のエージェントのものなので、
+  //      こちらは terrain.ts の純関数だけを見て 草を敷く) ----
+  if (insideCoveArea(x, z)) {
+    if (onCovePier(x, z)) return null; // 桟橋の板の上
+    if (!coveWalkable(x, z)) return null;
+    const y = coveGroundY(x, z);
+    if (y === null || y < COVE_SEA_Y + NEAR_COVE_MIN) return null; // 波うちぎわの砂
+    const { lx, lz } = coveLocal(x, z);
+    if (Math.hypot(lx - NEAR_COVE_SKIP.lx, lz - NEAR_COVE_SKIP.lz) < NEAR_COVE_SKIP.r) return null;
+    return y;
+  }
+  // ---- 島 ----
+  if (Math.hypot(x, z + 1) < 11.5) return null; // 広場は開けておく(散布デコと同じ半径)
+  if (x > GARDEN_AREA.minX - 1 && x < GARDEN_AREA.maxX + 1 &&
+      z > GARDEN_AREA.minZ - 1 && z < GARDEN_AREA.maxZ + 1) return null; // お庭(畑)
+  const pdx = x - POND.x, pdz = z - POND.z;
+  const pdist = Math.hypot(pdx, pdz);
+  if (pdist < 16 && pdist < pondShoreR(Math.atan2(pdz, pdx)) + 1.4) return null; // 池と泥の岸
+  const h = terrainHeight(x, z);
+  // 草の色になる高さ(terrainColor は 0.62 から上が草)より さらに上だけ。
+  // 砂浜・濡れた砂・岩の高台には生やさない
+  if (h < 0.82 || h > 3.4) return null;
+  if (pathDist(x, z) < 2.2) return null; // 道の上と そのふち
+  for (const b of BUILDINGS) {
+    const pp = POIS[b.id];
+    if (Math.hypot(x - pp.x, z - pp.z) < Math.max(b.w, b.d) * 0.85) return null;
+  }
+  if (!walkableGround(x, z)) return null; // 「立てるところ」= 歩ける地面の規則をそのまま借りる
+  return h;
+}
+
+/** nearGrassGroundY の真偽版(テストと読みやすさのため) */
+export function nearGrassAllowed(x: number, z: number): boolean {
+  return nearGrassGroundY(x, z) !== null;
+}
+
+/** 注視点(cx,cz)のまわりに敷く草の一覧。世界座標の格子ハッシュなので何度呼んでも同じ */
+export function nearGrassLayout(cx: number, cz: number): NearInst[] {
+  const out: NearInst[] = [];
+  const c0x = Math.floor((cx - NEAR_R) / NEAR_CELL);
+  const c1x = Math.floor((cx + NEAR_R) / NEAR_CELL);
+  const c0z = Math.floor((cz - NEAR_R) / NEAR_CELL);
+  const c1z = Math.floor((cz + NEAR_R) / NEAR_CELL);
+  for (let iz = c0z; iz <= c1z; iz++) {
+    for (let ix = c0x; ix <= c1x; ix++) {
+      const hk = cellHash(ix, iz, 1);
+      if (hk > NEAR_FILL) continue;
+      const jx = (cellHash(ix, iz, 2) - 0.5) * 0.92;
+      const jz = (cellHash(ix, iz, 3) - 0.5) * 0.92;
+      const x = (ix + 0.5 + jx) * NEAR_CELL;
+      const z = (iz + 0.5 + jz) * NEAR_CELL;
+      const d = Math.hypot(x - cx, z - cz);
+      if (d > NEAR_R) continue;
+      const gy = nearGrassGroundY(x, z);
+      if (gy === null) continue;
+      // ふちほど低く(1本ずつ背が変わるので「刈りそろえた縁」に見えない)
+      const fade = Math.min(1, Math.max(0, (NEAR_R - d) / NEAR_FADE));
+      const edge = fade * fade * (3 - 2 * fade);
+      const s = 0.55 + cellHash(ix, iz, 4) * 0.62;
+      out.push({
+        x,
+        y: gy - 0.05, // 地面メッシュ(1.15m格子)の折れ面に埋める
+        z,
+        s,
+        sy: s * (0.7 + cellHash(ix, iz, 5) * 0.5) * (0.42 + edge * 0.58),
+        rotY: cellHash(ix, iz, 6) * Math.PI * 2,
+        phase: cellHash(ix, iz, 7) * 6.28,
+      });
+    }
+  }
+  if (out.length > NEAR_MAX) {
+    // あふれたら 遠いものから捨てる(足もとの密度を最優先にする)
+    out.sort((a, b) => (a.x - cx) ** 2 + (a.z - cz) ** 2 - ((b.x - cx) ** 2 + (b.z - cz) ** 2));
+    out.length = NEAR_MAX;
+  }
+  return out;
+}
+
+/** カメラの注視点(見ているところ)。追従カメラではプレイヤーの足もとになる */
+function camFocus(scene: Scene): { x: number; z: number } | null {
+  const cam = scene.activeCamera as { getTarget?: () => { x: number; z: number }; position?: { x: number; z: number } } | null;
+  if (!cam) return null;
+  const t = typeof cam.getTarget === 'function' ? cam.getTarget() : null;
+  if (t && Number.isFinite(t.x) && Number.isFinite(t.z)) return { x: t.x, z: t.z };
+  return cam.position ? { x: cam.position.x, z: cam.position.z } : null;
+}
+
+/**
+ * 近景の草のじゅうたんを作り、毎フレームの世話(まき直しと風のゆれ)まで登録する。
+ *
+ * **IslandScene は これを「島の見た目を丸ごと消す対象(islandMeshes)」の
+ * スナップショットより あとで呼ぶ**。空(sky)と同じ理由で、島でも入り江でも
+ * 同じように 足もとに草が生えていてほしいから。
+ * 部屋・NPCの家・いちば島・でんしゃの中では、その座標に「置いてよい所」が1つも無いので
+ * 敷く数が0になり、メッシュは自分で消える(状態を別に覚えなくてよい)。
+ */
+export function buildNearGrass(scene: Scene): NearGrass {
+  const mesh = makeNearGrassSource(scene);
+  mesh.isPickable = false;
+  mesh.setEnabled(false);
+  // 中身が毎回動くので、外わく(BoundingInfo)は当てにしない=視錐台カリングにかけない。
+  // 教訓4「毎フレーム動くメッシュは 外わくが作成時のままだと 作ったのに見えない」の
+  // いちばん安いかわし方。1メッシュなので カリングを省く損はない
+  mesh.alwaysSelectAsActiveMesh = true;
+  // 行列の入れものは **1回だけ** 作って、以後はこの配列に書きこむだけにする。
+  // まき直しのたびに thinInstanceSetBuffer を呼ぶと、そのつどGPUのバッファを取りなおす
+  // (走っていると 毎秒6回)。容量は上限ぶん確保しておき、実際に描く数は thinInstanceCount で絞る。
+  const buf = new Float32Array(NEAR_MAX * 16);
+  mesh.thinInstanceSetBuffer('matrix', buf, 16, false);
+  mesh.thinInstanceCount = 0;
+  const q = new Quaternion();
+  const mtx = new Matrix();
+  const scale = new Vector3(1, 1, 1);
+  const pos = new Vector3(0, 0, 0);
+  let list: NearInst[] = [];
+  let cx = 1e9;
+  let cz = 1e9;
+  let acc = 1;
+  const shown = { count: 0, cx: 0, cz: 0 };
+
+  const put = (i: number, lean: number): void => {
+    const g = list[i];
+    scale.set(g.s, g.sy, g.s);
+    pos.set(g.x, g.y, g.z);
+    Quaternion.RotationYawPitchRollToRef(g.rotY, 0, lean, q);
+    Matrix.ComposeToRef(scale, q, pos, mtx);
+    mtx.copyToArray(buf, i * 16);
+  };
+
+  const rescatter = (fx: number, fz: number): void => {
+    list = nearGrassLayout(fx, fz);
+    cx = fx;
+    cz = fz;
+    shown.count = list.length;
+    shown.cx = Math.round(fx * 10) / 10;
+    shown.cz = Math.round(fz * 10) / 10;
+    if (!list.length) {
+      mesh.setEnabled(false);
+      return;
+    }
+    for (let i = 0; i < list.length; i++) put(i, 0);
+    // 使わないぶんは 0行列(つぶれた三角形)にしておく。実際に描く数は thinInstanceCount で絞る
+    buf.fill(0, list.length * 16);
+    mesh.thinInstanceBufferUpdated('matrix');
+    mesh.thinInstanceCount = list.length;
+    mesh.setEnabled(true);
+  };
+
+  const near: NearGrass = {
+    mesh,
+    shown,
+    follow(dtSec: number): void {
+      acc += dtSec;
+      if (acc < 1 / NEAR_HZ) return;
+      const f = camFocus(scene);
+      if (!f) return;
+      if (Math.hypot(f.x - cx, f.z - cz) < NEAR_MOVE) return;
+      acc = 0;
+      rescatter(f.x, f.z);
+    },
+    sway(t: number): void {
+      if (!list.length || !mesh.isEnabled(false)) return;
+      // buf は thinInstanceSetBuffer で Babylon に渡した「その配列そのもの」なので、
+      // 書きこんでから updated を1回呼べば足りる(既存の風のゆれと同じやり方)
+      for (let i = 0; i < list.length; i++) put(i, Math.sin(t * 1.5 + list[i].phase) * 0.042);
+      mesh.thinInstanceBufferUpdated('matrix');
+    },
+  };
+
+  // 毎フレームの世話。「まき直し」は毎フレーム見る(間引きの中に入れると、走っているあいだ
+  // じゅうたんが ついてこず 足もとに空白が出る)。中身は移動量と NEAR_HZ で間引かれる。
+  // 風のゆれは 散布デコと同じ12Hz。
+  let swayAcc = 0;
+  let swayT = 0;
+  scene.onBeforeRenderObservable.add(() => {
+    const dt = scene.getEngine().getDeltaTime() / 1000;
+    near.follow(dt);
+    swayAcc += dt;
+    swayT += dt;
+    if (swayAcc < 1 / 12) return;
+    swayAcc = 0;
+    near.sway(swayT);
+  });
+  return near;
+}
+
+/**
+ * 近景の草の株(薄板を4枚 十字ぎみに交差)。散布デコの thin より背が低く・葉が多い。
+ * 色は既存の草(#8fbf72)より ほんの少し黄みへ寄せて、株の見わけがつくようにする。
+ */
+function makeNearGrassSource(scene: Scene): Mesh {
+  const A = A0();
+  const g1 = Color3.FromHexString('#93bf6d');
+  // 葉は7枚。**細く**する(半幅1.4〜2cm)——太いと 至近距離で「緑の板きれ」に見える。
+  // 実機の B1 接写で 半幅4.5cm を試して やりすぎだったので この値にした
+  for (let i = 0; i < 7; i++) {
+    const th = (i / 7) * Math.PI + 0.17;
+    const base = A.pos.length / 3;
+    const w = 0.022 + (i % 3) * 0.006;
+    const hh = 0.16 + (i % 3) * 0.05;
+    const lean = ((i % 3) - 1) * 0.075;
+    const leanZ = ((i % 2) - 0.5) * 0.09;
+    const dx = Math.cos(th), dz = Math.sin(th);
+    const ox = (vnoise(i * 5 + 3, 11) - 0.5) * 0.11;
+    const oz = (vnoise(11, i * 5 + 3) - 0.5) * 0.11;
+    A.pos.push(
+      ox - dx * w, 0, oz - dz * w,
+      ox + dx * w, 0, oz + dz * w,
+      ox - dx * w * 0.28 + lean, hh, oz - dz * w * 0.28 + leanZ,
+      ox + dx * w * 0.28 + lean, hh, oz + dz * w * 0.28 + leanZ
+    );
+    const c = jitterColor(g1, i + 5, 0.17);
+    for (let k = 0; k < 4; k++) {
+      A.col.push(c.r * (k < 2 ? 0.74 : 1.1), c.g * (k < 2 ? 0.78 : 1.1), c.b * (k < 2 ? 0.74 : 1.1), 1);
+    }
+    A.idx.push(base, base + 1, base + 2, base + 1, base + 3, base + 2);
+  }
+  // 薄板だけなので巻き順の向きは 'keep'(既存の草の株 makeThinGrassSource と同じ)
+  const mesh = toMesh(scene, 'decoNearGrass', A, 'keep');
+  mesh.material = getDecoMat(scene);
+  return mesh;
+}
+
 // 草・花・落ち葉は薄板なので両面ライティングの専用マテリアルを使う
 let decoMat: StandardMaterial | null = null;
 function getDecoMat(scene: Scene): StandardMaterial {
@@ -177,7 +481,7 @@ function makeGrassTuftSource(scene: Scene): Mesh {
     for (let k = 0; k < 4; k++) A.col.push(c.r * (k < 2 ? 0.8 : 1.06), c.g * (k < 2 ? 0.82 : 1.06), c.b * (k < 2 ? 0.8 : 1.06), 1);
     A.idx.push(base, base + 1, base + 2, base + 1, base + 3, base + 2);
   }
-  const mesh = toMesh(scene, 'tuftSrc', A);
+  const mesh = toMesh(scene, 'tuftSrc', A, 'keep');
   mesh.material = getDecoMat(scene);
   return mesh;
 }
@@ -200,7 +504,7 @@ function makeThinGrassSource(scene: Scene): Mesh {
     for (let k = 0; k < 4; k++) A.col.push(c.r * (k < 2 ? 0.82 : 1.08), c.g * (k < 2 ? 0.85 : 1.08), c.b * (k < 2 ? 0.82 : 1.08), 1);
     A.idx.push(base, base + 1, base + 2, base + 1, base + 3, base + 2);
   }
-  const mesh = toMesh(scene, 'thinSrc', A);
+  const mesh = toMesh(scene, 'thinSrc', A, 'keep');
   mesh.material = getDecoMat(scene);
   return mesh;
 }
@@ -211,7 +515,7 @@ function makeLeafClumpSource(scene: Scene): Mesh {
   const c = Color3.FromHexString('#6f9a58');
   appendBlob(A, 0, 0.14, 0, 0.3, 0.16, 0.28, jitterColor(c, 2), { segs: 6, noise: 0.22, bottomDark: 0.28 });
   appendBlob(A, 0.22, 0.1, 0.12, 0.18, 0.11, 0.17, jitterColor(c, 5, 0.12), { segs: 5, noise: 0.24, bottomDark: 0.28 });
-  return toMesh(scene, 'leafSrc', A);
+  return toMesh(scene, 'leafSrc', A, 'keep');
 }
 
 // 花(色ちがい2種を用意する)
@@ -223,7 +527,7 @@ function makeFlowerSource(scene: Scene, headHex: string): Mesh {
   for (let k = 0; k < 4; k++) A.col.push(stem.r, stem.g, stem.b, 1);
   A.idx.push(base, base + 1, base + 2, base + 1, base + 3, base + 2);
   appendBlob(A, 0, 0.38, 0, 0.07, 0.05, 0.07, Color3.FromHexString(headHex), { segs: 5, noise: 0.06, bottomDark: 0.1 });
-  const mesh = toMesh(scene, `flowerSrc_${headHex.slice(1)}`, A);
+  const mesh = toMesh(scene, `flowerSrc_${headHex.slice(1)}`, A, 'keep');
   mesh.material = getDecoMat(scene);
   return mesh;
 }
@@ -247,7 +551,7 @@ function makeFallenLeafSource(scene: Scene): Mesh {
     for (let k = 0; k < 4; k++) A.col.push(c.r, c.g, c.b, 1);
     A.idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
   }
-  const mesh = toMesh(scene, 'fallenSrc', A);
+  const mesh = toMesh(scene, 'fallenSrc', A, 'keep');
   mesh.material = getDecoMat(scene);
   return mesh;
 }
@@ -256,7 +560,7 @@ function makePebbleSource(scene: Scene): Mesh {
   const A = A0();
   appendBlob(A, 0, 0.05, 0, 0.11, 0.07, 0.09, C_ROCK, { segs: 5, noise: 0.25, flatBottom: true });
   appendBlob(A, 0.16, 0.035, 0.06, 0.06, 0.045, 0.055, jitterColor(C_ROCK, 4, 0.14), { segs: 5, noise: 0.25, flatBottom: true });
-  return toMesh(scene, 'pebbleSrc', A);
+  return toMesh(scene, 'pebbleSrc', A, 'keep');
 }
 
 // 低い茂み
@@ -266,7 +570,7 @@ function makeBushSource(scene: Scene): Mesh {
   appendBlob(A, 0, 0.24, 0, 0.34, 0.26, 0.32, jitterColor(c, 1), { segs: 7, noise: 0.22, bottomDark: 0.3 });
   appendBlob(A, -0.24, 0.16, 0.1, 0.2, 0.16, 0.19, jitterColor(c, 3, 0.12), { segs: 6, noise: 0.24, bottomDark: 0.3 });
   appendBlob(A, 0.22, 0.18, -0.1, 0.21, 0.17, 0.2, jitterColor(c, 6, 0.12), { segs: 6, noise: 0.24, bottomDark: 0.3 });
-  return toMesh(scene, 'bushSrc', A);
+  return toMesh(scene, 'bushSrc', A, 'keep');
 }
 
 // ============================================================
@@ -303,7 +607,7 @@ export function makeSeabird(scene: Scene, seed: number): Seabird {
   appendBlob(A, 0, 0.01, -0.3, 0.085, 0.016, 0.12, jitterColor(C_GULL_BACK, seed + 4, 0.06), {
     segs: 6, noise: 0.08, seed: seed + 4, bottomDark: 0.08,
   });
-  const root = toMesh(scene, `gull_${seed}`, A, 'flip');
+  const root = toMesh(scene, `gull_${seed}`, A, 'keep');
   root.isPickable = false;
 
   // 翼: 付け根(x=0)を軸に回すので、ローカル原点は からだの中心にそろえる
@@ -315,7 +619,7 @@ export function makeSeabird(scene: Scene, seed: number): Seabird {
     appendBlob(W, sx * 0.72, 0.012, -0.07, 0.16, 0.013, 0.075, jitterColor(C_GULL_TIP, seed + 6, 0.08), {
       segs: 6, noise: 0.08, seed: seed + 6, bottomDark: 0.05,
     });
-    const m = toMesh(scene, name, W, 'flip');
+    const m = toMesh(scene, name, W, 'keep');
     m.parent = root;
     m.isPickable = false;
     return m;
@@ -484,7 +788,7 @@ export function buildPondShore(scene: Scene): { x: number; z: number; r: number 
     }
   }
   const parts: Mesh[] = [];
-  if (Ab.pos.length) parts.push(toMesh(scene, 'pondShoreB', Ab, 'flip'));
+  if (Ab.pos.length) parts.push(toMesh(scene, 'pondShoreB', Ab, 'keep'));
   if (Ak.pos.length) parts.push(toMesh(scene, 'pondShoreK', Ak, 'keep'));
   const merged = parts.length > 1 ? Mesh.MergeMeshes(parts, true, true, undefined, false, false) : parts[0];
   if (merged) {
@@ -669,7 +973,7 @@ export function makeRockLedge(scene: Scene, seed: number, w = 1, layers = 3): Me
       segs: 8, noise: 0.22, seed: seed + i * 3, flatBottom: true, bottomDark: 0.38,
     });
   }
-  const m = toMesh(scene, `ledge_${seed}`, A);
+  const m = toMesh(scene, `ledge_${seed}`, A, 'keep');
   m.isPickable = false;
   return m;
 }
@@ -684,7 +988,7 @@ export function makeOutcrop(scene: Scene, seed: number, scale = 1): Mesh {
   appendBlob(A, 0.42 * scale, 0.26 * scale, -0.3 * scale, 0.5 * scale, 0.3 * scale, 0.44 * scale, jitterColor(c, seed + 2, 0.14), {
     segs: 7, noise: 0.3, seed: seed + 4, flatBottom: true, bottomDark: 0.34,
   });
-  const m = toMesh(scene, `outcrop_${seed}`, A);
+  const m = toMesh(scene, `outcrop_${seed}`, A, 'keep');
   m.isPickable = false;
   return m;
 }
@@ -701,29 +1005,14 @@ export function makeFlagstones(scene: Scene, seed: number, n = 7, spread = 1.4):
       segs: 6, noise: 0.2, seed: seed + i, flatBottom: true, bottomDark: 0.1,
     });
   }
-  const m = toMesh(scene, `flagstones_${seed}`, A);
+  const m = toMesh(scene, `flagstones_${seed}`, A, 'keep');
   m.isPickable = false;
   return m;
 }
 
-/**
- * appendBlobで作った形の「表と裏」をそろえる(v9で発見した見た目のバグの修正)。
- *
- * appendBlob の巻き順は内向き(外がわの面がバックフェースカリングで消える)。
- * toMesh の 'flip' が直すのは**法線だけ**なので、GPUが実際に描くのは「向こう側の内面」になる。
- * まるい形では輪郭も明るさもほぼ同じで気づけないが(教訓4「閉じた形状は裏返っていても気づけない」)、
- * 平たい形では見えているのが「下面の内がわ」= 光が当たらない面になり、上面が真っ黒に見える。
- * v9の「ほりあと」と「チョウの羽」で実害が出て、実機の接写と
- * backFaceCulling を切った比較で原因を特定した。
- *
- * indices を反転すると巻き順が外向きになり、'flip'した法線と向きがそろう。
- * ※ flora.ts の toMesh 自体は直さない(島じゅうの既存メッシュの見た目が変わってしまうため)。
- *   v9で新しく作った平たいメッシュにだけ、この関数を通す。
- */
-export function faceOutward(mesh: Mesh): Mesh {
-  mesh.flipFaces(false); // 法線はそのまま、巻き順だけ反転
-  return mesh;
-}
+// v28で faceOutward(巻き順だけ反転)は 消した。
+// appendBlob の巻き順そのものを 外向きの きまり(flora.ts の WINDING_RULE)へ そろえたので、
+// メッシュを 作ったあとに 面を 裏返す 必要が なくなった。
 
 // ============================================================
 // v9 背の高い草(tallgrass): カマで かると わらがとれる採取ノード。
@@ -763,7 +1052,7 @@ export function makeTallGrassNode(scene: Scene, seed: number): Mesh {
   appendBlob(A, 0, 0.07, 0, 0.26, 0.07, 0.24, jitterColor(C_TALL, seed + 31, 0.1), {
     segs: 8, noise: 0.2, seed: seed + 31, flatBottom: true, bottomDark: 0.34,
   });
-  const m = faceOutward(toMesh(scene, `tallgrass_${seed}`, A, 'flip'));
+  const m = toMesh(scene, `tallgrass_${seed}`, A, 'keep');
   m.isPickable = false;
   return m;
 }
@@ -819,7 +1108,7 @@ export function makeDigMound(scene: Scene, seed: number): Mesh {
   appendBlob(A, -0.12, 0.135, 0.08, 0.17, 0.02, 0.075,
     jitterColor(Color3.FromHexString('#c4a684'), seed + 51, 0.08),
     { segs: 6, noise: 0.16, seed: seed + 51, bottomDark: 0 });
-  const m = faceOutward(toMesh(scene, `digmound_${seed}`, A, 'flip'));
+  const m = toMesh(scene, `digmound_${seed}`, A, 'keep');
   m.isPickable = false;
   return m;
 }

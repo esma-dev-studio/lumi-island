@@ -1,9 +1,11 @@
 // プレイヤー操作: WASD/矢印移動・Shift走り・加減速・地形追従・衝突・アニメ同期
 import type { CharacterView } from '../characters/CharacterView';
-import { sfx } from '../audio/AudioSystem';
+import { sfx, type SfxName } from '../audio/AudioSystem';
 import { onPier } from '../entities/water';
 import { terrainHeight } from '../entities/terrain';
 import { followCameraYaw } from '../scenes/CameraController';
+import { insideHomeFloor } from '../scenes/HomeInterior';
+import { insideNpcHomeFloor } from '../scenes/NpcInteriors';
 import type { IslandScene } from '../scenes/IslandScene';
 
 export interface InputState {
@@ -37,6 +39,25 @@ export const BOXED_PROBE = 0.34;
 
 /** そこに立てるか(歩ける+コライダーに押し出されない)を返す関数 */
 export type CanStand = (x: number, z: number) => boolean;
+
+/** 砂浜と草地の さかいめの高さ(m)。これより低ければ 砂を踏んでいる */
+export const SAND_HEIGHT = 0.62;
+
+/**
+ * その足もとの 地面の音(純関数)。
+ *
+ * 室内(マイホーム・よその家)は **別空間の純関数** insideHomeFloor /
+ * insideNpcHomeFloor を そのまま見る。座標のマジックナンバーで判定しないので、
+ * 部屋を広げても(段階つきの拡張)・よその家を足しても ここは直さなくてよい。
+ * v27 まで室内の判定が無く、板の間で「砂浜の足音」が鳴っていた
+ * (室内は 世界の遠くへ ずらして置いてあり、そこの地形の高さが 海面下だったため)。
+ */
+export function footstepFor(x: number, z: number): SfxName {
+  if (insideHomeFloor(x, z) || insideNpcHomeFloor(x, z)) return 'step_indoor';
+  if (onPier(x, z)) return 'step_wood';
+  if (terrainHeight(x, z) < SAND_HEIGHT) return 'step_sand';
+  return 'step_grass';
+}
 
 /**
  * 四方(8方向)どこへも出られない=完全に囲まれているか。
@@ -333,9 +354,7 @@ export class PlayerController {
       this.stepAcc += this.speed * dt;
       if (this.stepAcc > 0.85) {
         this.stepAcc = 0;
-        if (onPier(this.x, this.z)) sfx('step_wood');
-        else if (terrainHeight(this.x, this.z) < 0.62) sfx('step_sand');
-        else sfx('step_grass');
+        sfx(footstepFor(this.x, this.z));
       }
     }
     this.apply();

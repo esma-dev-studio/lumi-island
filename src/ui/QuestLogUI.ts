@@ -9,6 +9,7 @@ import { QUESTS } from '../data/quests';
 import { FRIEND_BEST, HEART_MAX, friendshipHearts, friendshipText, metNpcs } from '../systems/GiftSystem';
 import { icon } from './icons';
 import { byInput } from './inputMode';
+import { attachPanelScrollCue } from './panelScroll';
 import { sfx } from '../audio/AudioSystem';
 
 export class QuestLogUI {
@@ -22,6 +23,8 @@ export class QuestLogUI {
     this.el = document.createElement('div');
     this.el.className = 'panel quest-panel hidden';
     document.getElementById('ui-root')!.appendChild(this.el);
+    // おねがい+きょうの おてつだい+なかよし度で 画面ぎりぎりまで のびる。下に まだ あることを 帯で見せる
+    attachPanelScrollCue(this.el);
   }
 
   toggle(): void {

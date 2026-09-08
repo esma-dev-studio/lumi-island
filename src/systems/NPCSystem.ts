@@ -18,6 +18,9 @@ import { displayContents } from '../game/GameState';
 import { questFor } from './QuestSystem';
 import type { IslandScene } from '../scenes/IslandScene';
 import { vnoise } from '../entities/terrain';
+import { npcFootstep } from '../audio/AudioSystem';
+import { MIX } from '../audio/mix';
+import { footstepFor } from './PlayerController';
 import { findDryStand, waterClearance, SHORE_CLEAR } from '../scenes/DialogueCameraPlanner';
 
 // ---------------------------------------------------------------------------
@@ -190,6 +193,8 @@ interface NpcRuntime {
   subTimer: number;
   workTimer: number;
   stuck: number;
+  /** 足音の歩幅つみあげ(m)。実際に進んだぶんだけ たまる */
+  stepAcc: number;
 }
 
 const WALK_SPEED_MULT = 0.85;
@@ -328,7 +333,7 @@ export class NPCSystem {
       x: home.x, z: home.z, y: this.island.groundY(home.x, home.z),
       rotY: home.rotY ?? 0,
       hidden: false, talking: false, reactT: 0, entry: null,
-      subTarget: null, subTimer: 2, workTimer: 1, stuck: 0,
+      subTarget: null, subTimer: 2, workTimer: 1, stuck: 0, stepAcc: 0,
     };
     view.play('idle');
     this.apply(rt);
@@ -493,7 +498,7 @@ export class NPCSystem {
         x: home.x, z: home.z, y: this.island.groundY(home.x, home.z),
         rotY: home.rotY ?? 0,
         hidden: false, talking: false, reactT: 0, entry: null,
-        subTarget: null, subTimer: 2, workTimer: 1, stuck: 0,
+        subTarget: null, subTimer: 2, workTimer: 1, stuck: 0, stepAcc: 0,
       };
       view.play('idle');
       this.apply(rt);
@@ -655,8 +660,18 @@ export class NPCSystem {
         // 押し返されているあいだは stuck が0のままだった = 家の角で えいえんに 足ぶみできた。
         // v16 まつりの集合で 島を横切る長い道すじができて 実際に起きた
         // (ノクトが 自分の家の角に 引っかかって 一歩も動かなかった)。
-        if (Math.hypot(rt.x - fromX, rt.z - fromZ) < sp * dt * 0.3) rt.stuck += dt;
+        const moved = Math.hypot(rt.x - fromX, rt.z - fromZ);
+        if (moved < sp * dt * 0.3) rt.stuck += dt;
         else rt.stuck = 0;
+        // 足音(実際に進んだぶんだけ たまる=押し返されているあいだは鳴らない)。
+        // 見えていない人・別の場所にいる人は鳴らさない(見た目の出しわけと同じ条件)。
+        rt.stepAcc += moved;
+        if (rt.stepAcc > MIX.npcFoot.strideM) {
+          rt.stepAcc = 0;
+          if (!rt.hidden && this.areaOf(rt) === this.area) {
+            npcFootstep(footstepFor(rt.x, rt.z), Math.hypot(rt.x - px, rt.z - pz));
+          }
+        }
         if (rt.stuck > 2.5) {
           // 完全に詰まったら目的地へワープ(見えない所で)
           rt.x = targetX;

@@ -1,0 +1,93 @@
+
+Running 89 tests using 1 worker
+
+[1/89] tests\e2e\badge.spec.ts:87:1 › バッジタブ: ぜんぶのマスが シルエット+進捗で ならぶ → 初つりで色つきに かわる
+[2/89] tests\e2e\badge.spec.ts:138:1 › さかのぼり一括: あそんであるセーブを読むと まとめてつき、トーストは1枚だけ
+[3/89] tests\e2e\badge.spec.ts:195:1 › ごほうび限定の3点: じっせきを たっせいすると とどき、家に おける
+[4/89] tests\e2e\bottle.spec.ts:74:1 › メッセージボトル: 浜でひろう → 手紙が ひらく → ずかんに のこる
+[5/89] tests\e2e\bottle.spec.ts:136:1 › じっせきの ごほうび: 達成でとどく / 達成ずみのセーブには さかのぼってとどく
+[6/89] tests\e2e\chapter2.spec.ts:99:1 › ふねの修理: 500ルミナを ためて わたす → 桟橋の小舟に のれるようになる
+[7/89] tests\e2e\chapter2.spec.ts:141:1 › 入り江でロカに出会い、レンズを作って とうだいを ともす
+[8/89] tests\e2e\chapter2.spec.ts:265:1 › 誘導のエリアまたぎ: 場所がちがえば ふねの のりばへ案内する
+[9/89] tests\e2e\chapter3.spec.ts:96:1 › 第3章: えきを たのむ → できる → でんしゃで いちば島 → 買いもの → 依頼 → かえる → セーブ復元
+[10/89] tests\e2e\chapter3.spec.ts:214:1 › 第3章: いちば島で 保存したセーブは いちば島から 始まり、いつでも 帰れる
+[11/89] tests\e2e\combo.spec.ts:84:1 › くみあわせ: はずれても減らない → 当てて発見 → 作って たべると 効果が出る
+[12/89] tests\e2e\combo.spec.ts:161:1 › いろみず: くみあわせで見つけて、おいてある家具の色を かえる(セーブでのこる)
+[13/89] tests\e2e\daily.spec.ts:81:1 › 朝の「きょうの島」カード: 出る → Eで閉じる → その日はもう出ない
+[14/89] tests\e2e\daily.spec.ts:121:1 › でんごんばん: 見る → 素材を集めて とどける → ごほうびと チェックマーク
+[15/89] tests\e2e\dialogue_camera.spec.ts:33:3 › 会話カメラ: tsumugi(向き合い・遮蔽なし・カメラが建物外)
+[16/89] tests\e2e\dialogue_camera.spec.ts:33:3 › 会話カメラ: minamo(向き合い・遮蔽なし・カメラが建物外)
+[17/89] tests\e2e\dialogue_camera.spec.ts:33:3 › 会話カメラ: nokto(向き合い・遮蔽なし・カメラが建物外)
+[18/89] tests\e2e\dialogue_click.spec.ts:158:1 › ねたあと・あめの日でも、会話の選択ボタンを実マウスで押せる
+[19/89] tests\e2e\dialogue_click.spec.ts:188:1 › 会話ボックスの上に、クリックを吸う要素が1つものっていない
+[20/89] tests\e2e\dialogue_click.spec.ts:230:1 › 数字キー(1・2)でも会話の選択ボタンをえらべる(クリックの保険)
+[21/89] tests\e2e\display_big.spec.ts:89:1 › おおきな すいそうを お庭に置く → 魚6ぴき → セーブ/ロードで6ぴきとも およいでいる
+[22/89] tests\e2e\display_big.spec.ts:187:1 › v12までのセーブ(content=1匹)を読むと contents に移り、中身が消えない
+[23/89] tests\e2e\festival.spec.ts:94:1 › 7日めの朝: かざりが出て、カードが まつりを知らせる
+[24/89] tests\e2e\festival.spec.ts:107:1 › 6日めの朝: 前日の予告が出る
+[25/89] tests\e2e\festival.spec.ts:115:1 › ゆうがた: みんなが集まり、ランタンをもらって とばすと 記録がのこる
+[26/89] tests\e2e\festival.spec.ts:171:1 › 翌朝: かざりも E候補も 片づいている
+[27/89] tests\e2e\fishing.spec.ts:25:1 › 夜に釣ったヨルサカナでも釣り依頼が達成になる
+[28/89] tests\e2e\fishing.spec.ts:51:1 › 釣った直後にEを3連打しても2匹目が始まらない
+[29/89] tests\e2e\game.spec.ts:25:1 › タイトルから新規開始できる
+[30/89] tests\e2e\game.spec.ts:35:1 › プレイヤーが移動できる(WASD)
+[31/89] tests\e2e\game.spec.ts:58:1 › 採取: 木をきって木材を得る(ノードは枯れて非表示化)
+[32/89] tests\e2e\game.spec.ts:70:1 › クラフト: 材料からカマを作る(UI操作)
+[33/89] tests\e2e\game.spec.ts:82:1 › 家具配置→リロードで復元される
+[34/89] tests\e2e\game.spec.ts:100:1 › NPC会話と依頼の受注
+[35/89] tests\e2e\game.spec.ts:121:1 › ポーズ中はゲーム内時間が止まる
+[36/89] tests\e2e\game.spec.ts:146:1 › 釣り: 桟橋でサカナがつれる
+[37/89] tests\e2e\home_expand2.spec.ts:120:1 › ツムギの ふだんの会話が、こうじのことを かならず教える
+[38/89] tests\e2e\home_expand2.spec.ts:161:1 › 800ルミナの2回目のこうじで部屋がさらに広がり、家具もセーブも保たれる
+[39/89] tests\e2e\home_pack.spec.ts:98:1 › 「?」行 → 条件を やると 本物のレシピに かわる(おおきな むしかご)
+[40/89] tests\e2e\home_pack.spec.ts:161:1 › 新しい家具を 置くと ずかんの「すてき度」が 上がる
+[41/89] tests\e2e\hotfix_v111.spec.ts:76:1 › 依頼のとちゅう(q2_shell受注中)でも 入り江 ⇄ 島 を往復できる
+[42/89] tests\e2e\hotfix_v111.spec.ts:141:1 › 報告に行くとちゅうでも 採取・拾いもの・ほりあと が使える(釣りと店は出ない)
+[43/89] tests\e2e\lifelike_v21.spec.ts:42:1 › なかよし度10のミナモに話しかけると「ふたりの じかん」が1回だけ起きる
+[44/89] tests\e2e\lifelike_v21.spec.ts:101:1 › さんばしで20ひき つった人は ぬしを つりあげられる(タイミング押し3回)
+[45/89] tests\e2e\lifelike_v21.spec.ts:143:1 › ぬしは 押しごろの まえに 押すと にげる。フラグは 立たないので 何度でも やりなおせる
+[46/89] tests\e2e\lifelike_v21.spec.ts:172:1 › よるの入り江でも 釣りができる。ただし ふねの のりばが かならず 勝つ(島へ帰れなくならない)
+[47/89] tests\e2e\lifelike_v21.spec.ts:205:1 › 立ち話は 会話ボックスを ひらかず、話しかけると ふつうの会話が 勝つ
+[48/89] tests\e2e\lifelike_v24.spec.ts:75:1 › 置いた家具を Rで うごかして 置き直す → セーブに のこる
+[49/89] tests\e2e\lifelike_v24.spec.ts:127:1 › Pで しゃしんを とる → アルバムに のこる → しゃしんたてに かざる
+[50/89] tests\e2e\lifelike_v24.spec.ts:199:1 › ふくを そめる → セーブ/ロードで のこる → NPCが 1回だけ 気づく
+[51/89] tests\e2e\lifelike_v24.spec.ts:256:1 › ゆきの日: 白い島で ゆきを3回 あつめると ゆきだるまが できる
+[52/89] tests\e2e\modal_pause.spec.ts:26:1 › 会話を開いているあいだ時刻が進まず、NPCも帰宅しない
+[53/89] tests\e2e\modal_pause.spec.ts:44:1 › クラフト画面を開いているあいだ時刻が進まない・閉じると再開する
+[54/89] tests\e2e\modal_pause.spec.ts:60:1 › 複数UIを行き来しても停止が解除されない
+[55/89] tests\e2e\modal_pause.spec.ts:80:1 › 依頼達成バナー表示中はプレイヤーが動かない
+[56/89] tests\e2e\npc_home.spec.ts:114:1 › 在宅なら おじゃまできる: 入る → 家トーク → 出る
+[57/89] tests\e2e\npc_home.spec.ts:170:1 › 留守のときは入れない(表示だけで、Eを押しても何も起きない)
+[58/89] tests\e2e\npc_home.spec.ts:185:1 › おみやげの日: なかよし度3以上なら1日1回だけ もらえる
+[59/89] tests\e2e\npc_home.spec.ts:216:1 › 家の中でセーブ → 読み直しても 同じ家の中から始まる
+[60/89] tests\e2e\npc_home.spec.ts:249:1 › 3軒それぞれに入れる(ノクトは昼・ツムギとミナモは夜)
+[61/89] tests\e2e\onboarding.spec.ts:22:1 › 新規開始→誘導どおりに歩いてツムギから最初の依頼を受ける(デバッグなし)
+[62/89] tests\e2e\plush_shelf.spec.ts:88:1 › ぬいぐるみだなに 3つ ならべる → セーブ/ロードで 3つとも のこる
+[63/89] tests\e2e\plush_shelf.spec.ts:168:1 › たなを 色ぬりしても ならべた ぬいぐるみの色は 変わらない
+[64/89] tests\e2e\save_transfer.spec.ts:66:1 › 書き出し → 別セーブ → よみこみ → まえの データに もどす
+[65/89] tests\e2e\save_transfer.spec.ts:153:1 › よみこんだデータで つづきから あそべる
+[66/89] tests\e2e\sit_emote.spec.ts:64:1 › ベンチに すわって、Eで立てる
+[67/89] tests\e2e\sit_emote.spec.ts:93:1 › すわっているときに 動かすと 立つ
+[68/89] tests\e2e\sit_emote.spec.ts:123:1 › すわっているあいだも 時間は流れる
+[69/89] tests\e2e\sit_emote.spec.ts:140:1 › Xで てをふる → もう一度で よろこぶ / 近くの人が こたえる
+[70/89] tests\e2e\sit_emote.spec.ts:173:1 › すわったままでも てをふれる(立ちあがらない)
+[71/89] tests\e2e\sit_emote.spec.ts:195:1 › おいた家具のそばでは 家具の操作(もちかえる)が すわるより 先に出る
+[72/89] tests\e2e\sleep.spec.ts:46:1 › 自宅のドアのEは「家に はいる」で、室内のベッドでだけ ねられる
+[73/89] tests\e2e\sleep.spec.ts:90:1 › ベッドでEを10回連打しても日付は1日だけ進む
+[74/89] tests\e2e\sleep.spec.ts:122:1 › 睡眠中はプレイヤーが動かず、NPCも動かない
+[75/89] tests\e2e\sleep.spec.ts:137:1 › 睡眠直後にリロードしても朝の時刻から始まる(同期後セーブ)
+[76/89] tests\e2e\sleep.spec.ts:155:1 › 睡眠途中にEscを押しても状態が壊れない(ポーズも開かない)
+[77/89] tests\e2e\sleep.spec.ts:171:1 › 室内で壁に向かって歩いても外へ抜けない(自動脱出も島へ飛ばさない)
+[78/89] tests\e2e\ui_wave_v161.spec.ts:98:3 › P0-1 タイトルの そうさほうほう: ロゴと4ボタンが 画面にのこる(720p・キーボード)
+[79/89] tests\e2e\ui_wave_v161.spec.ts:142:3 › P0-1 タイトルの せってい: 同じ形(720p)
+[80/89] tests\e2e\ui_wave_v161.spec.ts:98:3 › P0-1 タイトルの そうさほうほう: ロゴと4ボタンが 画面にのこる(1024x768・キーボード)
+[81/89] tests\e2e\ui_wave_v161.spec.ts:142:3 › P0-1 タイトルの せってい: 同じ形(1024x768)
+[82/89] tests\e2e\ui_wave_v161.spec.ts:165:1 › P0-1 タッチのときも ロゴと4ボタンが のこる(そうさほうほう・タッチ版)
+[83/89] tests\e2e\ui_wave_v161.spec.ts:189:1 › P0-1 ポーズメニューの そうさほうほうも パネルの中だけ 流れる
+[84/89] tests\e2e\ui_wave_v161.spec.ts:226:1 › P0-2 ずかん: 3列とも 枠の中・個数が 読める・横スクロールなし
+[85/89] tests\e2e\ui_wave_v161.spec.ts:317:1 › P0-3 3レーン: 小物=右下 / お祝い=中央上 / 左上は 目標カード専用
+[86/89] tests\e2e\ui_wave_v161.spec.ts:389:1 › P1-7 はいち中の帯: ○/× が 出て、色と 高さが かわる
+[87/89] tests\e2e\world_v26.spec.ts:51:1 › 名札: 4mまで近づくと出て、会話中は消え、はなれると消える
+[88/89] tests\e2e\world_v26.spec.ts:86:1 › ほしまつり: 5人ぜんいんが 輪に立ち、輪の上では 名札を出さない
+[89/89] tests\e2e\world_v26.spec.ts:133:1 › よるの池の 光の群れ: 夜だけ 出る(メッシュ1枚・つかまえる候補は 出さない)
+  89 passed (14.4m)

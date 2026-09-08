@@ -11,7 +11,6 @@ import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { Scene } from '@babylonjs/core/scene';
 import { A0, appendBlob, appendTrunk, jitterColor, toMesh, type Arrays } from './flora';
-import { faceOutward } from './deco';
 import { terrainHeight } from './terrain';
 import { PUDDLE_SPOTS, SNAIL_SPOTS, SNOW_SPOTS, snailPose, type WeatherNow } from '../systems/WeatherSystem';
 
@@ -134,7 +133,7 @@ export function flyItem(x: number, y: number, z: number): void {
   if (!mesh) {
     const A = A0();
     appendBlob(A, 0, 0, 0, 0.09, 0.09, 0.09, Color3.FromHexString('#ffe8c0'), { segs: 5, noise: 0.05, bottomDark: 0 });
-    mesh = toMesh(scene, 'flyItem', A);
+    mesh = toMesh(scene, 'flyItem', A, 'keep');
     const m = new StandardMaterial('flyMat', scene);
     m.emissiveColor = Color3.FromHexString('#ffd9a0');
     m.diffuseColor = Color3.FromHexString('#8a6a4a');
@@ -525,7 +524,7 @@ export function snowDriftArrays(seed: number): Arrays {
  * ゆきの ふきだまり(あつめられる 白い山)。てっぺんを 平らにして「すくえそう」に見せる。
  *
  * ---- 面の向き(実機の画素で 4通り 測って 決めた。教訓1「1個目を実機で確かめる」)----
- * 出荷まえは `toMesh(..., 'flip')` だけで、**巻き順を 直しわすれていた**。
+ * 出荷まえは `toMesh(..., 'keep')` だけで、**巻き順を 直しわすれていた**。
  * appendBlob だけで 組んだ形は 巻き順が 内向きなので、表の面が 背面として カリングされ、
  * 見えていたのは「向こう側の 内面」。頂点色は 0.88/0.90/0.92 の ほぼ白なのに、
  * 昼の草地で **灰色の岩**に 見えていた(ゆきの日の 接写で 発覚)。
@@ -537,11 +536,11 @@ export function snowDriftArrays(seed: number): Arrays {
  *   'flip' + 両面描画       … 235,240,245(同じ絵。ただし 裏面も 描く ぶん 損)
  *
  * 直しかたは この島の 決まり文句どおり —— appendBlob だけの形は
- * `faceOutward(toMesh(..., 'flip'))`(bugs.ts・deco.ts と 同じ)。
+ * `toMesh(..., 'keep')`(bugs.ts・deco.ts と 同じ)。
  * 巻き順を 自分で ひっくり返さず、共通の helper に まかせる。
  */
 export function makeSnowDrift(s: Scene, seed: number): Mesh {
-  return faceOutward(toMesh(s, `snowDrift_${seed}`, snowDriftArrays(seed), 'flip'));
+  return toMesh(s, `snowDrift_${seed}`, snowDriftArrays(seed), 'keep');
 }
 
 // ---- 雨脚 ----
@@ -744,8 +743,11 @@ const C_SNAIL_BODY = Color3.FromHexString('#c9b49a');
 const C_SNAIL_SHELL = Color3.FromHexString('#9a6f3f');
 const C_SNAIL_EYE = Color3.FromHexString('#3a2e26');
 
-/** カタツムリ1匹(からだ+うずまきのから+目の柄2本)。手でひろえる小さな生きもの */
-function makeSnail(s: Scene, seed: number): Mesh {
+/**
+ * カタツムリ1匹(からだ+うずまきのから+目の柄2本)。手でひろえる小さな生きもの。
+ * export しているのは 巻き順の機械検査(tests/unit/winding_v28.test.ts)から 呼ぶため。
+ */
+export function makeSnail(s: Scene, seed: number): Mesh {
   const A = A0();
   // からだ(足): 細長いかまぼこ。底を平らにして地面に貼りつかせる
   appendBlob(A, 0, 0.032, -0.03, 0.05, 0.032, 0.15, C_SNAIL_BODY, { segs: 8, noise: 0.05, seed, flatBottom: true });
@@ -773,7 +775,7 @@ function makeSnail(s: Scene, seed: number): Mesh {
   appendTrunk(A, [[0.021, 0.07, 0.115], [0.031, 0.124, 0.152]], 0.0085, 0.006, C_SNAIL_BODY, seed + 7);
   appendBlob(A, -0.031, 0.142, 0.149, 0.013, 0.013, 0.013, C_SNAIL_EYE, { segs: 5, noise: 0, seed });
   appendBlob(A, 0.032, 0.128, 0.153, 0.012, 0.012, 0.012, C_SNAIL_EYE, { segs: 5, noise: 0, seed: seed + 2 });
-  return toMesh(s, `snail${seed}`, A);
+  return toMesh(s, `snail${seed}`, A, 'keep');
 }
 
 /**
@@ -916,7 +918,7 @@ function ensureCookMotes(): void {
   for (let i = 0; i < COOK_MOTES; i++) {
     const A = A0();
     appendBlob(A, 0, 0, 0, 0.055, 0.055, 0.055, Color3.FromHexString('#fff4d8'), { segs: 6, noise: 0.05, seed: 90 + i });
-    const mesh = toMesh(scene, `cookMote${i}`, A);
+    const mesh = toMesh(scene, `cookMote${i}`, A, 'keep');
     mesh.material = cookMoteMat;
     mesh.isPickable = false;
     mesh.setEnabled(false);
@@ -1100,16 +1102,23 @@ function ensureLanternMats(s: Scene): void {
   }
 }
 
-/** ちょうちん1つ(紙の胴+上下のふた)。近くで見ても「光の玉」にしない形にする */
-function buildLanternBody(s: Scene, i: number): Mesh {
+/**
+ * ちょうちん1つ(紙の胴+上下のふた)。近くで見ても「光の玉」にしない形にする。
+ * export しているのは 巻き順の機械検査(tests/unit/winding_v28.test.ts)から 呼ぶため。
+ */
+export function buildLanternBody(s: Scene, i: number): Mesh {
   const A = A0();
   const paper = Color3.FromHexString('#ffe7b8');
   appendBlob(A, 0, 0, 0, 0.17, 0.22, 0.17, paper, { segs: 9, noise: 0.05, seed: i * 7 + 3 });
   appendTrunk(A, [[0, 0.19, 0], [0, 0.23, 0]], 0.07, 0.045, Color3.FromHexString('#c9a05c'), i, 0);
   appendTrunk(A, [[0, -0.23, 0], [0, -0.19, 0]], 0.045, 0.07, Color3.FromHexString('#c9a05c'), i + 1, 0);
-  // ほのお(下の口の中。のぞきこむと 見える)
-  appendBlob(A, 0, -0.14, 0, 0.05, 0.06, 0.05, Color3.FromHexString('#fff6e0'), { segs: 6, noise: 0.1, seed: i });
-  const mesh = toMesh(s, `fesFly${i}`, A);
+  // ほのお。**下の口から のぞく 高さ**に 置く(v28)。
+  // v27まで y=-0.14 = 紙の たま(半径 0.22)の まん中あたりに あったので、
+  // 巻き順を 直して 手前の面が ちゃんと 出たとたん、火が まるごと 消えた
+  // (教訓1「発光オブジェクトを不透明な箱の中に入れない」そのもの)。
+  // ちょうちんは 下から 見上げる ものなので、口もとに 出すと 火が 見える
+  appendBlob(A, 0, -0.245, 0, 0.05, 0.06, 0.05, Color3.FromHexString('#fff6e0'), { segs: 6, noise: 0.1, seed: i });
+  const mesh = toMesh(s, `fesFly${i}`, A, 'keep');
   mesh.material = lanternBodyMat;
   mesh.isPickable = false;
   return mesh;

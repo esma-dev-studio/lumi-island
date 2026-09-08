@@ -30,6 +30,7 @@
 import type { GameState } from '../game/GameState';
 import { NPC_BY_ID } from '../data/npcs';
 import { questFor } from './QuestSystem';
+import { validateTextStyle } from './TextStyleCheck';
 
 /** だれが しゃべっている行か */
 export type ChatSide = 'a' | 'b';
@@ -440,9 +441,17 @@ export class ChatEventSystem {
   }
 }
 
-/** データ整合性チェック(起動時に呼ぶ) */
+/**
+ * データ整合性チェック(起動時に呼ぶ)。
+ *
+ * v17: 画面に出る日本語の読みやすさ検査(src/systems/TextStyleCheck.ts)も ここから 呼ぶ。
+ * 検査そのものは 立ち話だけでなく 依頼・あいさつ・手紙・チュートリアルまで またぐが、
+ * 起動時の検査の並び(src/scenes/GameScene.ts)は 別の担当が持っているファイルなので、
+ * **すでに その並びに入っている 会話まわりのデータ検査に 相乗り**させてある。
+ * ここを外すと 台詞の検査が 起動時に かからなくなる(ユニットテスト側は 直接よんでいる)。
+ */
 export function validateChatData(): string[] {
-  const problems: string[] = [];
+  const problems: string[] = [...validateTextStyle()];
   const seen = new Set<string>();
   for (const p of CHAT_PAIRS) {
     if (seen.has(p.id)) problems.push(`立ち話${p.id}のIDが重複`);

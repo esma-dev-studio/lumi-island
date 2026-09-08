@@ -1,0 +1,9 @@
+タイトル表示 OK
+操作前のBGM: null
+「はじめから」を (640, 337) でクリック
+ゲーム開始 OK
+歩いた距離: 3.42 m  (-3.0,6.0) → (-3.0,2.6)
+島のBGM: {"playing":true,"sounding":true,"indoor":false,"ducked":false,"hidden":false,"preset":"evening","resting":false,"switching":false,"nightIdx":1,"festival":false,"seed":815415196,"notes":19,"bpm":56,"restSec":31.85,"gain":0.21299999952316284,"cutoff":14000,"stingers":0,"lastStinger":null}
+環境音 out: 0.12660937011241913
+consoleエラー: 0件
+スモーク OK(タイトル→はじめる→歩く)

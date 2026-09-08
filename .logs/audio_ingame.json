@@ -5,21 +5,25 @@
         "level": 1,
         "gain": 0.07500000298023224,
         "targetGain": 0.075,
-        "cutoff": 2198.9267578125,
+        "cutoff": 2196.4052734375,
         "sheltered": false,
         "playing": true
       },
       "ambience": {
         "level": 0.058499999999999996,
-        "out": 0.05849999934434891,
+        "out": 0.04333903640508652,
         "sheltered": false,
+        "snow": 0,
+        "snowWind": 0,
+        "cutoff": 16000,
         "wave": 0,
-        "grass": 0.6437060236930847,
+        "grass": 0.5334005951881409,
         "forest": 0,
         "targets": {
           "wave": 0,
           "grass": 0.72,
-          "forest": 0
+          "forest": 0,
+          "snowWind": 0
         },
         "weights": {
           "wave": 0,
@@ -29,7 +33,26 @@
         "night": false,
         "festival": false
       },
-      "music": null
+      "music": {
+        "playing": true,
+        "sounding": true,
+        "indoor": false,
+        "ducked": false,
+        "hidden": false,
+        "preset": "evening",
+        "resting": false,
+        "switching": true,
+        "nightIdx": 1,
+        "festival": false,
+        "seed": 815415196,
+        "notes": 19,
+        "bpm": 56,
+        "restSec": 31.85,
+        "gain": 0,
+        "cutoff": 14000,
+        "stingers": 0,
+        "lastStinger": null
+      }
     },
     "雨・はまべ": {
       "rain": {
@@ -42,15 +65,19 @@
       },
       "ambience": {
         "level": 0.058499999999999996,
-        "out": 0.05849999934434891,
+        "out": 0.055812764912843704,
         "sheltered": false,
-        "wave": 0.39664819836616516,
-        "grass": 0.18682271242141724,
+        "snow": 0,
+        "snowWind": 0,
+        "cutoff": 16000,
+        "wave": 0.4010481536388397,
+        "grass": 0.1617218554019928,
         "forest": 0,
         "targets": {
           "wave": 0.4908708882475961,
           "grass": 0.07740538265769241,
-          "forest": 0
+          "forest": 0,
+          "snowWind": 0
         },
         "weights": {
           "wave": 0.8924925240865383,
@@ -60,7 +87,26 @@
         "night": false,
         "festival": false
       },
-      "music": null
+      "music": {
+        "playing": true,
+        "sounding": true,
+        "indoor": false,
+        "ducked": false,
+        "hidden": false,
+        "preset": "day",
+        "resting": false,
+        "switching": false,
+        "nightIdx": 1,
+        "festival": false,
+        "seed": 2126895312,
+        "notes": 17,
+        "bpm": 72,
+        "restSec": 37.86,
+        "gain": 0.1382850855588913,
+        "cutoff": 14000,
+        "stingers": 0,
+        "lastStinger": null
+      }
     },
     "雨・林": {
       "rain": {
@@ -73,15 +119,19 @@
       },
       "ambience": {
         "level": 0.058499999999999996,
-        "out": 0.05849999934434891,
+        "out": 0.05814120173454285,
         "sheltered": false,
-        "wave": 0.22523730993270874,
-        "grass": 0.07898015528917313,
-        "forest": 0.16195286810398102,
+        "snow": 0,
+        "snowWind": 0,
+        "cutoff": 16000,
+        "wave": 0.22235876321792603,
+        "grass": 0.07224592566490173,
+        "forest": 0.16572043299674988,
         "targets": {
           "wave": 0.18444587277194538,
           "grass": 0.053581389117052305,
-          "forest": 0.2006765923750984
+          "forest": 0.2006765923750984,
+          "snowWind": 0
         },
         "weights": {
           "wave": 0.33535613231262795,
@@ -91,21 +141,44 @@
         "night": false,
         "festival": false
       },
-      "music": null
+      "music": {
+        "playing": true,
+        "sounding": true,
+        "indoor": false,
+        "ducked": false,
+        "hidden": false,
+        "preset": "day",
+        "resting": false,
+        "switching": false,
+        "nightIdx": 1,
+        "festival": false,
+        "seed": 2126895312,
+        "notes": 17,
+        "bpm": 72,
+        "restSec": 37.86,
+        "gain": 0.17800000309944153,
+        "cutoff": 14000,
+        "stingers": 0,
+        "lastStinger": null
+      }
     },
     "雨・よる": {
       "rain": null,
       "ambience": {
         "level": 0.09,
-        "out": 0.08778119087219238,
+        "out": 0.0877298042178154,
         "sheltered": false,
-        "wave": 0.01586884632706642,
-        "grass": 0.6748511791229248,
-        "forest": 0.011441919021308422,
+        "snow": 0,
+        "snowWind": 0,
+        "cutoff": 16000,
+        "wave": 0.015802687034010887,
+        "grass": 0.6738786697387695,
+        "forest": 0.011839463375508785,
         "targets": {
           "wave": 0,
           "grass": 0.72,
-          "forest": 0
+          "forest": 0,
+          "snowWind": 0
         },
         "weights": {
           "wave": 0,
@@ -121,13 +194,19 @@
         "indoor": false,
         "ducked": false,
         "hidden": false,
+        "preset": "night",
+        "resting": false,
+        "switching": false,
         "nightIdx": 1,
         "festival": false,
         "seed": 1666947063,
         "notes": 42,
         "bpm": 62,
-        "gain": 0.1599999964237213,
-        "cutoff": 14000
+        "restSec": 0,
+        "gain": 0.09059455245733261,
+        "cutoff": 14000,
+        "stingers": 0,
+        "lastStinger": null
       }
     },
     "はれ・よる(ひろば)": {
@@ -136,13 +215,17 @@
         "level": 0.09,
         "out": 0.09000000357627869,
         "sheltered": false,
-        "wave": 0.0011139679700136185,
-        "grass": 0.7168525457382202,
-        "forest": 0.0007978370413184166,
+        "snow": 0,
+        "snowWind": 0,
+        "cutoff": 16000,
+        "wave": 0.001104877796024084,
+        "grass": 0.7167664766311646,
+        "forest": 0.0008277997258119285,
         "targets": {
           "wave": 0,
           "grass": 0.72,
-          "forest": 0
+          "forest": 0,
+          "snowWind": 0
         },
         "weights": {
           "wave": 0,
@@ -158,28 +241,38 @@
         "indoor": false,
         "ducked": false,
         "hidden": false,
+        "preset": "night",
+        "resting": false,
+        "switching": false,
         "nightIdx": 1,
         "festival": false,
         "seed": 1666947063,
         "notes": 42,
         "bpm": 62,
+        "restSec": 0,
         "gain": 0.1599999964237213,
-        "cutoff": 14000
+        "cutoff": 14000,
+        "stingers": 0,
+        "lastStinger": null
       }
     },
     "はれ・ひる(はまべ)": {
       "rain": null,
       "ambience": {
         "level": 0.13,
-        "out": 0.12221250683069229,
+        "out": 0.12229391187429428,
         "sheltered": false,
-        "wave": 0.395527184009552,
-        "grass": 0.2019023597240448,
+        "snow": 0,
+        "snowWind": 0,
+        "cutoff": 16000,
+        "wave": 0.3965175449848175,
+        "grass": 0.20058517158031464,
         "forest": 0,
         "targets": {
           "wave": 0.4908708882475961,
           "grass": 0.07740538265769241,
-          "forest": 0
+          "forest": 0,
+          "snowWind": 0
         },
         "weights": {
           "wave": 0.8924925240865383,
@@ -190,33 +283,43 @@
         "festival": false
       },
       "music": {
-        "playing": false,
+        "playing": true,
         "sounding": true,
         "indoor": false,
         "ducked": false,
         "hidden": false,
+        "preset": "day",
+        "resting": false,
+        "switching": false,
         "nightIdx": 1,
         "festival": false,
-        "seed": 1666947063,
-        "notes": 42,
-        "bpm": 62,
-        "gain": 0.07645930349826813,
-        "cutoff": 14000
+        "seed": 2126895312,
+        "notes": 17,
+        "bpm": 72,
+        "restSec": 37.86,
+        "gain": 0.00775165157392621,
+        "cutoff": 14000,
+        "stingers": 0,
+        "lastStinger": null
       }
     },
     "はれ・ひる(林)": {
       "rain": null,
       "ambience": {
         "level": 0.13,
-        "out": 0.1284872144460678,
+        "out": 0.12851233780384064,
         "sheltered": false,
-        "wave": 0.2258290797472,
-        "grass": 0.08242475986480713,
-        "forest": 0.16148659586906433,
+        "snow": 0,
+        "snowWind": 0,
+        "cutoff": 16000,
+        "wave": 0.22566166520118713,
+        "grass": 0.08196944743394852,
+        "forest": 0.16175943613052368,
         "targets": {
           "wave": 0.18444587277194538,
           "grass": 0.053581389117052305,
-          "forest": 0.2006765923750984
+          "forest": 0.2006765923750984,
+          "snowWind": 0
         },
         "weights": {
           "wave": 0.33535613231262795,
@@ -227,18 +330,24 @@
         "festival": false
       },
       "music": {
-        "playing": false,
-        "sounding": false,
+        "playing": true,
+        "sounding": true,
         "indoor": false,
         "ducked": false,
         "hidden": false,
+        "preset": "day",
+        "resting": false,
+        "switching": false,
         "nightIdx": 1,
         "festival": false,
-        "seed": 1666947063,
-        "notes": 42,
-        "bpm": 62,
-        "gain": 0,
-        "cutoff": 14000
+        "seed": 2126895312,
+        "notes": 17,
+        "bpm": 72,
+        "restSec": 37.86,
+        "gain": 0.16375884413719177,
+        "cutoff": 14000,
+        "stingers": 0,
+        "lastStinger": null
       }
     },
     "はれ・ひる(ひろば)": {
@@ -247,13 +356,17 @@
         "level": 0.13,
         "out": 0.12999999523162842,
         "sheltered": false,
-        "wave": 0.04426611587405205,
-        "grass": 0.5954638123512268,
-        "forest": 0.03158563748002052,
+        "snow": 0,
+        "snowWind": 0,
+        "cutoff": 16000,
+        "wave": 0.04384668543934822,
+        "grass": 0.5960600972175598,
+        "forest": 0.031467147171497345,
         "targets": {
           "wave": 0,
           "grass": 0.72,
-          "forest": 0
+          "forest": 0,
+          "snowWind": 0
         },
         "weights": {
           "wave": 0,
@@ -264,20 +377,312 @@
         "festival": false
       },
       "music": {
-        "playing": false,
-        "sounding": false,
+        "playing": true,
+        "sounding": true,
         "indoor": false,
         "ducked": false,
         "hidden": false,
+        "preset": "day",
+        "resting": false,
+        "switching": false,
         "nightIdx": 1,
         "festival": false,
-        "seed": 1666947063,
-        "notes": 42,
-        "bpm": 62,
-        "gain": 0,
-        "cutoff": 14000
+        "seed": 2126895312,
+        "notes": 17,
+        "bpm": 72,
+        "restSec": 37.86,
+        "gain": 0.17800000309944153,
+        "cutoff": 14000,
+        "stingers": 0,
+        "lastStinger": null
+      }
+    },
+    "ゆき・ひる(ひろば)": {
+      "rain": null,
+      "ambience": {
+        "level": 0.0975,
+        "out": 0.09979056566953659,
+        "sheltered": false,
+        "snow": 1,
+        "snowWind": 0.20000000298023224,
+        "cutoff": 1803.1976318359375,
+        "wave": 0.003437722334638238,
+        "grass": 0.7153947949409485,
+        "forest": 0,
+        "targets": {
+          "wave": 0,
+          "grass": 0.72,
+          "forest": 0,
+          "snowWind": 0.2
+        },
+        "weights": {
+          "wave": 0,
+          "forest": 0,
+          "grass": 1
+        },
+        "night": false,
+        "festival": false
+      },
+      "music": {
+        "playing": true,
+        "sounding": true,
+        "indoor": false,
+        "ducked": false,
+        "hidden": false,
+        "preset": "day",
+        "resting": false,
+        "switching": false,
+        "nightIdx": 1,
+        "festival": false,
+        "seed": 2126895312,
+        "notes": 17,
+        "bpm": 72,
+        "restSec": 37.86,
+        "gain": 0.17800000309944153,
+        "cutoff": 14000,
+        "stingers": 2,
+        "lastStinger": "quest"
       }
     }
+  },
+  "presets": {
+    "4:29(よるのつづき)": {
+      "hour": 4.48,
+      "want": "night",
+      "playing": true,
+      "sounding": true,
+      "indoor": false,
+      "ducked": false,
+      "hidden": false,
+      "preset": "night",
+      "resting": false,
+      "switching": false,
+      "nightIdx": 0,
+      "festival": false,
+      "seed": 3238141220,
+      "notes": 29,
+      "bpm": 62,
+      "restSec": 0,
+      "gain": 0.1599999964237213,
+      "cutoff": 14000,
+      "stingers": 0,
+      "lastStinger": null
+    },
+    "4:31(あさ)": {
+      "hour": 4.55,
+      "want": "morning",
+      "playing": true,
+      "sounding": true,
+      "indoor": false,
+      "ducked": false,
+      "hidden": false,
+      "preset": "morning",
+      "resting": false,
+      "switching": false,
+      "nightIdx": 1,
+      "festival": false,
+      "seed": 425723442,
+      "notes": 16,
+      "bpm": 54,
+      "restSec": 29.22,
+      "gain": 0.02026531845331192,
+      "cutoff": 14000,
+      "stingers": 0,
+      "lastStinger": null
+    },
+    "8:59(あさ)": {
+      "hour": 8.9,
+      "want": "morning",
+      "playing": true,
+      "sounding": true,
+      "indoor": false,
+      "ducked": false,
+      "hidden": false,
+      "preset": "morning",
+      "resting": false,
+      "switching": false,
+      "nightIdx": 1,
+      "festival": false,
+      "seed": 425723442,
+      "notes": 16,
+      "bpm": 54,
+      "restSec": 29.22,
+      "gain": 0.1899999976158142,
+      "cutoff": 14000,
+      "stingers": 0,
+      "lastStinger": null
+    },
+    "9:01(ひる)": {
+      "hour": 9.1,
+      "want": "day",
+      "playing": true,
+      "sounding": true,
+      "indoor": false,
+      "ducked": false,
+      "hidden": false,
+      "preset": "day",
+      "resting": false,
+      "switching": false,
+      "nightIdx": 1,
+      "festival": false,
+      "seed": 2126895312,
+      "notes": 17,
+      "bpm": 72,
+      "restSec": 37.86,
+      "gain": 0.16011974215507507,
+      "cutoff": 14000,
+      "stingers": 0,
+      "lastStinger": null
+    },
+    "15:59(ひる)": {
+      "hour": 15.9,
+      "want": "day",
+      "playing": true,
+      "sounding": true,
+      "indoor": false,
+      "ducked": false,
+      "hidden": false,
+      "preset": "day",
+      "resting": false,
+      "switching": false,
+      "nightIdx": 1,
+      "festival": false,
+      "seed": 2126895312,
+      "notes": 17,
+      "bpm": 72,
+      "restSec": 37.86,
+      "gain": 0.17800000309944153,
+      "cutoff": 14000,
+      "stingers": 0,
+      "lastStinger": null
+    },
+    "16:01(ゆうがた)": {
+      "hour": 16.1,
+      "want": "evening",
+      "playing": true,
+      "sounding": true,
+      "indoor": false,
+      "ducked": false,
+      "hidden": false,
+      "preset": "evening",
+      "resting": false,
+      "switching": false,
+      "nightIdx": 1,
+      "festival": false,
+      "seed": 815415196,
+      "notes": 19,
+      "bpm": 56,
+      "restSec": 31.85,
+      "gain": 0.20031316578388214,
+      "cutoff": 14000,
+      "stingers": 0,
+      "lastStinger": null
+    },
+    "18:59(ゆうがた)": {
+      "hour": 18.9,
+      "want": "evening",
+      "playing": true,
+      "sounding": true,
+      "indoor": false,
+      "ducked": false,
+      "hidden": false,
+      "preset": "evening",
+      "resting": false,
+      "switching": false,
+      "nightIdx": 1,
+      "festival": false,
+      "seed": 815415196,
+      "notes": 19,
+      "bpm": 56,
+      "restSec": 31.85,
+      "gain": 0.21299999952316284,
+      "cutoff": 14000,
+      "stingers": 0,
+      "lastStinger": null
+    },
+    "19:01(よる)": {
+      "hour": 19.1,
+      "want": "night",
+      "playing": true,
+      "sounding": true,
+      "indoor": false,
+      "ducked": false,
+      "hidden": false,
+      "preset": "night",
+      "resting": false,
+      "switching": false,
+      "nightIdx": 1,
+      "festival": false,
+      "seed": 1666947063,
+      "notes": 42,
+      "bpm": 62,
+      "restSec": 0,
+      "gain": 0.1503276526927948,
+      "cutoff": 14000,
+      "stingers": 0,
+      "lastStinger": null
+    }
+  },
+  "title": {
+    "before": null,
+    "after": {
+      "playing": true,
+      "sounding": true,
+      "indoor": false,
+      "ducked": false,
+      "hidden": false,
+      "preset": "title",
+      "resting": false,
+      "switching": false,
+      "nightIdx": 0,
+      "festival": false,
+      "seed": 3982323085,
+      "notes": 20,
+      "bpm": 52,
+      "restSec": 10.74,
+      "gain": 0.13757239282131195,
+      "cutoff": 14000,
+      "stingers": 0,
+      "lastStinger": null
+    }
+  },
+  "stinger": {
+    "before": 0,
+    "after": 2,
+    "last": "quest"
+  },
+  "footsteps": {
+    "室内(マイホーム)": {
+      "x": 58,
+      "z": -58,
+      "want": "step_indoor",
+      "got": "step_indoor"
+    },
+    "さんばしの上": {
+      "x": 4,
+      "z": 49,
+      "want": "step_wood",
+      "got": "step_wood"
+    },
+    "はまべ": {
+      "x": 0,
+      "z": 40,
+      "want": "step_sand",
+      "got": "step_sand"
+    },
+    "ひろば": {
+      "x": 0,
+      "z": -1,
+      "want": "step_grass",
+      "got": "step_grass"
+    }
+  },
+  "npcFoot": {
+    "far": false,
+    "close": true,
+    "played": 5,
+    "walked": 5,
+    "radius": 6
   },
   "problems": [],
   "consoleErrors": []

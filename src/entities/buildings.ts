@@ -204,7 +204,7 @@ export function buildHouse(scene: Scene, kind: string, w: number, d: number): Ho
     box(A, w / 4, ridgeH - 0.2, -d / 6, 0.38, 1.35, 0.38, C_STONE, 0.07);
   }
 
-  const mesh = toMesh(scene, `house_${kind}`, A);
+  const mesh = toMesh(scene, `house_${kind}`, A, 'keep');
   const glowWindows = new Mesh(`houseglow_${kind}`, scene);
   applyArrays(glowWindows, G);
   glowWindows.material = getGlowMats(scene).amber;
@@ -222,7 +222,7 @@ export function makeBench(scene: Scene, rot: number): Mesh {
     box(A, sx * c, 0.18, -sx * s2, 0.12, 0.34, 0.38, C_WOOD_D, 0.05, rot);
   }
   box(A, 0.19 * s2, 0.62, 0.19 * c, 1.5, 0.3, 0.06, C_WOOD, 0.06, rot);
-  return toMesh(scene, 'bench', A);
+  return toMesh(scene, 'bench', A, 'keep');
 }
 
 export function makeLamp(scene: Scene): { mesh: Mesh; globe: Mesh } {
@@ -233,7 +233,7 @@ export function makeLamp(scene: Scene): { mesh: Mesh; globe: Mesh } {
   box(A, 0, 1.62, 0.3, 0.24, 0.03, 0.24, C_WOOD_D);
   box(A, 0, 1.92, 0.3, 0.28, 0.045, 0.28, C_WOOD_D);
   for (const sx of [-0.1, 0.1]) for (const sz of [-0.1, 0.1]) box(A, sx, 1.77, 0.3 + sz, 0.028, 0.28, 0.028, C_WOOD_D);
-  const mesh = toMesh(scene, 'lamp', A);
+  const mesh = toMesh(scene, 'lamp', A, 'keep');
   const G = A0();
   appendBlob(G, 0, 1.77, 0.3, 0.093, 0.12, 0.093, Color3.FromHexString('#f2e0b8'), { segs: 6, noise: 0.03 });
   const globe = new Mesh('lampGlobe', scene);
@@ -250,7 +250,7 @@ export function makeStoneRing(scene: Scene): Mesh {
     const th = (i / 10) * Math.PI * 2;
     appendBlob(A, Math.cos(th) * 2.6, 0.06, Math.sin(th) * 2.6, 0.3, 0.22, 0.26, jitterColor(C_STONE, i), { segs: 5, noise: 0.25, flatBottom: true });
   }
-  return toMesh(scene, 'stoneRing', A);
+  return toMesh(scene, 'stoneRing', A, 'keep');
 }
 
 // ---------------------------------------------------------------------------

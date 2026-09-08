@@ -3,6 +3,8 @@
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
+import { Texture } from '@babylonjs/core/Materials/Textures/texture';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 import { PATHS, POND, POIS, BUILDINGS } from '../data/island';
@@ -298,14 +300,32 @@ const C_ROCK = new Color3(0.58, 0.565, 0.51);
 const C_SEABED = new Color3(0.74, 0.68, 0.52);
 // 池まわり: 水が青一色に見える原因になるので、底も岸も青緑をやめて泥・濡れ砂の色にする
 const C_WETSAND = new Color3(0.56, 0.49, 0.37); // 池の濡れた岸(乾いた砂より暗い)
-const C_PONDBED = new Color3(0.30, 0.32, 0.25); // 池の底(泥のオリーブ)
-const C_PONDBED2 = new Color3(0.37, 0.35, 0.27); // 底のむら(砂まじり)
+// v28 池の底を 15%ほど明るくした。水面の濃さを 岸で 0.55 まで下げた(entities/water.ts)ので、
+// 岸ぎわは 底が半分ちかく透ける。前の暗さのままだと「透けた先が まっ暗」で、
+// せっかくの透明感が「濁った深い池」にしか見えなかった(実機の B6 接写で確認)。
+// 青緑にはしない——青くすると 池が「小さな海」に見える(v11 の実験履歴)。
+const C_PONDBED = new Color3(0.345, 0.365, 0.285); // 池の底(泥のオリーブ)
+const C_PONDBED2 = new Color3(0.425, 0.405, 0.315); // 底のむら(砂まじり)
 // v22 草地のごく淡いむら(引きの画で緑一色に見せない)。どちらも C_GRASS のすぐ隣の色
 const C_GRASS_SUN = new Color3(0.545, 0.688, 0.400); // 日なたで色のぬけた草(黄みどり)
 const C_GRASS_DAMP = new Color3(0.398, 0.586, 0.396); // しめった濃い草(青みどり)
 // 高台: 灰色一色にしないための土・岩の層
 const C_HILL_DIRT = new Color3(0.47, 0.40, 0.29);
 const C_HILL_ROCK2 = new Color3(0.40, 0.385, 0.35);
+// v28 波うちぎわの「濡れた砂」。乾いた砂(C_SAND)より暗く、ほんの少し寒色へ。
+// 砂と海のあいだに硬い1本の線が出ていたのは、砂が水ぎわまで同じ明るさだったから。
+const C_SAND_WET = new Color3(0.600, 0.552, 0.448);
+
+/**
+ * v28 中周波のむら(2オクターブ)。
+ * 波長およそ 9m と 3.4m。既存の v22 のまだら(波長36m)と 細かいゆらぎ(1m)のあいだを埋める段。
+ * 返すのは -0.5..0.5 の符号つきの値で、明るさは ±5%、しめった側だけ色を青みどりへ寄せる。
+ */
+function midMottle(x: number, z: number): number {
+  const a = vnoise(x * 0.112 + 17, z * 0.112 + 71) - 0.5;
+  const b = vnoise(x * 0.295 + 63, z * 0.295 + 29) - 0.5;
+  return a * 0.68 + b * 0.32;
+}
 
 function terrainColor(x: number, z: number, h: number): Color3 {
   const n = vnoise(x * 0.24 + 3, z * 0.24 + 11);
@@ -348,13 +368,25 @@ function terrainColor(x: number, z: number, h: number): Color3 {
       }
     }
   }
-  // 道
+  // v28 波うちぎわの「濡れた砂」。水ぎわ(0.3)から乾いた砂(0.72)へ かけて 砂を暗く落とす。
+  // ふちはノイズでゆらして「等高線」に見せない。海底(h<0.24)には手を出さない
+  // ——あそこを暗くすると 浅瀬の水そのものが にごって見える。
+  if (h >= 0.24 && h < 0.78) {
+    const wob = (vnoise(x * 0.33 + 89, z * 0.33 + 47) - 0.5) * 0.16;
+    const wet = sstep(Math.min(1, Math.max(0, (0.72 + wob - h) / 0.36)));
+    c = Color3.Lerp(c, C_SAND_WET, wet * 0.5);
+  }
+  // 道。
+  // v28 色の境目だけノイズでゆらし(±0.36m)、外がわの土の帯も 2.4→3.1m まで のばして
+  // 「道の縁が定規で引いた線」に見えないようにする。**判定に使う pathDist は動かさない**
+  // (歩ける範囲・地形の高さは今までどおり素の pd を見る)。
   const pd = pathDist(x, z);
-  if (pd < 1.5 && h > 0.55) {
-    const f = sstep(1 - pd / 1.5);
+  const pdw = pd + (vnoise(x * 0.52 + 13, z * 0.52 + 67) - 0.5) * 0.72;
+  if (pdw < 1.5 && h > 0.55) {
+    const f = sstep(1 - pdw / 1.5);
     c = Color3.Lerp(c, C_PATH, f * 0.9);
-  } else if (pd < 2.4 && h > 0.55) {
-    c = Color3.Lerp(c, C_DIRT, sstep(1 - (pd - 1.5) / 0.9) * 0.35);
+  } else if (pdw < 3.1 && h > 0.55) {
+    c = Color3.Lerp(c, C_DIRT, sstep(1 - (pdw - 1.5) / 1.6) * 0.35);
   }
   // 広場は踏み固められた土
   const plaza = g(x, z, 0, -1, 10);
@@ -371,14 +403,119 @@ function terrainColor(x: number, z: number, h: number): Color3 {
   const inGarden =
     x > GARDEN_AREA.minX - 1 && x < GARDEN_AREA.maxX + 1 &&
     z > GARDEN_AREA.minZ - 1 && z < GARDEN_AREA.maxZ + 1;
-  if (pd >= 2.4 && h >= 0.66 && !inGarden) {
+  if (pdw >= 2.4 && h >= 0.66 && !inGarden) {
     const mo = vnoise(x * 0.028 + 51, z * 0.028 + 83) - 0.5; // -0.5..0.5
     c = Color3.Lerp(c, mo > 0 ? C_GRASS_SUN : C_GRASS_DAMP, Math.min(0.2, Math.abs(mo) * 0.4));
     mv = 1 + mo * 0.07;
   }
+  // v28 中周波のむら(波長 9m と 3.4m)。
+  //   明るさ: どこでも ±5%(砂浜・高台にも効かせる。畑=お庭だけ外す)
+  //   色み  : 草地だけ、暗いほうを しめった青みどりへ ごく弱く寄せる(色相そのものは動かさない)
+  // これが v22 のまだら(36m)と 下の細かいゆらぎ(1m)のあいだを埋める段で、
+  // 「接写でも引きでも同じのっぺり」を割るための いちばん大きな効きめ。
+  if (!inGarden) {
+    const mm = midMottle(x, z); // -0.5..0.5
+    mv *= 1 + mm * 0.10; // ±5%
+    if (h >= 0.66 && pdw >= 1.8 && mm < 0) {
+      c = Color3.Lerp(c, C_GRASS_DAMP, Math.min(0.16, -mm * 0.34));
+    }
+  }
   // 微妙な色ゆらぎ
   const v = (0.94 + n * 0.12) * mv;
   return new Color3(c.r * v, c.g * v, c.b * v);
+}
+
+// ===========================================================================
+// v28 地面の質感テクスチャ(プログラム生成・タイル)
+//
+// なぜ要るか: 地面は頂点カラーだけだったので、1.15m格子より細かい情報が1つも無く、
+// 至近距離では「無地の平面」に見えていた(監査 B1_closeup_grass)。
+//
+// 作りかた(3つの決まりごと):
+//   1) **かならず継ぎめなく つながる**。周期のあるバリューノイズだけで作る
+//      (キャンバスに線を引くと 端で切れる)。格子の添字を P で 折りかえせば
+//      「タイルの右端 = 左端」が 誤差なしで 一致する。
+//   2) **色相は変えない**。灰色1色の濃淡だけを作り、頂点カラーと掛け算する。
+//      平均の明るさは buildTerrain 側で diffuseColor を上げて 打ち消すので、
+//      島ぜんたいの明るさ・ゆきの白さは 1ミリも変わらない。
+//   3) **wrapU/wrapV を明示する**(教訓1)。BabylonのDynamicTextureの既定はCLAMPで、
+//      UVが1をこえる地面では 端の1列が 引きのばされて 全面が単色に見える。
+// ---------------------------------------------------------------------------
+/** テクスチャ1枚がカバーする世界の大きさ(m)。256px なので 64px/m */
+const TEX_TILE_M = 4;
+const TEX_PX = 256;
+/** 濃淡のはば。±7%(明度)。これ以上あげると 引きの画で「ざらざらの紙」に見える */
+const TEX_CONTRAST = 0.07;
+
+/** 周期 PX×PZ で折りかえすバリューノイズ(タイルの継ぎめが出ない) */
+function pnoise(x: number, z: number, px: number, pz: number): number {
+  const ix = Math.floor(x), iz = Math.floor(z);
+  const fx = x - ix, fz = z - iz;
+  const wrap = (i: number, p: number): number => ((i % p) + p) % p;
+  const x0 = wrap(ix, px), x1 = wrap(ix + 1, px);
+  const z0 = wrap(iz, pz), z1 = wrap(iz + 1, pz);
+  const a = hash2(x0, z0), b = hash2(x1, z0), c = hash2(x0, z1), d = hash2(x1, z1);
+  const u = sstep(fx), v = sstep(fz);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+
+/**
+ * 地面の質感テクスチャを作る。返り値の mean は「この画の平均の明るさ」で、
+ * 呼び手が diffuseColor = 1/mean を入れて 平均の明るさを もとどおりにするために使う。
+ * キャンバスが使えない環境(単体テストのjsdom等)では null を返し、質感なしで動く。
+ */
+function makeGroundTexture(scene: Scene): { tex: DynamicTexture; mean: number } | null {
+  let tex: DynamicTexture;
+  let ctx: CanvasRenderingContext2D;
+  try {
+    tex = new DynamicTexture('terrainTex', { width: TEX_PX, height: TEX_PX }, scene, true);
+    ctx = tex.getContext() as CanvasRenderingContext2D;
+    if (!ctx || typeof ctx.createImageData !== 'function') return null;
+  } catch {
+    return null;
+  }
+  const img = ctx.createImageData(TEX_PX, TEX_PX);
+  const d = img.data;
+  let sum = 0;
+  for (let iy = 0; iy < TEX_PX; iy++) {
+    const tv = iy / TEX_PX; // 0..1(タイル内の位置)
+    for (let ix = 0; ix < TEX_PX; ix++) {
+      const tu = ix / TEX_PX;
+      // 土のむら: 波長 1m と 45cm。低い周波数から順に効きを弱める
+      const broad = pnoise(tu * 4, tv * 4, 4, 4) - 0.5;
+      const mid = pnoise(tu * 9 + 3, tv * 9 + 7, 9, 9) - 0.5;
+      // 草のすじ: 片方の軸だけ細かい異方性ノイズを、整数のせん断(tu + 2tv など)で ななめに倒す。
+      // 係数が整数なので、タイルの端では ちょうど1周ぶんずれて つながる。
+      //
+      // **向きは3つ**にする。2つだと(最初にそうしていた)、規則正しい2方向が
+      // 引きの画で 織り目=むしろのような格子に見えた(実機の 01_plaza_day で確認)。
+      // どれも「短いすじ」にして、下の clump で 生えぐあいに むらを付ける。
+      const f1 = pnoise(60 * (tu + 2 * tv) + 11, 20 * tv + 5, 60, 20) - 0.5;
+      const f2 = pnoise(52 * (tv - 3 * tu) + 29, 26 * tu + 19, 52, 26) - 0.5;
+      const f3 = pnoise(44 * (tu - tv) + 7, 22 * (tu + tv) + 31, 44, 22) - 0.5;
+      // ごく細かい粒(3cm)。近づいたときだけ効く。ミップで遠景では消える
+      const grain = pnoise(tu * 64 + 41, tv * 64 + 13, 64, 64) - 0.5;
+      // すじの濃さを 場所ごとに変える(どこも同じ密度で生えていると「織り目」に見える)
+      const clump = Math.max(0.15, 0.5 + broad + mid * 0.6);
+      const n =
+        broad * 0.52 + mid * 0.3 + (f1 * 0.3 + f2 * 0.22 + f3 * 0.18) * clump + grain * 0.2;
+      const g0 = 0.9 * (1 + Math.max(-1.2, Math.min(1.2, n * 2)) * TEX_CONTRAST);
+      const b = Math.max(0, Math.min(255, Math.round(g0 * 255)));
+      sum += b;
+      const o = (iy * TEX_PX + ix) * 4;
+      d[o] = b;
+      d[o + 1] = b;
+      d[o + 2] = b;
+      d[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  tex.update(false); // invertY=false: 上下の向きは どちらでも継ぎめが出ないので そろえておく
+  tex.wrapU = Texture.WRAP_ADDRESSMODE; // 教訓1: 既定のCLAMPだと全面が単色になる
+  tex.wrapV = Texture.WRAP_ADDRESSMODE;
+  tex.anisotropicFilteringLevel = 4; // 浅い角度(引きの草原)で ぼやけすぎないように
+  tex.hasAlpha = false;
+  return { tex, mean: sum / (TEX_PX * TEX_PX * 255) };
 }
 
 export interface Terrain {
@@ -390,6 +527,7 @@ export function buildTerrain(scene: Scene): Terrain {
   const positions: number[] = [];
   const indices: number[] = [];
   const colors: number[] = [];
+  const uvs: number[] = [];
   const step = SIZE / RES;
   for (let iz = 0; iz <= RES; iz++) {
     for (let ix = 0; ix <= RES; ix++) {
@@ -397,6 +535,9 @@ export function buildTerrain(scene: Scene): Terrain {
       const z = -SIZE / 2 + iz * step;
       const h = terrainHeight(x, z);
       positions.push(x, h, z);
+      // 質感テクスチャのUVは世界座標を TEX_TILE_M で割るだけ(平面投影)。
+      // メッシュを作りなおしても 同じ場所に 同じ模様が出る
+      uvs.push(x / TEX_TILE_M, z / TEX_TILE_M);
       const c = terrainColor(x, z, h);
       colors.push(c.r, c.g, c.b, 1);
     }
@@ -417,11 +558,21 @@ export function buildTerrain(scene: Scene): Terrain {
   vd.indices = indices;
   vd.normals = normals;
   vd.colors = colors;
+  vd.uvs = uvs;
   const mesh = new Mesh('terrain', scene);
   vd.applyToMesh(mesh);
   const mat = new StandardMaterial('terrainMat', scene);
   mat.specularColor = Color3.Black();
   mat.diffuseColor = Color3.White();
+  // v28 質感テクスチャ。頂点カラー(10色のブレンド)との**掛け算**なので、色は動かない。
+  // 平均の明るさぶんを diffuseColor で持ちあげて、島ぜんたいの明るさを もとどおりにする
+  // (ゆきの白さ・夜の沈みかた・遠景のトーンを 変えないため)。
+  const gt = makeGroundTexture(scene);
+  if (gt) {
+    mat.diffuseTexture = gt.tex;
+    const k = 1 / Math.max(0.35, gt.mean);
+    mat.diffuseColor = new Color3(k, k, k);
+  }
   mesh.material = mat;
   mesh.receiveShadows = true;
   mesh.freezeWorldMatrix();

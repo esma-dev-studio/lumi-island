@@ -13,6 +13,23 @@ export const STICK_DEADZONE = 0.16;
 export const STICK_RADIUS = 58;
 /** 行動ボタンのラベルの上限文字数(超えたら省略) */
 export const LABEL_MAX = 18;
+/** ヒントが1つも無いときの行動ボタンの文字(位置を動かさないために残す) */
+export const IDLE_LABEL = 'しらべる';
+/**
+ * 丸ボタンの連打よけ(ms)。touch_audit_v17 F-05:
+ * ツムギに報告した直後、同じ場所で もう一度 押すと 店が開いて 動けなくなった。
+ * 押した相手が つぎの瞬間 別のものに 入れかわるので、
+ * 「1回の意図で 2回 動く」ことだけを ここで止める(会話送りは 対象外)。
+ */
+export const ACTION_DEBOUNCE_MS = 350;
+/** できない理由のとき、丸ボタンに出す文字が作れなかった場合の代わり */
+export const REASON_FALLBACK = '…';
+/** できない理由でも そのまま出してよい短さ(文字数)。長い理由は 画面下のヒント帯にまかせる */
+const REASON_KEEP_MAX = 10;
+/** 釣りの最中の言い回し(ヒントが一瞬きえても この言葉を すこし残す) */
+const FISHING_RE = /まってる|つりあげ|ひっぱ|ぬしが/;
+/** 釣りの言葉を残しておく時間(ms) */
+const FISHING_HOLD_MS = 1500;
 
 export interface StickVector {
   /** PlayerControllerの ix と同じ向き(+が画面左) */
@@ -60,6 +77,39 @@ export function hintToLabel(hint: string): string {
   s = s.replace(/\s+/g, ' ').trim();
   if (s.length > LABEL_MAX) s = s.slice(0, LABEL_MAX - 1) + '…';
   return s;
+}
+
+/** 押したら本当に何かが起きるヒントか(=キーボードのEで実行できる候補か) */
+const ACTIONABLE_RE = /<kbd>\s*(?:E|Space)\s*<\/kbd>/i;
+
+/**
+ * そのヒントは「押せば動く」ものか。
+ *
+ * InteractionRouting の約束: **実行できる候補のヒントだけが `<kbd>E</kbd>` を持つ**。
+ * 「つかまえるには 虫あみが ひつよう」「しぜんの めぐみの ばしょだよ」のような
+ * *できない理由* は わざと `<kbd>E</kbd>` を入れていない(向こうのコメントにも書いてある)。
+ * touch_audit_v17 F-03: 丸ボタンが その理由文を そのままラベルにしていたので、
+ * 押せそうに見えて 何も起きない「説明板」になっていた。
+ */
+export function isActionableHint(hint: string): boolean {
+  return ACTIONABLE_RE.test(hint);
+}
+
+/**
+ * できない理由の文 → 丸ボタンに出す短い言葉。
+ *
+ * ・配置中は 置ける/置けないの話しかないので いつも「おく」
+ * ・「〜には ○○が ひつよう」の形は 前の動詞だけ(つかまえる / つり / ほる / うえる)
+ * ・「まってる…」のような短い ようすの言葉は そのまま
+ * ・それ以外は「…」。理由そのものは 画面下のヒント帯が 出しているので、
+ *   ここで もう一度 出さない(F-12 の二重表示も これで消える)。
+ */
+export function reasonToLabel(text: string, placementActive: boolean): string {
+  if (placementActive) return 'おく';
+  const verb = /^([^\s<]{1,8}?)には/.exec(text);
+  if (verb) return verb[1];
+  if (text.length <= REASON_KEEP_MAX) return text;
+  return REASON_FALLBACK;
 }
 
 /** 毎フレームGameSceneから渡す表示条件 */
@@ -169,6 +219,7 @@ export class TouchControls {
   private btnCodex: HTMLElement;
   private btnPhoto: HTMLElement;
   private btnEmote: HTMLElement;
+  private btnClose: HTMLElement;
   private placeBar: HTMLElement;
   private moveBar: HTMLElement;
   private detachFns: Array<() => void> = [];
@@ -176,6 +227,13 @@ export class TouchControls {
   private origin = { x: 0, y: 0 };
   private lastLabel = '';
   private lastDim = true;
+  /** 最後に丸ボタンが効いた時刻(連打よけ) */
+  private lastActionAt = -1e9;
+  /** 会話・達成・見せ場のあいだは 連打よけをしない(文をどんどん送りたい) */
+  private fastAction = false;
+  /** 直前に出していた釣りの言葉と、その時刻 */
+  private fishLabel = '';
+  private fishAt = -1e9;
   /** タッチUIを出しているか(UA判定はしない) */
   visible = false;
 
@@ -202,7 +260,8 @@ export class TouchControls {
         <button class="touch-btn" data-el="move" type="button">${GLYPH.move}<span>うごかす</span></button>
       </div>
       <button class="touch-emote hidden" data-el="emote" type="button">${GLYPH.wave}<span>てをふる</span></button>
-      <button class="touch-action dim" data-el="action" type="button">しらべる</button>
+      <button class="touch-close hidden" data-el="close" type="button">${GLYPH.cancel}<span>とじる</span></button>
+      <button class="touch-action dim" data-el="action" type="button">${IDLE_LABEL}</button>
     `;
     const pick = (name: string): HTMLElement => el.querySelector(`[data-el="${name}"]`) as HTMLElement;
     this.el = el;
@@ -216,6 +275,7 @@ export class TouchControls {
     this.btnCodex = pick('codex');
     this.btnPhoto = pick('photo');
     this.btnEmote = pick('emote');
+    this.btnClose = pick('close');
     this.placeBar = pick('place');
     this.moveBar = pick('movebar');
     opts.root.appendChild(el);
@@ -223,7 +283,11 @@ export class TouchControls {
 
   attach(): void {
     const o = this.opts;
-    this.detachFns.push(...pressable(this.action, () => o.onInteract()));
+    this.detachFns.push(...pressable(this.action, () => this.runAction()));
+    // パネルを開いているあいだ、左下(スティックのあった場所)に出る「とじる」。
+    // 店・メニューが開くと スティックも 丸ボタンも 消えるので、
+    // 右上の小さな「とじる」しか 出口が無かった(F-05)。Escと同じ道を通す。
+    this.detachFns.push(...pressable(this.btnClose, () => o.onMenu(), null));
     // 下の5つ+やめるは InputRouter が ひらく/とじるの音を鳴らす(音の二重を避ける)
     this.detachFns.push(...pressable(this.btnInv, () => o.onInventory(), null));
     this.detachFns.push(...pressable(this.btnCraft, () => o.onCraft(), null));
@@ -336,17 +400,48 @@ export class TouchControls {
     delete this.opts.input.az;
   }
 
+  /** 丸ボタンを押したとき。連打よけを通してから InputRouter へ渡す */
+  private runAction(): void {
+    const now = performance.now();
+    if (!this.fastAction && now - this.lastActionAt < ACTION_DEBOUNCE_MS) return;
+    this.lastActionAt = now;
+    this.opts.onInteract();
+  }
+
   // ---------- 毎フレームの反映 ----------
   sync(f: TouchFrame): void {
     if (!this.visible) return;
     // 行動ボタン: HUDのヒントと同じ内容。会話・演出中は「つぎへ」等の専用表示。
+    //
+    // v17.1(touch_audit_v17 F-03/F-12/F-13):
+    //   「押せば動く」ヒントだけを そのまま出し、できない理由は
+    //   淡く・短い動詞(または「…」)にする。理由の文は 画面下のヒント帯にまかせる。
+    this.fastAction = f.dialogueOpen || f.questCompleteOpen || f.sequenceActive;
     let label: string;
+    let dim = false;
     if (f.dialogueOpen) label = 'つぎへ';
     else if (f.questCompleteOpen) label = 'とじる';
     else if (f.sequenceActive) label = 'すすむ';
-    else label = hintToLabel(f.hint);
-    const dim = label === '';
-    if (dim) label = 'しらべる'; // 位置を動かさないため、文字は残して淡くする
+    else {
+      const text = hintToLabel(f.hint);
+      const now = performance.now();
+      if (text !== '' && FISHING_RE.test(text)) {
+        this.fishLabel = text;
+        this.fishAt = now;
+      }
+      if (text === '') {
+        // できることが無い。釣りの直後なら その場面の言葉を すこしのあいだ 残す
+        // (「まってる…」→「!! つりあげる」→ 急に「しらべる」に もどらないように)
+        const holding = this.fishLabel && now - this.fishAt < FISHING_HOLD_MS;
+        label = holding ? this.fishLabel : IDLE_LABEL;
+        dim = true;
+      } else if (isActionableHint(f.hint)) {
+        label = text;
+      } else {
+        label = reasonToLabel(text, f.placementActive);
+        dim = true;
+      }
+    }
     if (label !== this.lastLabel) {
       this.lastLabel = label;
       this.action.textContent = label;
@@ -365,14 +460,23 @@ export class TouchControls {
     this.action.classList.toggle('hidden', hideWorld);
     this.zone.classList.toggle('hidden', hideStick);
     if (hideStick && this.stickId !== null) this.releaseStick();
-    // 未解放のメニューは出さない(キーボードと同じ段階解放)
-    this.btnInv.classList.toggle('hidden', !f.gates.inventory);
-    this.btnCraft.classList.toggle('hidden', !f.gates.craft);
-    this.btnQuest.classList.toggle('hidden', !f.gates.quest);
+    // パネルを開いているあいだだけ 出す「とじる」(左下=スティックのあった場所)。
+    // パネルは まん中で、たて・よこ どちらでも このボタンとは 重ならない高さにある
+    this.btnClose.classList.toggle('hidden', !f.panelOpen);
+    // 未解放のメニューは出さない(キーボードと同じ段階解放)。
+    // v17.1(F-15)配置中は パネルのボタンを しまう: 開くと 配置バーだけ消えて
+    // 「置くとちゅうなのに 何も出ていない」状態になっていた。やめるのは 配置バーの「やめる」で
+    const placing = f.placementActive;
+    this.btnInv.classList.toggle('hidden', !f.gates.inventory || placing);
+    this.btnCraft.classList.toggle('hidden', !f.gates.craft || placing);
+    this.btnQuest.classList.toggle('hidden', !f.gates.quest || placing);
     // ずかんは「もちもの」と同じ解放ゲート
-    this.btnCodex.classList.toggle('hidden', !f.gates.inventory || !this.opts.onCodex);
+    this.btnCodex.classList.toggle('hidden', !f.gates.inventory || !this.opts.onCodex || placing);
     // v24 しゃしんは「もちもの」と同じ解放ゲート(はじめの手ほどきの あいだは 出さない)
-    this.btnPhoto.classList.toggle('hidden', !f.gates.inventory || !this.opts.onPhoto || !f.photoReady);
+    this.btnPhoto.classList.toggle(
+      'hidden',
+      !f.gates.inventory || !this.opts.onPhoto || !f.photoReady || placing
+    );
     this.placeBar.classList.toggle('hidden', !f.placementActive || hideWorld);
     // v24 「うごかす」は 置いた家具のそばに立ったときだけ。
     // 配置中は まわす/やめる の バーが 出ているので こちらは しまう(2つ 同時には 出さない)

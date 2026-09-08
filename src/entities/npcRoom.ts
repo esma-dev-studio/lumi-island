@@ -4,7 +4,7 @@
 //   - ローカル座標は 床の中心が原点・床の上面 y=0・正面 +Z。
 //   - 壁は北(-Z)と東(+X)だけ。南(+Z)と西(-X)は開けたまま(カメラは南から北を見る)。
 //   - 面は box()/quad() だけで組み、toMesh は 'keep'(巻き順で法線が決まる)。
-//     丸い部品(appendBlob)は別メッシュにして 'flip' + faceOutward(attachRound)で作る。
+//     丸い部品(appendBlob)は別メッシュにして attachRound で作る(巻き順は WINDING_RULE で共通)。
 //     'flip'だけだと巻き順が残り、背面カリングで消える(実機で 水がめ・かいがらが黒くなった)
 //     ——ひとつのメッシュに混ぜると、どちらの向き指定も当てにならなくなる(教訓4)。
 //   - 光る部分(ランプの球・窓ガラス)は別メッシュ+getGlowMats。
@@ -18,7 +18,6 @@ import type { Scene } from '@babylonjs/core/scene';
 import {
   A0, appendBlob, appendTrunk, applyArrays, getGlowMats, jitterColor, toMesh, type Arrays,
 } from './flora';
-import { faceOutward } from './deco';
 import { vnoise } from './terrain';
 
 // ---------------------------------------------------------------------------
@@ -261,15 +260,15 @@ export interface NpcRoomProps {
 /**
  * 丸い部品(appendBlob だけ)を root の子として足す。混ぜないための入口を1つにする。
  *
- * 'flip' は法線だけを反転する(巻き順はそのまま)ので、これだけだと
- * 面の表うらが逆のまま=背面カリングで消えて「中の面だけが見える真っ黒な形」になる。
- * 実機のスクショで 水がめ・かいがら・糸玉が黒い かたまりに見えたのがこれ。
- * deco.ts の faceOutward(巻き順だけ反転)を重ねて、法線と巻き順の両方をそろえる
- * ——背の高い草・ほりあと・虫と同じ組み合わせ。
+ * v28まで ここは 'flip'(法線だけ反転)+ faceOutward(巻き順だけ反転)の 2手だった。
+ * 'flip' だけだと 面の表うらが逆のまま=背面カリングで消えて
+ * 「中の面だけが見える真っ黒な形」になる(実機のスクショで 水がめ・かいがら・糸玉が
+ * 黒い かたまりに見えたのがこれ)。いまは appendBlob の巻き順そのものが
+ * 外向き(flora.ts の WINDING_RULE)なので 'keep' 1つで そろう。
  */
 function attachRound(scene: Scene, root: Mesh, name: string, R: Arrays): void {
   if (R.pos.length === 0) return;
-  const m = faceOutward(toMesh(scene, name, R, 'flip'));
+  const m = toMesh(scene, name, R, 'keep');
   m.parent = root;
   m.isPickable = false;
 }

@@ -256,7 +256,7 @@ export function makeStarweed(
   }
   const root = toMesh(scene, `starweed_${seed}`, A, 'keep');
   // 穂はすべて appendBlob なので 'flip'(entities/flora.ts の Orient を参照)
-  const tips = toMesh(scene, `starweedTip_${seed}`, T, 'flip');
+  const tips = toMesh(scene, `starweedTip_${seed}`, T, 'keep');
   tips.material = getGlowMats(scene).mint;
   tips.parent = root;
   tips.isPickable = false;
@@ -288,8 +288,8 @@ export function makeLightShell(scene: Scene, seed: number): { root: Mesh; inner:
   // 平たい形・はなれた部品の集まりだと外れる(教訓1・4の法線の項)。
   // appendBlobだけで作った形は ComputeNormals が内向きを出すので flip が正しい
   // (実機で法線を実測: keep だと外向き74/内向き246 で「黒いくぼみ」に見えた)
-  const root = toMesh(scene, `lightshell_${seed}`, A, 'flip');
-  const inner = toMesh(scene, `lightshellIn_${seed}`, N, 'flip');
+  const root = toMesh(scene, `lightshell_${seed}`, A, 'keep');
+  const inner = toMesh(scene, `lightshellIn_${seed}`, N, 'keep');
   inner.material = getGlowMats(scene).blue;
   inner.parent = root;
   inner.isPickable = false;
@@ -364,7 +364,7 @@ export function makeLighthouse(scene: Scene): Mesh {
   const [lx0, lz0] = at(1.06);
   appendBox(A, lx0, 1.92, lz0, 1.24, 0.2, 0.26, jitterColor(C_TOWER_STONE, 44, 0.12), rot, 33);
   const tower = toMesh(scene, 'coveLighthouse', A, 'keep');
-  const stones = toMesh(scene, 'coveLighthouseStone', B, 'flip');
+  const stones = toMesh(scene, 'coveLighthouseStone', B, 'keep');
   stones.parent = tower;
   stones.isPickable = false;
   return tower;
@@ -630,7 +630,7 @@ export function makeRubble(scene: Scene, seed: number, scale = 1): Mesh {
     appendBlob(A, 0.5 * scale, 0.18 * scale, 0.3 * scale, 0.32 * scale, 0.26 * scale, 0.3 * scale,
       jitterColor(C_TOWER_STONE, seed + 1, 0.2), { seed: seed + 5, noise: 0.24, segs: 7, flatBottom: true, bottomDark: 0.16 });
   }
-  return toMesh(scene, `coveRock_${seed}`, A, 'flip');
+  return toMesh(scene, `coveRock_${seed}`, A, 'keep');
 }
 
 // ---------------------------------------------------------------------------

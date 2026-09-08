@@ -214,12 +214,16 @@ describe('おくりものの反応(ロカ)', () => {
     expect(r.lines).not.toEqual(ROKA.giftLines.love); // tierの共通文ではない
   });
 
-  it('専用の反応を持たないNPCは これまでどおり tier の文のまま', () => {
+  // v17: 5人ぜんいんが giftLinesByItem を持つようになったので、
+  // 「専用の反応が無いNPC」ではなく **「専用の反応が無いアイテム」** で 同じことを確かめる
+  it('専用の反応を持たないアイテムは これまでどおり tier の文のまま', () => {
     const s = newGameState();
-    invAdd(s, 'fish', 1);
-    const r = applyGift(s, 'minamo', 'fish')!;
-    expect(r.lines).toEqual(NPC_BY_ID.minamo.giftLines.love.map((l) => l.replace('{item}', ITEMS.fish.name)));
-    expect(NPC_BY_ID.minamo.giftLinesByItem).toBeUndefined();
+    invAdd(s, 'seabream', 1);
+    expect(NPC_BY_ID.minamo.giftLinesByItem?.seabream).toBeUndefined();
+    const r = applyGift(s, 'minamo', 'seabream')!;
+    expect(r.lines).toEqual(
+      NPC_BY_ID.minamo.giftLines[r.tier].map((l) => l.replace('{item}', ITEMS.seabream.name))
+    );
   });
 
   it('だいすき・うれしい・ふつう の3種とも 理由のわかる文になっている', () => {

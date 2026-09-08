@@ -138,7 +138,10 @@ tests/
 
 ## 制約・既知の事項
 
-- PCブラウザ・キーボード操作が対象(モバイル用UIは未実装。入力・UIは分離してあり追加可能)
+- PCブラウザのキーボード操作と、タッチ操作(iPad)の両対応。タッチUI(`src/ui/TouchControls.ts`)は
+  実装ずみで、`pointerdown` の `pointerType` を見て自動で切りかわる(案内の文言も同じ判定源から選ぶ)。
+  iPad 相当(1024x768・hasTouch・iPad の UA)での通し確認ずみ
+  — `node tools/touch_audit_v19.mjs` / スクショは `.logs/screenshots/touch_audit_v17/`
 - 採取ノードの枯れ/復活状態はセーブ対象外(リロードで復活。仕様)
 - 音はブラウザの自動再生制限のため、最初のクリック/キー入力後に有効になる
 
