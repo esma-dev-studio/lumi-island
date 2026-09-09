@@ -34,9 +34,12 @@ const GATHER = new Set(GATHER_CATEGORIES);
  * 「どの誘導中でも拾える」ようにしたので、判定器もそれに合わせる。
  * これは判定の緩和ではなく、設計の意味論への較正:
  * 目的が「もくざいを あつめよう」でも、足もとの ほしのかけらを拾うのは仕様どおりの動き。
- * 復活するふつうの採取ノード(木・岩・草・ベリー・コケ・こうせき)はここに入れない
- * ので、「別素材の採取ヒントが出ている」の検出はこれまでどおり効く
- * (v4コーパスの 179 gatherOre×gatherMoss / 262 gatherMoss×gatherStone は不変)。
+ *
+ * v17.2 追記: 復活するふつうの採取ノード(木・岩・草・ベリー・コケ・こうせき)も
+ * 誘導中に採れるようになったので、この集合は「報告(report)の段階でも許す」ための
+ * 例外リストではなくなった —— いまは どの段階でも通る道が 下の GATHER_OK_OBJ にもある。
+ * それでも残してあるのは、報告の段階を GATHER_OK_OBJ に入れない設計(釣りだけを見張る)を
+ * 保ちながら「時間で消える拾いものは 何があっても許す」を1行で表すため。
  */
 const TRANSIENT_PICKUP = new Set(['gatherStar', 'gatherFloat', 'gatherSnail']);
 /**
@@ -67,6 +70,43 @@ const TRANSIENT_PICKUP = new Set(['gatherStar', 'gatherFloat', 'gatherSnail']);
  *           道すがらの採取・釣りは寄り道ではない。こちらも FREE_CONTEXT()。
  */
 const ANYTHING_OK_OBJ = new Set(['free', 'tutorial', 'talk', 'money', 'sail']);
+
+/**
+ * v17.2 「誘導中でも とる・ひろう・つるは ふさがない」段階(報告 report だけが例外)。
+ *
+ * オーナーの指摘:
+ *   「チュートリアルの最中に『木材を集めよう』だと 木材いがいが 集められないように
+ *     なっている。常にアイテムは集められるようにしないと、ただ言われたことだけを
+ *     やる作業ゲームになってしまう」
+ * を受けて、src/systems/ObjectiveSystem.ts の objectiveActionContext は
+ * targetItemIds の意味を「これ以外を隠す(filter)」から
+ * 「同じ強さなら これを先に出す(prefer)」へ変えた。結果として、
+ * 採取・釣り・クラフト・配置・ベッド待ち・とうだいの各段階では
+ *   - どの採取ノードのEヒントも 出る(「Eきのこをとる」など)
+ *   - 釣り場に立てば「Eつりをする」も 出る(道具が無ければ blocked の理由表示)
+ * のが **仕様どおりの画面**になった。よってここも同じ意味論へそろえる。
+ * これは判定の緩和ではなく、設計の意味論への較正(教訓5)。
+ *
+ * この較正で v4コーパスの既知陽性8件のうち2件
+ *   179 gatherOre × gatherMoss / 262 gatherMoss × gatherStone
+ * は「旧仕様(他素材を隠す)を陽性として固定していたもの」なので陰性へ再ラベルする
+ * (=既知陽性は6件になる)。残る6件の性質は1つも変えていない:
+ *   13 gatherWood × talk … 誘導中の雑談は いまも隠す(preferredKinds に talk が入らない)
+ *   141/146/151/157 report × fish … 報告に行かず釣りつづける の検出(合否条件そのもの)
+ *   224 gatherWood × shop … 店は どの誘導中でも矛盾
+ *
+ * report を **入れない**のが要点。報告は「その相手に会う」1手で終わるのに対し、
+ * 釣りは「かかるまで待つ」長い専念行動なので、報告段階の fish だけは
+ * これまでどおり矛盾のまま(refishDuringReport ゲートと同じ意味論)。
+ */
+const GATHER_OK_OBJ = new Set([
+  ...GATHER_CATEGORIES, // 採取の段階(もくざい・いし・ヒカリゴケ…)
+  'fish', // 釣りの段階
+  'craft', // 「Cで ◯◯を作ろう」
+  'place', // 「◯◯を 島に置こう」
+  'sleep', // NPC不在で「ベッドで ねて まとう」
+  'lighthouse', // 「とうだいに レンズを つけよう」
+]);
 
 /** HTML片(kbdタグ等)と全角スペースをならして、素の1行にする */
 function normalize(text) {
@@ -311,8 +351,11 @@ export function isShopPanelTitle(title) {
  * 逆に必ずfalseにするもの:
  *  - hint=shop(「Eお店をみる」): 店は依頼の進行に一切寄与しない。
  *    行動が絞られている段階(受注済み)では必ず矛盾。
- *  - 別素材の採取ヒント(例: 目的=ヒカリゴケ + ヒント=岩をくだく)。
+ *  - 誘導中の hint=talk(雑談): 目的の相手いがいとの会話は preferredKinds に入らない設計。
  *  - 目的=report + hint=fish(報告に行くべき場面での釣り再開)。
+ *  ※ v17.2 まで ここにあった「別素材の採取ヒント(例: 目的=ヒカリゴケ + ヒント=岩をくだく)」は
+ *    設計変更により **陰性**になった(GATHER_OK_OBJ のコメントを参照)。
+ *    どの誘導中でも どの素材でも採れるのが仕様なので、別素材のEヒントが出るのは正しい画面。
  *  - hint=display(v10の すいそう・むしかごの出し入れ): carry と同じ「かざる遊び」の寄り道。
  *    候補の kind は 'pickup' なので ObjectiveSystem の preferredKinds には決して入らず、
  *    誘導中(guided)は表示されない設計。出ていたら候補の絞りこみが壊れたということなので、
@@ -360,10 +403,14 @@ export function isSemanticMatch(objCat, hintCat) {
   if (hintCat === 'unknown') return true;
   if (hintCat === 'shop') return false;
   if (objCat === hintCat) return true;
-  if (objCat === 'report' && hintCat === 'talk') return true;
-  // 報告のとちゅうの採取は寄り道ではない(釣り・店は上で false のまま)
-  if (objCat === 'report' && GATHER.has(hintCat)) return true;
-  if ((objCat === 'craft' || objCat === 'place') && GATHER.has(hintCat)) return true;
+  if (objCat === 'report') {
+    // 報告は「その相手に会う」1手。会話も、道すがらの採取も 進行を1ミリも遅らせない。
+    // 釣り(かかるまで待つ長い行動)・店・もちかえる・展示は これまでどおり矛盾のまま
+    return hintCat === 'talk' || GATHER.has(hintCat);
+  }
+  // v17.2 報告いがいの誘導段階は、採取(gather*)も 釣り(fish)も 設計として ふさいでいない
+  // (GATHER_OK_OBJ のコメントに根拠と、コーパス再ラベル2件の内訳がある)
+  if (GATHER_OK_OBJ.has(objCat) && (GATHER.has(hintCat) || hintCat === 'fish')) return true;
   if (objCat === 'unknown') return true;
   return false;
 }

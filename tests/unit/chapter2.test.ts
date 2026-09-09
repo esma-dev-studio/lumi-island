@@ -248,8 +248,8 @@ describe('第2章3-4: ひかりの貝・ほしくさ(見せるだけ=へらな�
     expect(o.progress).toEqual({ cur: 0, max: 3 });
     const ctx = objectiveActionContext(o);
     expect(ctx.guided).toBe(true);
-    // v11.1: 案内している素材+時間で消える拾いもの(ObjectiveSystem の TRANSIENT_PICKUPS)
-    expect(ctx.targetItemIds).toEqual(['lightshell', 'starshard', 'glassfloat']);
+    // v17.2: targetItemIds は「隠す条件」ではなく「同じ強さならこれを先に出す」優先リスト
+    expect(ctx.targetItemIds).toEqual(['lightshell']);
   });
 });
 
@@ -330,9 +330,11 @@ describe('第2章6: とうだいの点灯', () => {
     expect(ctx.guided).toBe(true);
     expect(ctx.preferredKinds).toContain('place');
     expect(ctx.preferredKinds).toContain('exit'); // 帰り道は いつでも通す
-    // v11.1: 採取は「時間で消える拾いもの」だけ通す(入り江の素材ノードは この段階では出ない)
-    expect(ctx.targetItemIds).toEqual(['starshard', 'glassfloat']);
-    expect(ctx.preferredKinds).not.toContain('fish');
+    // v17.2: 入り江の素材ノードも 釣りも この段階で通す(道すがら つんでも 誰も待たせない)。
+    // 案内している素材は無い段階なので、優先の下駄をはく候補も無い
+    expect(ctx.targetItemIds).toBeUndefined();
+    expect(ctx.preferredKinds).toContain('gather');
+    expect(ctx.preferredKinds).toContain('fish');
     expect(ctx.preferredKinds).not.toContain('shop');
   });
 
@@ -678,13 +680,16 @@ describe('意味チェッカー: 第2章の語彙', () => {
     }
   });
 
-  it('レンズを つける段階は厳格なまま(寄り道は矛盾)', () => {
+  it('レンズを つける段階でも 採取は矛盾ではない。店だけは矛盾(v17.2)', () => {
     expect(isSemanticMatch('lighthouse', 'lighthouse')).toBe(true);
     expect(isSemanticMatch('lighthouse', 'blocked')).toBe(true); // 理由表示は矛盾ではない
-    expect(isSemanticMatch('lighthouse', 'gatherStarweed')).toBe(false);
+    // v17.2: とうだいへ向かう道すがらの採取・釣りは 仕様どおりの画面
+    expect(isSemanticMatch('lighthouse', 'gatherStarweed')).toBe(true);
+    expect(isSemanticMatch('lighthouse', 'fish')).toBe(true);
     expect(isSemanticMatch('lighthouse', 'shop')).toBe(false);
-    // 入り江の素材どうしも 別素材なら従来どおり矛盾
-    expect(isSemanticMatch('gatherLightshell', 'gatherStarweed')).toBe(false);
+    expect(isSemanticMatch('lighthouse', 'carry')).toBe(false);
+    // 入り江の素材どうしも v17.2 から矛盾ではない
+    expect(isSemanticMatch('gatherLightshell', 'gatherStarweed')).toBe(true);
     expect(isSemanticMatch('gatherLightshell', 'gatherLightshell')).toBe(true);
     // クラフト・配置の最中の採取は これまでどおり許す
     expect(isSemanticMatch('craft', 'gatherLightshell')).toBe(true);

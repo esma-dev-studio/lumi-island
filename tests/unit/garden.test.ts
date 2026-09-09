@@ -273,14 +273,21 @@ describe('誘導中の見え方(ObjectiveInteractionPolicy)', () => {
     expect(selectInteraction([pick], ctx)?.hint).toContain('つみとる');
   });
 
-  it('もくざい集めの誘導中は うえる も つみとる も出ない', () => {
+  it('v17.2 もくざい集めの誘導中でも「つみとる」は出る(「うえる」は出ない)', () => {
     const ctx = objOf({
       id: 'q_wood_gather', headline: 'いまやること', label: 'もくざいを あつめよう',
       target: { kind: 'poi', id: 'forest' }, gatherItem: 'wood',
     });
-    expect(selectInteraction([plant, pick], ctx)).toBeNull();
-    // 目的の素材(もくざい)の採取だけが残る
-    expect(selectInteraction([plant, pick, woodNode], ctx)?.hint).toContain('木をきる');
+    // 「うえる」は kind='place' なので これまでどおり誘導中は出ない(のばなを1つ使う操作)
+    expect(selectInteraction([plant], ctx)).toBeNull();
+    // 「つみとる」は kind='gather'。v17.2 から どの誘導中でも採れる
+    expect(selectInteraction([plant, pick], ctx)?.hint).toContain('つみとる');
+    // 花だん(garden 29)は 案内している素材の下駄(gather 30 → 29.5)より強いまま。
+    // 「区画の上に立ったら 必ず花だんが出る」という別の設計を 目的の優先が壊さない
+    // (実際の島では 花だんと いちばん近い採取ノードが2.3m以上はなれているので競合しない)
+    expect(selectInteraction([plant, pick, woodNode], ctx)?.hint).toContain('つみとる');
+    // 花だんが無ければ 案内どおり木が出る
+    expect(selectInteraction([woodNode], ctx)?.hint).toContain('木をきる');
   });
 
   it('のばな集めの誘導中は「つみとる」だけ出る(実際にのばなが手に入るため)', () => {
@@ -292,21 +299,17 @@ describe('誘導中の見え方(ObjectiveInteractionPolicy)', () => {
     expect(selectInteraction([plant, pick], ctx)?.hint).toContain('つみとる');
   });
 
-  it('クラフト・配置の誘導中は花だんが出ない。報告中は つみとりだけ出る(v11.1)', () => {
+  it('v17.2 クラフト・配置・報告のどの誘導中でも「つみとる」は出る(「うえる」は出ない)', () => {
+    // 「うえる」は kind='place'(のばなを1つ 使う操作)なので どの誘導中も出ないまま。
+    // 「つみとる」は kind='gather'(のばなが2つ 手に入る)なので どの誘導中でも出る
     for (const o of [
       { id: 'q_fish_craft', headline: 'いまやること', label: 'ツリザオを作ろう', target: { kind: 'none' as const }, craftRecipe: 'r_rod' },
       { id: 'q_lumi_place', headline: 'いまやること', label: '光る家具を 島に置こう', target: { kind: 'none' as const }, placeFurniture: true },
+      { id: 'q_wood_report', headline: 'できた!', label: 'ツムギに ほうこくしよう', target: { kind: 'npc' as const, id: 'tsumugi' } },
     ]) {
-      expect(selectInteraction([plant, pick], objOf(o)), o.id).toBeNull();
+      expect(selectInteraction([plant], objOf(o)), `${o.id} うえる`).toBeNull();
+      expect(selectInteraction([plant, pick], objOf(o))?.id, `${o.id} つみとる`).toBe('garden_pick_0');
     }
-    // 報告の段階だけ、道すがらの採取を塞がない(実プレイの苦情への修正)。
-    // 「うえる」は kind='place' なので従来どおり出ない。「つみとる」は kind='gather' なので出る
-    const report = {
-      id: 'q_wood_report', headline: 'できた!', label: 'ツムギに ほうこくしよう',
-      target: { kind: 'npc' as const, id: 'tsumugi' },
-    };
-    expect(selectInteraction([plant], objOf(report))).toBeNull();
-    expect(selectInteraction([plant, pick], objOf(report))?.id).toBe('garden_pick_0');
   });
 
   it('花だんは採取ノードより強い(区画の上に立てば必ず花だんが出る)', () => {

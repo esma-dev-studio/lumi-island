@@ -117,11 +117,14 @@ describe('ObjectiveInteractionPolicy(目的に合う候補だけを出す)', () 
       selectInteraction([node('moss5', 'moss', 0.4), node('ore1', 'ore', 1.6)], oreCtx())?.id
     ).toBe('node_ore1');
   });
-  it('こうせきほり中: コケしかなければ主ヒントなし(「ヒカリゴケをとる」を出さない)', () => {
-    expect(selectInteraction([node('moss5', 'moss', 0.4)], oreCtx())).toBeNull();
+  it('v17.2 こうせきほり中: コケしかなければ コケのヒントが出て、Eでとれる', () => {
+    // 旧仕様(v17.1まで)は null = 「目の前のコケに 何をしても反応しない」だった。
+    // オーナーの指摘「常にアイテムは集められるように」への修正で、ここは出るのが正しい
+    expect(selectInteraction([node('moss5', 'moss', 0.4)], oreCtx())?.id).toBe('node_moss5');
   });
-  it('ヒカリゴケあつめ中: 岩を主ヒントにしない', () => {
-    expect(selectInteraction([node('rock2', 'stone', 0.5)], mossCtx())).toBeNull();
+  it('v17.2 ヒカリゴケあつめ中: 岩しかなければ岩が出る。両方あればコケが勝つ', () => {
+    expect(selectInteraction([node('rock2', 'stone', 0.5)], mossCtx())?.id).toBe('node_rock2');
+    // 案内している素材(コケ)が同じEの輪にいれば、近い岩より かならずコケが勝つ
     expect(
       selectInteraction([node('rock2', 'stone', 0.5), node('moss6', 'moss', 1.8)], mossCtx())?.id
     ).toBe('node_moss6');
@@ -154,8 +157,14 @@ describe('ObjectiveInteractionPolicy(目的に合う候補だけを出す)', () 
   it('採取目的中でも「ねる」はできる(夜に行きづまらせない)', () => {
     expect(selectInteraction([bed()], woodCtx())?.id).toBe('sleep');
   });
-  it('採取目的中に釣り場へ行っても釣りは主ヒントにしない', () => {
-    expect(selectInteraction([fishing(1.0)], woodCtx())).toBeNull();
+  it('v17.2 採取目的中でも釣り場に立てば「つりをする」が出る(採取ノードには勝てない)', () => {
+    expect(selectInteraction([fishing(1.0)], woodCtx())?.id).toBe('fishing');
+    // 優先度は 採取30 < 釣り50 なので、採取ノードが射程にあれば そちらが勝つ
+    expect(
+      selectInteraction([fishing(1.0), node('tree1', 'wood', 1.8)], woodCtx())?.id
+    ).toBe('node_tree1');
+    // 報告の段階だけは これまでどおり釣りを出さない(報告に行かず釣りつづけるのを防ぐ)
+    expect(selectInteraction([fishing(1.0)], reportCtx())).toBeNull();
   });
   it('道具が足りない理由表示は、目的に合う対象なら残る', () => {
     const reason = cand({

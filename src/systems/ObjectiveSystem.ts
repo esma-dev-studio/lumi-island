@@ -121,13 +121,15 @@ export interface ObjectiveActionContext {
 //     DIG_SPOTS も既存の判定帯から3m以上はなして置いてある(src/data/island.ts)。
 //
 // ここに入れていないもの(意図的に隠したままにするもの):
-//   - fish  : 釣りは「かかるまで待つ」長い専念行動。報告に行くとちゅうで始めると
-//             そのまま釣りつづけてしまう(UXボットの refishDuringReport ゲートの対象)。
 //   - shop  : 店は依頼の進行に一切寄与せず、パネルを開くと画面が止まる
 //             (UXボットの shopOpens ゲートの対象)。
 //   - pickup: 「もちかえる」「いきものを いれる/とりだす」= 自分で置いた家具の操作。
 //             家具は動かないので いつでも戻れる相手で、資源も増えない(むしろ島から減る)。
 //   - place : 花だんに うえる・灯台にレンズを つける等。誘導の見せ場そのものなので絞る。
+//   - fish  : ここ(全誘導文脈への一括許可)には入れないが、v17.2 から
+//             **報告(report)いがいの誘導段階には 段階ごとに足してある**
+//             (採取・釣り・クラフト・配置・ベッド待ち・とうだい)。理由は
+//             objectiveActionContext の各段階のコメントを参照。
 const ALWAYS_ALLOWED: InteractionKind[] = ['sleep', 'enter', 'exit', 'catch', 'dig'];
 
 /**
@@ -135,10 +137,14 @@ const ALWAYS_ALLOWED: InteractionKind[] = ['sleep', 'enter', 'exit', 'catch', 'd
  * どちらも道具が要らず、時間がすぎると拾われないまま消える:
  *   ほしのかけら: 夜(19時〜翌5時)だけ。朝5時に未回収でも消える(StarShardSystem)
  *   うきだま    : 朝(6〜10時)だけ。10時に波にさらわれる(DriftSystem)
- * = 虫とり(catch)とまったく同じ「あとで戻れない相手」なので、どの誘導中でも採れるようにする。
- * これらの候補は kind='gather' なので、種別ではなく「アイテムの許可リスト」で通す
- * (ふつうの採取ノード——木・岩・草・ベリー・コケ・こうせき——は時間で復活するので絞ったまま。
- *  そうしないと「もくざいを あつめよう」の最中に岩や草のEが出て、誘導がぼやける)。
+ *
+ * v11.1〜v17.1 は「誘導中でも この2つだけは 採れる」例外の許可リストだった。
+ * v17.2 で **採取そのものを 一切 塞がなくした**ので、例外リストとしての役目は終わっている
+ * (objectiveActionContext は もう この定数を使わない)。
+ * それでも残してあるのは、「あとで戻れない拾いもの」という**概念の定義**が
+ * ここ1か所にあるほうがよいから:
+ *   - UXボットの意味判定器 tools/ux_semantic_check.mjs の TRANSIENT_PICKUP が これを写している
+ *   - tests/unit/objective_v111.test.ts が「道具が要らない・スポーン制」を機械検査している
  *
  * 雨のカタツムリ(snail)がここに無いのは、候補づくりに乗っていないから:
  * GameScene.routeWithSnail が「ほかに何もできないとき」のフォールバックとして直接ヒントを出すので、
@@ -672,6 +678,39 @@ export function withAreaTravel(o: Objective, at: boolean | ObjectiveArea): Objec
  *   報告 / ベッドで待つ / 採取 / 釣り / クラフト・配置。
  * 未受注の「話を聞こう」・移動チュートリアル・クリア後は自由あつかい(従来どおり全候補)。
  * obj=null は最初のフレーム(目的未計算)なので自由あつかい。
+ *
+ * ---------------------------------------------------------------------------
+ * v17.2 **誘導中でも「とる・ひろう」は 1つも 塞がない**(オーナーの指摘)
+ *
+ *   「チュートリアルの最中に『木材を集めよう』だと 木材いがいが 集められないように
+ *     なっている。常にアイテムは集められるようにしないと、ただ言われたことだけを
+ *     やる作業ゲームになってしまう」
+ *
+ * v11.1 で「報告のとちゅう」だけ塞ぎをやめたが、**採取・釣り・クラフト・配置・
+ * ベッド待ち・とうだいの段階には 塞ぎが残っていた**。それが上の指摘の正体で、
+ * 「もくざいを あつめよう」の最中に 目の前の きのこ・のばな・かいがらへ 近づいても
+ * Eのヒントが1文字も出ない(押しても何も起きない)状態だった。
+ *
+ * そこで targetItemIds の意味を、
+ *      これ以外を **隠す**(filter)  →  同じ強さなら これを **先に出す**(prefer)
+ * へ変えた。実装は ObjectiveInteractionPolicy.selectInteraction の
+ * OBJECTIVE_ITEM_BONUS(優先度に -0.5 の下駄)で、ここは「何を案内しているか」を
+ * 渡すだけになる。これも判定の緩和ではなく、設計の意味論の変更:
+ *   - 採取(gather)・掘る(dig)・虫とり(catch)は「そこにある物を手にとる」操作で、
+ *     どれも一瞬で終わり、依頼の進行を1ミリも遅らせない。子どもは目の前の きのこを
+ *     見つけたらそこで拾う。それを塞ぐと「なにをしても反応しない島」になる。
+ *   - 誘導がぼやける心配は 優先度で受ける: 同じ強さの候補が2つ出たときは
+ *     案内している素材のほうを先に出す(OBJECTIVE_ITEM_BONUS)。ほかの物しか
+ *     無いときだけ その物のヒント(例「Eきのこをとる」)が出る = 案内は消えず、遊びも消えない。
+ *     ただし **採取ノードどうし**の取り合いは ここには来ない: 候補を作る前に
+ *     InteractionSystem.update が「1.9m以内のいちばん近い1本」だけを選んでいるので、
+ *     ノードどうしは 目的ではなく距離で決まる(実測: tools/shots_gather_free_v172.mjs)。
+ *   - 釣り(fish)も **報告いがいの全段階**に足した。道具が無ければ これまでどおり
+ *     「つりには ツリザオが ひつよう」の理由表示になるだけ(押しても何も起きない)。
+ *     報告の段階にだけ入れないのは、報告は「その相手に会う」1手で終わるのに
+ *     釣りは「かかるまで待つ」長い専念行動で、待っているあいだ報告に行かなくなるから
+ *     (UXボットの refishDuringReport ゲートが この1点を見張っている)。
+ * ---------------------------------------------------------------------------
  */
 export function objectiveActionContext(obj: Objective | null): ObjectiveActionContext {
   if (!obj) return FREE_CONTEXT();
@@ -693,47 +732,58 @@ export function objectiveActionContext(obj: Objective | null): ObjectiveActionCo
     // 報告そのものが横取りされないことは優先度で保証している:
     // 報告できるNPCは PRIORITY.npcQuest=10 で最強、さらに selectInteraction が
     // 受注・報告できるNPCを距離より先に選ぶ(tests/unit/objective.test.ts が機械検査)。
-    // 釣り(fish)と店(shop)だけは足さない——上の ALWAYS_ALLOWED のコメントを参照。
+    // 店(shop)と釣り(fish)だけは足さない——上の ALWAYS_ALLOWED のコメントを参照。
+    // v17.2 でも ここだけは 釣りを入れないまま(報告は1手で終わる/釣りは待つ行動)。
     return {
       preferredKinds: ['talk', 'gather', ...ALWAYS_ALLOWED],
       targetNpcId: obj.target.id, guided: true,
     };
   }
   // NPC不在でベッドへ誘導中(withAvailabilityが作る目的)。
-  // ベッドは家の中なので、出入り(enter/exit)も許可しないと誘導どおりに動けない
+  // ベッドは家の中なので、出入り(enter/exit)も許可しないと誘導どおりに動けない。
+  // v17.2 朝まで待つあいだの採取・釣りは ふさがない(案内する素材が無いので prefer も無し)。
   if (obj.target.kind === 'poi' && obj.target.id === 'bed') {
     return {
-      preferredKinds: ['gather', ...ALWAYS_ALLOWED],
-      targetItemIds: [...TRANSIENT_PICKUPS], targetPoiId: 'bed', guided: true,
+      preferredKinds: ['gather', 'fish', ...ALWAYS_ALLOWED],
+      targetPoiId: 'bed', guided: true,
     };
   }
-  // v11第2章 とうだいに レンズを つける段階。とびらのE候補は kind='place' なので
-  // それだけを通す(釣り・店・ふつうの採取は この場面では出さない=見せ場の直前で寄り道させない)
+  // v11第2章 とうだいに レンズを つける段階。とびらのE候補は kind='place'。
+  // v17.2 「見せ場の直前だから寄り道させない」を やめた: レンズを つけるのは
+  // とびらの前に立ったときだけで、道すがら ほしくさを つんでも 1ミリも遅れない。
+  // とうだい本体(place)は 判定圏に入れば PRIORITY.door 帯で必ず勝つ。
   if (obj.target.kind === 'poi' && obj.target.id === COVE_LIGHTHOUSE_POI) {
     return {
-      preferredKinds: ['place', 'gather', ...ALWAYS_ALLOWED],
-      targetItemIds: [...TRANSIENT_PICKUPS], targetPoiId: COVE_LIGHTHOUSE_POI, guided: true,
+      preferredKinds: ['place', 'gather', 'fish', ...ALWAYS_ALLOWED],
+      targetPoiId: COVE_LIGHTHOUSE_POI, guided: true,
     };
   }
   if (obj.gatherItem) {
-    // 案内している素材+「いま拾わないと消えるもの」だけ。ほかの採取ノードは絞ったまま
+    // 採取の段階。**どの採取ノードも隠さない**(v17.2)。targetItemIds は
+    // 「同じEの輪に案内中の素材があれば そちらを先に出す」ための prefer リスト。
     return {
-      preferredKinds: ['gather', ...ALWAYS_ALLOWED],
-      targetItemIds: [obj.gatherItem, ...TRANSIENT_PICKUPS], guided: true,
+      preferredKinds: ['gather', 'fish', ...ALWAYS_ALLOWED],
+      targetItemIds: [obj.gatherItem], guided: true,
     };
   }
   if (obj.fishItems) {
+    // 釣りの段階。採取も 1つも隠さない(v17.2)。
+    // 採取(30)は 釣り(50)より強いので、採取ノードのEの輪が釣り場にかかっていると
+    // 「つりをする」が採取に食われる。src/data/island.ts は水ぎわから2.9m以上
+    // はなす約束で置いてあり、いま重なっているのは tree11(池の南西の岸)の1本だけ
+    // ——tests/unit/gather_free_v172.test.ts が その1本に数を固定して機械検査する。
     return {
       preferredKinds: ['fish', 'gather', ...ALWAYS_ALLOWED],
-      targetItemIds: [...obj.fishItems, ...TRANSIENT_PICKUPS], guided: true,
+      targetItemIds: [...obj.fishItems], guided: true,
     };
   }
   if (obj.craftRecipe || obj.placeFurniture) {
-    // クラフト・配置はCキー/もちものでする作業。Eの主ヒントは出さない
-    // (targetItemIds に ふつうの素材を入れない=採取ノードは対象外)
+    // クラフト・配置はCキー/もちものでする作業。Eの主ヒントは この段階の目的ではない。
+    // v17.2 だからこそ 採取・釣りを ふさがない: 「Cで ツリザオを作ろう」と言われている
+    // 最中に 目の前の きのこが とれないほうが おかしい(案内する素材が無いので prefer も無し)。
     return {
-      preferredKinds: ['gather', ...ALWAYS_ALLOWED],
-      targetItemIds: [...TRANSIENT_PICKUPS], guided: true,
+      preferredKinds: ['gather', 'fish', ...ALWAYS_ALLOWED],
+      guided: true,
     };
   }
   return FREE_CONTEXT();

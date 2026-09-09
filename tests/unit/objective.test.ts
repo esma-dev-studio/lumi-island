@@ -161,22 +161,23 @@ describe('ObjectiveSystem(いまやること)', () => {
 
 // ---- 目的→「Eでやってよいこと」(v5 P0-1) ----
 describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
-  it('採取段階: その素材の採取だけを対象にする', () => {
+  it('採取段階: 採取はどれも通し、案内している素材だけを「優先」する(v17.2)', () => {
     const s = newGameState();
     acceptQuest(s, QUEST_BY_ID.q_wood);
     const ctx = objectiveActionContext(currentObjective(s));
     expect(ctx.guided).toBe(true);
     expect(ctx.preferredKinds).toContain('gather');
+    expect(ctx.preferredKinds).toContain('fish'); // v17.2 釣りも塞がない(報告段階だけ別)
     expect(ctx.preferredKinds).not.toContain('shop');
-    // v11.1: 案内している素材+時間で消える拾いもの(かけら・うきだま)だけ
-    expect(ctx.targetItemIds).toEqual(['wood', 'starshard', 'glassfloat']);
+    // v17.2: targetItemIds は「これ以外を隠す」ではなく「同じ強さならこれを先に出す」
+    expect(ctx.targetItemIds).toEqual(['wood']);
   });
   it('採取段階でも「ねる」は許可する(夜に行きづまらせない)', () => {
     const s = newGameState();
     acceptQuest(s, QUEST_BY_ID.q_wood);
     expect(objectiveActionContext(currentObjective(s)).preferredKinds).toContain('sleep');
   });
-  it('釣り段階: 釣りだけを対象にし、夜魚も達成アイテムに含む', () => {
+  it('釣り段階: 釣りを優先しつつ、採取はどれも通す(夜魚も達成アイテムに含む)', () => {
     const s = newGameState();
     s.quests.q_wood = 'done';
     s.quests.q_fish = 'open';
@@ -187,8 +188,9 @@ describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
     const ctx = objectiveActionContext(o);
     expect(ctx.guided).toBe(true);
     expect(ctx.preferredKinds).toContain('fish');
-    // v11.1: 釣りの最中でも 時間で消える拾いものだけは拾える(ふつうの採取ノードは対象外)
-    expect(ctx.targetItemIds).toEqual(['fish', 'nightfish', 'starshard', 'glassfloat']);
+    expect(ctx.preferredKinds).toContain('gather');
+    // v17.2: ふつうの採取ノードも通る(隠さない)。ここは「優先する素材」の一覧
+    expect(ctx.targetItemIds).toEqual(['fish', 'nightfish']);
   });
   it('報告段階: その相手との会話だけを対象にする', () => {
     const s = newGameState();
@@ -215,7 +217,7 @@ describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
     expect(o?.id).toBe('tut_move');
     expect(objectiveActionContext(o).guided).toBe(false);
   });
-  it('NPC不在のベッド誘導中は「ねる」と自宅の出入り(と虫とり)だけ', () => {
+  it('NPC不在のベッド誘導中も 採取・釣りは通す(優先する素材は無い)', () => {
     const s = newGameState();
     acceptQuest(s, QUEST_BY_ID.q_wood);
     invAdd(s, 'wood', 5);
@@ -223,12 +225,13 @@ describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
     const ctx = objectiveActionContext(o);
     expect(ctx.guided).toBe(true);
     // v11: 虫とり(catch) / v11.1: 穴ほり(dig)も常時許可(ObjectiveSystem の ALWAYS_ALLOWED)
-    expect(ctx.preferredKinds).toEqual(['gather', 'sleep', 'enter', 'exit', 'catch', 'dig']);
-    // 採取は「時間で消える拾いもの」だけ(ふつうの採取ノードはベッド誘導中も出ない)
-    expect(ctx.targetItemIds).toEqual(['starshard', 'glassfloat']);
+    // v17.2: 釣り(fish)も この段階には入る(報告段階だけ入れない)
+    expect(ctx.preferredKinds).toEqual(['gather', 'fish', 'sleep', 'enter', 'exit', 'catch', 'dig']);
+    // 案内している素材が無い段階なので、優先の下駄をはく候補も無い
+    expect(ctx.targetItemIds).toBeUndefined();
     expect(ctx.targetPoiId).toBe('bed');
   });
-  it('クラフト段階は採取ノードを対象にしない(時間で消える拾いものだけ)', () => {
+  it('クラフト段階も採取ノードを隠さない(優先する素材は無い)', () => {
     const s = newGameState();
     s.quests.q_wood = 'done';
     s.quests.q_fish = 'open';
@@ -240,9 +243,11 @@ describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
     expect(o.craftRecipe).toBe('r_rod');
     const ctx = objectiveActionContext(o);
     expect(ctx.guided).toBe(true);
-    expect(ctx.targetItemIds).toEqual(['starshard', 'glassfloat']);
+    expect(ctx.preferredKinds).toContain('gather');
+    expect(ctx.preferredKinds).toContain('fish');
+    expect(ctx.targetItemIds).toBeUndefined();
   });
-  it('配置段階も採取ノードを対象にしない', () => {
+  it('配置段階も採取ノードを隠さない', () => {
     const s = newGameState();
     s.quests.q_wood = 'done';
     s.quests.q_fish = 'done';
@@ -253,7 +258,9 @@ describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
     const o = currentObjective(s);
     expect(o.id).toBe('q_lantern_place');
     expect(o.placeFurniture).toBe(true);
-    expect(objectiveActionContext(o).targetItemIds).toEqual(['starshard', 'glassfloat']);
+    const ctx = objectiveActionContext(o);
+    expect(ctx.preferredKinds).toContain('gather');
+    expect(ctx.targetItemIds).toBeUndefined();
   });
   it('全クリア後と目的未計算(null)は自由探索あつかい', () => {
     const s = newGameState();
@@ -318,9 +325,10 @@ describe('虫とり(catch)は誘導中でも使える。ただし採取を横取
     expect(best?.kind).toBe('gather');
   });
 
-  it('目的と関係ない素材の採取は従来どおり隠れる(虫だけが例外)', () => {
+  it('v17.2 目的と関係ない素材の採取も残る(虫より採取が強いのは従来どおり)', () => {
     const ctx = woodCtx();
     const best = selectInteraction([bugCand(1.0), gatherCand(0.4, 'fiber')], ctx);
-    expect(best?.kind, '関係ない採取は候補から外れ、虫が残る').toBe('catch');
+    expect(best?.kind, '関係ない採取も候補に残り、優先度で採取が勝つ').toBe('gather');
+    expect(best?.itemId).toBe('fiber');
   });
 });

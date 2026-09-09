@@ -115,13 +115,21 @@ describe('categorizeHint(ホットヒント)', () => {
 });
 
 describe('isSemanticMatch(既知の矛盾を検出する)', () => {
-  it('実測の矛盾3件をfalseにする', () => {
-    // sec179: 高台で こうせきをほろう + Eヒカリゴケをとる
-    expect(isSemanticMatch('gatherOre', 'gatherMoss')).toBe(false);
+  it('実測の矛盾のうち、いまも矛盾なのは 店・雑談・報告中の釣り', () => {
     // sec224: もくざいを あつめよう + Eお店をみる(うる・かう)
     expect(isSemanticMatch('gatherWood', 'shop')).toBe(false);
+    // sec13: もくざいを あつめよう + Eツムギと はなす(誘導中の雑談は いまも隠す)
+    expect(isSemanticMatch('gatherWood', 'talk')).toBe(false);
+    // sec141〜157: ◯◯に ほうこくしよう + Eつりをする
+    expect(isSemanticMatch('report', 'fish')).toBe(false);
+  });
+  it('v17.2 別素材の採取ヒントは もう矛盾ではない(設計変更にあわせた再ラベル)', () => {
+    // 誘導中でも どの採取ノードも Eで採れるのが仕様になった
+    // (ObjectiveSystem.objectiveActionContext / ObjectiveInteractionPolicy.matchesObjective)。
+    // sec179: 高台で こうせきをほろう + Eヒカリゴケをとる
+    expect(isSemanticMatch('gatherOre', 'gatherMoss')).toBe(true);
     // sec262: ヒカリゴケを あつめよう + E岩をくだく
-    expect(isSemanticMatch('gatherMoss', 'gatherStone')).toBe(false);
+    expect(isSemanticMatch('gatherMoss', 'gatherStone')).toBe(true);
   });
   it('報告に行くべき場面での釣り再開はfalse', () => {
     expect(isSemanticMatch('report', 'fish')).toBe(false);
@@ -168,9 +176,9 @@ describe('isSemanticMatch(既知の矛盾を検出する)', () => {
         expect(isSemanticMatch(obj, hint), `${obj} x ${hint}`).toBe(true);
       }
     }
-    // 復活するふつうの採取ノードは較正の対象外(別素材の検出はこれまでどおり効く)
-    expect(isSemanticMatch('gatherWood', 'gatherMoss')).toBe(false);
-    expect(isSemanticMatch('gatherMoss', 'gatherStone')).toBe(false);
+    // v17.2: 復活するふつうの採取ノードも 誘導中に採れる仕様になったので ここも true
+    expect(isSemanticMatch('gatherWood', 'gatherMoss')).toBe(true);
+    expect(isSemanticMatch('gatherMoss', 'gatherStone')).toBe(true);
   });
   it('v11.1 報告のとちゅうの採取は矛盾ではない(釣り・店・もちかえるは従来どおりfalse)', () => {
     // 報告は「その相手に会う」ことだけが条件。道すがら何を採っても遅れない
@@ -189,10 +197,23 @@ describe('isSemanticMatch(既知の矛盾を検出する)', () => {
     expect(isSemanticMatch('report', 'fish')).toBe(false);
     expect(isSemanticMatch('report', 'shop')).toBe(false);
     expect(isSemanticMatch('report', 'carry')).toBe(false);
-    // 採取・釣り・就寝の段階も従来どおり(復活するふつうの素材どうし)
-    expect(isSemanticMatch('gatherFiber', 'gatherMoss')).toBe(false);
-    expect(isSemanticMatch('fish', 'gatherFiber')).toBe(false);
-    expect(isSemanticMatch('sleep', 'gatherWood')).toBe(false);
+    // 誘導中の雑談・もちかえる・展示・家具の配置は 従来どおり矛盾
+    expect(isSemanticMatch('gatherFiber', 'talk')).toBe(false);
+    expect(isSemanticMatch('gatherFiber', 'carry')).toBe(false);
+    expect(isSemanticMatch('gatherFiber', 'display')).toBe(false);
+    expect(isSemanticMatch('gatherFiber', 'place')).toBe(false);
+    expect(isSemanticMatch('sleep', 'shop')).toBe(false);
+  });
+  it('v17.2 報告いがいの誘導段階では、採取も釣りも矛盾ではない', () => {
+    // ObjectiveSystem.objectiveActionContext が 報告いがいの全段階に
+    // gather と fish を入れたので、判定器も同じ意味論にそろえる(設計意味論への較正)。
+    for (const obj of ['gatherFiber', 'gatherWood', 'fish', 'craft', 'place', 'sleep', 'lighthouse']) {
+      for (const hint of ['gatherMoss', 'gatherMushroom', 'gatherStar', 'fish']) {
+        expect(isSemanticMatch(obj, hint), `${obj} x ${hint}`).toBe(true);
+      }
+    }
+    // 報告の段階だけは 釣りを許さない(合否条件そのもの)
+    expect(isSemanticMatch('report', 'fish')).toBe(false);
   });
   it('クラフト目的中の採取はtrue(目的文からは不足素材が読み取れないため)', () => {
     expect(isSemanticMatch('craft', 'gatherWood')).toBe(true);
@@ -237,8 +258,10 @@ describe('isSemanticMatch(既知の矛盾を検出する)', () => {
     expect(isSemanticMatch('fish', 'sleep')).toBe(true);
     expect(isSemanticMatch('report', 'sleep')).toBe(true);
     expect(isSemanticMatch('craft', 'sleep')).toBe(true);
-    // 目的そのものがベッド誘導のときは従来どおり厳格(採取などのヒントは矛盾のまま)
-    expect(isSemanticMatch('sleep', 'gatherWood')).toBe(false);
+    // v17.2 ベッド誘導中の採取も 矛盾ではない(朝を待つあいだに拾っても 誰も待たせない)。
+    // 店だけは このときも矛盾のまま
+    expect(isSemanticMatch('sleep', 'gatherWood')).toBe(true);
+    expect(isSemanticMatch('sleep', 'shop')).toBe(false);
     expect(isSemanticMatch('sleep', 'sleep')).toBe(true);
   });
   it('会話送りのヒントはどの目的中でも矛盾ではない', () => {
@@ -252,8 +275,8 @@ describe('isSemanticMatch(既知の矛盾を検出する)', () => {
       expect(isSemanticMatch(obj, 'enter'), `${obj} x enter`).toBe(true);
       expect(isSemanticMatch(obj, 'exit'), `${obj} x exit`).toBe(true);
     }
-    // 目的そのものがベッド誘導のときも、採取などのヒントは従来どおり矛盾のまま
-    expect(isSemanticMatch('sleep', 'gatherWood')).toBe(false);
+    // 目的そのものがベッド誘導のときも、店のヒントは従来どおり矛盾のまま
+    expect(isSemanticMatch('sleep', 'shop')).toBe(false);
   });
   it('ベッド誘導の目的文は「家に はいって ベッドで ねよう」でもsleep', () => {
     expect(categorizeObjective('ツムギは いまは いないよ<br>家に はいって ベッドで ねよう')).toBe('sleep');
@@ -269,7 +292,7 @@ describe('annotateRow / summarizeTrace(traceのまとめ判定)', () => {
     expect(a.dir).toBe(3);
     expect(a.objectiveCategory).toBe('gatherOre');
     expect(a.hintCategory).toBe('gatherMoss');
-    expect(a.semanticMatch).toBe(false);
+    expect(a.semanticMatch).toBe(true); // v17.2 別素材の採取は仕様どおりの画面
   });
   it('矛盾・報告中の釣りを数える', () => {
     const sum = summarizeTrace([
@@ -277,7 +300,9 @@ describe('annotateRow / summarizeTrace(traceのまとめ判定)', () => {
       { sec: 10, obj: 'もくざいを あつめよう', sub: '1 / 5', hint: 'E木をきる' },
       { sec: 15, obj: 'ミナモに ほうこくしよう', sub: '', hint: 'まってる… Escやめる' },
       { sec: 20, obj: 'ミナモに ほうこくしよう', sub: '', hint: 'Eつりをする' },
-      { sec: 25, obj: 'ヒカリゴケを あつめよう', sub: '1 / 2', hint: 'E岩をくだく' },
+      // v17.2: 採取段階の別素材は矛盾ではない。かわりに「誘導中の雑談」を1件入れる
+      { sec: 25, obj: 'ヒカリゴケを あつめよう', sub: '1 / 2', hint: 'Eミナモと はなす' },
+      { sec: 30, obj: 'ヒカリゴケを あつめよう', sub: '1 / 2', hint: 'E岩をくだく' }, // 仕様どおり
     ]);
     expect(sum.semanticMismatchCount).toBe(3);
     expect(sum.semanticMismatches.map((m) => m.sec)).toEqual([15, 20, 25]);
@@ -367,17 +392,26 @@ const V4_TRACE = [
   { sec: 267, obj: "ヒカリゴケを あつめよう", sub: "1 / 2", hint: "" },
   { sec: 272, obj: "ランタンを 島に置こう(もちもの→おく)", sub: "", hint: "Eおく Rまわす Escやめる" },
 ];
-// この8件は当時 目視で「本物の矛盾」と裁定したもの。数も秒も変えてはいけない。
-const V4_MISMATCH_SECS = [13, 141, 146, 151, 157, 179, 224, 262];
+// v4当時 目視で「本物の矛盾」と裁定した8件のうち、6件はいまも矛盾。
+// 残る2件(179 gatherOre×gatherMoss / 262 gatherMoss×gatherStone)は
+// **v17.2の設計変更で陰性へ再ラベル**した:
+// 旧仕様は「案内している素材いがいの採取ノードを 誘導中は隠す」で、当時はその画面自体が
+// バグの証拠だった。いまは「どの誘導中でも どの素材でも採れる」が仕様なので、
+// 別素材のEヒントが出ているのは 正しい画面 = 矛盾ではない。
+// (再ラベルの根拠は tools/ux_semantic_check.mjs の GATHER_OK_OBJ のコメント。
+//  ほかの6件の性質は 1つも変えていない。数も秒も、これ以外の理由で変えてはいけない)
+const V4_MISMATCH_SECS = [13, 141, 146, 151, 157, 224];
+/** 設計変更で陰性になった2件(旧仕様を陽性として固定していたもの) */
+const V4_RELABELED_SECS = [179, 262];
 
 describe('v4過去トレースの回帰(判定器を直しても検出が減らない)', () => {
-  it('v4コーパス49行の矛盾はちょうど8件で、秒も従来どおり', () => {
+  it('v4コーパス49行の矛盾はちょうど6件で、秒も従来どおり', () => {
     const sum = summarizeTrace(V4_TRACE);
     expect(V4_TRACE.length).toBe(49);
-    expect(sum.semanticMismatchCount).toBe(8);
+    expect(sum.semanticMismatchCount).toBe(6);
     expect(sum.semanticMismatches.map((m) => m.sec)).toEqual(V4_MISMATCH_SECS);
   });
-  it('8件の中身(目的×ヒントの組)も従来どおり', () => {
+  it('6件の中身(目的×ヒントの組)も従来どおり', () => {
     const sum = summarizeTrace(V4_TRACE);
     expect(sum.semanticMismatches.map((m) => `${m.sec}:${m.objectiveCategory}x${m.hintCategory}`)).toEqual([
       '13:gatherWoodxtalk',
@@ -385,10 +419,18 @@ describe('v4過去トレースの回帰(判定器を直しても検出が減ら�
       '146:reportxfish',
       '151:reportxfish',
       '157:reportxfish',
-      '179:gatherOrexgatherMoss',
       '224:gatherWoodxshop',
+    ]);
+  });
+  it('再ラベルした2件は「別素材の採取」だけ(それ以外の理由で消えていない)', () => {
+    const sum = summarizeTrace(V4_TRACE);
+    const relabeled = sum.trace.filter((r) => V4_RELABELED_SECS.includes(r.sec));
+    expect(relabeled.map((r) => `${r.sec}:${r.objectiveCategory}x${r.hintCategory}`)).toEqual([
+      '179:gatherOrexgatherMoss',
       '262:gatherMossxgatherStone',
     ]);
+    // どちらも「誘導中の採取段階 × ほかの採取ノード」= v17.2で仕様どおりになった組
+    for (const r of relabeled) expect(r.semanticMatch, `${r.sec}`).toBe(true);
   });
   it('報告中の釣り4件・停滞0件・未知ヒント0件も従来どおり', () => {
     const sum = summarizeTrace(V4_TRACE);
@@ -457,12 +499,13 @@ describe('v6の新しい採取ヒント(4種)', () => {
     expect(categorizeObjective('かいがらを あつめよう')).toBe('gatherShell');
     expect(categorizeObjective('ほしのかけらを あつめよう')).toBe('gatherStar');
   });
-  it('別素材どうしは矛盾・同じ素材は一致・craft/place中の採取は許す', () => {
+  it('採取どうしは同じ素材でも別素材でも一致(v17.2)・craft/place中の採取は許す', () => {
     expect(isSemanticMatch('gatherFlower', 'gatherFlower')).toBe(true);
-    expect(isSemanticMatch('gatherFlower', 'gatherMushroom')).toBe(false);
+    // v17.2: 別素材でも矛盾ではない(どの誘導中でも どの素材も採れるのが仕様)
+    expect(isSemanticMatch('gatherFlower', 'gatherMushroom')).toBe(true);
     // ほしのかけらは v11.1 から常時許可(時間限定の拾いもの)なので、ここは true
     expect(isSemanticMatch('gatherShell', 'gatherStar')).toBe(true);
-    expect(isSemanticMatch('gatherMoss', 'gatherShell')).toBe(false);
+    expect(isSemanticMatch('gatherMoss', 'gatherShell')).toBe(true);
     expect(isSemanticMatch('report', 'gatherFlower')).toBe(true);
     expect(isSemanticMatch('craft', 'gatherShell')).toBe(true);
     expect(isSemanticMatch('place', 'gatherStar')).toBe(true);
@@ -497,7 +540,7 @@ describe('v6の新しい採取ヒント(4種)', () => {
     // クラフト・配置の最中に拾っても矛盾あつかいにしない(ほかの拾いものと同じ)
     expect(isSemanticMatch('craft', 'gatherSnail')).toBe(true);
     expect(isSemanticMatch('place', 'gatherSnail')).toBe(true);
-    expect(isSemanticMatch('gatherSnail', 'gatherShell')).toBe(false);
+    expect(isSemanticMatch('gatherSnail', 'gatherShell')).toBe(true); // v17.2 別素材も許す
   });
   it('既存の文言の判定は変わらない(新ルールが古いヒントを横取りしない)', () => {
     expect(categorizeHint('Eベリーをつむ')).toBe('gatherBerry');

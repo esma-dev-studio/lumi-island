@@ -84,7 +84,7 @@ describe('v11.1 誘導中でも「すぐ終わる・資源が増える」操作�
     expect(without?.kind).toBe('gather');
   });
 
-  it('採取の誘導中は、案内している素材と 時間で消える拾いものだけ', () => {
+  it('v17.2 採取の誘導中は どの素材も通る(時間で復活するふつうの素材もふくむ)', () => {
     const s = newGameState();
     acceptQuest(s, QUEST_BY_ID.q_wood);
     const ctx = objectiveActionContext(currentObjective(s));
@@ -92,9 +92,9 @@ describe('v11.1 誘導中でも「すぐ終わる・資源が増える」操作�
     for (const item of TRANSIENT_PICKUPS) {
       expect(matchesObjective(cand('gather', PRIORITY.gather, 1, item), ctx), item).toBe(true);
     }
-    // 時間で復活するふつうの素材は これまでどおり隠す(誘導をぼやけさせない)
-    expect(matchesObjective(cand('gather', PRIORITY.gather, 1, 'fiber'), ctx), 'クサツル').toBe(false);
-    expect(matchesObjective(cand('gather', PRIORITY.gather, 1, 'moss'), ctx), 'ヒカリゴケ').toBe(false);
+    // v17.1までは false(隠していた)。オーナーの指摘で「常に集められる」へ変えた
+    expect(matchesObjective(cand('gather', PRIORITY.gather, 1, 'fiber'), ctx), 'クサツル').toBe(true);
+    expect(matchesObjective(cand('gather', PRIORITY.gather, 1, 'moss'), ctx), 'ヒカリゴケ').toBe(true);
   });
 
   it('案内している素材のノードのほうが近ければ、そちらが勝つ', () => {
