@@ -27,6 +27,7 @@ function setup(debug = true) {
   const player = { x: PIER.x, z: PIER.z, locked: false, face: () => {} };
   const hand = new TransformNode('handR', scene);
   const played: string[] = [];
+  const faces: string[] = []; // v29 出した顔(アタリ=surprised / 釣れた=smile / にげられた=sad)
   const ends: (() => void)[] = []; // アニメ終了コールバック(登録順)
   const view = {
     groups: new Map<string, AnimationGroup>([
@@ -37,6 +38,9 @@ function setup(debug = true) {
     play: (name: string, opts?: { onEnd?: () => void }) => {
       played.push(name);
       if (opts?.onEnd) ends.push(opts.onEnd);
+    },
+    pulseFace: (name: string) => {
+      faces.push(name);
     },
   };
   const p = player as unknown as PlayerController;
@@ -56,7 +60,10 @@ function setup(debug = true) {
   const bobberOn = (): boolean => scene.getMeshByName('bobber')?.isEnabled(false) ?? false;
   const rodOn = (): boolean => scene.getMeshByName('rodProp')?.isEnabled(false) ?? false;
   const lineExists = (): boolean => scene.getMeshByName('fline') !== null;
-  return { fishing, state, player, view: v, p, advance, toBite, finishAnim, ends, played, bobberOn, rodOn, lineExists };
+  return {
+    fishing, state, player, view: v, p, advance, toBite, finishAnim, ends, played, faces,
+    bobberOn, rodOn, lineExists,
+  };
 }
 
 describe('釣りの状態機械', () => {
@@ -216,6 +223,21 @@ describe('釣りの状態機械', () => {
     expect(fishing.state).toBe('idle');
     fishing.start(p, view); // すぐ次を始められる
     expect(fishing.state).toBe('casting');
+  });
+
+  it('v29 アタリ=おどろき / 釣れた=にっこり / にげられた=しょんぼり の顔が出る', () => {
+    // 顔は「モーフの重み」なので、体のアニメ(played)とは べつの みちすじで出る。
+    // ここでは 出す順番だけを 固定する(重みの ふるまいは face_v29.test.ts)。
+    const a = setup();
+    a.toBite();
+    expect(a.faces).toEqual(['surprised']); // アタリ
+    a.fishing.action(a.p, a.view);
+    expect(a.faces).toEqual(['surprised', 'smile']); // 釣れた(ぬしも 同じ道すじ)
+
+    const b = setup();
+    b.toBite();
+    b.advance(1.375); // bite を 放置 → にげられた
+    expect(b.faces).toEqual(['surprised', 'sad']);
   });
 
   it('にげられた場合はidleに戻り、すぐ次を始められる(従来どおり)', () => {

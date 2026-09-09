@@ -27,17 +27,49 @@ interface RawStop {
   zen: string;
   /** v15 雲がうける光の色(夕方は茜) */
   cloud: string;
+  // ---- v17 「絵作り」の列(ここから下は v16 までの絵には 無かったもの) ----
+  /**
+   * 影の中の色。青みグレーで 影を まっ黒にしない(ART_DIRECTION「影は真っ黒にしない」)。
+   * ここが **「影の中は何色か」の唯一の情報源**で、行き先は2つ:
+   *   1) scene.ambientColor(材質が ambientColor を持てば そのまま効く)
+   *   2) ポストプロセスの 暗部のもち上げ(lift)の 色
+   * Babylon の StandardMaterial は ambientColor の既定が 黒なので、
+   * いまの島では 1) は 効かない。実際に 影を持ち上げているのは 2) と
+   * 影ジェネレータの darkness(IslandScene)。色を 1か所で 決めておくと、
+   * あとで 材質側を opt-in させたときに 3つが 勝手にそろう。
+   */
+  amb: string;
+  /** 上の色の 強さ。0.05 前後。上げすぎると 絵ぜんたいが ねむくなる */
+  ambI: number;
+  /** 時刻のグレーディングの 色み。**明るさが動かないよう ならして**から つかう */
+  grC: string;
+  /** 上の 効き(0=無変化)。ART_DIRECTION の パステルを こわさない値に しぼる */
+  grA: number;
+  /** 暗いところの もち上げ(色は amb と同じ)。夜の 黒つぶれよけ。リニアの足し算 */
+  grLift: number;
+  /** 露出(1=そのまま)。リニアの かけ算 */
+  grExpo: number;
+  /**
+   * ハイライトの肩が はじまる 明るさ(**画面に出る値** 0..1)。1 = 肩なし。
+   * ここから上だけが なだらかに 白へ 近づく = 夕焼けの空・雪・きらめきが
+   * 「1色の白い面」に つぶれにくくなる。これより下の 中間調は **1ビットも動かない**。
+   */
+  grShoulder: number;
+  /** 太陽のまわりの かさ(halo)の色 */
+  halo: string;
+  /** かさの強さ。朝夕で強く・昼は弱く・夜は 0(月には 別のかさが ある) */
+  haloA: number;
 }
 // 夜は「暗い」ではなく「光がきれい」: 環境光を持ち上げ、道と人物が見える値にする
 const RAW: RawStop[] = [
-  { h: 4.5, sky: '#263551', fog: '#36465e', sunC: '#8aa0c8', sunI: 0.5, hemiC: '#5d6d94', hemiG: '#38405a', hemiI: 0.55, fogD: 0.0058, glowMint: 0.5, glowAmber: 0.55, glowBlue: 0.45, sea: '#2e4a63', zen: '#14203c', cloud: '#5a6b8c' },
-  { h: 6, sky: '#e8c8a8', fog: '#e5c9ae', sunC: '#ffca8a', sunI: 1.1, hemiC: '#cfc0b0', hemiG: '#8a7a66', hemiI: 0.55, fogD: 0.005, glowMint: 0.12, glowAmber: 0.2, glowBlue: 0.1, sea: '#3f6a80', zen: '#c2ccda', cloud: '#f6cdb4' },
-  { h: 9, sky: '#a6def4', fog: '#c8e2ea', sunC: '#fff0cf', sunI: 1.9, hemiC: '#c9e6f2', hemiG: '#8a7a66', hemiI: 0.7, fogD: 0.0038, glowMint: 0, glowAmber: 0, glowBlue: 0, sea: '#3f7288', zen: '#6fb3e0', cloud: '#fbfaf6' },
-  { h: 15.5, sky: '#a8dcee', fog: '#c5dfe8', sunC: '#ffebc8', sunI: 1.8, hemiC: '#c9e5f2', hemiG: '#8a7a66', hemiI: 0.68, fogD: 0.0038, glowMint: 0, glowAmber: 0, glowBlue: 0, sea: '#3f7288', zen: '#6db0dd', cloud: '#fbf8f2' },
-  { h: 17.5, sky: '#f2c08a', fog: '#e8bd96', sunC: '#ffb27a', sunI: 1.25, hemiC: '#d8b8a0', hemiG: '#7a6a58', hemiI: 0.55, fogD: 0.005, glowMint: 0.15, glowAmber: 0.25, glowBlue: 0.12, sea: '#40667c', zen: '#a98aa8', cloud: '#f2a878' },
-  { h: 19.5, sky: '#324263', fog: '#3e4e6b', sunC: '#93a8cf', sunI: 0.62, hemiC: '#68789e', hemiG: '#3c4560', hemiI: 0.58, fogD: 0.0056, glowMint: 0.62, glowAmber: 0.72, glowBlue: 0.55, sea: '#2e4a63', zen: '#1e2a48', cloud: '#7a7b96' },
-  { h: 22, sky: '#1b2a48', fog: '#27364f', sunC: '#8aa0c8', sunI: 0.52, hemiC: '#57678e', hemiG: '#343c50', hemiI: 0.52, fogD: 0.006, glowMint: 0.7, glowAmber: 0.8, glowBlue: 0.62, sea: '#24405a', zen: '#101c36', cloud: '#41496a' },
-  { h: 28.5, sky: '#263551', fog: '#36465e', sunC: '#8aa0c8', sunI: 0.5, hemiC: '#5d6d94', hemiG: '#38405a', hemiI: 0.55, fogD: 0.0058, glowMint: 0.5, glowAmber: 0.55, glowBlue: 0.45, sea: '#2e4a63', zen: '#14203c', cloud: '#5a6b8c' },
+  { h: 4.5, sky: '#263551', fog: '#36465e', sunC: '#8aa0c8', sunI: 0.5, hemiC: '#5d6d94', hemiG: '#38405a', hemiI: 0.55, fogD: 0.0058, glowMint: 0.5, glowAmber: 0.55, glowBlue: 0.45, sea: '#2e4a63', zen: '#14203c', cloud: '#5a6b8c', amb: '#5a6e9e', ambI: 0.085, grC: '#c8c0ff', grA: 0.13, grLift: 0.01, grExpo: 1, grShoulder: 0.92, halo: '#8fa6d8', haloA: 0 },
+  { h: 6, sky: '#e8c8a8', fog: '#e5c9ae', sunC: '#ffca8a', sunI: 1.1, hemiC: '#cfc0b0', hemiG: '#8a7a66', hemiI: 0.55, fogD: 0.005, glowMint: 0.12, glowAmber: 0.2, glowBlue: 0.1, sea: '#3f6a80', zen: '#c2ccda', cloud: '#f6cdb4', amb: '#9e8f96', ambI: 0.05, grC: '#ffd9c2', grA: 0.15, grLift: 0.005, grExpo: 1, grShoulder: 0.88, halo: '#ffd9a8', haloA: 0.55 },
+  { h: 9, sky: '#a6def4', fog: '#c8e2ea', sunC: '#fff0cf', sunI: 1.9, hemiC: '#c9e6f2', hemiG: '#8a7a66', hemiI: 0.7, fogD: 0.0038, glowMint: 0, glowAmber: 0, glowBlue: 0, sea: '#3f7288', zen: '#6fb3e0', cloud: '#fbfaf6', amb: '#8fb4d8', ambI: 0.055, grC: '#ffffff', grA: 0, grLift: 0.003, grExpo: 1, grShoulder: 0.9, halo: '#fff2d8', haloA: 0.14 },
+  { h: 15.5, sky: '#a8dcee', fog: '#c5dfe8', sunC: '#ffebc8', sunI: 1.8, hemiC: '#c9e5f2', hemiG: '#8a7a66', hemiI: 0.68, fogD: 0.0038, glowMint: 0, glowAmber: 0, glowBlue: 0, sea: '#3f7288', zen: '#6db0dd', cloud: '#fbf8f2', amb: '#8fb2d6', ambI: 0.055, grC: '#fffdf8', grA: 0.06, grLift: 0.003, grExpo: 1, grShoulder: 0.9, halo: '#fff0d0', haloA: 0.16 },
+  { h: 17.5, sky: '#f2c08a', fog: '#e8bd96', sunC: '#ffb27a', sunI: 1.25, hemiC: '#d8b8a0', hemiG: '#7a6a58', hemiI: 0.55, fogD: 0.005, glowMint: 0.15, glowAmber: 0.25, glowBlue: 0.12, sea: '#40667c', zen: '#a98aa8', cloud: '#f2a878', amb: '#9a8ba0', ambI: 0.055, grC: '#ffd0a0', grA: 0.13, grLift: 0.005, grExpo: 1, grShoulder: 0.88, halo: '#ffb27a', haloA: 0.62 },
+  { h: 19.5, sky: '#324263', fog: '#3e4e6b', sunC: '#93a8cf', sunI: 0.62, hemiC: '#68789e', hemiG: '#3c4560', hemiI: 0.58, fogD: 0.0056, glowMint: 0.62, glowAmber: 0.72, glowBlue: 0.55, sea: '#2e4a63', zen: '#1e2a48', cloud: '#7a7b96', amb: '#6c7aa8', ambI: 0.08, grC: '#d0ccff', grA: 0.13, grLift: 0.009, grExpo: 1, grShoulder: 0.91, halo: '#c9a2b4', haloA: 0.22 },
+  { h: 22, sky: '#1b2a48', fog: '#27364f', sunC: '#8aa0c8', sunI: 0.52, hemiC: '#57678e', hemiG: '#343c50', hemiI: 0.52, fogD: 0.006, glowMint: 0.7, glowAmber: 0.8, glowBlue: 0.62, sea: '#24405a', zen: '#101c36', cloud: '#41496a', amb: '#57699c', ambI: 0.09, grC: '#c8c0ff', grA: 0.13, grLift: 0.011, grExpo: 1, grShoulder: 0.92, halo: '#8fa6d8', haloA: 0 },
+  { h: 28.5, sky: '#263551', fog: '#36465e', sunC: '#8aa0c8', sunI: 0.5, hemiC: '#5d6d94', hemiG: '#38405a', hemiI: 0.55, fogD: 0.0058, glowMint: 0.5, glowAmber: 0.55, glowBlue: 0.45, sea: '#2e4a63', zen: '#14203c', cloud: '#5a6b8c', amb: '#5a6e9e', ambI: 0.085, grC: '#c8c0ff', grA: 0.13, grLift: 0.01, grExpo: 1, grShoulder: 0.92, halo: '#8fa6d8', haloA: 0 },
 ];
 
 /**
@@ -66,6 +98,45 @@ interface Stop {
   zen: Color3; cloud: Color3;
   sunI: number; hemiI: number; fogD: number;
   glowMint: number; glowAmber: number; glowBlue: number;
+  amb: Color3; ambI: number;
+  grC: Color3; grA: number; grLift: number; grExpo: number; grShoulder: number;
+  halo: Color3; haloA: number;
+}
+/**
+ * グレーディングの 色みを「明るさが 1」に ならす。
+ *
+ * わり算に つかうのは **人の目の明るさ(Rec.709)**であって RGBの平均ではない。
+ * 平均で ならすと、青がかった色みを かけたときに 目には 暗くなって見える
+ * (青は 明るさへの きき目が 0.07 しか ない)。人の目の重みで ならしておけば、
+ * grA(効き)を 上げても **明るさは 動かず 色みだけ**が 変わる ので、
+ * 「中間調の 平均輝度は before から動かさない」という 約束を 数式で 守れる。
+ */
+const LUMA_R = 0.2126;
+const LUMA_G = 0.7152;
+const LUMA_B = 0.0722;
+const normTint = (hex: string): Color3 => {
+  const c = Color3.FromHexString(hex);
+  const m = LUMA_R * c.r + LUMA_G * c.g + LUMA_B * c.b || 1;
+  return new Color3(c.r / m, c.g / m, c.b / m);
+};
+
+/**
+ * v17 ポストプロセスへ わたす「絵づくり」の 値。
+ *
+ * GameScene の ビネットのシェーダが 毎フレーム ここを読む(uniform へ入れるだけ)。
+ * 時刻の色を 決める場所を 1つにするため、**中身を作るのは DayNight だけ**。
+ * on=false のときは シェーダが 素通しに なる(同じビルドの中の A/B 用)。
+ */
+export interface GradeState {
+  on: boolean;
+  /** 露出(リニアの かけ算) */
+  expo: number;
+  /** ハイライトの肩が はじまる リニア値(= 表示値の2乗) */
+  knee: number;
+  /** 暗部のもち上げ(リニア・色つき) */
+  lift: Color3;
+  /** 時刻の色み(明るさ1に ならしてある) */
+  tint: Color3;
 }
 const parse = (list: RawStop[]): Stop[] =>
   list.map((r) => ({
@@ -75,6 +146,9 @@ const parse = (list: RawStop[]): Stop[] =>
     zen: Color3.FromHexString(r.zen), cloud: Color3.FromHexString(r.cloud),
     sunI: r.sunI, hemiI: r.hemiI, fogD: r.fogD,
     glowMint: r.glowMint, glowAmber: r.glowAmber, glowBlue: r.glowBlue,
+    amb: Color3.FromHexString(r.amb), ambI: r.ambI,
+    grC: normTint(r.grC), grA: r.grA, grLift: r.grLift, grExpo: r.grExpo, grShoulder: r.grShoulder,
+    halo: Color3.FromHexString(r.halo), haloA: r.haloA,
   }));
 const STOPS_NEW: Stop[] = parse(RAW);
 const STOPS_PREV: Stop[] = parse(RAW.map((r) => ({ ...r, ...(PREV[r.h] ?? {}) })));
@@ -123,6 +197,21 @@ export class DayNight {
   glow: GlowLayer;
   lumiBoost = 1; // ルミの木の段階で島の発光を強める
   lastGlow = { mint: 0, amber: 0, blue: 0 };
+  /**
+   * v17 「絵づくり」の いまの値(GameScene のポストプロセスが 毎フレーム読む)。
+   * 参照を 配りっぱなしにするので **入れかえずに 中身だけ 書きかえる**。
+   */
+  readonly grade: GradeState = {
+    on: true, expo: 1, knee: 1, lift: new Color3(), tint: new Color3(1, 1, 1),
+  };
+  /**
+   * 空のかさ(halo)と 太陽の向きを 入れる いれもの。
+   * 毎フレーム 作りなおさないよう ここに 1つだけ 持つ。
+   */
+  /** v17 絵づくりが 効いているか(setArtEnabled が切りかえる。検証の A/B 用) */
+  private artOn = true;
+  private haloC = new Color3();
+  private sunTo = new Vector3(0, 1, 0);
   private poolLight: PointLight;
   private acc = TICK; // 初回は即時反映
   private tmpA = new Color3();
@@ -135,6 +224,7 @@ export class DayNight {
   private skyDay: (() => number) | null = null;
   private skyColors: SkyColors = {
     horizon: new Color3(), sky: new Color3(), zenith: new Color3(), cloud: new Color3(),
+    halo: this.haloC, haloA: 0, sunDir: this.sunTo,
   };
   /** 天気の寒色ぐあい(0=はれ 1=本降り)。WeatherSystemが毎フレーム書き込む */
   private cold = 0;
@@ -217,6 +307,24 @@ export class DayNight {
     return this.indoorDamp;
   }
 
+  /**
+   * v17 「絵づくり」を まとめて 切る/入れる(トーンカーブ・時刻の色み・
+   * 暗部のもち上げ・影の中の色・空の かさ)。
+   *
+   * 切った状態が v16.2 の絵そのものなので、**同じビルド・同じ機械・同じ分**で
+   * before/after を くらべられる(--off sky と まったく同じ考えかた)。
+   * ふだんの遊びでは 呼ばれない。GameScene.setGradeEnabled が入口。
+   */
+  setArtEnabled(on: boolean): void {
+    if (this.artOn === on) return;
+    this.artOn = on;
+    this.grade.on = on;
+    this.update(this.lastHour, this.lastPx, this.lastPz);
+  }
+  get artEnabled(): boolean {
+    return this.artOn;
+  }
+
   /** 即時更新(デバッグ・イベント用) */
   update(hour: number, px?: number, pz?: number): void {
     this.lastHour = hour;
@@ -235,6 +343,21 @@ export class DayNight {
     const t0 = (h - a.h) / (b.h - a.h || 1);
     const t = t0 * t0 * (3 - 2 * t0);
     const L = (x: number, y: number): number => x + (y - x) * t;
+
+    // ---- 太陽の向き(6時=東から、18時=西へ。夜は月の固定方向) ----
+    // **空より先に**決める: 空のかさ(halo)が 太陽の方角を 見るため。
+    // 向きの式を 2か所に書くと かならず 片方が 腐るので、情報源は ここ1つだけ。
+    const dayT = Math.max(0, Math.min(1, (hour - 6) / 12.5));
+    if (hour >= 5.5 && hour <= 19) {
+      const el = Math.max(0.38, Math.sin(Math.PI * dayT));
+      this.sun.direction.set(-Math.cos(Math.PI * dayT) * 0.75, -el, -0.35);
+      this.sun.direction.normalize();
+    } else {
+      this.sun.direction.set(0.25, -1, -0.2);
+      this.sun.direction.normalize();
+    }
+    // 平行光は「太陽から 地面へ」の向き。空で使うのは その逆(空の 太陽の位置)
+    this.sun.direction.scaleToRef(-1, this.sunTo);
 
     Color3.LerpToRef(a.sky, b.sky, t, this.tmpA);
     // 天気ぶんの寒色寄せ。時刻の色を作りおえてから、その上に重ねる(時刻の階調は保つ)
@@ -259,6 +382,10 @@ export class DayNight {
         Color3.LerpToRef(sc.zenith, C_OVERCAST_SKY, w * W_SKY_MIX, sc.zenith);
         Color3.LerpToRef(sc.cloud, C_OVERCAST_CLOUD, w * 0.7, sc.cloud);
       }
+      // v17 太陽のまわりの かさ。朝夕で強く・昼は弱く・夜は 0。
+      // 雨雲の日は 太陽の位置が 分からないので ほとんど消す
+      Color3.LerpToRef(a.halo, b.halo, t, sc.halo);
+      sc.haloA = this.artOn ? L(a.haloA, b.haloA) * (1 - w * 0.85) : 0;
       this.sky.applyTime(hour, this.skyDay ? this.skyDay() : 1, sc, w);
     }
 
@@ -275,16 +402,24 @@ export class DayNight {
     this.hemi.intensity =
       L(a.hemiI, b.hemiI) * (1 + (this.lumiBoost - 1) * 0.08) * (1 - w * W_HEMI_DOWN) * this.indoorDamp;
 
-    // 太陽の向き(6時=東から、18時=西へ。夜は月の固定方向)
-    const dayT = Math.max(0, Math.min(1, (hour - 6) / 12.5));
-    if (hour >= 5.5 && hour <= 19) {
-      const el = Math.max(0.38, Math.sin(Math.PI * dayT));
-      this.sun.direction.set(-Math.cos(Math.PI * dayT) * 0.75, -el, -0.35);
-      this.sun.direction.normalize();
-    } else {
-      this.sun.direction.set(0.25, -1, -0.2);
-      this.sun.direction.normalize();
-    }
+    // ---- v17 影の中の色 と 絵づくり ----
+    // 影の中の色を 1か所で 決めて、2つへ 配る(RawStop.amb のコメントを参照)。
+    // 部屋の中(indoorDamp)や 雨(w)でも、太陽・半球光と 同じ倍率で 動かす。
+    // そうしないと 部屋を 暗くしたのに 影だけ 明るいままになる。
+    const ambI = this.artOn ? L(a.ambI, b.ambI) * this.indoorDamp * (1 - w * 0.25) : 0;
+    Color3.LerpToRef(a.amb, b.amb, t, this.tmpA);
+    this.scene.ambientColor.copyFrom(this.tmpA).scaleInPlace(ambI);
+    const gr = this.grade;
+    gr.expo = L(a.grExpo, b.grExpo);
+    // 肩は「表示の明るさ」で書いてあるので、シェーダの計算に合わせて 2乗でリニアへ
+    const sh = L(a.grShoulder, b.grShoulder);
+    gr.knee = sh * sh;
+    // 暗部のもち上げ。色は 影の中の色と 同じ = 影が 青みグレーへ 持ち上がる
+    this.tmpA.scaleToRef(L(a.grLift, b.grLift) / (LUMA_R * this.tmpA.r + LUMA_G * this.tmpA.g + LUMA_B * this.tmpA.b || 1), gr.lift);
+    // 時刻の色み。効き 0 なら まっ白(= 何もしない)
+    Color3.LerpToRef(a.grC, b.grC, t, this.tmpA);
+    const ga = L(a.grA, b.grA);
+    gr.tint.set(1 + (this.tmpA.r - 1) * ga, 1 + (this.tmpA.g - 1) * ga, 1 + (this.tmpA.b - 1) * ga);
 
     // 発光(植物・窓・街灯)+光だまり
     const gm = getGlowMats(this.scene);

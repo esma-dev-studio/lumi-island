@@ -10,6 +10,7 @@ import {
   buildScarf, buildFuroshiki,
 } from './outfits.mjs';
 import { buildClips } from './anim.mjs';
+import { buildFaceMesh, checkFaceMesh } from './face.mjs';
 import { mergeMeshes, validateMesh, meshStats, weldSeamNormals } from './geo.mjs';
 import { paintTexture } from './paint.mjs';
 import { encodePNG } from './tex.mjs';
@@ -30,7 +31,7 @@ export function makeSpecs() {
       id: 'mio', speciesId: 'mio', prop,
       head: { rx: 0.185, rz: 0.178, ...hb, cheek: 0.05, flat: 0.055, jawForward: 0.008 },
       eye: { thetaDeg: 24, y: hb.yBottom + (hb.yTop - hb.yBottom) * 0.40, w: 0.057, h: 0.066 },
-      face: { mouthT: 0.24 },
+      face: { mouthT: 0.24, mouthPatch: { y: 127, erase: 0.46, mouth: 0.29, w: 0.28 } },
       neckR: 0.048,
       body: { yBottom: 0.29, yTop: 0.615, hipsR: 0.095, waistR: 0.086, chestR: 0.092, shoulderR: 0.074, sx: 1.1, sz: 0.9 },
       arm: { thick: 1 },
@@ -66,7 +67,7 @@ export function makeSpecs() {
         profile: [[0, 0.5], [0.12, 0.76], [0.28, 0.95], [0.44, 1.0], [0.62, 0.985], [0.8, 0.93], [0.92, 0.82], [1, 0.5]],
       },
       eye: { thetaDeg: 27, y: hb.yBottom + (hb.yTop - hb.yBottom) * 0.58, w: 0.042, h: 0.048 },
-      face: { mouthT: 0.27 },
+      face: { mouthT: 0.27, mouthPatch: { y: 111, erase: 0.46, mouth: 0.28, w: 0.34 } },
       neckR: 0.055,
       body: {
         yBottom: prop.legRatio * H - 0.045, yTop: prop.legRatio * H + prop.torsoRatio * H,
@@ -134,7 +135,7 @@ export function makeSpecs() {
       id: 'tsumugi', speciesId: 'tsumugi', prop,
       head: { rx: 0.163, rz: 0.172, ...hb, cheek: 0.035, flat: 0.04, jawForward: 0.013 },
       eye: { thetaDeg: 27, y: hb.yBottom + (hb.yTop - hb.yBottom) * 0.45, w: 0.044, h: 0.05 },
-      face: { mouthT: 0.2 },
+      face: { mouthT: 0.2, mouthPatch: { y: 140, erase: 0.48, mouth: 0.33, w: 0.25 } },
       neckR: 0.05,
       body: {
         yBottom: prop.legRatio * H - 0.05, yTop: prop.legRatio * H + prop.torsoRatio * H,
@@ -224,7 +225,7 @@ export function makeSpecs() {
         profile: [[0, 0.44], [0.12, 0.7], [0.3, 0.9], [0.5, 1.0], [0.7, 0.99], [0.86, 0.85], [0.96, 0.48], [1, 0.13]],
       },
       eye: { thetaDeg: 26, y: hb.yBottom + (hb.yTop - hb.yBottom) * 0.52, w: 0.04, h: 0.046, out: 0.0032 },
-      face: { mouthT: 0.3 },
+      face: { mouthT: 0.3, mouthPatch: { y: 116, erase: 0.41, mouth: 0.28, w: 0.26 } },
       neckR: 0.048,
       body: {
         yBottom: prop.legRatio * H - 0.04, yTop: prop.legRatio * H + prop.torsoRatio * H,
@@ -333,7 +334,20 @@ export function buildCharacter(id) {
   }
   validateMesh(mesh, id);
 
+  // 表情(smile/surprised/sad)は **別メッシュ**。まばたきのアニメ(モーフの重み)の
+  // 中身を 1バイトも 変えないため(理由は face.mjs / glb.mjs のコメント)。
+  const face = buildFaceMesh(rig, spec, head);
+  validateMesh(face.mesh, `${id}_face`);
+  // eyeParts の ならびは [開きL, 開きR, 閉じL, 閉じR](body.mjs の buildEyes)
+  const faceCheck = checkFaceMesh(spec, head, face.quads, {
+    eyeL: [eyeParts[0].mesh, eyeParts[2].mesh],
+    eyeR: [eyeParts[1].mesh, eyeParts[3].mesh],
+  }, id);
+
   const clips = buildClips(spec.clipOpts);
   const png = encodePNG(paintTexture(spec));
-  return { id, mesh, rig, clips, png, blinkDelta, stats: meshStats(mesh) };
+  return {
+    id, mesh, rig, clips, png, blinkDelta, face,
+    stats: { ...meshStats(mesh), faceTris: meshStats(face.mesh).tris, faceCheck },
+  };
 }

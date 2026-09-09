@@ -787,6 +787,7 @@ describe('オルゴールBGM: 配線', () => {
     expect(audio).toMatch(/const st = STINGER_FOR_SFX\[name\];\s*\n\s*if \(st\) musicStinger\(st\)/);
     // 見せ場の区切りは GameScene が「章の締め」を先に鳴らす
     expect(scene).toMatch(/musicStinger\('chapter'\);\s*\n\s*sfx\('quest'\)/);
-    expect(scene.match(/musicStinger\('chapter'\)/g)?.length).toBe(3);
+    // ランタンとばし / ふたりのじかん / とうだいの点灯 / v29 第3章フィナーレ の4か所
+    expect(scene.match(/musicStinger\('chapter'\)/g)?.length).toBe(4);
   });
 });

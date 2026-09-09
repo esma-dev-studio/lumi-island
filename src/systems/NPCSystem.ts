@@ -3,11 +3,14 @@ import type { Scene } from '@babylonjs/core/scene';
 import { CharacterView } from '../characters/CharacterView';
 import { CHARACTERS } from '../data/characters';
 import {
-  NPC_BY_ID, residentNpcs, npcSpot, scheduleEntryAt, nextOutdoorEntry,
+  NPC_BY_ID, hasNpcSpot, residentNpcs, npcSpot, scheduleEntryAt, nextOutdoorEntry,
   type NpcArea, type NpcDef, type ScheduleEntry,
 } from '../data/npcs';
 import type { VisitPraiseFacts } from '../data/npcs';
-import { GATHER_NODES } from '../data/island';
+import { GATHER_NODES, type NpcSpot } from '../data/island';
+import { dayHash } from './BulletinSystem';
+import { sharedWeather } from './WeatherSystem';
+import { SIT_ROOT_BELOW_SEAT } from './SitSystem';
 import {
   FESTIVAL_FAR, FESTIVAL_FROM, FESTIVAL_LANDING, FESTIVAL_PLAZA, FESTIVAL_RING_R, FESTIVAL_TO,
   festivalStand,
@@ -103,11 +106,51 @@ export interface FestivalProbe {
   ids: string[];
 }
 
-/** 日付ハッシュ(同じ日・同じsaltなら必ず同じ値。乱数は使わない) */
-function dayHash(day: number, salt: number): number {
-  let h = Math.imul((day | 0) ^ 0x9e3779b9, 0x85ebca6b) ^ salt;
-  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
-  return (h ^ (h >>> 16)) >>> 0;
+// ---------------------------------------------------------------------------
+// v29 あめやどり。
+//
+// 雨が しっかり降っているあいだ(WeatherSystem.npcShelter)、島の人は
+// 「屋根のある いちばん近いところ」= 自分の shelter スポットへ **走って** 行き、
+// 上がるまで そこで待つ。差しかえの強さは まつり・工房前ロック・朝の来訪の 下、
+// 立ち話より 上(雨の中で 立ち話をさせない)。
+//
+// **依頼の相手(questCritical)は 1ミリも 動かさない**——受注・報告のために
+// 会いに行く人が 雨で 別の場所へ移ると、誘導は追いかけられても
+// 「いつもの場所にいない」が 依頼の最中に起きる。既存の rule と同じ考え方。
+// 在宅の枠(activity:'home')も 上書きしない(家にいる人を 雨の外に出さない)。
+// ---------------------------------------------------------------------------
+export const SHELTER_SPOT_KEY = 'shelter';
+const SHELTER_ENTRY: ScheduleEntry = { from: 0, to: 30, spot: SHELTER_SPOT_KEY, activity: 'watch' };
+
+/** うろうろの行き先を決めなおす きざみ(ゲーム内の時。20分ごと=実時間で約8秒) */
+const WANDER_SLOT_H = 1 / 3;
+
+/** NPCのidを整数にする(乱数のかわりに使う ハッシュの種) */
+function idSalt(id: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 0x01000193);
+  return h >>> 0;
+}
+
+/**
+ * うろうろの行き先(純関数・乱数なし)。
+ *
+ * 同じ日・同じNPC・同じ時刻なら 必ず同じ点を返す(教訓「乱数を使わない」)。
+ * 時刻は WANDER_SLOT_H ごとの ますに落としてあるので、
+ * ゲーム内20分ごとに 行き先が 1回だけ 変わる=見た目は これまでの
+ * 「6〜11秒ごとに ぶらぶら」と同じで、リロードしても 同じ道すじになる。
+ *
+ * @param radius うろうろの半径(m)。0なら その場から動かない
+ */
+export function wanderTarget(
+  day: number, id: string, hour: number, spot: { x: number; z: number }, radius: number
+): { x: number; z: number } | null {
+  if (radius <= 0) return null;
+  const slot = Math.floor(hour / WANDER_SLOT_H);
+  const h = dayHash(day, (idSalt(id) ^ Math.imul(slot, 0x9e3779b1)) | 0);
+  const a = ((h % 1024) / 1024) * Math.PI * 2;
+  const k = 0.4 + (((h >>> 10) % 1024) / 1024) * 0.6;
+  return { x: spot.x + Math.cos(a) * radius * k, z: spot.z + Math.sin(a) * radius * k };
 }
 
 /** 来訪くじの入力(なかよし度と依頼の状況)。1人ぶん */
@@ -190,14 +233,33 @@ interface NpcRuntime {
   entry: ScheduleEntry | null;
   // その場の小移動(うろうろ)
   subTarget: { x: number; z: number } | null;
-  subTimer: number;
+  /** うろうろの行き先を決めた「時刻のます」(変わったら決めなおす。乱数は使わない) */
+  subSlot: number;
   workTimer: number;
   stuck: number;
   /** 足音の歩幅つみあげ(m)。実際に進んだぶんだけ たまる */
   stepAcc: number;
+  /**
+   * v29 いま すわっているか(sit の枠で 目的地に着いている)。
+   * 会話・エモートが 姿勢を 立ちポーズで つぶさないための ただ1つの目じるし。
+   */
+  sitting: boolean;
+  /** すわったときの 体の向き(rad)。相手のほうを向くときの 基準にする */
+  seatRotY: number;
 }
 
 const WALK_SPEED_MULT = 0.85;
+/**
+ * v29 いそぐ枠(あめやどり・まつりの集合)で使う 走りの速さ。
+ * プレイヤーの走り(runSpeed 3.6)より おそくしてある——島の人に 追いぬかれない。
+ */
+const RUN_SPEED_MULT = 0.72;
+/** これより遠いあいだだけ 走る(m)。近づいたら 歩きにもどる */
+const RUN_FROM = 4.0;
+/** work の interact の間かく(秒)の下じき。ゆらぎは vnoise で足す */
+const WORK_EVERY = 3.5;
+/** v29 water(水やり)の間かく(秒)。work より ゆっくり=しぐさで 見わけられる */
+const WATER_EVERY = 5.5;
 
 /** 自宅のドア前(src/scenes/InteractionRouting.ts の HOME_POINT と同じ点)。庭先はここから測る */
 const HOME_DOOR_OUT = { x: -30.9, z: 6.7 };
@@ -205,8 +267,30 @@ const HOME_DOOR_OUT = { x: -30.9, z: 6.7 };
 const VISIT_DIST = 2.5;
 const NPC_BODY_R = 0.3; // NPCSystem.update の resolveCollision と同じ
 
-/** v18 エモートに こたえて よろこんでいる時間(秒)。happy クリップ(1.2秒)ぶん */
-export const EMOTE_REACT_SEC = 1.25;
+/**
+ * v29 すわったまま 相手のほうへ 向きを変えられる角度(rad・約69度)。
+ *
+ * すわりポーズは ひざから先が 前に出ているので、体ごと 180度まわすと
+ * 足が ベンチ・桟橋の板の中へ めりこむ。上半身をひねる ぐらいで止めると、
+ * 顔は 相手のほうを向き、足は すわった向きのまま のこる。
+ */
+export const SIT_TURN_MAX = 1.2;
+
+/** from から to へ、最大 max だけ 回す(角度の差は -π〜π に たたむ)。純関数 */
+export function turnToward(from: number, to: number, max: number): number {
+  let d = to - from;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return from + Math.max(-max, Math.min(max, d));
+}
+
+/**
+ * v18 エモートに こたえている時間(秒)。
+ * v29 返しかたを happy(1.2秒)から **wave(1.4秒)** に変えたので、その長さに合わせる。
+ * 「手をふったら 手をふりかえす」——よろこぶ(happy)は おくりもの・開花の
+ * 見せ場のための しぐさとして のこす(同じ しぐさが 2つの意味を持たないようにする)。
+ */
+export const EMOTE_REACT_SEC = 1.45;
 
 export class NPCSystem {
   npcs = new Map<string, NpcRuntime>();
@@ -333,7 +417,7 @@ export class NPCSystem {
       x: home.x, z: home.z, y: this.island.groundY(home.x, home.z),
       rotY: home.rotY ?? 0,
       hidden: false, talking: false, reactT: 0, entry: null,
-      subTarget: null, subTimer: 2, workTimer: 1, stuck: 0, stepAcc: 0,
+      subTarget: null, subSlot: -1, workTimer: 1, stuck: 0, stepAcc: 0, sitting: false, seatRotY: 0,
     };
     view.play('idle');
     this.apply(rt);
@@ -498,7 +582,7 @@ export class NPCSystem {
         x: home.x, z: home.z, y: this.island.groundY(home.x, home.z),
         rotY: home.rotY ?? 0,
         hidden: false, talking: false, reactT: 0, entry: null,
-        subTarget: null, subTimer: 2, workTimer: 1, stuck: 0, stepAcc: 0,
+        subTarget: null, subSlot: -1, workTimer: 1, stuck: 0, stepAcc: 0, sitting: false, seatRotY: 0,
       };
       view.play('idle');
       this.apply(rt);
@@ -528,6 +612,8 @@ export class NPCSystem {
     // v10 来訪: なかよしのNPCは 朝7〜9時だけ 自宅の庭先にいる。
     // 依頼が動いている日は visitorToday が null を返すので、依頼の枠を横取りすることはない
     if (this.isVisiting(rt.def.id, this.island.time.day, hour)) return VISIT_ENTRY;
+    // v29 あめやどり(まつり・工房前ロック・朝の来訪より よわく、立ち話より つよい)
+    if (this.wantsShelter(rt, entry, hour)) return SHELTER_ENTRY;
     // v21 立ち話。いちばん よわい差しかえ:在宅の枠は 上書きしない(ねている人を 外へ出さない)
     if (entry.activity !== 'home' && this.chatPairOf(rt) !== null) return CHAT_ENTRY;
     if (entry.activity === 'home' && this.questCritical(rt.def.id)) {
@@ -537,11 +623,28 @@ export class NPCSystem {
   }
 
   /**
+   * v29 いま その人が あめやどりするか(純ロジックの言いかえ)。
+   *
+   * 4つ ぜんぶ そろったときだけ true:
+   *   1. 屋根のある行き先(shelter スポット)を もっている人
+   *   2. その人が いま 島にいる(入り江・いちば島の人には 島の雨は かからない)
+   *   3. 依頼の受注・報告の相手に なっていない(questCritical は いつもの場所のまま)
+   *   4. その枠が 在宅ではない(家にいる人を 雨の中へ出さない)+ 雨あしが しきい値以上
+   */
+  private wantsShelter(rt: NpcRuntime, entry: ScheduleEntry, hour: number): boolean {
+    if (!hasNpcSpot(rt.def.id, SHELTER_SPOT_KEY)) return false;
+    if (this.areaOf(rt) !== 'island' || this.area !== 'island') return false;
+    if (this.questCritical(rt.def.id)) return false;
+    if (entry.activity === 'home') return false;
+    return sharedWeather().npcShelter(this.island.time.day, hour);
+  }
+
+  /**
    * スケジュール枠の立ち位置。
    *   来訪の枠   … init で実測した庭先(NPC_SPOTSには置かない)
    *   まつりの枠 … 桟橋ひろばの輪(FestivalSystem が人数から計算する。wanderR:0=その場から動かない)
    */
-  private spotFor(rt: NpcRuntime, entry: ScheduleEntry): { x: number; z: number; rotY?: number; wanderR?: number } {
+  private spotFor(rt: NpcRuntime, entry: ScheduleEntry): NpcSpot {
     if (entry.spot === VISIT_SPOT_KEY) return this.visitSpot;
     if (entry.spot === FESTIVAL_SPOT_KEY) {
       const stand = festivalStand(this.festivalSlot(rt), this.festivalTotal());
@@ -566,18 +669,20 @@ export class NPCSystem {
       // (カメラの切り替わりと同時なので見た目には出ない。会話中はupdateが止まるのでそのまま保たれる)
       // 家の中で会っている住人は動かさない: 部屋は島の地形の上では「深い海」なので、
       // 水ぎわの寄せをそのまま通すと 部屋の中で立ち位置を探しまわることになる
-      if (this.hostId !== id && waterClearance(rt.x, rt.z, SHORE_CLEAR) < SHORE_CLEAR) {
+      // v29 すわっている人も動かさない: ベンチ・桟橋のへりから ずらすと
+      // 「すわったまま 1m 横へ すべる」絵になる(桟橋は まわりが ぜんぶ水なので必ず当たる)
+      if (!rt.sitting && this.hostId !== id && waterClearance(rt.x, rt.z, SHORE_CLEAR) < SHORE_CLEAR) {
         const dry = findDryStand(this.island, rt.x, rt.z);
         rt.x = dry.x;
         rt.z = dry.z;
         rt.y = this.island.groundY(rt.x, rt.z);
       }
-      if (facePx !== undefined && facePz !== undefined) {
-        rt.rotY = Math.atan2(facePx - rt.x, facePz - rt.z) + Math.PI; // 顔を相手へ
-      }
-      rt.view.play('talk');
+      if (facePx !== undefined && facePz !== undefined) this.faceTo(rt, facePx, facePz); // 顔を相手へ
+      // v29 すわっている人は すわったまま話す(立ちポーズの talk に差しかえると
+      // 体だけ立って ベンチに めりこむ)。会話カメラは 二人の位置しか見ないので構図は不変
+      if (!rt.sitting) rt.view.play('talk');
     } else {
-      rt.view.play('idle');
+      rt.view.play(rt.sitting ? 'sit' : 'idle');
     }
     this.apply(rt);
   }
@@ -638,8 +743,12 @@ export class NPCSystem {
 
       if (dist > 0.55) {
         // 目的地へ歩く
+        rt.sitting = false;
         const def = CHARACTERS[rt.def.charId];
-        const sp = def.walkSpeed * WALK_SPEED_MULT;
+        // v29 いそぐ枠(あめやどり・まつりの集合)で、まだ遠いときだけ **走る**。
+        // 近づいたら歩きにもどす(目の前で 走りこんで 急ブレーキ、にならない)
+        const hurry = (entry === SHELTER_ENTRY || entry === FESTIVAL_ENTRY) && dist > RUN_FROM;
+        const sp = hurry ? def.runSpeed * RUN_SPEED_MULT : def.walkSpeed * WALK_SPEED_MULT;
         const dirX = (targetX - rt.x) / dist;
         const dirZ = (targetZ - rt.z) / dist;
         const nx = rt.x + dirX * sp * dt;
@@ -679,52 +788,91 @@ export class NPCSystem {
           rt.stuck = 0;
         }
         rt.rotY = Math.atan2(dirX, dirZ) + Math.PI; // 描画は+π回転のため、+πで進行方向に顔が向く
-        if (rt.view.current?.name !== 'walk') rt.view.play('walk');
-        rt.view.setSpeed(sp / def.walkSpeed);
+        const clip = hurry ? 'run' : 'walk';
+        if (rt.view.current?.name !== clip) rt.view.play(clip);
+        rt.view.setSpeed(sp / (hurry ? def.runSpeed : def.walkSpeed));
       } else {
         // 到着: 活動
-        if (rt.view.current?.name === 'walk') rt.view.play('idle');
+        if (rt.view.current?.name === 'walk' || rt.view.current?.name === 'run') rt.view.play('idle');
+        if (entry.activity !== 'sit') rt.sitting = false;
         if (entry.activity === 'home') {
           rt.hidden = true;
         } else if (entry.activity === 'fish') {
           if (rt.view.current?.name !== 'fish_idle') rt.view.play('fish_idle');
           if (spot.rotY !== undefined) rt.rotY = spot.rotY;
-        } else if (entry.activity === 'work') {
+        } else if (entry.activity === 'sit') {
+          // v29 すわる。sit はループするクリップなので、1回 play すれば そのまま保たれる
+          // (会話・エモートで つぶれないように rt.sitting を立てておく)
+          rt.sitting = true;
+          if (rt.view.current?.name !== 'sit') rt.view.play('sit');
+          if (spot.rotY !== undefined) {
+            rt.seatRotY = spot.rotY;
+            if (!rt.subTarget) rt.rotY = spot.rotY;
+          }
+        } else if (entry.activity === 'work' || entry.activity === 'water') {
+          // v29 水やりは work と同じ「interact のくりかえし」。間かくだけ ゆっくりにして、
+          // 手わざ(とんとん)と 水やり(そそぐ)を 速さで 見わける
           rt.workTimer -= dt;
           if (rt.workTimer <= 0) {
-            rt.workTimer = 3.5 + vnoise(hour * 3, rt.x) * 3;
+            const base = entry.activity === 'water' ? WATER_EVERY : WORK_EVERY;
+            rt.workTimer = base + vnoise(hour * 3, rt.x) * 3;
             rt.view.play('interact');
           }
           if (spot.rotY !== undefined) rt.rotY = spot.rotY;
         } else {
           // idle / watch / stroll: ときどき歩きまわる。
           // wanderR:0 のスポット(v11 入り江のロカ)は その場から動かない。
-          // 乱数(Math.random)を1度も引かないので、入り江の行動は完全に決定論になる
-          // ——「時刻で行き先が変わるぶんだけ歩く」だけの動き。
+          // v29 行き先は 日づけ・NPCのid・時刻から決まる純関数(wanderTarget)。
+          // 乱数は 1度も引かない=同じ日の同じ時刻なら いつも同じ位置になり、
+          // リロードしても 撮影ハーネスでも 同じ絵が出る(プロジェクトの鉄則)。
           const radius = entry.activity === 'stroll' ? 4 : (spot.wanderR ?? 2.2);
-          rt.subTimer -= dt;
-          if (radius > 0 && rt.subTimer <= 0) {
-            rt.subTimer = entry.activity === 'stroll' ? 4 + Math.random() * 4 : 6 + Math.random() * 5;
-            const a = Math.random() * Math.PI * 2;
-            const tx = spot.x + Math.cos(a) * radius * (0.4 + Math.random() * 0.6);
-            const tz = spot.z + Math.sin(a) * radius * (0.4 + Math.random() * 0.6);
+          const slot = Math.floor(hour / WANDER_SLOT_H);
+          if (radius > 0 && slot !== rt.subSlot) {
+            rt.subSlot = slot;
+            const t = wanderTarget(this.island.time.day, rt.def.id, hour, spot, radius);
             // 水ぎわへは寄らない(話しかけられたときに足が水に浸からないように)
-            if (this.island.walkable(tx, tz) && waterClearance(tx, tz, SHORE_CLEAR) >= SHORE_CLEAR) {
-              rt.subTarget = { x: tx, z: tz };
+            if (t && this.island.walkable(t.x, t.z) && waterClearance(t.x, t.z, SHORE_CLEAR) >= SHORE_CLEAR) {
+              rt.subTarget = t;
             }
           }
           if (entry.activity === 'watch' && spot.rotY !== undefined && !rt.subTarget) rt.rotY = spot.rotY;
         }
       }
-      rt.y += (this.island.groundY(rt.x, rt.z) - rt.y) * Math.min(1, dt * 12);
+      rt.y += (this.standY(rt, entry, spot) - rt.y) * Math.min(1, dt * 12);
       this.apply(rt);
       // プレイヤーがとても近いときは立ち止まって向く(ぶつかり防止)
       const pd = Math.hypot(px - rt.x, pz - rt.z);
       if (pd < 1.1 && !rt.hidden) {
-        rt.rotY = Math.atan2(px - rt.x, pz - rt.z) + Math.PI;
+        this.faceTo(rt, px, pz);
         this.apply(rt);
       }
     }
+  }
+
+  /**
+   * v29 体の原点を置く高さ。すわっている枠のときだけ、
+   * 「すわる面 − SIT_ROOT_BELOW_SEAT」ぶん 上げ下げする(SitSystem.sitPose と同じ式)。
+   *
+   *   ひろばのベンチ … seatH 0.395 → 足もとより 14.5cm 上(おしりが 板に のる)
+   *   桟橋の へり     … seatH 0    → 板より 25cm 下(足が へりから 外へ ぶら下がる)
+   * 歩いているあいだは いつもどおり 地面の高さ。rt.y は なめらかに追うので、
+   * すわる/立つの 上下は 0.2秒ほどの 動きになる。
+   */
+  /**
+   * v29 その点のほうへ 顔を向ける(唯一の向き変え口)。
+   * すわっている人だけは、すわった向きから SIT_TURN_MAX までしか まわさない
+   * ——足が ベンチ・桟橋の板に めりこむのを ふせぐ。何度呼んでも 同じ角度になる
+   * (基準が いつも seatRotY なので、呼ぶたびに 少しずつ回る、が起きない)。
+   */
+  private faceTo(rt: NpcRuntime, tx: number, tz: number): void {
+    const want = Math.atan2(tx - rt.x, tz - rt.z) + Math.PI;
+    rt.rotY = rt.sitting ? turnToward(rt.seatRotY, want, SIT_TURN_MAX) : want;
+  }
+
+  private standY(rt: NpcRuntime, entry: ScheduleEntry, spot: NpcSpot): number {
+    const g = this.island.groundY(rt.x, rt.z);
+    if (entry.activity !== 'sit' || !rt.sitting) return g;
+    return g + (spot.seatH ?? 0) - SIT_ROOT_BELOW_SEAT;
   }
 
   /**
@@ -735,6 +883,29 @@ export class NPCSystem {
     const rt = this.npcs.get(id);
     if (!rt || !rt.view.groups.has(name)) return;
     rt.view.play(name);
+  }
+
+  /**
+   * v29 その人の 見た目(CharacterView)を 名前で 取り出す **読み取りだけ**の 入口。
+   * 会話の 行送りで 顔(pulseFace)と 短いうなずきを 出すために 要る。
+   * NPCSystem 側の 状態は 1つも 変えない(いる/いないの 判定だけ ここに 置く)。
+   */
+  viewOf(id: string): CharacterView | null {
+    const rt = this.npcs.get(id);
+    return rt ? rt.view : null;
+  }
+
+  /**
+   * v29 その人が いま すわっているか(ベンチ・桟橋のへり)。
+   *
+   * 会話の中で 一発アニメ(うなずき・よろこび)を 出す側が、
+   * おわったあとに もどす姿勢を えらぶために 読む口:
+   *   view.play(clip, { onEnd: () => view.play(npcs.isSitting(id) ? 'sit' : 'talk') })
+   * これを見ないで 'talk'(立ちポーズ)へ もどすと、
+   * すわった高さのまま 体だけ立って ベンチに めりこむ。
+   */
+  isSitting(id: string): boolean {
+    return this.npcs.get(id)?.sitting === true;
   }
 
   /** 会話カメラ用: 向きを直接指定する(talking中はスケジュール更新で上書きされない) */
@@ -754,7 +925,7 @@ export class NPCSystem {
       if (rt.hidden) continue;
       if (this.areaOf(rt) !== this.area) continue; // 別の場所にいる人は動かさない
       rt.rotY = Math.atan2(x - rt.x, z - rt.z) + Math.PI; // 顔をそちらへ
-      if (happy) rt.view.play('happy', { onEnd: () => rt.view.play('idle') });
+      if (happy) rt.view.play('happy', { onEnd: () => rt.view.play(rt.sitting ? 'sit' : 'idle') });
       this.apply(rt);
     }
   }
@@ -798,18 +969,19 @@ export class NPCSystem {
   }
 
   /**
-   * v18 エモートに こたえる: こちらを向いて よろこぶ。
+   * v18 エモートに こたえる: こちらを向いて **手をふりかえす**(v29 wave)。
    * **なかよし度は動かさない**(EmoteSystem の説明のとおり、演出だけのごほうび)。
    * 話しかけている最中の人は そのまま(会話の姿勢をこわさない)。
+   * すわっている人は すわったまま 手をふり、おわったら sit にもどる。
    * @returns 実際に こたえたら 立っている位置(頭の高さの目安つき)
    */
   replyToEmote(id: string, px: number, pz: number): { x: number; y: number; z: number } | null {
     const rt = this.npcs.get(id);
     if (!rt || rt.hidden || rt.talking) return null;
-    rt.rotY = Math.atan2(px - rt.x, pz - rt.z) + Math.PI;
+    this.faceTo(rt, px, pz);
     rt.subTarget = null; // うろうろの行き先を捨てて その場で こたえる
     rt.reactT = EMOTE_REACT_SEC;
-    rt.view.play('happy', { onEnd: () => rt.view.play('idle') });
+    rt.view.play('wave', { onEnd: () => rt.view.play(rt.sitting ? 'sit' : 'idle') });
     this.apply(rt);
     return { x: rt.x, y: rt.y, z: rt.z };
   }
@@ -849,12 +1021,20 @@ export class NPCSystem {
     const spot = this.spotFor(rt, entry);
     rt.entry = entry;
     rt.subTarget = null;
+    rt.subSlot = -1;
     rt.x = spot.x;
     rt.z = spot.z;
-    rt.y = this.island.groundY(spot.x, spot.z);
-    if (spot.rotY !== undefined) rt.rotY = spot.rotY;
+    // v29 すわる枠へ 飛ばされたときは、すわった姿勢と高さで 置く
+    // (ねて朝へ飛んだ・部屋から出た瞬間に 立ったまま ベンチに めりこむ、を作らない)
+    rt.sitting = entry.activity === 'sit';
+    rt.y = this.standY(rt, entry, spot);
+    if (spot.rotY !== undefined) {
+      rt.rotY = spot.rotY;
+      if (rt.sitting) rt.seatRotY = spot.rotY;
+    }
     rt.hidden = entry.activity === 'home';
-    if (rt.view.current?.name === 'walk') rt.view.play('idle');
+    if (rt.sitting) rt.view.play('sit');
+    else if (rt.view.current?.name === 'walk' || rt.view.current?.name === 'run') rt.view.play('idle');
     this.apply(rt);
   }
 

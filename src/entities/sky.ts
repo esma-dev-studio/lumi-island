@@ -29,6 +29,7 @@ import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Constants } from '@babylonjs/core/Engines/constants';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
+import type { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { Scene } from '@babylonjs/core/scene';
 
 // ---------------------------------------------------------------------------
@@ -53,6 +54,13 @@ const R_DOME = 320;
 const R_STAR = 300;
 const R_MOON = 296;
 const R_CLOUD = 262;
+/**
+ * v17 太陽のまわりの かさ(halo)の 広さ。cos(角度)で 持つ(内積と そのまま比べる)。
+ * 60度 = 空の 3分の1くらい。**小さい丸ではなく「太陽のがわの空ぜんたいが 暖かい」**が ねらい。
+ * ドームの横の分割が 28(=12.9度きざみ)なので、これより せまくすると
+ * かさが 五角形に 見える(頂点カラーの補間だけで 描いているため)。
+ */
+const HALO_COS = Math.cos((60 * Math.PI) / 180);
 
 // ---------------------------------------------------------------------------
 // 時間帯ごとの「出ぐあい」
@@ -294,6 +302,12 @@ export interface SkyColors {
   zenith: Color3;
   /** 雲がうける光の色(夕方は茜) */
   cloud: Color3;
+  /** v17 太陽のまわりの かさ(halo)の色。空の色に **足す**(かけ算ではない) */
+  halo: Color3;
+  /** v17 かさの強さ(0=なし)。朝夕で強く・昼は弱く・夜は0 */
+  haloA: number;
+  /** v17 空の中の 太陽の向き(単位ベクトル)。DayNight の平行光と 同じ情報源 */
+  sunDir: Vector3;
 }
 
 // ---------------------------------------------------------------------------
@@ -307,6 +321,7 @@ export class Sky {
   private domeCol: Float32Array;
   private domeHW: Float32Array; // 地平線の色 → 空の色 の まぜぐあい
   private domeZW: Float32Array; // 空の色 → 天のてっぺんの色 の まぜぐあい
+  private domeDir: Float32Array; // v17 頂点ごとの 空の向き(太陽からの角度を測る)
 
   private stars: Mesh;
   private starMat: StandardMaterial;
@@ -341,6 +356,7 @@ export class Sky {
     this.domeCol = dome.col;
     this.domeHW = dome.hw;
     this.domeZW = dome.zw;
+    this.domeDir = dome.dir;
 
     // ---- 星と天の川 ----
     const st = this.buildStars(scene);
@@ -387,7 +403,9 @@ export class Sky {
    * そこから上へ 1段ふかい色へ のぼっていく。段の切りかたを 地平線の近くに
    * かためてあるのは、このゲームで画面に入る空が 地平線から10度ちょっとの帯だけだから。
    */
-  private buildDome(scene: Scene): { mesh: Mesh; col: Float32Array; hw: Float32Array; zw: Float32Array } {
+  private buildDome(scene: Scene): {
+    mesh: Mesh; col: Float32Array; hw: Float32Array; zw: Float32Array; dir: Float32Array;
+  } {
     const SEG = 28;
     // 高さの段(rad)。下は 見おろしのカメラ(部屋のドールハウス構図)でも
     // すきまが出ないように 真下まで用意する
@@ -399,6 +417,8 @@ export class Sky {
     const indices: number[] = [];
     const hw: number[] = [];
     const zw: number[] = [];
+    /** v17 頂点ごとの 空の向き(単位ベクトル)。太陽からの 角度を 測るのに つかう */
+    const dir: number[] = [];
     for (let r = 0; r < ROWS.length; r++) {
       const el = ROWS[r];
       const ce = Math.cos(el);
@@ -413,6 +433,7 @@ export class Sky {
         colors.push(1, 1, 1, 1);
         hw.push(h);
         zw.push(z);
+        dir.push(ce * Math.sin(th), se, ce * Math.cos(th));
       }
     }
     const cols = SEG + 1;
@@ -444,7 +465,10 @@ export class Sky {
     // 中身のないシェーダなので、2枚ぶん塗っても負荷はほとんど変わらない
     mat.backFaceCulling = false;
     mesh.material = mat;
-    return { mesh, col: new Float32Array(colors), hw: new Float32Array(hw), zw: new Float32Array(zw) };
+    return {
+      mesh, col: new Float32Array(colors), hw: new Float32Array(hw),
+      zw: new Float32Array(zw), dir: new Float32Array(dir),
+    };
   }
 
   /**
@@ -757,15 +781,36 @@ export class Sky {
     const col = this.domeCol;
     const hw = this.domeHW;
     const zw = this.domeZW;
+    const dir = this.domeDir;
+    // v17 太陽のまわりの かさ。太陽から HALO_COS までの 角度に 暖色を足す。
+    // **かけ算ではなく「白へ近づける」足しかた**にしてある(c += halo*(1-c)*w):
+    // かけ算だと 空の色そのものが 変わって しまい、手で 決めた 夕焼けの色が 死ぬ。
+    // 足し算だと 1 を こえないまま、太陽のがわだけ 明るく・暖かくなる。
+    const ha = c.haloA;
+    const sx = c.sunDir.x, sy = c.sunDir.y, sz = c.sunDir.z;
     for (let i = 0; i < hw.length; i++) {
       const z = zw[i];
       const h = hw[i];
       const mr = c.sky.r + (c.zenith.r - c.sky.r) * z;
       const mg = c.sky.g + (c.zenith.g - c.sky.g) * z;
       const mb = c.sky.b + (c.zenith.b - c.sky.b) * z;
-      col[i * 4 + 0] = c.horizon.r + (mr - c.horizon.r) * h;
-      col[i * 4 + 1] = c.horizon.g + (mg - c.horizon.g) * h;
-      col[i * 4 + 2] = c.horizon.b + (mb - c.horizon.b) * h;
+      let r = c.horizon.r + (mr - c.horizon.r) * h;
+      let g = c.horizon.g + (mg - c.horizon.g) * h;
+      let b = c.horizon.b + (mb - c.horizon.b) * h;
+      if (ha > 0.002) {
+        const d = dir[i * 3] * sx + dir[i * 3 + 1] * sy + dir[i * 3 + 2] * sz;
+        if (d > HALO_COS) {
+          // 0(かさのふち)→1(太陽の まん中)。2乗して ふちを やわらかくする
+          const u = (d - HALO_COS) / (1 - HALO_COS);
+          const w = u * u * ha;
+          r += (c.halo.r - r) * w;
+          g += (c.halo.g - g) * w;
+          b += (c.halo.b - b) * w;
+        }
+      }
+      col[i * 4 + 0] = r;
+      col[i * 4 + 1] = g;
+      col[i * 4 + 2] = b;
     }
     this.dome.updateVerticesData(VertexBuffer.ColorKind, col, false, false);
   }

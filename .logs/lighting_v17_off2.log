@@ -1,0 +1,16 @@
+=== audit_v17 (v16.2 見た目の定点記録) ===
+--- セーブを組み立てる ---
+  27日め(sunny) 家具30 / まつり 28日め / でんしゃ 27日め
+AUDIT FAILED: Runtime.evaluate timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.
+ProtocolError: Runtime.evaluate timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.
+    at <instance_members_initializer> (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/node_modules/puppeteer-core/lib/esm/puppeteer/common/CallbackRegistry.js:97:14)
+    at new Callback (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/node_modules/puppeteer-core/lib/esm/puppeteer/common/CallbackRegistry.js:101:16)
+    at CallbackRegistry.create (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/node_modules/puppeteer-core/lib/esm/puppeteer/common/CallbackRegistry.js:20:26)
+    at Connection._rawSend (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/node_modules/puppeteer-core/lib/esm/puppeteer/cdp/Connection.js:89:26)
+    at CdpCDPSession.send (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/node_modules/puppeteer-core/lib/esm/puppeteer/cdp/CDPSession.js:65:33)
+    at #evaluate (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/node_modules/puppeteer-core/lib/esm/puppeteer/cdp/ExecutionContext.js:339:18)
+    at ExecutionContext.evaluate (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/node_modules/puppeteer-core/lib/esm/puppeteer/cdp/ExecutionContext.js:275:36)
+    at IsolatedWorld.evaluate (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/node_modules/puppeteer-core/lib/esm/puppeteer/cdp/IsolatedWorld.js:97:30)
+    at CdpFrame.evaluate (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/node_modules/puppeteer-core/lib/esm/puppeteer/api/Frame.js:345:43)
+    at CdpFrame.<anonymous> (file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/node_modules/puppeteer-core/lib/esm/puppeteer/util/decorators.js:101:27)
+OFF2_EXIT=1

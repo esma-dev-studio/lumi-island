@@ -155,10 +155,13 @@ test('Xで てをふる → もう一度で よろこぶ / 近くの人が こ�
   await page.keyboard.press('x');
   await page.waitForTimeout(250);
   expect(await ev(page, 'window.__lumi.game.playerView.current?.name')).toBe('wave');
-  // 近くの人が こたえて happy になる
+  // v29 近くの人は **手をふりかえす**(wave)。
+  // v28 までは happy(よろこぶ)を返していたが、happy は おくりもの・開花の見せ場の
+  // しぐさとして のこし、「手をふったら 手がかえってくる」を まっすぐ 結んだ
+  // (src/systems/NPCSystem.ts replyToEmote)。
   expect(
     await ev(page, "window.__lumi.game.npcs.npcs.get('tsumugi').view.current?.name")
-  ).toBe('happy');
+  ).toBe('wave');
   // なかよし度は 動かない(ごほうびではなく 演出だけ)
   const f0 = await ev<number>(page, "__lumiDebug.state().npcs.tsumugi.friendship");
 

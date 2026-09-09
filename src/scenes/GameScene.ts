@@ -52,7 +52,8 @@ import {
 } from '../data/npcs';
 import { TutorialSystem } from '../systems/TutorialSystem';
 import {
-  LIGHTHOUSE_LIT_KEY, evaluate as evaluateAchievements, statCount,
+  LIGHTHOUSE_LIT_KEY, OPENING_SEEN_KEY, STORY_END_KEY,
+  evaluate as evaluateAchievements, statCount,
 } from '../systems/AchievementSystem';
 import {
   grantAchievementRewards, rewardIcon, rewardLabel, validateAchievementRewards,
@@ -159,18 +160,84 @@ const FESTIVAL_MURMUR_R = 24;
 const VIGNETTE_ON = true;
 /** 四すみの落としぐあい(0.032 = 3.2%)。派手にしないため 0.02〜0.04 の範囲でだけ使う */
 const VIGNETTE_AMOUNT = 0.032;
+/**
+ * v17 四すみを **わずかに 寒色へ**寄せる量(0.05 = 5%)。
+ * 落とすだけだと 四すみが「灰色いフィルタ」に見える。青がわへ ほんの少し ずらすと
+ * まん中の 暖かさが 引き立つ(写真の「まわりを冷やす」定石)。0.08 をこえると
+ * 四すみが 青むらさきに 見えて ART_DIRECTION の 禁止(青紫)に ふれる。
+ */
+const VIGNETTE_COOL = 0.05;
+/**
+ * v17 肩の 行きつく先(リニア)。1.0 だと まっ白が 0.90 まで 下がって しまう。
+ * すこし 1 より 上に 置くと、まっ白の 落ちぐあいが 半分ですむ。
+ */
+const GRADE_WHITE = 1.06;
+/**
+ * v17 暗部のもち上げが 効く 上のはし(リニア)。ここより 明るい所は 1ミリも 動かない。
+ * 0.12(=表示 0.35)より 上げると 夜の 中間調まで 白っぽくなる
+ * (実測: 0.3 にしたとき 夜の4構図で 中間調が +5〜12% 動いた)。
+ */
+const GRADE_LIFT_TOP = 0.12;
 const VIGNETTE_NAME = 'lumiVignette';
+// ---------------------------------------------------------------------------
+// v17 「絵づくり」を この1枚に 足しこむ(**パスは 増やさない**)。
+//
+// 順番(写真の現像と 同じ):
+//   1) 表示の値 → リニアへ(ガンマ2.0の 近似 = c*c。sqrt と 対で ぴたり 戻る)
+//   2) 露出
+//   3) 肩(ハイライトの まるめ)。knee までは **1ビットも 動かさない**ので、
+//      中間調の 平均輝度は before と 同じ(検証の 約束を 式で 守る)
+//   4) 暗部の もち上げ(影の中の色で。夜の 黒つぶれよけ)
+//   5) 時刻の 色み(明るさ 1 に ならしてある)
+//   6) リニア → 表示へ(sqrt)
+//   7) ビネット(四すみを すこし落として すこし冷やす)
+//
+// **なぜ scene.imageProcessingConfiguration を つかわないか**:
+//   あちらは 全マテリアルの シェーダに 焼かれるので、空のドーム・発光マテリアルの
+//   emissive まで 一律に 変わる。手で 決めた 夕焼け・ランタンの色が 崩れる。
+//   ここなら「画面に 出たあと」だけを さわるので、色表は 1つも 壊れない。
+//
+// **肩が できること・できないこと**(実測して 分かったこと・報告に 書くこと):
+//   Babylon の StandardMaterial は 明るさを シェーダの 中で clamp(...,0,1) してから
+//   書き出す。つまり ここへ 来る絵は すでに 1 で 頭打ち。肩は「1 をこえた光を
+//   取りもどす」ことは できない。できるのは「白の 手前の 階調を 広げて、
+//   1色の白い面に 見えるのを 減らす」ところまで。
+// ---------------------------------------------------------------------------
 Effect.ShadersStore[`${VIGNETTE_NAME}FragmentShader`] = `
 precision highp float;
 varying vec2 vUV;
 uniform sampler2D textureSampler;
 uniform float amount;
+uniform float cool;
+uniform float grade;
+uniform float expo;
+uniform float knee;
+uniform float white;
+uniform float liftTop;
+uniform vec3 lift;
+uniform vec3 tint;
 void main(void) {
   vec4 c = texture2D(textureSampler, vUV);
+  vec3 o = c.rgb;
+  if (grade > 0.5) {
+    vec3 x = o * o * expo;
+    // 肩: knee までは そのまま。こえたぶんだけ t/(1+t) で white へ 近づける
+    // (knee で かたむき 1・そこから なめらか = 継ぎ目が 出ない)
+    vec3 over = max(x - knee, 0.0) / max(white - knee, 1e-4);
+    x = min(x, vec3(knee)) + (white - knee) * (over / (1.0 + over));
+    // 暗部の もち上げ: liftTop より 明るい所は 動かさない
+    x += lift * (1.0 - smoothstep(0.0, liftTop, x));
+    x *= tint;
+    o = sqrt(max(x, 0.0));
+  }
   vec2 d = vUV - vec2(0.5);
   // まん中=0・四すみ=1 の量。2乗して「四すみだけ」に効かせる(へりのまん中は 4分の1)
   float r = clamp(dot(d, d) * 2.0, 0.0, 1.0);
-  gl_FragColor = vec4(c.rgb * (1.0 - amount * r * r), c.a);
+  float v = r * r;
+  o *= 1.0 - amount * v;
+  // 四すみを わずかに 寒色へ(赤をすこし引き・青をすこし足す。明るさは ほぼ 不動)
+  o += vec3(-0.55, -0.1, 0.75) * (cool * v * dot(o, vec3(0.2126, 0.7152, 0.0722)));
+  gl_FragColor = vec4(clamp(o, 0.0, 1.0), c.a);
 }
 `;
 
@@ -442,10 +509,16 @@ export class GameScene {
       questComplete: this.questComplete, tutorial: this.tutorial, player: this.player,
       onDialogueCamera: (npcId) => this.focusDialogueCamera(npcId),
       onIslandLevel: (lv) => this.island.applyIslandLevel(lv),
-      onCelebrate: () => this.seq.start('bloom'),
+      // v29 ルミの木の開花。ミオも 見あげて にっこりする(見せ場の 前に 顔を 出す)
+      onCelebrate: () => {
+        this.playerView.pulseFace('smile', 3.0);
+        this.seq.start('bloom');
+      },
+      onMioFace: (face, sec) => this.playerView.pulseFace(face, sec), // v29 おくりものが よろこばれた
       onBoatRepaired: () => this.island.applyBoatRepaired(true),
       onStationOrdered: () => orderStation(this.state, this.island.time.day),
       onBondEvent: (npcId) => this.startBondEvent(npcId),
+      onStoryFinale: () => this.startStoryFinale(), // v29 第3章フィナーレ
       // v24 そめた ふくに 気づく一言(そめてから 最初に 話しかけた1人だけ・1回)
       noticeOutfit: () => {
         const label = outfitLabel(this.state.outfit);
@@ -1463,6 +1536,7 @@ export class GameScene {
     // v18 じっせき=お祝いのファンファーレ / バッジだけ=小さな「ちりん」。
     // どちらも quest ひとつだったので、何が起きたのか 音では区別がつかなかった
     sfx(unlocked.length > 0 ? 'quest' : 'badge');
+    this.playerView.pulseFace('smile', 2.0); // v29 じっせき・バッジの瞬間だけ ミオが にっこり
     save(this.state); // 達成の記録を取りこぼさない
   }
 
@@ -1849,6 +1923,47 @@ export class GameScene {
     });
   }
 
+  // ---------- v29 物語の 入口(オープニング)と 出口(フィナーレ) ----------
+  /**
+   * オープニング(ふねで島へ着く)。**タイトルの「はじめから」の直後に main.ts が1回だけ呼ぶ**。
+   *
+   * 「1回きり」は stats のキー1つ(OPENING_SEEN_KEY)で成り立つ:
+   *   セーブの stats は [A-Za-z0-9_] のキーだけ通るので、**セーブの形は1つも増えない**
+   *   (じっせきの記録 ach_◯◯・ごほうびの achrw_◯◯ と まったく同じ考えかた)。
+   * 「つづきから」では そもそも呼ばれず、万一 呼ばれても この印で 出ない。
+   */
+  startOpening(): void {
+    if (this.seq.active) return;
+    if (statCount(this.state, OPENING_SEEN_KEY) >= 1) return;
+    statAdd(this.state, OPENING_SEEN_KEY);
+    save(this.state); // 見せる **前** に記録する(途中で閉じても 2度は出ない)
+    this.seq.startOpening();
+  }
+
+  /**
+   * 第3章フィナーレ(みんなと 島じゅうの あかり)。
+   * q3_taste の報告が おわった瞬間に QuestDialogueController が呼ぶ。
+   *
+   * 状態(依頼の達成・報酬・じっせきの記録)は **ここで確定させてから** 見せ場へ入る
+   * ——教訓4「見せ場の状態変化は演出の前に確定させる」。
+   * 達成バナーは たたむ: 2.6秒 出しっぱなしにすると、見せ場のはじめに かぶる。
+   */
+  startStoryFinale(): void {
+    if (this.seq.active) return;
+    statAdd(this.state, STORY_END_KEY); // じっせき「ものがたりの おわり」の材料
+    save(this.state);
+    this.questComplete.hide();
+    this.seq.startFinale();
+  }
+
+  /** フィナーレのあと: 音楽の締め・お祝いのことば(じっせきは毎秒の判定が拾う) */
+  onStoryFinaleDone(): void {
+    musicStinger('chapter'); // 章の区切り。sfx('quest') より先に呼ぶ(点灯・まつりと同じ)
+    sfx('quest');
+    toast('しまの ものがたりは ここまで。あとは すきなだけ くらそう', 'festival');
+    save(this.state);
+  }
+
   // ---------- v18 すわる / エモート ----------
   /**
    * ベンチ・いすに すわる。位置・向き・高さは SitSystem の純関数が決める。
@@ -1918,11 +2033,45 @@ export class GameScene {
    * (=「ビネットを足したら 絵が あらくなった」を 構造的に起こさない)。
    */
   private buildVignette(): void {
-    const pp = new PostProcess(VIGNETTE_NAME, VIGNETTE_NAME, ['amount'], null, 1, this.camCtl.cam);
-    pp.onApply = (effect) => effect.setFloat('amount', VIGNETTE_AMOUNT);
+    const pp = new PostProcess(
+      VIGNETTE_NAME, VIGNETTE_NAME,
+      ['amount', 'cool', 'grade', 'expo', 'knee', 'white', 'liftTop', 'lift', 'tint'],
+      null, 1, this.camCtl.cam
+    );
+    pp.onApply = (effect) => {
+      effect.setFloat('amount', VIGNETTE_AMOUNT);
+      effect.setFloat('cool', VIGNETTE_COOL);
+      effect.setFloat('white', GRADE_WHITE);
+      effect.setFloat('liftTop', GRADE_LIFT_TOP);
+      // 時刻の値は DayNight が 15Hz で 書きかえている(ここは 読むだけ)
+      const g = this.island.dayNight.grade;
+      effect.setFloat('grade', g.on ? 1 : 0);
+      effect.setFloat('expo', g.expo);
+      effect.setFloat('knee', g.knee);
+      effect.setColor3('lift', g.lift);
+      effect.setColor3('tint', g.tint);
+    };
     pp.samples = Math.min(4, Math.max(1, this.engine.getCaps().maxMSAASamples ?? 1));
     this.vignette = pp;
     this.vignetteOn = true;
+  }
+
+  /**
+   * v17 「絵づくり」(トーンカーブ・露出・時刻の色み・暗部のもち上げ)を まとめて 切る/入れる。
+   *
+   * 切っても **ポストプロセスの枚数は 変わらない**(シェーダの中で 素通しになるだけ)ので、
+   * 同じビルド・同じ機械・同じ分で「足したぶんの コストと 見た目」を 比べられる
+   * (教訓5「同じビルド内で機能をON/OFFする --off 方式」)。
+   * tools/perf_mobile.mjs --off tonemap と tools/shots_audit_v17.mjs --off grade が呼ぶ。
+   */
+  setGradeEnabled(on: boolean): void {
+    // 空のかさ(halo)と 影の中の色も 同じ口で 切る = 「v17で足した絵づくり」が まるごと戻る
+    this.island.dayNight.setArtEnabled(on);
+  }
+
+  /** v17 絵づくりが 効いているか(検証ハーネスが読む) */
+  get gradeEnabled(): boolean {
+    return this.island.dayNight.grade.on;
   }
 
   /**

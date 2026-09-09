@@ -14,3 +14,12 @@ export interface UvRegion {
 
 /** 部位ごとのUV領域(頭・髪・服・脚・腕…) */
 export declare const REG: Record<string, UvRegion>;
+
+/** 表情の名前(GLBのモーフターゲット名) */
+export declare const FACE_NAMES: readonly string[];
+
+/** 口の絵の大きさ(px)。頭の絵から そのまま写すので 写す元と同じ */
+export declare const MOUTH_PATCH: { w: number; h: number };
+
+/** 表情ごとの目・口のUV領域 */
+export declare const FACE_REG: Record<string, { eyeL: UvRegion; eyeR: UvRegion; mouth: UvRegion }>;

@@ -195,14 +195,25 @@ export function buildLegs(rig, spec) {
 
 // ---------- 目(開閉クアッド+モーフ差分) ----------
 // spec.eye = { thetaDeg, y, w, h, out } 頭を楕円体近似して表面に貼る
-export function buildEyes(rig, spec) {
+
+/**
+ * 目のクアッドを1枚作る(表情の目も 同じ関数で作る = 大きさ・位置が ぴたり そろう)。
+ * offset は 楕円体の面からの ずらし量。プラスで 顔の外、マイナスで 頭の中(=見えない)。
+ * 返り値の dir は クアッドの中心の 外向き法線(モーフで 出し入れする向き)。
+ *
+ * adjust: グリッド点を さらに 動かす関数(省略可)。表情の目だけが 使う ——
+ * 楕円体の近似と 実物の頭の面が ずれる種族(ヤギのマズル)で「頭に うまらない」
+ * ところまで 押し出すため(face.mjs の faceEyeQuad)。省略すれば これまでと 1ミリも
+ * 変わらない = ふだんの目(buildEyes)の 頂点は 1つも 動かない。
+ */
+export function eyeQuad(rig, spec, thetaDeg, region, offset, adjust, thickness = 0.0016) {
   const hs = spec.head;
   const e = spec.eye;
   const cy = (hs.yBottom + hs.yTop) / 2;
   const center = [0, cy + (hs.yTop - hs.yBottom) * 0.02, (hs.jawForward ?? 0.008) * 0.5];
-  const surfaceAt = (thetaDeg, y, du, dv, w, h) => {
+  const surfaceAt = (thetaDeg2, y, du, dv, w, h) => {
     // 頭表面(楕円体近似)上の点: theta=左右角、y=高さ。du,dv=クアッド内オフセット
-    const th = d2r(thetaDeg) + du * (w / hs.rx);
+    const th = d2r(thetaDeg2) + du * (w / hs.rx);
     const yy = y + dv * h;
     const ry = (hs.yTop - hs.yBottom) / 2;
     const dy = (yy - center[1]) / ry;
@@ -212,19 +223,23 @@ export function buildEyes(rig, spec) {
     return { p: [px, yy, pz], n: norm([Math.sin(th) * rr, dy * 0.55, Math.cos(th) * rr]) };
   };
   const headI = rig.index.head;
-  const mk = (thetaDeg, region, offset) => {
-    const mesh = patch({
-      cols: 3, rows: 3, thickness: 0.0016,
-      uvRegion: region.tb,
-      surfaceFn: (u, v) => {
-        const { p, n } = surfaceAt(thetaDeg, e.y, (u - 0.5), (v - 0.5), e.w, e.h);
-        return add(p, mul(n, offset));
-      },
-      weightFn: () => solo(headI),
-    });
-    const dir = surfaceAt(thetaDeg, e.y, 0, 0, e.w, e.h).n; // クアッド中心の外向き法線
-    return { mesh, dir };
-  };
+  const mesh = patch({
+    cols: 3, rows: 3, thickness,
+    uvRegion: region.tb,
+    surfaceFn: (u, v) => {
+      const { p, n } = surfaceAt(thetaDeg, e.y, (u - 0.5), (v - 0.5), e.w, e.h);
+      const q = add(p, mul(n, offset));
+      return adjust ? adjust(q) : q;
+    },
+    weightFn: () => solo(headI),
+  });
+  const dir = surfaceAt(thetaDeg, e.y, 0, 0, e.w, e.h).n; // クアッド中心の外向き法線
+  return { mesh, dir };
+}
+
+export function buildEyes(rig, spec) {
+  const e = spec.eye;
+  const mk = (thetaDeg, region, offset) => eyeQuad(rig, spec, thetaDeg, region, offset);
   const OUT = e.out ?? 0.004;
   const openL = mk(e.thetaDeg, REG.eyeOpenL, OUT);
   const openR = mk(-e.thetaDeg, REG.eyeOpenR, OUT);

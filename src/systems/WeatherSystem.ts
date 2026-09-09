@@ -96,6 +96,23 @@ export function rainLevelFor(weather: Weather, hour: number): number {
 }
 
 /**
+ * v29 NPCが 屋根の下へ にげる 雨あしの さかいめ(0〜1)。
+ *
+ * 降りはじめ・上がりぎわの30分(RAIN_FADE_HOURS)の 半分ぐらい——
+ * 「ぱらついてきたな」で 走りだし、「もう だいじょうぶ」で 予定に戻る。
+ * ゆきの日は 0(ゆきでは にげない。雪あそびの島に 人がいなくなると さびしい)。
+ */
+export const NPC_SHELTER_RAIN = 0.35;
+
+/**
+ * v29 いま NPCが あめやどりする天気か(純関数)。
+ * 見た目の側(NPCSystem)は かならずここを通すので、しきい値は この1か所にしかない。
+ */
+export function npcShelterFor(weather: Weather, hour: number): boolean {
+  return rainLevelFor(weather, hour) >= NPC_SHELTER_RAIN;
+}
+
+/**
  * 虹の濃さ(0〜1)。雨が上がった15:00から30分だけ、ふわりと出て ふわりと消える。
  * 端を丸めるので「出た瞬間に真っ濃い」にはならない。
  */
@@ -421,6 +438,22 @@ export class WeatherSystem {
   /** 釣りの待ち時間の倍率(FishingSystemが使う) */
   fishWaitScale(day: number, hour: number): number {
     return fishWaitScaleFor(this.weatherOf(day), hour);
+  }
+
+  /**
+   * v29 いまの雨あし(0〜1)を「日づけと時刻から」出す(純関数の言いかえ)。
+   * update の順番に よらない = 木のそよぎ(IslandScene)が 1フレーム遅れた雨を読まない。
+   */
+  rainAt(day: number, hour: number): number {
+    return rainLevelFor(this.weatherOf(day), hour);
+  }
+
+  /**
+   * v29 いま NPCが あめやどりする時間か(NPCSystem の唯一の問い合わせ口)。
+   * 天気の固定(?weather=rain)も そのまま効く = 撮影・検証が 決定的にできる。
+   */
+  npcShelter(day: number, hour: number): boolean {
+    return npcShelterFor(this.weatherOf(day), hour);
   }
 }
 

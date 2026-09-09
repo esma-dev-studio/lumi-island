@@ -1,0 +1,491 @@
+
+> lumi-island@0.1.0 verify
+> npm run typecheck && npm run lint && npm test && npm run check:chars
+
+
+> lumi-island@0.1.0 typecheck
+> tsc --noEmit
+
+
+> lumi-island@0.1.0 lint
+> eslint src tools tests
+
+
+C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\tools\chargen\geo.mjs
+  267:11  warning  'p' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\tools\chargen\outfits.mjs
+  235:18  warning  'p' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\tools\shots_audit_v17_hires.mjs
+  158:11  warning  'fit' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\tools\shots_v17_creatures.mjs
+  183:22  warning  'onTree' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\tools\shots_v24.mjs
+  116:16  warning  'zoomIn' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\tools\ux_bot.mjs
+  15:7  warning  'EDGE' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 6 problems (0 errors, 6 warnings)
+
+
+> lumi-island@0.1.0 test
+> vitest run
+
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/Users/2016k/Caoude作業フォルダ/90_Private/アプリ開発㉒_LumiIsland[39m
+
+[90mstdout[2m | tests/unit/winding_v28.test.ts
+[22m[39mBJS - [14:46:35]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/home_pack_v24.test.ts
+[22m[39mBJS - [14:46:36]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/beetles_v23.test.ts
+[22m[39mBJS - [14:46:36]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/combo_v12.test.ts
+[22m[39mBJS - [14:46:36]: Babylon.js v8.56.2 - Null engine
+
+ [32m✓[39m tests/unit/touch.test.ts [2m([22m[2m45 tests[22m[2m)[22m[33m 625[2mms[22m[39m
+[90mstdout[2m | tests/unit/display_big_v13.test.ts
+[22m[39mBJS - [14:46:37]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/winding_v28.test.ts[2m > [22m[2mv28 巻き順の きまり[2m > [22m[2m検査した メッシュの 数(検査もれの 見はり)
+[22m[39m[winding_v28] 検査したメッシュ: 298個
+
+ [32m✓[39m tests/unit/winding_v28.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1279[2mms[22m[39m
+   [33m[2m✓[22m[39m v28 巻き順の きまり[2m > [22m置ける家具・りょうり(全種) [33m465[2mms[22m[39m
+ [32m✓[39m tests/unit/beetles_v23.test.ts [2m([22m[2m37 tests[22m[2m)[22m[33m 859[2mms[22m[39m
+   [33m[2m✓[22m[39m v23 場所べつの日がわりローテ(捕獲不能の種を作らない)[2m > [22mじっさいに走らせると 目標の数ちょうど出る(3か所×30日) [33m304[2mms[22m[39m
+ [32m✓[39m tests/unit/home_pack_v24.test.ts [2m([22m[2m42 tests[22m[2m)[22m[33m 1357[2mms[22m[39m
+   [33m[2m✓[22m[39m v24 まだ しらないレシピの「?」行[2m > [22mクラフト画面: ?行は ボタンを もたず、既存の .craft-row を 1つも 増やさない [33m460[2mms[22m[39m
+   [33m[2m✓[22m[39m v24 おうちの すてき度[2m > [22mずかんに すてき度が 出る(内わけと つぎの目標つき) [33m419[2mms[22m[39m
+[90mstdout[2m | tests/unit/lifelike_v21.test.ts[2m > [22m[2mトロフィー・限定家具[2m > [22m[2mメッシュは 仮の立方体ではない(5種とも 中身のある形)
+[22m[39mBJS - [14:46:37]: Babylon.js v8.56.2 - Null engine
+
+ [32m✓[39m tests/unit/lifelike_v21.test.ts [2m([22m[2m67 tests[22m[2m)[22m[33m 461[2mms[22m[39m
+ [32m✓[39m tests/unit/display_big_v13.test.ts [2m([22m[2m50 tests[22m[2m)[22m[33m 1015[2mms[22m[39m
+ [32m✓[39m tests/unit/combo_v12.test.ts [2m([22m[2m57 tests[22m[2m)[22m[33m 2789[2mms[22m[39m
+   [33m[2m✓[22m[39m 画面(くみあわせタブ・ずかん・もちもの)[2m > [22mはじめは「レシピ」タブ(ボットが読む .craft-row がそのまま出る) [33m361[2mms[22m[39m
+   [33m[2m✓[22m[39m 画面(くみあわせタブ・ずかん・もちもの)[2m > [22mくみあわせタブ: えらぶ → ためす → 発見の演出が出る [33m382[2mms[22m[39m
+   [33m[2m✓[22m[39m 画面(くみあわせタブ・ずかん・もちもの)[2m > [22mずかん: 未はっけんは「?」わく、見つけたら 名前が出る [33m512[2mms[22m[39m
+[90mstdout[2m | tests/unit/burial_v28.test.ts
+[22m[39mBJS - [14:46:43]: Babylon.js v8.56.2 - Null engine
+
+ [32m✓[39m tests/unit/gift.test.ts [2m([22m[2m51 tests[22m[2m)[22m[33m 1604[2mms[22m[39m
+   [33m[2m✓[22m[39m ハート表示と 数字表示[2m > [22mおねがいパネルに3人ぶんのハート+数字が出る(10以上は「しんゆう」) [33m484[2mms[22m[39m
+[90mstdout[2m | tests/unit/display_v10.test.ts
+[22m[39mBJS - [14:46:45]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/plush_v25.test.ts[2m > [22m[2mv25 データ整合[2m > [22m[2m起動時の検査が ぜんぶ 0件
+[22m[39mBJS - [14:46:44]: Babylon.js v8.56.2 - Null engine
+
+ [32m✓[39m tests/unit/plush_v25.test.ts [2m([22m[2m29 tests[22m[2m)[22m[33m 1227[2mms[22m[39m
+   [33m[2m✓[22m[39m v25 画面の文言は 家具の表から 出ている[2m > [22mパネルの見出し・ボタン・数の たんいが たなに 合っている [33m452[2mms[22m[39m
+ [32m✓[39m tests/unit/display_v10.test.ts [2m([22m[2m35 tests[22m[2m)[22m[33m 1043[2mms[22m[39m
+ [32m✓[39m tests/unit/inputMode.test.ts [2m([22m[2m29 tests[22m[2m)[22m[33m 1304[2mms[22m[39m
+[90mstdout[2m | tests/unit/cove_return.test.ts[2m > [22m[2m帰りの桟橋: 見た目と判定が同じ場所にある[2m > [22m[2m板の位置が COVE_PIER と そろっている(見えない足場を作らない)
+[22m[39mBJS - [14:46:46]: Babylon.js v8.56.2 - Null engine
+
+ [32m✓[39m tests/unit/cove_return.test.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 332[2mms[22m[39m
+ [32m✓[39m tests/unit/story_v29.test.ts [2m([22m[2m36 tests[22m[2m)[22m[33m 1667[2mms[22m[39m
+   [33m[2m✓[22m[39m オープニング(ふねで島へ着く)[2m > [22m20〜25秒の見せ場で、終わると idle にもどる [33m736[2mms[22m[39m
+ [32m✓[39m tests/unit/interaction.test.ts [2m([22m[2m28 tests[22m[2m)[22m[90m 161[2mms[22m[39m
+ [32m✓[39m tests/unit/roka_v11.test.ts [2m([22m[2m26 tests[22m[2m)[22m[33m 338[2mms[22m[39m
+[90mstdout[2m | tests/unit/mouse_camera.test.ts[2m > [22m[2mマウスの見回し(キャンバス操作)[2m > [22m[2m左ドラッグで回る。感度は指と同じで、公開ヨー(移動のカメラ相対化)も同じ値になる
+[22m[39mBJS - [14:46:51]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/mouse_camera.test.ts[2m > [22m[2mマウスの見回し(キャンバス操作)[2m > [22m[2m左へドラッグすると逆へ回り、縦は見下ろし角が変わる(範囲は指と同じ)
+[22m[39mBJS - [14:46:51]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/mouse_camera.test.ts[2m > [22m[2mマウスの見回し(キャンバス操作)[2m > [22m[2m4px未満の動きでは1度も回さない(クリックとして扱う)
+[22m[39mBJS - [14:46:51]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/mouse_camera.test.ts[2m > [22m[2mマウスの見回し(キャンバス操作)[2m > [22m[2mしきい値を超えたら、押した点からの動き全部が反映される(取りこぼさない)
+[22m[39mBJS - [14:46:51]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/mouse_camera.test.ts[2m > [22m[2mマウスの見回し(キャンバス操作)[2m > [22m[2m左ボタン以外では回さない(右クリック・中クリック)
+[22m[39mBJS - [14:46:51]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/mouse_camera.test.ts[2m > [22m[2mマウスの見回し(キャンバス操作)[2m > [22m[2m離したあとに動かしても回らない(ドラッグ中だけ効く)
+[22m[39mBJS - [14:46:51]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/mouse_camera.test.ts[2m > [22m[2mマウスの見回し(キャンバス操作)[2m > [22m[2mドラッグ中はカーソルがgrabbingになり、離すと元へ戻る
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/mouse_camera.test.ts[2m > [22m[2mマウスの見回し(キャンバス操作)[2m > [22m[2m指のドラッグと二重に効かない(pointerTypeで分かれている)
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/mouse_camera.test.ts[2m > [22m[2mマウスの見回し(キャンバス操作)[2m > [22m[2mホイールでズームし、範囲を超えない
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/mouse_camera.test.ts[2m > [22m[2mマウスの見回し(キャンバス操作)[2m > [22m[2mホイールはページのスクロールを止める(preventDefaultする)
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/mouse_camera.test.ts[2m > [22m[2mマウスの見回し(キャンバス操作)[2m > [22m[2mポーズ・パネル表示中(orbitEnabled=false)は回らない・ズームしない
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/mouse_camera.test.ts[2m > [22m[2mマウスの見回し(キャンバス操作)[2m > [22m[2mドラッグ中にパネルが開いたら、そこで打ち切る(復帰時にカメラが飛ばない)
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/mouse_camera.test.ts[2m > [22m[2mマウスの見回し(キャンバス操作)[2m > [22m[2m室内・会話・見せ場では回らない(追従カメラのときだけ動かす)
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/mouse_camera.test.ts[2m > [22m[2mマウスの見回し(キャンバス操作)[2m > [22m[2mマウスに触れなければヨーは0のまま(キーボードだけの操作が変わらない)
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/mouse_camera.test.ts[2m > [22m[2mマウスの見回し(キャンバス操作)[2m > [22m[2mdisposeで購読も向きも残さない
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+ [32m✓[39m tests/unit/mouse_camera.test.ts [2m([22m[2m22 tests[22m[2m)[22m[33m 523[2mms[22m[39m
+[90mstdout[2m | tests/unit/ground_water_v22.test.ts
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/mesh_v9_tools.test.ts
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2m投げ(casting)→着水(waiting)→当たり(bite)と進む
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2mキャッチでreelingになり、魚は1匹だけ増える
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2mreeling中はplayer.lockedがtrueのまま
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2mreeling中にstart()を呼んでも2回目は始まらない
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2mreeling中のE連打(action)でも魚は増えない
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2mアニメ完了(onEnd)でcooldownへ移り、そこで初めて片付けとlocked解除が起きる
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2monEndが来なくてもdt進行でcooldownへ抜ける(安全網)
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2mcooldown中はcanFishがok:false、時間経過でidleに戻る
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2mcooldown中にstart()を連打しても始まらず、明けたら再び釣れる
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2mcooldown中に釣り場から1.5m以上離れたらすぐidleになる
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2mcancel()は待機中の竿・糸・ウキを消してidleに戻す
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2mreeling中のEscでも安全に片付いてidleに戻る(遅れて届くonEndでも壊れない)
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2mv29 アタリ=おどろき / 釣れた=にっこり / にげられた=しょんぼり の顔が出る
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+BJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2mにげられた場合はidleに戻り、すぐ次を始められる(従来どおり)
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2mEscのあとに投げアニメのonEndが届いても釣りの構えに戻らない
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2mupdateを止めている間はどの状態も進まない(ポーズ・会話中の相当)
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2m釣り場の外・ツリザオ無しでは始まらない
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2mlocksPlayerは演出中だけtrue(cooldownは動いてよい)
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/fishing.test.ts[2m > [22m[2m釣りの状態機械[2m > [22m[2mヒントは状態ごとに切り替わる(cooldownは出さない)
+[22m[39mBJS - [14:46:52]: Babylon.js v8.56.2 - Null engine
+
+ [32m✓[39m tests/unit/fishing.test.ts [2m([22m[2m19 tests[22m[2m)[22m[33m 622[2mms[22m[39m
+ [32m✓[39m tests/unit/burial_v28.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 9371[2mms[22m[39m
+   [33m[2m✓[22m[39m v28 うもれの きまり[2m > [22mしらべる(全メッシュ) [33m9367[2mms[22m[39m
+ [32m✓[39m tests/unit/mesh_v9_tools.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 396[2mms[22m[39m
+ [32m✓[39m tests/unit/ground_water_v22.test.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 2490[2mms[22m[39m
+   [33m[2m✓[22m[39m 判定不変の証明(見た目だけの変更である裏づけ)[2m > [22m歩ける/水/高さ/釣りの格子ダンプが v22 の前とバイト一致する [33m2196[2mms[22m[39m
+[90mstdout[2m | tests/unit/pond_water_edge.test.ts
+[22m[39mBJS - [14:46:56]: Babylon.js v8.56.2 - Null engine
+
+[90mstderr[2m | tests/unit/photo_v24.test.ts[2m > [22m[2mv24 アルバムの 読みこみ(外から来たデータの検証)[2m > [22m[2mアルバムが 読めなくても 空で 立ちあがる(ゲームは 止まらない)
+[22m[39m[photo] アルバムが 読めないので 空にします SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at Module.loadPhotos [90m(C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39msrc\systems\PhotoSystem.ts:132:32[90m)[39m
+    at [90mC:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39mtests\unit\photo_v24.test.ts:93:12
+    at [90mfile:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:146:14
+    at [90mfile:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:533:11
+    at runWithTimeout [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:39:7[90m)[39m
+    at runTest [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1056:17[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at runSuite [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+    at runSuite [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+
+[90mstderr[2m | tests/unit/photo_v24.test.ts[2m > [22m[2mv24 アルバムの 読みこみ(外から来たデータの検証)[2m > [22m[2m入りきらないときは 古いものを 捨てながら やり直す
+[22m[39m[photo] 入りきらないので 古い しゃしんを 1枚 捨てました
+[photo] 入りきらないので 古い しゃしんを 1枚 捨てました
+
+ [32m✓[39m tests/unit/photo_v24.test.ts [2m([22m[2m15 tests[22m[2m)[22m[90m 29[2mms[22m[39m
+ [32m✓[39m tests/unit/pond_water_edge.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 953[2mms[22m[39m
+   [33m[2m✓[22m[39m 見た目だけの変更である裏づけ(判定は水面メッシュを見ていない)[2m > [22m旧の水面の下には「立てるのに釣れない」泥の岸がある(ゲートは通るが投げ先が無い) [33m622[2mms[22m[39m
+ [32m✓[39m tests/unit/notify_v161.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 448[2mms[22m[39m
+[90mstdout[2m | tests/unit/move_v24.test.ts
+[22m[39mBJS - [14:46:58]: Babylon.js v8.56.2 - Null engine
+
+ [32m✓[39m tests/unit/near_grass_v28.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 343[2mms[22m[39m
+ [32m✓[39m tests/unit/move_v24.test.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 530[2mms[22m[39m
+ [32m✓[39m tests/unit/outfit_v24.test.ts [2m([22m[2m13 tests[22m[2m)[22m[90m 21[2mms[22m[39m
+ [32m✓[39m tests/unit/codex_ui.test.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 3531[2mms[22m[39m
+   [33m[2m✓[22m[39m CodexUI(あつめたもの)[2m > [22m道具をのぞく全アイテムをならべる [33m645[2mms[22m[39m
+   [33m[2m✓[22m[39m CodexUI(あつめたもの)[2m > [22m未入手はシルエット+「?」で、名前も個数も見せない [33m653[2mms[22m[39m
+   [33m[2m✓[22m[39m CodexUI(あつめたもの)[2m > [22m入手済みは名前と累計を出す(所持数ではない) [33m375[2mms[22m[39m
+   [33m[2m✓[22m[39m CodexUI(あつめたもの)[2m > [22m開くたびに描き直す(採取のあとに開くと増えている) [33m369[2mms[22m[39m
+   [33m[2m✓[22m[39m CodexUI(開閉)[2m > [22mtoggleで開閉し、とじるボタンでも閉じる [33m375[2mms[22m[39m
+ [32m✓[39m tests/unit/ux_semantic.test.ts [2m([22m[2m62 tests[22m[2m)[22m[90m 40[2mms[22m[39m
+ [32m✓[39m tests/unit/content_v9_tools.test.ts [2m([22m[2m52 tests[22m[2m)[22m[33m 338[2mms[22m[39m
+ [32m✓[39m tests/unit/home_order_ui.test.ts [2m([22m[2m10 tests[22m[2m)[22m[90m 218[2mms[22m[39m
+ [32m✓[39m tests/unit/hud_v161.test.ts [2m([22m[2m13 tests[22m[2m)[22m[90m 242[2mms[22m[39m
+[90mstdout[2m | tests/unit/mesh_v8.test.ts
+[22m[39mBJS - [14:47:03]: Babylon.js v8.56.2 - Null engine
+
+ [32m✓[39m tests/unit/mesh_v8.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 167[2mms[22m[39m
+ [32m✓[39m tests/unit/sequence.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 79[2mms[22m[39m
+ [32m✓[39m tests/unit/musicbox.test.ts [2m([22m[2m48 tests[22m[2m)[22m[33m 895[2mms[22m[39m
+   [33m[2m✓[22m[39m オルゴールBGM: フレーズ生成[2m > [22m全ての音がペンタトニック・音域C5〜A6の内側 [33m459[2mms[22m[39m
+ [32m✓[39m tests/unit/chapter2.test.ts [2m([22m[2m59 tests[22m[2m)[22m[90m 80[2mms[22m[39m
+ [32m✓[39m tests/unit/badge_ui.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 3391[2mms[22m[39m
+   [33m[2m✓[22m[39m ずかんのタブ[2m > [22mはじめは「ずかん」タブ(v13までと同じ中身がそのまま出る) [33m426[2mms[22m[39m
+   [33m[2m✓[22m[39m ずかんのタブ[2m > [22mタブの見出しに いま何こ取れているかを出す [33m399[2mms[22m[39m
+   [33m[2m✓[22m[39m ずかんのタブ[2m > [22m「バッジ」を押すと バッジのグリッドに切りかわり、戻れる [33m545[2mms[22m[39m
+   [33m[2m✓[22m[39m ずかんのタブ[2m > [22mとじても タブは おぼえていて、開きなおすと同じタブが出る [33m410[2mms[22m[39m
+   [33m[2m✓[22m[39m バッジのマス[2m > [22m未取得はシルエット(locked)+進捗、取得済みは色つき(got)+取得日 [33m450[2mms[22m[39m
+   [33m[2m✓[22m[39m バッジのマス[2m > [22m未取得のマスにも 取り方のヒントを持たせる(title) [33m318[2mms[22m[39m
+[90mstdout[2m | tests/unit/bugs_v24.test.ts
+[22m[39mBJS - [14:47:06]: Babylon.js v8.56.2 - Null engine
+BJS - [14:47:06]: Babylon.js v8.56.2 - Null engine
+
+ [32m✓[39m tests/unit/festival.test.ts [2m([22m[2m47 tests[22m[2m)[22m[90m 90[2mms[22m[39m
+ [32m✓[39m tests/unit/daily.test.ts [2m([22m[2m44 tests[22m[2m)[22m[90m 246[2mms[22m[39m
+ [32m✓[39m tests/unit/npc_home.test.ts [2m([22m[2m35 tests[22m[2m)[22m[33m 349[2mms[22m[39m
+ [32m✓[39m tests/unit/saptree_v27.test.ts [2m([22m[2m46 tests[22m[2m)[22m[33m 663[2mms[22m[39m
+ [32m✓[39m tests/unit/life_v29.test.ts [2m([22m[2m41 tests[22m[2m)[22m[33m 370[2mms[22m[39m
+ [32m✓[39m tests/unit/reports.test.ts [2m([22m[2m44 tests[22m[2m)[22m[90m 45[2mms[22m[39m
+[90mstderr[2m | tests/unit/save_transfer.test.ts[2m > [22m[2mv19 ファイルへの書き出し/読みこみ[2m > [22m[2mいまのセーブがこわれている(JSONでない)ときは書き出せない
+[22m[39m[save] 書き出し: いまのセーブが読めない形になっている
+
+[90mstderr[2m | tests/unit/save_transfer.test.ts[2m > [22m[2mv19 ファイルへの書き出し/読みこみ[2m > [22m[2mよみこみの検証(こわれたファイルは必ず落ちる)[2m > [22m[2m中のセーブが復元できないものは badSave(チェックサムは合っている)
+[22m[39m[save] 壊れたセーブデータのため新規扱いにします Error: not object
+    at sanitizeState [90m(C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39msrc\save\SaveSystem.ts:172:87[90m)[39m
+    at Module.parseBundle [90m(C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39msrc\save\SaveSystem.ts:632:17[90m)[39m
+    at [90mC:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39mtests\unit\save_transfer.test.ts:212:14
+    at [90mfile:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:146:14
+    at [90mfile:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:533:11
+    at runWithTimeout [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:39:7[90m)[39m
+    at runTest [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1056:17[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at runSuite [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+    at runSuite [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+
+[90mstderr[2m | tests/unit/save_transfer.test.ts[2m > [22m[2mv19 じどうバックアップ(3世代)[2m > [22m[2m容量が足りないときは バックアップを捨てて 本体のセーブを通す
+[22m[39m[save] 容量が足りないため じどうバックアップを 1 世代 捨てました
+
+[90mstderr[2m | tests/unit/save_transfer.test.ts[2m > [22m[2mv19 じどうバックアップ(3世代)[2m > [22m[2m容量オーバー以外のエラー(保存が禁じられている等)では 世代を捨てない
+[22m[39m[save] failed Error [SecurityError]: The operation is insecure.
+    at Object.setItem [90m(C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39mtests\unit\save_transfer.test.ts:37:19[90m)[39m
+    at writeSaveText [90m(C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39msrc\save\SaveSystem.ts:84:18[90m)[39m
+    at Module.save [90m(C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39msrc\save\SaveSystem.ts:63:8[90m)[39m
+    at [90mC:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39mtests\unit\save_transfer.test.ts:421:12
+    at [90mfile:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:146:14
+    at [90mfile:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:533:11
+    at runWithTimeout [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:39:7[90m)[39m
+    at runTest [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1056:17[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at runSuite [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+
+[90mstderr[2m | tests/unit/save_transfer.test.ts[2m > [22m[2mv19 復元の入口はひとつ(sanitizeState)[2m > [22m[2msanitizeState はオブジェクト以外を受けつけない
+[22m[39m[save] 壊れたセーブデータのため新規扱いにします Error: not object
+    at Module.sanitizeState [90m(C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39msrc\save\SaveSystem.ts:172:87[90m)[39m
+    at [90mC:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39mtests\unit\save_transfer.test.ts:456:12
+    at [90mfile:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:146:14
+    at [90mfile:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:533:11
+    at runWithTimeout [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:39:7[90m)[39m
+    at runTest [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1056:17[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at runSuite [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+    at runSuite [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+    at runFiles [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1262:5[90m)[39m
+[save] 壊れたセーブデータのため新規扱いにします Error: not object
+    at Module.sanitizeState [90m(C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39msrc\save\SaveSystem.ts:172:87[90m)[39m
+    at [90mC:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39mtests\unit\save_transfer.test.ts:457:12
+    at [90mfile:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:146:14
+    at [90mfile:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:533:11
+    at runWithTimeout [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:39:7[90m)[39m
+    at runTest [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1056:17[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at runSuite [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+    at runSuite [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+    at runFiles [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1262:5[90m)[39m
+[save] 壊れたセーブデータのため新規扱いにします Error: not object
+    at Module.sanitizeState [90m(C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39msrc\save\SaveSystem.ts:172:87[90m)[39m
+    at [90mC:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39mtests\unit\save_transfer.test.ts:458:12
+    at [90mfile:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:146:14
+    at [90mfile:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:533:11
+    at runWithTimeout [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:39:7[90m)[39m
+    at runTest [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1056:17[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at runSuite [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+    at runSuite [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+    at runFiles [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1262:5[90m)[39m
+[save] 壊れたセーブデータのため新規扱いにします Error: not object
+    at Module.sanitizeState [90m(C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39msrc\save\SaveSystem.ts:172:87[90m)[39m
+    at [90mC:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39mtests\unit\save_transfer.test.ts:459:12
+    at [90mfile:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:146:14
+    at [90mfile:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:533:11
+    at runWithTimeout [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:39:7[90m)[39m
+    at runTest [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1056:17[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at runSuite [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+    at runSuite [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+    at runFiles [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1262:5[90m)[39m
+
+[90mstdout[2m | tests/unit/save_transfer.test.ts[2m > [22m[2mv19 永続化のお願い(navigator.storage.persist)[2m > [22m[2mはじめてセーブできたときに1回だけ呼ぶ(2回目以降は呼ばない)
+[22m[39m[save] persistent storage: granted
+
+[90mstdout[2m | tests/unit/save_transfer.test.ts[2m > [22m[2mv19 永続化のお願い(navigator.storage.persist)[2m > [22m[2mpersist が例外を投げてもセーブは通る
+[22m[39m[save] persistent storage: 使えない Error: nope
+    at Object.persist [90m(C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39mtests\unit\save_transfer.test.ts:497:19[90m)[39m
+    at requestPersistOnce [90m(C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39msrc\save\SaveSystem.ts:124:34[90m)[39m
+    at Module.save [90m(C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39msrc\save\SaveSystem.ts:65:3[90m)[39m
+    at [90mC:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39mtests\unit\save_transfer.test.ts:506:16
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90mfile:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:533:5
+    at runTest [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1056:11[90m)[39m
+    at runSuite [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+    at runSuite [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+    at runFiles [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1262:5[90m)[39m
+
+ [32m✓[39m tests/unit/save_transfer.test.ts [2m([22m[2m36 tests[22m[2m)[22m[33m 404[2mms[22m[39m
+ [32m✓[39m tests/unit/dynres.test.ts [2m([22m[2m31 tests[22m[2m)[22m[33m 433[2mms[22m[39m
+ [32m✓[39m tests/unit/chapter3.test.ts [2m([22m[2m34 tests[22m[2m)[22m[90m 45[2mms[22m[39m
+ [32m✓[39m tests/unit/home_expand_v11.test.ts [2m([22m[2m33 tests[22m[2m)[22m[33m 580[2mms[22m[39m
+   [33m[2m✓[22m[39m 2段階目の間取り(12×9m)[2m > [22m9×7mで歩けた床・置けた場所は、12×9mでもぜんぶ有効(家具が外に出ない) [33m414[2mms[22m[39m
+ [32m✓[39m tests/unit/content_v8.test.ts [2m([22m[2m50 tests[22m[2m)[22m[33m 1933[2mms[22m[39m
+   [33m[2m✓[22m[39m 海の魚(あおうお・にじうお)[2m > [22m解禁後の桟橋: 昼はおよそ5割であおうお [33m1352[2mms[22m[39m
+   [33m[2m✓[22m[39m 海の魚(あおうお・にじうお)[2m > [22m池には海の魚(あおうお・にじうお・タイ・タツノオトシゴ)は出ない [33m354[2mms[22m[39m
+ [32m✓[39m tests/unit/cove.test.ts [2m([22m[2m28 tests[22m[2m)[22m[33m 1211[2mms[22m[39m
+   [33m[2m✓[22m[39m よるの入り江: 別空間としての置きかた[2m > [22mセーブのロード時クランプ(±70)の内がわに収まる [33m514[2mms[22m[39m
+   [33m[2m✓[22m[39m よるの入り江: 別空間としての置きかた[2m > [22m島の見た目から じゅうぶん はなれている(島の外れは深い海) [33m373[2mms[22m[39m
+ [32m✓[39m tests/unit/bottle.test.ts [2m([22m[2m36 tests[22m[2m)[22m[90m 102[2mms[22m[39m
+ [32m✓[39m tests/unit/weather.test.ts [2m([22m[2m27 tests[22m[2m)[22m[33m 2000[2mms[22m[39m
+   [33m[2m✓[22m[39m カタツムリ(雨の日だけ)[2m > [22m動きは決定的で、ゆっくり・決めた範囲から出ない [33m950[2mms[22m[39m
+   [33m[2m✓[22m[39m カタツムリ(雨の日だけ)[2m > [22mほかのE候補と取り合いにならない距離をとってある [33m525[2mms[22m[39m
+ [32m✓[39m tests/unit/home_deco.test.ts [2m([22m[2m27 tests[22m[2m)[22m[90m 296[2mms[22m[39m
+ [32m✓[39m tests/unit/bugs_v24.test.ts [2m([22m[2m26 tests[22m[2m)[22m[33m 6435[2mms[22m[39m
+   [33m[2m✓[22m[39m v24 かごの中の うごき(cagedBugPose・純ロジック)[2m > [22m動く はばは かならず span の中(前へだけ・0以上) [33m4629[2mms[22m[39m
+   [33m[2m✓[22m[39m v24 かごの中の虫は かごから はみ出さない(実メッシュ)[2m > [22mおおきなむしかご: 6ぴき動いても、置いたままの姿より 3.5cm以上は 出ない [33m819[2mms[22m[39m
+ [32m✓[39m tests/unit/garden.test.ts [2m([22m[2m22 tests[22m[2m)[22m[33m 1877[2mms[22m[39m
+   [33m[2m✓[22m[39m お庭のかたち(柵・門・花だん)[2m > [22m柵を足しても歩ける場所はひとつながり(お庭に袋小路ができていない) [33m855[2mms[22m[39m
+   [33m[2m✓[22m[39m お庭のかたち(柵・門・花だん)[2m > [22m門をふさぐと お庭が孤立する(=柵がほんとうに囲えている) [33m856[2mms[22m[39m
+ [32m✓[39m tests/unit/content_v6.test.ts [2m([22m[2m28 tests[22m[2m)[22m[90m 135[2mms[22m[39m
+ [32m✓[39m tests/unit/text_style_v17.test.ts [2m([22m[2m22 tests[22m[2m)[22m[90m 53[2mms[22m[39m
+ [32m✓[39m tests/unit/objective.test.ts [2m([22m[2m29 tests[22m[2m)[22m[90m 29[2mms[22m[39m
+ [32m✓[39m tests/unit/badges.test.ts [2m([22m[2m31 tests[22m[2m)[22m[90m 171[2mms[22m[39m
+ [32m✓[39m tests/unit/creatures_v17.test.ts [2m([22m[2m25 tests[22m[2m)[22m[33m 4251[2mms[22m[39m
+   [33m[2m✓[22m[39m v17 きょうの顔ぶれ(日がわりローテ)[2m > [22m走ったまま近づいても つかまえられる(あたらしい虫もふくめて/夕方と夜も) [33m336[2mms[22m[39m
+   [33m[2m✓[22m[39m v17 あたらしい魚3種(釣りのテーブル)[2m > [22m昼の池: およそ3割でコイ(のこりはサカナ) [33m1141[2mms[22m[39m
+   [33m[2m✓[22m[39m v17 あたらしい魚3種(釣りのテーブル)[2m > [22m昼の海: タイ15%・あおうお50%(あおうおの確率は v8から変わらない) [33m1092[2mms[22m[39m
+   [33m[2m✓[22m[39m v17 あたらしい魚3種(釣りのテーブル)[2m > [22mタツノオトシゴは 第2章のあとの 夜の海だけ(にじうおの2割は変わらない) [33m1129[2mms[22m[39m
+ [32m✓[39m tests/unit/objective_v111.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+ [32m✓[39m tests/unit/sit_emote.test.ts [2m([22m[2m30 tests[22m[2m)[22m[90m 27[2mms[22m[39m
+ [32m✓[39m tests/unit/market.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 689[2mms[22m[39m
+   [33m[2m✓[22m[39m いちば島の地形[2m > [22mセーブの ±70 クランプの内がわに おさまっている [33m489[2mms[22m[39m
+ [32m✓[39m tests/unit/face_v29.test.ts [2m([22m[2m27 tests[22m[2m)[22m[90m 54[2mms[22m[39m
+ [32m✓[39m tests/unit/home_expand.test.ts [2m([22m[2m19 tests[22m[2m)[22m[90m 231[2mms[22m[39m
+ [32m✓[39m tests/unit/audio_mix.test.ts [2m([22m[2m25 tests[22m[2m)[22m[90m 151[2mms[22m[39m
+ [32m✓[39m tests/unit/overlay_hit.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+ [32m✓[39m tests/unit/ach_reward.test.ts [2m([22m[2m15 tests[22m[2m)[22m[90m 28[2mms[22m[39m
+ [32m✓[39m tests/unit/world_v26.test.ts [2m([22m[2m16 tests[22m[2m)[22m[90m 131[2mms[22m[39m
+ [32m✓[39m tests/unit/station.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 26[2mms[22m[39m
+ [32m✓[39m tests/unit/achievement.test.ts [2m([22m[2m20 tests[22m[2m)[22m[90m 19[2mms[22m[39m
+[90mstdout[2m | tests/unit/snow_v24.test.ts[2m > [22m[2mv24 ゆきの白さは 見た目だけ(判定は 1つも 変わらない)[2m > [22m[2m歩ける・水・高さ・釣りの格子ダンプが ゆきで 変わらない
+[22m[39mBJS - [14:47:16]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/snow_v24.test.ts[2m > [22m[2mv24 ふきだまりの 面は 外を向いている(灰色の岩に 見えない)[2m > [22m[2mどの ふきだまりも 法線は 外向き・表の面が 手前(灰色の岩に ならない)
+[22m[39mBJS - [14:47:19]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/snow_v24.test.ts[2m > [22m[2mv24 あとから 足した面にも その場で ゆきが 積もる[2m > [22m[2m積もっている まっ最中に 登録した面は すぐ 白くなる(登録の順番で 差が つかない)
+[22m[39mBJS - [14:47:19]: Babylon.js v8.56.2 - Null engine
+
+ [32m✓[39m tests/unit/snow_v24.test.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 5979[2mms[22m[39m
+   [33m[2m✓[22m[39m v24 ゆきの日(決まりかた)[2m > [22mあめと ゆきは 同じ日には ぜったいに 出ない(排他) [33m728[2mms[22m[39m
+   [33m[2m✓[22m[39m v24 ゆきの白さは 見た目だけ(判定は 1つも 変わらない)[2m > [22m歩ける・水・高さ・釣りの格子ダンプが ゆきで 変わらない [33m5146[2mms[22m[39m
+ [32m✓[39m tests/unit/node_reach.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 802[2mms[22m[39m
+   [33m[2m✓[22m[39m 採取ノードに 真横まで 寄れる(格子の実測)[2m > [22mどのノードも 採取のとどく1.9mに 0.6m以上の余裕をもって近づける [33m759[2mms[22m[39m
+[90mstderr[2m | tests/unit/save.test.ts[2m > [22m[2mセーブ/ロード[2m > [22m[2m壊れたJSONはnull(新規開始へフォールバック)
+[22m[39m[save] 壊れたセーブデータのため新規扱いにします SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at Module.load [90m(C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39msrc\save\SaveSystem.ts:155:31[90m)[39m
+    at [90mC:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\[39mtests\unit\save.test.ts:38:12
+    at [90mfile:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:146:14
+    at [90mfile:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:533:11
+    at runWithTimeout [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:39:7[90m)[39m
+    at runTest [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1056:17[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at runSuite [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+    at runSuite [90m(file:///C:/Users/2016k/Caoude%E4%BD%9C%E6%A5%AD%E3%83%95%E3%82%A9%E3%83%AB%E3%83%80/90_Private/%E3%82%A2%E3%83%97%E3%83%AA%E9%96%8B%E7%99%BA%E3%89%92_LumiIsland/[39mnode_modules/[4m@vitest/runner[24m/dist/index.js:1205:15[90m)[39m
+
+ [32m✓[39m tests/unit/save.test.ts [2m([22m[2m16 tests[22m[2m)[22m[90m 40[2mms[22m[39m
+ [32m✓[39m tests/unit/stuck_escape.test.ts [2m([22m[2m18 tests[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m tests/unit/home_interior.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 58[2mms[22m[39m
+[90mstdout[2m | tests/unit/placement.test.ts[2m > [22m[2mPlacementSystem(置けない場所でのふるまい)[2m > [22m[2m置けない場所ではplace()が家具もアイテムも消費しない
+[22m[39mBJS - [14:47:20]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/placement.test.ts[2m > [22m[2mPlacementSystem(置けない場所でのふるまい)[2m > [22m[2m置けないときのヒントに理由が出る
+[22m[39mBJS - [14:47:20]: Babylon.js v8.56.2 - Null engine
+
+[90mstdout[2m | tests/unit/placement.test.ts[2m > [22m[2mPlacementSystem(置けない場所でのふるまい)[2m > [22m[2m置ける場所ではEでおけるヒントになる
+[22m[39mBJS - [14:47:20]: Babylon.js v8.56.2 - Null engine
+
+ [32m✓[39m tests/unit/placement.test.ts [2m([22m[2m16 tests[22m[2m)[22m[90m 70[2mms[22m[39m
+ [32m✓[39m tests/unit/sky.test.ts [2m([22m[2m16 tests[22m[2m)[22m[90m 40[2mms[22m[39m
+ [32m✓[39m tests/unit/occlusion_v27.test.ts [2m([22m[2m16 tests[22m[2m)[22m[90m 62[2mms[22m[39m
+ [32m✓[39m tests/unit/dialogue_camera.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 125[2mms[22m[39m
+ [32m✓[39m tests/unit/quests.test.ts [2m([22m[2m14 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+ [32m✓[39m tests/unit/starshard.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 16[2mms[22m[39m
+ [32m✓[39m tests/unit/viewport.test.ts [2m([22m[2m17 tests[22m[2m)[22m[90m 15[2mms[22m[39m
+ [32m✓[39m tests/unit/crafting.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 15[2mms[22m[39m
+ [32m✓[39m tests/unit/codex.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 19[2mms[22m[39m
+ [32m✓[39m tests/unit/schedule.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+ [32m✓[39m tests/unit/gamestate.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 6[2mms[22m[39m
+ [32m✓[39m tests/unit/time.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 6[2mms[22m[39m
+ [32m✓[39m tests/unit/guidance.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+ [32m✓[39m tests/unit/gather.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+[90mstdout[2m | tests/unit/fishing_cast.test.ts[2m > [22m[2m投げ先さがしの土台[2m > [22m[2m毎フレーム呼ぶ有無判定(anyMatch)が十分に速い
+[22m[39manyMatch 1回あたり 0.45ms
+
+[90mstdout[2m | tests/unit/fishing_cast.test.ts[2m > [22m[2m投げ先さがしの土台[2m > [22m[2m投げるときの本探索(体の向きつき)が1フレームぶんに収まる
+[22m[39m本探索 1回あたり 1.57ms
+
+ [32m✓[39m tests/unit/fishing_cast.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 5852[2mms[22m[39m
+   [33m[2m✓[22m[39m 釣りの投げ先(池)[2m > [22m北・南・東・西+斜めのどの岸でも、どちらを向いて立っても、ウキは水の中に落ちる [33m1359[2mms[22m[39m
+   [33m[2m✓[22m[39m 釣りの投げ先(池)[2m > [22m水のほうを向いて立てば、投げ先はだいたい正面(体をひねりすぎない) [33m888[2mms[22m[39m
+   [33m[2m✓[22m[39m 釣りの投げ先(池)[2m > [22m釣りができると判定した立ち位置は、例外なく水にウキが落ちる(池のまわり総なめ) [33m3110[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m89 passed[39m[22m[90m (89)[39m
+[2m      Tests [22m [1m[32m2132 passed[39m[22m[90m (2132)[39m
+[2m   Start at [22m 14:46:27
+[2m   Duration [22m 55.35s[2m (transform 19.23s, setup 0ms, collect 82.12s, tests 77.03s, environment 138.69s, prepare 26.41s)[22m
+
+
+> lumi-island@0.1.0 check:chars
+> node tools/charcheck.mjs
+
+charcheck OK (0件)
+VERIFY_EXIT=0

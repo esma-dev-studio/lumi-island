@@ -223,7 +223,9 @@ setupAdaptiveResolution();
 initAudioOnGesture();
 setSoundEnabled(loadOpts().sound);
 
-async function bootGame(state = newGameState()): Promise<void> {
+async function bootGame(
+  state = newGameState()
+): Promise<import('./scenes/GameScene').GameScene> {
   const { GameScene } = await import('./scenes/GameScene');
   const game = new GameScene(engine, { debug, state });
   await game.init();
@@ -232,6 +234,7 @@ async function bootGame(state = newGameState()): Promise<void> {
   engine.runRenderLoop(() => game.render());
   (window as unknown as Record<string, Record<string, unknown>>).__lumi.game = game;
   (window as unknown as Record<string, Record<string, unknown>>).__lumi.ready = true as unknown as Record<string, unknown>;
+  return game;
 }
 
 async function boot(): Promise<void> {
@@ -281,7 +284,12 @@ async function boot(): Promise<void> {
         backdrop = null;
       }
       const state = mode === 'continue' ? (load() ?? newGameState()) : newGameState();
-      await bootGame(state);
+      const game = await bootGame(state);
+      // v29 「はじめから」のときだけ オープニング(ふねで島へ着く・約22秒)。
+      // タイトルを片づける **前** に始めるので、いちばん最初のフレームから まっ黒
+      // ——タイトルが消えた すきまに 広場が ちらりと 見えることが 無い。
+      // 「1回きり」の判断(stats)も 出す/出さないも GameScene.startOpening が持つ。
+      if (mode === 'new') game.startOpening();
       title.dispose();
     };
   }

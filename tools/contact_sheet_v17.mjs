@@ -9,7 +9,8 @@ const arg = (n, d) => {
   const i = argv.indexOf(n);
   return i >= 0 ? argv[i + 1] : d;
 };
-const DIR = '.logs/screenshots/audit_v17';
+// --dir で 別フォルダ(v17 絵づくりの after など)も まとめられる
+const DIR = arg('--dir', '.logs/screenshots/audit_v17').replace(/[\\/]+$/, '');
 const COLS = Number(arg('--cols', '4'));
 const W = Number(arg('--w', '520'));
 const PART = Number(arg('--part', '0')); // 0=全部 / 1,2=半分ずつ

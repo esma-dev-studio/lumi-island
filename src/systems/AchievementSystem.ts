@@ -18,6 +18,15 @@ import { SAP_CATCH_KEY } from './SapTreeSystem';
 export const ACH_PREFIX = 'ach_';
 /** とうだいに あかりを ともした回数(v11第2章。GameScene.onLighthouseLit が1だけ足す) */
 export const LIGHTHOUSE_LIT_KEY = 'lighthouse_lit';
+/**
+ * v29 オープニング(ふねで島へ着く)を見たか。
+ * 「1回きり」を これ1つで まかなう(GameScene.startOpening が 見せる前に1だけ足す)。
+ * じっせきの材料ではないが、セーブの入れ物(stats)を ふやさないために ここに置く
+ * ——キーの規則([A-Za-z0-9_]・40文字以内)を 1か所で 見わたせるようにする。
+ */
+export const OPENING_SEEN_KEY = 'opening_seen';
+/** v29 第3章フィナーレを むかえた回数(GameScene.startStoryFinale が 見せる前に1だけ足す) */
+export const STORY_END_KEY = 'story_end';
 
 export interface AchievementDef {
   id: string;
@@ -316,6 +325,14 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     id: 'a_saptree', name: 'あまい においの木',
     desc: '林の おくの あまい においの木で 虫を つかまえよう',
     target: 1, icon: 'b_kabuto', progress: (s) => statCount(s, SAP_CATCH_KEY),
+  },
+  // v29 物語の むすび。第3章の さいごの おねがい(q3_taste)を とどけると たっせい。
+  // **いちばん最後の a_all_quests より 前** に置くこと:
+  // 「じっせきの ならびの さいごは おねがいマスター」を いくつものテストが 固定している。
+  {
+    id: 'a_story_end', name: 'ものがたりの おわり',
+    desc: 'テンに りょうりを とどけて、しまの ものがたりを おわらせよう',
+    target: 1, icon: 'festival', progress: (s) => statCount(s, STORY_END_KEY),
   },
   {
     id: 'a_all_quests', name: 'おねがいマスター', desc: '島のみんなの おねがいを 5つ かなえよう',

@@ -4,11 +4,11 @@
   "area": "island",
   "need": 3,
   "limitSec": 120,
-  "elapsedSec": 18,
+  "elapsedSec": 20.6,
   "total": 3,
   "catches": [
     {
-      "sec": 12.4,
+      "sec": 13.9,
       "total": 1,
       "got": [
         "b_kabuto"
@@ -16,7 +16,7 @@
       "hintSeen": true
     },
     {
-      "sec": 13.5,
+      "sec": 15.6,
       "total": 2,
       "got": [
         "b_kabuto",
@@ -25,7 +25,7 @@
       "hintSeen": true
     },
     {
-      "sec": 17.9,
+      "sec": 20.5,
       "total": 3,
       "got": [
         "b_kabuto",
@@ -41,8 +41,8 @@
     "b_nokogiri"
   ],
   "hints": [
+    "Eベンチに すわる",
     "Eツムギと はなす",
-    "Eお店をみる(うる・かう)",
     "Eヒカリゴケをとる",
     "むしが いる! ちかづいて つかまえよう",
     "Eむしあみでつかまえる",
@@ -51,44 +51,44 @@
   "errors": [],
   "log": [
     {
-      "sec": 6.2,
+      "sec": 53.1,
       "label": "ゲーム開始(新規)"
     },
     {
-      "sec": 7.3,
+      "sec": 55.9,
       "label": "支度おわり: island 昼 hour=10.0 虫=1匹 いち=(-3.0,6.0)"
     },
     {
-      "sec": 7.3,
+      "sec": 55.9,
       "label": "いまやること: q_wood_offer 「ツムギの はなしを聞こう」"
     },
     {
-      "sec": 7.4,
+      "sec": 56.2,
       "label": "ねらう: b_kuwa (-2.5,-34.6) 40.6m"
     },
     {
-      "sec": 19.7,
+      "sec": 69.8,
       "label": "つかまえた! (1匹目 b_kabuto) ヒントを見てから=true"
     },
     {
-      "sec": 19.7,
-      "label": "ねらう: b_kuwa (-2.5,-34.6) 1.6m"
+      "sec": 69.9,
+      "label": "ねらう: b_kuwa (-2.5,-34.6) 2.0m"
     },
     {
-      "sec": 20.9,
+      "sec": 71.5,
       "label": "つかまえた! (2匹目 b_kabuto,b_kuwa) ヒントを見てから=true"
     },
     {
-      "sec": 20.9,
-      "label": "ねらう: b_nokogiri (-14.0,-37.8) 12.2m"
+      "sec": 71.5,
+      "label": "ねらう: b_nokogiri (-14.0,-37.8) 12.6m"
     },
     {
-      "sec": 25.3,
+      "sec": 76.4,
       "label": "つかまえた! (3匹目 b_kabuto,b_kuwa,b_nokogiri) ヒントを見てから=true"
     },
     {
-      "sec": 25.3,
-      "label": "PASS: 18秒で 3匹(合格は120秒で3匹)"
+      "sec": 76.5,
+      "label": "PASS: 20.6秒で 3匹(合格は120秒で3匹)"
     }
   ]
 }

@@ -77,6 +77,9 @@ export const ACHIEVEMENT_REWARDS: Record<string, AchievementReward> = {
   // ——「もっと カブクワに 会える」こと自体が いちばんの ごほうびなので、
   // ここで 限定の ものまで 出すと 二重になる(v21の ぬしと同じ考え方)
   a_saptree: { kind: 'lumina', amount: 40 },
+  // v29 物語の むすび。見せ場そのものが ごほうびなので ルミナだけにする
+  // (「ふたりのじかん」と同じ考えかた。ここで 限定のものまで 出すと 二重になる)
+  a_story_end: { kind: 'lumina', amount: 150 },
   a_all_quests: { kind: 'lumina', amount: 200 },
 };
 

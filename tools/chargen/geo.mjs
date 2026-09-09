@@ -325,6 +325,74 @@ export function bump(m, center, radius, amount, dir) {
   return m;
 }
 
+/**
+ * メッシュに 光線を あてて、いちばん遠い交点までの きょりを かえす(見つからなければ null)。
+ *
+ * なぜ要るか: 顔に貼る「口の絵のクアッド」は、楕円体の計算だけでは 置き場所が わからない。
+ * マズル(鼻先)は buildHead のあとに bump で 前へ 押し出されるので、楕円体の面は
+ * すでに 鼻の中に うまっている。実物のメッシュに 光線をあてて 面の位置を 実測すれば、
+ * 種族ごとの 鼻の長さに 自動で 合う。
+ *
+ * 「いちばん遠い」を取るのは、頭が ほぼ 中心について 星形だから(手前の面を 拾わない保険)。
+ * Möller–Trumbore 法。頭は約1000三角形なので 全部 総当たりで十分に速い。
+ */
+export function rayFarHit(m, origin, dir) {
+  const EPS = 1e-9;
+  let best = null;
+  for (let f = 0; f < m.idx.length; f += 3) {
+    const ia = m.idx[f] * 3, ib = m.idx[f + 1] * 3, ic = m.idx[f + 2] * 3;
+    const a = [m.pos[ia], m.pos[ia + 1], m.pos[ia + 2]];
+    const e1 = [m.pos[ib] - a[0], m.pos[ib + 1] - a[1], m.pos[ib + 2] - a[2]];
+    const e2 = [m.pos[ic] - a[0], m.pos[ic + 1] - a[1], m.pos[ic + 2] - a[2]];
+    const p = cross(dir, e2);
+    const det = dot(e1, p);
+    if (Math.abs(det) < EPS) continue;
+    const inv = 1 / det;
+    const s = sub(origin, a);
+    const u = dot(s, p) * inv;
+    if (u < 0 || u > 1) continue;
+    const q = cross(s, e1);
+    const v = dot(dir, q) * inv;
+    if (v < 0 || u + v > 1) continue;
+    const t = dot(e2, q) * inv;
+    if (t > EPS && (best === null || t > best)) best = t;
+  }
+  return best;
+}
+
+/**
+ * 「この UV の 絵が 出ている 場所」を メッシュから 引く(位置と 法線)。
+ *
+ * なぜ 要るか: 顔に貼る 口の絵は、頭の絵の その場所を そのまま 写して使う。
+ * 貼る場所が 1ピクセルでも ずれると つぎ目が 出る。楕円体の 計算で 場所を 出すと、
+ * bump で 前へ 押し出された マズルの ぶんだけ ずれてしまう(鼻先ほど 大きくずれる)。
+ * UV から 引けば、頭が どんな形に 変形していても **絵が 出ている まさに その点** に 貼れる。
+ *
+ * UV空間で 三角形を さがし、重心座標で 位置・法線を まぜる。
+ * 頭のUVは 1周ぶんが 一様に ならんでいるので、つなぎ目(u=0/1)以外では 1点に 1三角形。
+ */
+export function uvAtSurface(m, u, v) {
+  for (let f = 0; f < m.idx.length; f += 3) {
+    const ia = m.idx[f], ib = m.idx[f + 1], ic = m.idx[f + 2];
+    const ua = m.uv[ia * 2], va = m.uv[ia * 2 + 1];
+    const ub = m.uv[ib * 2], vb = m.uv[ib * 2 + 1];
+    const uc = m.uv[ic * 2], vc = m.uv[ic * 2 + 1];
+    const det = (vb - vc) * (ua - uc) + (uc - ub) * (va - vc);
+    if (Math.abs(det) < 1e-12) continue;
+    const w0 = ((vb - vc) * (u - uc) + (uc - ub) * (v - vc)) / det;
+    const w1 = ((vc - va) * (u - uc) + (ua - uc) * (v - vc)) / det;
+    const w2 = 1 - w0 - w1;
+    if (w0 < -1e-6 || w1 < -1e-6 || w2 < -1e-6) continue;
+    const mixAt = (arr, n) => {
+      const out = [];
+      for (let k = 0; k < n; k++) out.push(arr[ia * n + k] * w0 + arr[ib * n + k] * w1 + arr[ic * n + k] * w2);
+      return out;
+    };
+    return { p: mixAt(m.pos, 3), n: norm(mixAt(m.nrm, 3)) };
+  }
+  return null;
+}
+
 export function translateMesh(m, o) {
   for (let i = 0; i < m.pos.length; i += 3) {
     m.pos[i] += o[0];

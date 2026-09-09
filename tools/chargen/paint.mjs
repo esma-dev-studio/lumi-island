@@ -1,12 +1,11 @@
 // テクスチャアトラス描画: 種族ごとの色・顔・模様・質感ノイズ(512x512 RGBA)
 import { Tex, hex, mix, shade } from './tex.mjs';
-import { REG } from './uvmap.mjs';
+import { FACE_NAMES, FACE_REG, MOUTH_PATCH, MOUTH_X, REG, headPxAt } from './uvmap.mjs';
 
 // 頭領域内のピクセル座標(thetaDeg: 0=正面, yAbs: ワールド高さ)
+// 式は uvmap.mjs に1本だけ置く(face.mjs のクアッド配置と ずれると 継ぎ目になる)
 function headPx(spec, thetaDeg, yAbs) {
-  const { px } = REG.head;
-  const t = (yAbs - spec.head.yBottom) / (spec.head.yTop - spec.head.yBottom);
-  return [px.x + (0.5 + thetaDeg / 360) * px.w, px.y + (1 - t) * px.h];
+  return headPxAt(spec.head, thetaDeg, yAbs);
 }
 
 function fillReg(tex, r, c) {
@@ -46,6 +45,143 @@ function paintEyeClosed(tex, r, bg, line) {
   const { x, y, w, h } = r.px;
   tex.rect(x, y, w, h, bg);
   tex.bezier(x + w * 0.2, y + h * 0.42, x + w * 0.5, y + h * 0.78, x + w * 0.8, y + h * 0.42, 2.6, line);
+}
+
+/**
+ * 表情の目のクアッドが「頭の絵の どこを おおっているか」(px の四角)。
+ *
+ * 頭の絵は 横=1周360度・縦=頭の高さ の 一様な写像(上の headPx と同じ式)なので、
+ * 目のクアッドの ひろがり —— 角度は ±(eye.w / head.rx)/2 ラジアン、高さは eye.h
+ * (body.mjs の eyeQuad の surfaceAt) —— を そのまま px の四角に なおせる。
+ */
+function eyeSrcRect(spec, thetaDeg) {
+  const hs = spec.head, e = spec.eye;
+  const halfDeg = ((0.5 * e.w) / hs.rx) * (180 / Math.PI); // クアッドの 半分の 角度
+  const [x0] = headPx(spec, thetaDeg - halfDeg, e.y);
+  const [x1] = headPx(spec, thetaDeg + halfDeg, e.y);
+  const [, yTop] = headPx(spec, thetaDeg, e.y + e.h / 2);
+  const [, yBot] = headPx(spec, thetaDeg, e.y - e.h / 2);
+  return { x: x0, y: yTop, w: x1 - x0, h: yBot - yTop };
+}
+
+/**
+ * 表情の目(v29)。開き目と **同じ大きさのクアッド**に貼るので、地色・虹彩の半径は
+ * そのまま 使いまわせる(ふだんの顔と 目の大きさが 急に 変わらない)。
+ * @param kind    'smile' | 'surprised' | 'sad'
+ * @param outward 目じり(顔の外がわ)が +1=右 / -1=左。左右で 絵を 反転する
+ * @param src     下地に 写す 頭の絵の 四角(eyeSrcRect)。null なら 1色でぬる
+ */
+function paintEyeFace(tex, r, kind, bg, iris, opts = {}, outward = 1, src = null) {
+  const { x, y, w, h } = r.px;
+  tex.setClip(r.px); // 領域の外へ 1ピクセルも にじませない
+  // 下地は **口と 同じやり方**で「頭の絵の その場所」を そのまま 写す。
+  // 1色で 平らに ぬると、まだら模様の 顔(ロカ)の上で クアッドの 四角い ふちが
+  // 「うすい シール」に 見える。写せば 斑・地色・明暗が 頭と そろって ふちが 消える。
+  if (src) tex.copyRectScaled(src.x, src.y, src.w, src.h, x, y, w, h, true);
+  else tex.rect(x, y, w, h, bg);
+  const cx = x + w / 2, cy = y + h / 2;
+  const rx = opts.rx ?? w * 0.30, ry = opts.ry ?? h * 0.40;
+  const pupil = opts.pupil ?? [40, 30, 24];
+  // やわらかい ふち(soft=1.5px)の ぶんまで 入れて 領域に おさまる 半径にする。
+  // クリップで 切れば 安全だが、切ると まっすぐな 断面が 見えるので 先に 縮める。
+  const fit = (ecx, ecy, erx, ery) => {
+    const k = 1 + 1.5 / Math.max(1, Math.min(erx, ery));
+    const mx = Math.min(ecx - x, x + w - ecx) / k;
+    const my = Math.min(ecy - y, y + h - ecy) / k;
+    return [Math.min(erx, mx), Math.min(ery, my)];
+  };
+  const ell = (ecx, ecy, erx, ery, c, a, soft) => {
+    const [fx, fy] = fit(ecx, ecy, erx, ery);
+    tex.ellipse(ecx, ecy, fx, fy, c, a, soft);
+  };
+  if (kind === 'smile') {
+    // にっこり: 上へ ふくらむ 弧(∩)。閉じ目(∪)の 上下を 返した形。
+    // 下地ぜんたいに かかる「まぶたの くぼみ」は **もう 敷かない**。
+    // 下地が 頭の絵の 写しに なったので くぼみは すでに 頭の絵に 入っており、
+    // 重ねると まん中だけ 暗くなって **ふちが 明るい四角** に 見えてしまう
+    // (実測: 顔185 / ふち195 / 中176。写しだけなら 顔と 中は そろう)。
+    ell(cx, y + h * 0.74, rx * 0.9, ry * 0.28, shade(bg, 0.9), 0.45); // 弧の下の やわらかい影
+    tex.bezier(x + w * 0.18, y + h * 0.64, x + w * 0.5, y + h * 0.28, x + w * 0.82, y + h * 0.64, 2.9, shade(bg, 0.5));
+    tex.setClip(null);
+    return;
+  }
+  if (kind === 'surprised') {
+    // 見ひらく: **白目を 見せる**。黒目を 大きくするだけでは 目が こいだけに 見え、
+    // 「おどろき」に ならない(黒目のまわりに 白が 出るのが おどろきの しるし)。
+    // 縦は もう クアッドいっぱいなので、白目で まるさと 大きさを つくる。
+    // 白目は 白すぎない(まっ白だと 白い顔の ロカで 目だけ 浮いて見える)。
+    const wx = w * 0.40, wy = h * 0.40;
+    const white = mix(bg, [255, 255, 255], 0.55);
+    // まぶたの影は 白目に そう ぶんだけ(領域の ふちまで 広げると、下地の 写しを
+    // ふちだけ 残して 暗くしてしまい「明るい四角の ふち」になる)
+    ell(cx, cy + 0.6, wx + 1.4, wy + 1.4, shade(bg, 0.9), 0.5);
+    ell(cx, cy, wx, wy, opts.sclera ?? white);
+    const ix = Math.min(rx * 0.94, wx * 0.66), iy = Math.min(ry * 0.94, wy * 0.66);
+    ell(cx, cy, ix, iy, iris);
+    if (opts.pupilBar) {
+      tex.rect(Math.round(cx - ix * 0.7), Math.round(cy - iy * 0.22), Math.round(ix * 1.4), Math.round(iy * 0.44), pupil);
+    } else if (opts.pupil) {
+      ell(cx, cy, ix * 0.46, iy * 0.5, pupil);
+    }
+    ell(cx - ix * 0.34, cy - iy * 0.36, ix * 0.32, iy * 0.26, [255, 255, 255], 0.95);
+    tex.setClip(null);
+    return;
+  }
+  // sad: 黒目が 下へ よって、目じり(外がわ)の まぶたが たれる
+  const dy = ry * 0.18;
+  ell(cx, cy + dy * 0.5, rx * 1.02, ry * 0.98, shade(bg, 0.84), 0.55);
+  if (opts.sclera) ell(cx, cy + dy, rx * 0.98, ry * 0.9, opts.sclera);
+  ell(cx, cy + dy, rx * 0.92, ry * 0.86, iris);
+  if (opts.pupilBar) {
+    tex.rect(Math.round(cx - rx * 0.6), Math.round(cy + dy), Math.round(rx * 1.2), Math.round(ry * 0.34), pupil);
+  } else if (opts.pupil) {
+    ell(cx, cy + dy * 1.5, rx * 0.4, ry * 0.42, pupil);
+  }
+  ell(cx - rx * 0.32, cy, rx * 0.24, ry * 0.18, [255, 255, 255], 0.85);
+  // 上まぶた: 目がしら(内がわ)は 高く、目じり(外がわ)は 低く
+  const inX = cx - outward * w * 0.34, outX = cx + outward * w * 0.34;
+  tex.bezier(inX, y + h * 0.26, cx, y + h * 0.32, outX, y + h * 0.58, 3.0, shade(bg, 0.6));
+  tex.setClip(null);
+}
+
+/** 口の線の色。種族ごとの ふだんの口と そろえる(下の描画と 同じ値) */
+function mouthLineColor(sp, P) {
+  if (sp === 'mio') return P.mouth;
+  if (sp === 'minamo') return shade(P.fur, 0.62);
+  if (sp === 'tsumugi') return shade(P.fur, 0.66);
+  return shade(P.fur, 0.6); // ten
+}
+
+/**
+ * 表情の口(v29)。**頭の絵の その場所を そのまま 写して、口だけ 描きかえる**。
+ * 写した中の「もとの口」は 上下の色で 縦に つないで 消す(band)。
+ * こうすると 地色・明暗のむら・粒が 頭と 完全に 同じになり、貼っても つぎ目が 出ない。
+ */
+function paintMouthFace(tex, spec, P, region, kind) {
+  const mp = spec.face?.mouthPatch;
+  if (!mp) return; // くちばしの種族は 口の絵を 使わない
+  const { x, y, w, h } = region.px;
+  tex.copyRect(MOUTH_X, mp.y, MOUTH_PATCH.w, MOUTH_PATCH.h, x, y);
+  tex.setClip(region.px); // 領域の外へ 1ピクセルも にじませない
+  tex.eraseTo(x, y, w, h, mp.erase, spec.speciesId === 'mio' ? 0.03 : 0.06, 31);
+  const cx = x + w / 2;
+  const my = y + h * mp.mouth;
+  const hw = w * (mp.w ?? 0.30); // 口の 半分の はば
+  const c = mouthLineColor(spec.speciesId, P);
+  if (kind === 'smile') {
+    // 口角を 上げた ◡
+    tex.bezier(cx - hw, my - 2.0, cx, my + 5.2, cx + hw, my - 2.0, 2.1, c);
+    for (const sx of [-1, 1]) tex.ellipse(cx + sx * hw, my - 2.5, 1.0, 1.0, c, 0.85); // 口角の あがり
+  } else if (kind === 'surprised') {
+    // 小さく まるく 開く(大きく あけると 泣き顔に 見える)
+    const orx = Math.min(hw * 0.32, h * 0.105), ory = h * 0.14;
+    tex.ellipse(cx, my + 1.0, orx, ory, shade(c, 0.72));
+    tex.ellipse(cx, my + 0.2, orx * 0.72, ory * 0.66, shade(c, 1.12), 0.55); // 内がわの あかるみ
+  } else {
+    // への字
+    tex.bezier(cx - hw * 0.88, my + 2.4, cx, my - 3.0, cx + hw * 0.88, my + 2.4, 2.2, c);
+  }
+  tex.setClip(null);
 }
 
 export function paintTexture(spec) {
@@ -248,6 +384,27 @@ export function paintTexture(spec) {
   if (sp === 'ten') {
     // 目のクアッドの地に 頭と同じ粒をのせて、四角いふちを 目立たなくする
     for (const r of [REG.eyeOpenL, REG.eyeOpenR, REG.eyeClosedL, REG.eyeClosedR]) noiseReg(tex, r, 0.06, 13);
+  }
+
+  // ---- 表情(v29): にっこり / びっくり / しょんぼり ----
+  // ここより上で 頭の絵は でき上がっているので、目・口の 下地は そのまま 写せる
+  // (この下で REG.head に 描きたす処理は 1つも ない)。
+  // 既存の領域には 1ピクセルも さわらない(足すのは y>=368 の 使っていない帯だけ)。
+  // 目の下地は 口と 同じ「頭の絵の 写し取り」(eyeSrcRect + copyRectScaled)。
+  // bg は 下地ではなく、まぶたの影・弧の 色を 決めるためだけに 使う。
+  const srcL = eyeSrcRect(spec, spec.eye.thetaDeg);  // face.mjs の eyeL は +thetaDeg
+  const srcR = eyeSrcRect(spec, -spec.eye.thetaDeg);
+  for (const name of FACE_NAMES) {
+    const fr = FACE_REG[name];
+    paintEyeFace(tex, fr.eyeL, name, eyeBg, P.eye, eyeOpts, 1, srcL);
+    paintEyeFace(tex, fr.eyeR, name, eyeBg, P.eye, eyeOpts, -1, srcR);
+    // 粒(ノイズ)は もう のせない: 下地が 頭の絵の 写しなので 頭と 同じ粒が
+    // すでに 入っている。重ねると 頭より ざらつき、ふちの1列が ランダムに 浮く。
+    paintMouthFace(tex, spec, P, fr.mouth, name);
+    // のりしろ: となりの色を ひろわせない(教訓1「UVアトラスは 隣の色まで設計する」)
+    // のりしろは 8px。ロカの継ぎ目対策(paintRokaSeamGuards)と同じ理由で、
+    // 4px だと 縮小表示(ミップマップ)で となりの色を 拾うことがある
+    for (const r of [fr.eyeL, fr.eyeR, fr.mouth]) tex.bleed(r.px.x, r.px.y, r.px.w, r.px.h, 8);
   }
 
   // ---- 耳内側 ----

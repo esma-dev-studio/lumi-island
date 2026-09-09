@@ -8,8 +8,10 @@ import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import '@babylonjs/loaders/glTF/2.0';
+import type { MorphTarget } from '@babylonjs/core/Morph/morphTarget';
 import type { CharacterDef } from '../data/characters';
 import { outfitVertexColors } from './outfit';
+import { FACE_MORPHS, FaceMixer, type FaceCue, type FaceName } from './faceMixer';
 
 const FADE_TIME = 0.18; // 秒
 
@@ -21,6 +23,9 @@ export class CharacterView {
   private fading: { from: AnimationGroup | null; to: AnimationGroup; t: number } | null = null;
   private blinkTimer = 2 + Math.random() * 3;
   private disposed = false;
+  /** v29 顔の表情。重みの 上げ下げは 純ロジック(faceMixer)が 持つ */
+  readonly face = new FaceMixer();
+  private faceTargets = new Map<FaceName, MorphTarget>();
 
   private constructor(
     public readonly scene: Scene,
@@ -41,8 +46,43 @@ export class CharacterView {
       g.stop();
       view.groups.set(g.name, g);
     }
+    // v29 顔のモーフ(smile/surprised/sad)を さがす。
+    // まばたきは 本体メッシュ、表情は `${id}_face` メッシュに 分けてある
+    // (glTFの モーフの重みは メッシュ単位。1つに まとめると blink のアニメが
+    //  表情の重みまで 0 に 書きかえてしまう → tools/chargen/face.mjs の説明)。
+    for (const m of view.meshes) {
+      const mtm = (m as Mesh).morphTargetManager;
+      if (!mtm) continue;
+      for (let i = 0; i < mtm.numTargets; i++) {
+        const t = mtm.getTarget(i);
+        if ((FACE_MORPHS as readonly string[]).includes(t.name)) view.faceTargets.set(t.name as FaceName, t);
+      }
+    }
     scene.onBeforeRenderObservable.add(view.update);
     return view;
+  }
+
+  /**
+   * v29 顔の表情を 出す。'normal' で ふつうの顔へ もどす。
+   * まばたきとは 別の しくみなので、笑ったまま まばたきしても 破たんしない。
+   */
+  setFace(name: FaceCue, weight = 1, fadeSec?: number): void {
+    this.face.set(name, weight, fadeSec);
+  }
+
+  /** v29 表情を 出して、sec 秒たったら ひとりでに もどす(会話の1行・釣りのアタリ用) */
+  pulseFace(name: FaceCue, sec = 1.2, fadeSec?: number): void {
+    this.face.pulse(name, sec, fadeSec);
+  }
+
+  /** その表情の いまの重み(0..1)。テスト・検証用 */
+  faceWeight(name: FaceName): number {
+    return this.face.weightOf(name);
+  }
+
+  /** GLBに 表情モーフが 入っているか(古いGLBでも 落ちないための 目印) */
+  get hasFaces(): boolean {
+    return this.faceTargets.size > 0;
   }
 
   /** アニメ再生(クロスフェード)。one-shotは終了後 idle に戻る */
@@ -87,6 +127,10 @@ export class CharacterView {
       this.blinkTimer = 2 + Math.random() * 3.5;
       const blink = this.groups.get('blink');
       if (blink && blink !== this.current) blink.start(false, 1);
+    }
+    // v29 顔の表情(まばたきと 同じ更新経路。重みが 動いたときだけ 書きこむ)
+    if (this.face.update(dt) && this.faceTargets.size > 0) {
+      for (const [name, target] of this.faceTargets) target.influence = this.face.weightOf(name);
     }
   };
 

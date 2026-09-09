@@ -384,10 +384,165 @@ export function getFloraMat(scene: Scene): StandardMaterial {
  */
 export type Orient = 'keep';
 
+/**
+ * ============================================================================
+ * v17 接地AO(contact ambient occlusion)—— ものの「ねもと」を すこし暗くする
+ * ============================================================================
+ *
+ * 平行光+半球光だけだと、地面に立っているものは どれも 足もとまで 同じ明るさで
+ * 塗られ「ポン置き」に見える。実物は 地面とものの すきまに 光が まわりこめず、
+ * ねもとが すこし暗い。それを **頂点カラーだけ**で 作る(追加の描画パスは 0)。
+ *
+ * **高さの基準は「メッシュ全体の 底」ではなく「その場所の 底」**。
+ * 島の草・小石・落ち葉は 何百個を 1つのメッシュに まとめてあるので、
+ * メッシュの底で 決めると いちばん低い1個しか 暗くならない。そこで
+ * 横 1m の マスごとに 最低の高さ(と 最高の高さ)を 集め、
+ * となりの 8マスまで 見て ならしてから 使う。
+ *
+ * かける先を **よこ向き・した向きの面だけ**に しぼってあるのも わざと。
+ * うえ向きの面(床・板・地面すれすれの敷石)まで 暗くすると
+ * 「AO」ではなく ただの「全体が くすんだ絵」になる。
+ *
+ * 触るのは RGB だけ。**不透明度(A)は 1文字も 変えない**
+ * (色ぬり tintFurnitureMesh の検査が 不透明度の 不変を 見ている)。
+ */
+/** 高さの基準を取る 横のマス(m) */
+const AO_CELL = 1.0;
+/** いちばん暗くする わりあい */
+const AO_MAX = 0.18;
+/** ねもとから この高さまでで 0 になる。ものの高さの 35%(ただし 5cm〜50cm) */
+const AO_FALL_K = 0.35;
+const AO_FALL_MIN = 0.05;
+const AO_FALL_MAX = 0.5;
+/** これより背の低いもの(虫の羽・小さな部品)には かけない(m) */
+const AO_MIN_OBJ_H = 0.15;
+/** うえ向きの面の 効きを どれだけ 落とすか(1=まったく効かない) */
+const AO_UP_CUT = 0.8;
+
+/** ?noao=1 で 接地AOを 切る(同じビルドの 中で before/after を 比べるための口) */
+let aoOff: boolean | null = null;
+function aoEnabled(): boolean {
+  if (aoOff === null) {
+    aoOff = typeof location !== 'undefined' && /[?&]noao=1/.test(location.search || '');
+  }
+  return !aoOff;
+}
+
+/**
+ * 頂点カラー(RGB)に 接地AOを 焼きこむ。
+ * @returns かけた ぐあい(頂点ごと 0..1)。あとで 取り消すのに つかう。かけなければ null
+ */
+function bakeContactAO(A: Arrays, normals: ArrayLike<number>): Float32Array | null {
+  if (!aoEnabled()) return null;
+  const n = A.pos.length / 3;
+  if (n < 3) return null;
+  // ---- 1) 横1mのマスごとに 最低・最高の高さ ----
+  const lo = new Map<number, number>();
+  const hi = new Map<number, number>();
+  const keyOf = (x: number, z: number): number =>
+    (Math.floor(x / AO_CELL) + 4096) * 8192 + (Math.floor(z / AO_CELL) + 4096);
+  for (let i = 0; i < n; i++) {
+    const k = keyOf(A.pos[i * 3], A.pos[i * 3 + 2]);
+    const y = A.pos[i * 3 + 1];
+    const l = lo.get(k);
+    if (l === undefined || y < l) lo.set(k, y);
+    const h = hi.get(k);
+    if (h === undefined || y > h) hi.set(k, y);
+  }
+  // ---- 2) となりの8マスまで 見て ならす(1マスに またがる ものが 分断されないように) ----
+  const lo9 = new Map<number, number>();
+  const hi9 = new Map<number, number>();
+  for (const k of lo.keys()) {
+    let mn = Infinity;
+    let mx = -Infinity;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const kk = k + dx * 8192 + dz;
+        const l = lo.get(kk);
+        if (l !== undefined && l < mn) mn = l;
+        const h = hi.get(kk);
+        if (h !== undefined && h > mx) mx = h;
+      }
+    }
+    lo9.set(k, mn);
+    hi9.set(k, mx);
+  }
+  // ---- 3) 頂点ごとに かける ----
+  const w = new Float32Array(n);
+  let any = false;
+  for (let i = 0; i < n; i++) {
+    const k = keyOf(A.pos[i * 3], A.pos[i * 3 + 2]);
+    const base = lo9.get(k) as number;
+    const objH = (hi9.get(k) as number) - base;
+    if (objH < AO_MIN_OBJ_H) continue; // 小さすぎるもの(虫の羽など)には かけない
+    const fall = Math.min(AO_FALL_MAX, Math.max(AO_FALL_MIN, objH * AO_FALL_K));
+    const t = Math.min(1, Math.max(0, (A.pos[i * 3 + 1] - base) / fall));
+    const hFall = 1 - t * t * (3 - 2 * t); // ねもと=1 → fall の高さ=0
+    if (hFall <= 0.002) continue;
+    const ny = normals[i * 3 + 1];
+    const face = 1 - AO_UP_CUT * Math.max(0, ny); // うえ向きの面は ほとんど 効かせない
+    const a = hFall * face;
+    if (a <= 0.002) continue;
+    w[i] = a;
+    any = true;
+    const f = 1 - AO_MAX * a;
+    A.col[i * 4] *= f;
+    A.col[i * 4 + 1] *= f;
+    A.col[i * 4 + 2] *= f;
+  }
+  return any ? w : null;
+}
+
+/**
+ * 発光する部品からは 接地AOを 取りけす。
+ *
+ * Babylon の StandardMaterial は 頂点カラーを **発光色にも かける**ので、
+ * ランタンの玉・ベリー・ヒカリゴケに AOを 焼くと 夜の灯りが 暗くなる
+ * (ART_DIRECTION「夜は 暗いではなく 光がきれい」に 反する)。
+ * ところが 発光マテリアルは toMesh が 返した **あと**で 差しかえられるので、
+ * 焼く時点では 見わけが つかない。そこで 焼いたものを ためておき、
+ * 次の 描画の 直前に「発光マテリアルに なっていたら 取りけす」。
+ * 呼ぶ がわに 引数を 足さずに すむ = winding_v28 の toMesh 検査を 壊さない。
+ */
+interface AoPending { m: Mesh; w: Float32Array }
+let aoScene: Scene | null = null;
+let aoPending: AoPending[] = [];
+function drainAoUnbake(): void {
+  if (aoPending.length === 0) return;
+  const list = aoPending;
+  aoPending = [];
+  const g = glowMats;
+  if (!g) return;
+  for (const p of list) {
+    if (p.m.isDisposed()) continue;
+    const mat = p.m.material;
+    if (mat !== g.mint && mat !== g.amber && mat !== g.blue) continue;
+    const col = p.m.getVerticesData(VertexBuffer.ColorKind);
+    if (!col) continue;
+    for (let i = 0; i < p.w.length; i++) {
+      if (p.w[i] <= 0) continue;
+      const f = 1 / (1 - AO_MAX * p.w[i]);
+      col[i * 4] *= f;
+      col[i * 4 + 1] *= f;
+      col[i * 4 + 2] *= f;
+    }
+    p.m.setVerticesData(VertexBuffer.ColorKind, col, false);
+  }
+}
+function queueAoUnbake(scene: Scene, mesh: Mesh, w: Float32Array): void {
+  if (aoScene !== scene) {
+    aoScene = scene;
+    aoPending = [];
+    scene.onBeforeRenderObservable.add(drainAoUnbake);
+  }
+  aoPending.push({ m: mesh, w });
+}
+
 export function toMesh(scene: Scene, name: string, A: Arrays, orient: Orient): Mesh {
   void orient; // 'keep' しかない = ComputeNormals の向きを そのまま つかう
   const normals: number[] = [];
   VertexData.ComputeNormals(A.pos, A.idx, normals);
+  const ao = bakeContactAO(A, normals); // v17 ねもとの かげ(頂点色だけ)
   const vd = new VertexData();
   vd.positions = A.pos;
   vd.indices = A.idx;
@@ -397,6 +552,7 @@ export function toMesh(scene: Scene, name: string, A: Arrays, orient: Orient): M
   vd.applyToMesh(mesh);
   mesh.material = getFloraMat(scene);
   mesh.isPickable = false;
+  if (ao) queueAoUnbake(scene, mesh, ao);
   return mesh;
 }
 
@@ -409,12 +565,14 @@ export function toMesh(scene: Scene, name: string, A: Arrays, orient: Orient): M
 export function applyArrays(mesh: Mesh, A: Arrays): void {
   const normals: number[] = [];
   VertexData.ComputeNormals(A.pos, A.idx, normals);
+  const ao = bakeContactAO(A, normals); // toMesh と そろえる(ここだけ AO が 抜けないように)
   const vd = new VertexData();
   vd.positions = A.pos;
   vd.indices = A.idx;
   vd.normals = normals;
   vd.colors = A.col;
   vd.applyToMesh(mesh);
+  if (ao) queueAoUnbake(mesh.getScene(), mesh, ao);
 }
 
 // 発光マテリアル(昼夜コントローラが emissive を調整する)

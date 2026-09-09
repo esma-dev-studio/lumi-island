@@ -1,0 +1,34 @@
+=== audit_v17 (v16.2 見た目の定点記録) ===
+--- セーブを組み立てる ---
+  27日め(sunny) 家具30 / まつり 28日め / でんしゃ 27日め
+  caps/imageProcessing を記録
+  [01] 01_plaza_day.png  draw=484 active=116 tri=397502 cam+4.58m beacon=- err=0
+  [02] 02_plaza_evening.png  draw=484 active=113 tri=396094 cam+4.58m beacon=- err=0
+  [03] 03_plaza_night.png  draw=480 active=113 tri=382618 cam+4.58m beacon=- err=0
+  [01b] 01b_lumitree_full.png  draw=404 active=72 tri=345174 cam+3.63m beacon=- err=0
+  [04] 04_forest_north.png  draw=336 active=39 tri=335594 cam+4.94m beacon=- err=0
+  [05] 05_pond_fishing.png  draw=315 active=29 tri=321410 cam+4.13m beacon=- err=0
+  [06] 06_hill_night.png  draw=378 active=61 tri=331946 cam+5.96m beacon=- err=0
+  [07] 07_cove_day.png  draw=171 active=66 tri=155822 cam+9.62m beacon=- err=0
+  [08] 08_cove_night.png  draw=175 active=68 tri=158382 cam+9.62m beacon=- err=0
+  [09] 09_market_station_train.png  draw=126 active=41 tri=96786 cam+6.14m beacon=- err=0
+  [09b] 09b_market_street.png  draw=184 active=72 tri=129322 cam+11.17m beacon=- err=0
+  [10] 10_ten_shop.png  draw=142 active=50 tri=100466 cam+3.72m beacon=ON err=0
+  [11] 11_home_day.png  draw=244 active=58 tri=151786 cam+12.71m beacon=- err=0
+  [12] 12_home_night.png  draw=246 active=59 tri=150886 cam+12.71m beacon=- err=0
+  [13] 13_npchome_nokto.png  draw=82 active=15 tri=72670 cam+12.14m beacon=- err=0
+  [13b] 13b_npchome_minamo.png  draw=83 active=16 tri=77154 cam+14.87m beacon=- err=0
+  [14] 14_saptree_night.png  draw=333 active=38 tri=335346 cam+4.1m beacon=- err=0
+  [09c] 09c_island_station_night.png  draw=345 active=44 tri=308722 cam+7.37m beacon=- err=0
+  [B1] B1_closeup_grass.png  draw=332 active=37 tri=320290 cam+0.86m beacon=- err=0
+  [B2] B2_closeup_beach_water.png  draw=310 active=25 tri=281726 cam+0.41m beacon=- err=0
+  [B3] B3_closeup_building.png  draw=309 active=25 tri=307394 cam+2.44m beacon=- err=0
+  [B4] B4_closeup_player.png  draw=390 active=66 tri=346568 cam+0.93m beacon=- err=0
+  [B5] B5_closeup_npc_tsumugi.png  draw=452 active=96 tri=377292 cam+1.04m beacon=- err=0
+  [B6] B6_closeup_pond_water.png  draw=299 active=20 tri=287994 cam+1.97m beacon=- err=0
+  [15] 15_plaza_rain.png  draw=491 active=118 tri=386590 cam+4.58m beacon=- err=0
+  [16] 16_plaza_snow.png  draw=488 active=118 tri=398020 cam+4.58m beacon=- err=0
+  [17] 17_festival.png  draw=407 active=62 tri=414494 cam+4.1m beacon=- err=0
+
+=== 完了: 27枚 / console エラー 0件 → .logs/screenshots/lighting_v17/off
+OFF_EXIT=0

@@ -14,6 +14,7 @@ import { CreateDisc } from '@babylonjs/core/Meshes/Builders/discBuilder';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import '@babylonjs/core/Rendering/depthRendererSceneComponent';
 import { CharacterView } from '../characters/CharacterView';
+import { FACE_MORPHS, type FaceCue } from '../characters/faceMixer';
 import { CHARACTERS, ANIMS } from '../data/characters';
 
 // 表示するキャラは CHARACTERS の定義順に自動で増える(人数を数え打ちしない)
@@ -149,6 +150,18 @@ export class ShowcaseScene {
     } else {
       v?.play(name);
     }
+  }
+  /**
+   * v29 顔の表情を 出す(目視・スクショ用)。'normal' で ふつうの顔にもどす。
+   * 変わる時間を ほぼ 0 にしてあるので、1フレーム 進めれば その顔で 撮れる。
+   */
+  setFace(name: FaceCue, weight = 1): void {
+    const targets = this.lineup ? [...this.views.values()] : [this.views.get(this.currentId)];
+    for (const v of targets) v?.setFace(name, weight, 0.001);
+  }
+  /** 出せる顔の一覧(いちばん先頭が ふつうの顔) */
+  get faceNames(): readonly string[] {
+    return ['normal', ...FACE_MORPHS];
   }
   setNight(n: boolean): void {
     this.night = n;

@@ -304,11 +304,18 @@ function waveAt(x: number, z: number, t: number, out: [number, number, number]):
 const SEA_SEG = 48;
 /**
  * 中心からのリング(m)。島の水ぎわは だいたい r=40〜58 なので、そこだけ 3m きざみにする。
- * 沖(80m より外)は 目に入るのが 水平線の帯だけなので 一気にとばす。
+ *
+ * v17 で 58〜145m の あいだを 細かくした。色は 頂点にしか 無く、あいだは
+ * まっすぐ 補間されるので、リングが とんでいると **リングの1本が そのまま
+ * 「まっすぐな 段」に 見える**(監査の B2 で 水平線の手前に 出ていた)。
+ * 増やしたのは 6行(頂点 +294・三角形 +576)だけで、沖の 大きな三角形の
+ * 考えかたは そのまま。
  */
-const SEA_RINGS = [0, 22, 33, 39, 43, 46, 49, 52, 55, 58, 61, 65, 70, 76, 84, 100, 140, 240];
-/** このリングより外は 法線を動かさない(遠すぎて 波が1ピクセルにも出ない) */
-const SEA_ANIM_RINGS = 14;
+const SEA_RINGS = [
+  0, 22, 33, 39, 43, 46, 49, 52, 55, 58, 61, 64, 67, 70, 74, 78, 83, 89, 96, 105, 120, 145, 190, 240,
+];
+/** このリングより外は 法線を動かさない(遠すぎて 波が1ピクセルにも出ない)。r=78m まで */
+const SEA_ANIM_RINGS = 15;
 /** 海の波の 波長のばし(1=池と同じ)。小さいほど 波長が長い=外海の うねりになる */
 const SEA_WAVE_K = 0.34;
 /** 海の波の 進む速さ(1=池と同じ) */
@@ -317,6 +324,19 @@ const SEA_WAVE_W = 0.62;
 const SEA_WAVE_N = 26;
 /** この深さで「深い色」になりきる(m) */
 const SEA_DEEP_AT = 2.4;
+/**
+ * 沖の ゆっくりした 一段(v17)。
+ *
+ * 深さを 地形だけから 出すと、沖では 地形が すぐ 底に つくので 値が 1 で 止まり、
+ * 「ここから先は 全部 同じ色」に なる。その 止まる場所が リングの1本と 重なると
+ * まっすぐな 段に 見える(監査 B2)。そこで 沖だけ、中心からの きょりで
+ * **もう一段 ゆっくり** 深くする。岸の形は これまでどおり 地形が 決めるので、
+ * 「水面は 地面<水面 で切る」の 決まりは 変えていない(これは 色の話)。
+ */
+const SEA_FAR_FROM = 56;
+const SEA_FAR_SPAN = 70;
+/** 上の きょりの一段が 深さに 出す わりあい(0.22 = 2割) */
+const SEA_FAR_MIX = 0.22;
 /** 浅瀬の色(基準色にかける係数)。砂が透けて わずかに明るく・緑よりに */
 const SEA_C_SHALLOW = [1.1, 1.06, 0.95];
 /** 深場の色(基準色にかける係数)。暗く・青よりに落とす */
@@ -374,22 +394,23 @@ function buildSeaMesh(scene: Scene): SeaWave {
       const px = Math.cos(th) * rr;
       const pz = Math.sin(th) * rr;
       pos.push(px, 0, pz);
-      // 深さ: 足もとの地形が海面からどれだけ下がっているか。
+      // 深さ: 足もとの地形が海面からどれだけ下がっているか + 沖のゆっくりした一段。
       // 島の下(r<40)は地面が海面より上=深さ0だが、そこは地形に隠れて見えない
-      const dep = smooth01((SEA_Y - terrainHeight(px, pz)) / SEA_DEEP_AT);
-      // 浅瀬→中ほど→深場の2段。中ほど(dep=0.35)を基準色そのままにする
-      let k0: number, k1: number, k2: number;
-      if (dep < 0.35) {
-        const u = dep / 0.35;
-        k0 = SEA_C_SHALLOW[0] + (1 - SEA_C_SHALLOW[0]) * u;
-        k1 = SEA_C_SHALLOW[1] + (1 - SEA_C_SHALLOW[1]) * u;
-        k2 = SEA_C_SHALLOW[2] + (1 - SEA_C_SHALLOW[2]) * u;
-      } else {
-        const u = (dep - 0.35) / 0.65;
-        k0 = 1 + (SEA_C_DEEP[0] - 1) * u;
-        k1 = 1 + (SEA_C_DEEP[1] - 1) * u;
-        k2 = 1 + (SEA_C_DEEP[2] - 1) * u;
-      }
+      const depT = smooth01((SEA_Y - terrainHeight(px, pz)) / SEA_DEEP_AT);
+      // 沖の一段は **足し算**で のばす(かけ算にすると 岸ぎわの帯まで 動いてしまう)。
+      // 岸(r<56)では depF=0 なので、砂と海の 境目の帯は v16.2 と 同じ値のまま
+      const dep = depT + smooth01((rr - SEA_FAR_FROM) / SEA_FAR_SPAN) * SEA_FAR_MIX;
+      // 浅瀬→中ほど→深場の2段。中ほど(dep=0.35)を基準色そのままにする。
+      // v17 まっすぐな 補間を やめて **なめらかな段(smoothstep)を 2つ 重ねる**。
+      // まっすぐだと dep=0.35 で かたむきが 折れ、そこに 1本 線が 見えていた。
+      // smoothstep どうしなら つなぎ目の かたむきが 両方 0 = 折れ目が 出ない。
+      // 下の段の 幅を 0.65+沖の一段 に しておくと、深さが 1 で 止まったあとも
+      // 水平線まで ゆっくり 深くなりつづける = どこにも 「止まる線」が 出ない。
+      const s1 = smooth01(dep / 0.35);
+      const s2 = smooth01((dep - 0.35) / (0.65 + SEA_FAR_MIX));
+      const k0 = SEA_C_SHALLOW[0] + (1 - SEA_C_SHALLOW[0]) * s1 + (SEA_C_DEEP[0] - 1) * s2;
+      const k1 = SEA_C_SHALLOW[1] + (1 - SEA_C_SHALLOW[1]) * s1 + (SEA_C_DEEP[1] - 1) * s2;
+      const k2 = SEA_C_SHALLOW[2] + (1 - SEA_C_SHALLOW[2]) * s1 + (SEA_C_DEEP[2] - 1) * s2;
       // 潮のむら。波長およそ17mと5m。等高線に見えないよう2段かさねる
       const v = 1 + (vnoise(px * 0.06 + 71, pz * 0.06 + 19) - 0.5) * 0.1
         + (vnoise(px * 0.21 + 7, pz * 0.21 + 53) - 0.5) * 0.05;

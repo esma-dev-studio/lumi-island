@@ -25,8 +25,22 @@ const arg = (n, d) => {
   return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : d;
 };
 const PORT = arg('--port', '5222');
+/**
+ * v17 「絵づくり」の A/B 用。既定の出力先(= v16.2 の before)は **上書き禁止**なので、
+ * after は必ず別のフォルダへ出す。
+ *   node tools/shots_audit_v17.mjs --port 5222 --out .logs/screenshots/lighting_v17/on
+ */
+const OUT = arg('--out', '.logs/screenshots/audit_v17').replace(/[\\/]+$/, '');
+/**
+ * 同じビルドの中で「v17で足した絵づくり」だけを切って撮る(= 対照区)。
+ * `--off grade` … トーンマップ・時刻グレーディング・環境光・空のかさ
+ * `--off ao`    … ねもとのかげ(ページの ?noao=1 で切るので、読みこみ前に効かせる)
+ * 別ビルドの before と比べると 他の3エージェントの変更が まざるので、
+ * 輝度の制約は **この対照区との比較**で判定する(教訓5「--off 方式」)。
+ */
+const OFF = (arg('--off', '') || '').split(',').map((s) => s.trim()).filter(Boolean);
+const Q_OFF = OFF.includes('ao') ? '&noao=1' : '';
 const BASE = `http://localhost:${PORT}`;
-const OUT = '.logs/screenshots/audit_v17';
 mkdirSync(OUT, { recursive: true });
 
 // iPad(横)。deviceScaleFactor 2 なので PNG は 2360x1640
@@ -44,6 +58,9 @@ const notes = [];
 const browser = await launchEdge(puppeteer, {
   args: ['--window-size=1280,900', '--use-angle=d3d11', '--enable-gpu', '--mute-audio'],
   defaultViewport: VIEW,
+  // 並行作業中は CDP の1往復が 既定の180秒を こえて 走行ごと 落ちる
+  // (実害: v17 の対照区の撮り直しが Runtime.evaluate timed out で全滅した)
+  protocolTimeout: 420000,
 });
 
 let page = null;
@@ -66,10 +83,23 @@ async function newPage() {
 }
 
 async function readyGame(url) {
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await page.waitForFunction('window.__lumi && window.__lumi.ready===true', { timeout: 60000 });
-  await page.evaluate('document.fonts.ready');
-  await sleep(900);
+  // 世界が 建たなかった(メッシュが ほとんど無い)ときは 1回だけ 読み直す。
+  // 4エージェントの 並行作業では、ほかの人の 保存の 一瞬に あたると
+  // 起動の 途中で 例外が 出て「まっ青な画面」が 撮れてしまう
+  // (実害: v17 の対照区で 雨・雪・まつりの3枚が 空の画になった)。
+  for (let attempt = 0; ; attempt++) {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForFunction('window.__lumi && window.__lumi.ready===true', { timeout: 60000 });
+    await page.evaluate('document.fonts.ready');
+    await sleep(900);
+    const n = Number(await ev('window.__lumi.game.scene.meshes.length'));
+    if (n > 50 || attempt >= 2) {
+      if (n <= 50) notes.push(`世界が建たないまま撮影した: ${url} (メッシュ${n}個)`);
+      break;
+    }
+    console.log(`  [読み直し] 世界が建っていない(メッシュ${n}個) ${url}`);
+    await sleep(4000);
+  }
   // drawCalls は SceneInstrumentation が無いと累計になるので、フレーム頭で数え直させる
   await ev(`(() => { const eng = window.__lumi.game.scene.getEngine();
     if (eng._drawCalls && !eng.__auditHooked) {
@@ -77,6 +107,31 @@ async function readyGame(url) {
       eng.onBeginFrameObservable.add(() => eng._drawCalls.fetchNewFrame());
     }
     return !!eng._drawCalls; })()`);
+  await applyOff();
+}
+
+/**
+ * --off の指定を いまのページへ かける(ページを 開きなおすたびに 呼ぶ)。
+ * ao は URL の ?noao=1 で すでに 効いているので ここでは 何もしない。
+ */
+async function applyOff() {
+  if (!OFF.length) return;
+  const done = await ev(`(() => { const g = window.__lumi.game; const done = [];
+    ${JSON.stringify(OFF)}.forEach((n) => {
+      if (n === 'grade') { if (g.setGradeEnabled) { g.setGradeEnabled(false); done.push(n); } }
+      else if (n === 'shadowcfg') {
+        // v16.2 の影の設定へ戻す(奥ゆき120m・わけ目0.92・こさ0.42・つなぎ目0.1)
+        const sh = g.island.shadows;
+        sh.autoCalcDepthBounds = false; sh.shadowMaxZ = 120; sh.lambda = 0.92;
+        sh.darkness = 0.42; sh.cascadeBlendPercentage = 0.1;
+        done.push(n);
+      } else if (n === 'ao') done.push(n);
+    });
+    return JSON.stringify(done); })()`);
+  const list = JSON.parse(done);
+  if (list.length !== OFF.length) {
+    throw new Error(`--off の一部が効いていない: 指定 ${OFF.join(',')} / 実際 ${list.join(',') || '(none)'}`);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -467,7 +522,7 @@ try {
   page = await newPage();
   console.log('=== audit_v17 (v16.2 見た目の定点記録) ===');
   console.log('--- セーブを組み立てる ---');
-  await readyGame(`${BASE}/?scene=game&debug=1`);
+  await readyGame(`${BASE}/?scene=game&debug=1${Q_OFF}`);
   const seed = await page.evaluate(SEED);
   DAY = seed.day;
   const FES_DAY = Math.ceil((DAY + 1) / 7) * 7;
@@ -476,7 +531,7 @@ try {
   notes.push(`セーブ: ${DAY}日め(${seed.weather})・第3章まで完了・家具${seed.furniture}こ・花だん満開・依頼はすべて done`);
   metrics.seed = { day: DAY, weather: seed.weather, furniture: seed.furniture, festivalDay: FES_DAY, trainDay: TRAIN_DAY };
 
-  const LOAD = `${BASE}/?scene=game&debug=1&load=1`;
+  const LOAD = `${BASE}/?scene=game&debug=1&load=1${Q_OFF}`;
   await readyGame(LOAD);
   await sleep(1500); // 家具30・NPC5人の復元がおちつくのを待つ
   await ev('__lumiDebug.sealAchievementRewards()');
@@ -746,7 +801,7 @@ try {
     ['15', 'plaza_rain', 'rain', '雨'],
     ['16', 'plaza_snow', 'snow', '雪(冬)'],
   ]) {
-    await readyGame(`${BASE}/?scene=game&debug=1&load=1&weather=${w}`);
+    await readyGame(`${BASE}/?scene=game&debug=1&load=1&weather=${w}${Q_OFF}`);
     await sleep(1500);
     await ev('__lumiDebug.sealAchievementRewards()');
     await tp(PLAZA.x, PLAZA.z);
@@ -763,7 +818,7 @@ try {
   // =========================================================================
   // 17 ほしまつり(7日ごと 18〜21時)。いちばん最後に撮る
   // =========================================================================
-  await readyGame(`${BASE}/?scene=game&debug=1&load=1`);
+  await readyGame(`${BASE}/?scene=game&debug=1&load=1${Q_OFF}`);
   await sleep(1500);
   await ev('__lumiDebug.sealAchievementRewards()');
   await ev(`(() => { const s = __lumiDebug.state(); delete s.festival; })()`);
@@ -801,12 +856,13 @@ try {
     (l) => l.includes('描画解像度を下げました') || l.includes('[dynres]')
   );
   metrics.notes = notes;
+  metrics.off = OFF;
   writeFileSync(`${OUT}/metrics.json`, JSON.stringify(metrics, null, 1), 'utf8');
 
   const md = [];
-  md.push('# audit_v17 — v16.2 見た目の定点記録');
+  md.push('# audit_v17 — 見た目の定点記録');
   md.push('');
-  md.push(`撮影 ${new Date().toISOString()} / ビルド v16.2 (HEAD 3139eef) / dev http://localhost:${PORT}`);
+  md.push(`撮影 ${new Date().toISOString()} / dev http://localhost:${PORT} / --off ${OFF.join(',') || '(none)'}`);
   md.push(`解像度 ${VIEW.width}x${VIEW.height} @deviceScaleFactor ${VIEW.deviceScaleFactor} = **${VIEW.width * 2}x${VIEW.height * 2}px**(iPad横)`);
   md.push('');
   md.push('## 一覧');

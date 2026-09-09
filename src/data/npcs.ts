@@ -1,12 +1,25 @@
 // NPC定義: 性格・好きなもの・1日のスケジュール・あいさつ(親密度3段階)
-import { NPC_SPOTS } from './island';
+import { NPC_SPOTS, type NpcSpot } from './island';
 import type { ItemId } from './items';
+
+/**
+ * その枠で 何をしているか。見た目(クリップ)と その場のふるまいが これで決まる:
+ *   idle/watch/stroll … その場を うろうろ(watch は spot.rotY を向いたまま)
+ *   work              … interact を くりかえす(手わざ・店の しごと)
+ *   fish              … fish_idle(釣りの構え)
+ *   home              … 家の中(見た目を消す)
+ *   sit               … v29 その場に **すわる**(sit クリップ。spot.seatH ぶん 体を上げ下げ)
+ *   water             … v29 水やり(interact を work より ゆっくり くりかえす)
+ * 追加した2つは どちらも「その場から動かない」枠なので、spot に wanderR:0 を付ける。
+ */
+export type ScheduleActivity =
+  | 'idle' | 'work' | 'fish' | 'watch' | 'stroll' | 'home' | 'sit' | 'water';
 
 export interface ScheduleEntry {
   from: number; // 時
   to: number;
   spot: string; // NPC_SPOTSのキー
-  activity: 'idle' | 'work' | 'fish' | 'watch' | 'stroll' | 'home';
+  activity: ScheduleActivity;
 }
 
 /** いまの時刻に対応するスケジュール枠(6時未満は+24して扱う) */
@@ -297,7 +310,10 @@ export const NPCS: NpcDef[] = [
     schedule: [
       { from: 6, to: 10, spot: 'pond', activity: 'fish' },
       { from: 10, to: 13, spot: 'plaza', activity: 'stroll' },
-      { from: 13, to: 18, spot: 'pier', activity: 'fish' },
+      { from: 13, to: 16, spot: 'pier', activity: 'fish' },
+      // v29 夕がたは 桟橋の へりに すわって、足を出したまま 水面をながめる
+      // (立ちっぱなしの5時間を 2つに割った枠。13〜16時の 釣りは そのまま)
+      { from: 16, to: 18, spot: 'pier_edge', activity: 'sit' },
       { from: 18, to: 20, spot: 'pond', activity: 'idle' },
       { from: 20, to: 30, spot: 'home', activity: 'home' },
     ],
@@ -448,8 +464,13 @@ export const NPCS: NpcDef[] = [
       ],
     },
     schedule: [
-      { from: 6, to: 12, spot: 'shop', activity: 'work' },
-      { from: 12, to: 13.5, spot: 'bench', activity: 'idle' },
+      { from: 6, to: 8, spot: 'shop', activity: 'work' },
+      // v29 朝の 水やり(ルミの木)。工房から5.5m なので、この1時間に 会いに来た子も
+      // 工房の前から 姿が 見えている(いなくなったように 見えない)
+      { from: 8, to: 9, spot: 'water', activity: 'water' },
+      { from: 9, to: 12, spot: 'shop', activity: 'work' },
+      // v29 お昼は ひろばのベンチに **すわる**(v28まで ベンチの わきで 立っていた)
+      { from: 12, to: 13.5, spot: 'sit', activity: 'sit' },
       { from: 13.5, to: 19, spot: 'shop', activity: 'work' },
       { from: 19, to: 21, spot: 'lumi', activity: 'stroll' },
       { from: 21, to: 30, spot: 'home', activity: 'home' },
@@ -739,8 +760,17 @@ export function residentNpcs(flags: Record<string, boolean>): NpcDef[] {
   return NPCS.filter((def) => !def.debutFlag || flags[def.debutFlag] === true);
 }
 
+/**
+ * v29 その人に そのスポットが 定義してあるか(あめやどりの行き先の 有無を見るのに使う)。
+ * npcSpot は 無いキーを「先頭のスポット」で だまって埋めるので、
+ * 「あるかどうか」を 知りたい場所は 必ずこちらを通す。
+ */
+export function hasNpcSpot(npcId: string, key: string): boolean {
+  return NPC_SPOTS[npcId]?.[key] !== undefined;
+}
+
 // ツムギの家=工房(homeスポットはshopと同じ建物の裏手)
-export function npcSpot(npcId: string, key: string): { x: number; z: number; rotY?: number; wanderR?: number } {
+export function npcSpot(npcId: string, key: string): NpcSpot {
   const spots = NPC_SPOTS[npcId];
   // 島へ出したのに立ち位置が無い、という取りちがえを その場で分かる形にする
   // (これまでは undefined を読んで「spots.home が読めない」という遠い場所で落ちていた)

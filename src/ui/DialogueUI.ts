@@ -1,5 +1,6 @@
 // 会話ボックス(画面下)。Eかクリックで進む。
 import { sfx } from '../audio/AudioSystem';
+import { type Line, lineText } from '../data/dialogueLine';
 import { byInput } from './inputMode';
 
 /**
@@ -13,7 +14,12 @@ function nextLabel(last: boolean): string {
 
 export class DialogueUI {
   private el: HTMLElement;
-  private lines: string[] = [];
+  /**
+   * v29 台詞は string でも {text, face, act} でも 通る(後方互換)。
+   * **画面に出る文字は lineText() だけ**——顔・動きは 見た目の演出で、
+   * UXボット・回帰ボット・TextStyleCheck が読む文字は 1文字も 変わらない。
+   */
+  private lines: Line[] = [];
   private idx = 0;
   private speaker = '';
   open = false;
@@ -35,6 +41,14 @@ export class DialogueUI {
    * (タッチの丸ボタンと合わせて3つ以上は画面の下がふさがる)。
    */
   private extras: { label: string; handler: () => void }[] = [];
+  /**
+   * v29 行が 変わるたびに 呼ばれる(最初の行も 呼ぶ)。
+   * NPCの 顔・うなずきは ここから 出す。show() のたびに 差しかわるので、
+   * 前の会話の 演出が 次の会話へ もれない。
+   */
+  private onLine: ((line: Line, idx: number) => void) | null = null;
+  /** 演出を出した行の番号。ボタンの付け直しで renderLine が 何度も 走るため */
+  private cuedIdx = -1;
 
   constructor() {
     this.el = document.createElement('div');
@@ -57,11 +71,13 @@ export class DialogueUI {
     });
   }
 
-  show(speaker: string, lines: string[], onEnd?: () => void): void {
+  show(speaker: string, lines: readonly Line[], onEnd?: () => void, onLine?: (line: Line, idx: number) => void): void {
     this.speaker = speaker;
-    this.lines = lines;
+    this.lines = [...lines];
     this.idx = 0;
+    this.cuedIdx = -1;
     this.onEnd = onEnd ?? null;
+    this.onLine = onLine ?? null;
     this.open = true;
     this.blockAdvance = false;
     this.onBlockedAdvance = null;
@@ -142,6 +158,7 @@ export class DialogueUI {
     this.blockAdvance = false;
     this.onBlockedAdvance = null;
     this.extras = [];
+    this.onLine = null;
     this.el.classList.add('hidden');
     const cb = this.onEnd;
     this.onEnd = null;
@@ -151,7 +168,7 @@ export class DialogueUI {
   private renderLine(): void {
     const last = this.idx >= this.lines.length - 1;
     (this.el.querySelector('.dlg-name') as HTMLElement).textContent = this.speaker;
-    (this.el.querySelector('.dlg-text') as HTMLElement).textContent = this.lines[this.idx];
+    (this.el.querySelector('.dlg-text') as HTMLElement).textContent = lineText(this.lines[this.idx]);
     // ボタンの左肩の小さな数字は、そのまま押せるキー(1・2)。
     // 指の画面では意味がないので、CSS(html.touch-ui .dlg-key)で消してある。
     const extra = last
@@ -164,5 +181,16 @@ export class DialogueUI {
           .join('')
       : '';
     (this.el.querySelector('.dlg-next') as HTMLElement).innerHTML = extra + nextLabel(last);
+    // 演出は 文字を 出しきってから(表情が 先に 出ると 何に 反応したのか 分からない)。
+    // 同じ行で 2回 出さない(任意ボタンの 付け直しでも renderLine は 走る)
+    if (this.cuedIdx !== this.idx) {
+      this.cuedIdx = this.idx;
+      this.onLine?.(this.lines[this.idx], this.idx);
+    }
+  }
+
+  /** いま出ている行(検証・テスト用) */
+  get currentLine(): Line | null {
+    return this.open ? (this.lines[this.idx] ?? null) : null;
   }
 }

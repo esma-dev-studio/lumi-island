@@ -319,6 +319,7 @@ export class FishingSystem {
     this.state = 'reeling';
     this.reelFrom.copyFrom(this.bobber.position);
     player.locked = true;
+    view.pulseFace('smile', 2.6); // v29 釣れた! ふつうの魚も ぬしも ここを通る
     const finishAnim = view.groups.has('fish_reel') ? 'fish_reel' : 'happy';
     this.reelDur = this.animLength(view, finishAnim, REEL_FALLBACK);
     this.reelT = this.reelDur + REEL_MARGIN; // アニメのonEndが来なくても進むようにする安全網
@@ -407,6 +408,7 @@ export class FishingSystem {
     toast(note ? `にげられた… ${note}` : 'にげられた…', 'fish');
     sfx('miss');
     view.play('surprised');
+    view.pulseFace('sad', 2.2); // v29 にげられて しょんぼり
   }
 
   /** アニメの長さ(秒)。取れないときは既定値 */
@@ -469,6 +471,7 @@ export class FishingSystem {
           this.state = 'nushi';
           this.fight = new NushiFight();
           sfx('bite');
+          view.pulseFace('surprised', 1.6); // v29 ぬしの アタリは とくに おどろく
           const def = BOSS_BY_SPOT[this.spot];
           if (def) toast(def.hit, def.item);
           this.nushiFish.position.copyFrom(this.bobber.position);
@@ -476,6 +479,7 @@ export class FishingSystem {
         } else {
           this.state = 'bite';
           sfx('bite');
+          view.pulseFace('surprised', 1.2); // v29 アタリ! の おどろき顔
           this.biteT = BITE_S;
         }
       }

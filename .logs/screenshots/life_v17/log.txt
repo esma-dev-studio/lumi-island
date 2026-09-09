@@ -1,0 +1,39 @@
+  日=16 時刻=12.53 支度=true
+ツムギ(ベンチ): {"x":2.5,"y":1.3257866301548893,"z":-2.5,"hidden":false}
+  撮影: 01_tsumugi_bench.png
+  アニメ: sit
+  撮影: 01b_tsumugi_bench_closeup.png
+ツムギ(水やり): {"x":-1.5,"y":1.1860091635346228,"z":-5.5,"hidden":false}
+  撮影: 02_tsumugi_water.png
+  アニメ: idle
+  撮影: 02b_tsumugi_water_closeup.png
+idle
+  撮影: 04_wave_reply.png
+  NPCのアニメ: sit
+ミナモ(桟橋の へり): {"x":4,"y":0.67,"z":50,"hidden":false}
+  撮影: 10_minamo_pier_sit.png
+  アニメ: sit
+  撮影: 10b_minamo_pier_sit_closeup.png
+  撮影: 05_pond_fish_day.png
+  魚かげ: {"pond":3,"sea":2,"t":6.5,"glow":0,"visible":true}
+  撮影: 05b_pond_fish_closeup.png
+  撮影: 06_pond_fish_night.png
+  魚かげ(よる): {"pond":3,"sea":2,"t":6.5,"glow":0.73,"visible":true}
+  撮影: 06b_pond_fish_night_closeup.png
+  撮影: 07_bird_perch.png
+  小鳥: {"count":5,"t":39,"level":1,"visible":true,"perched":1}
+  撮影: 07b_bird_perch_closeup.png
+  撮影: 08_tree_sway_a.png
+  そよぎA: {"count":31,"maxTilt":0.00923,"tilt":[-0.00229,-0.00598,-0.00923]}
+  撮影: 09_tree_sway_b.png
+  そよぎB: {"count":31,"maxTilt":0.00923,"tilt":[0.00229,0.00598,0.00923]}
+  日=16 時刻=10.03 支度=true
+天気: "rainy" 雨あし=1.00
+ツムギ(あめやどり): {"x":-5.05,"y":1.1663451708700827,"z":0.95,"hidden":false}
+  撮影: 03a_rain_shelter_shop.png
+  撮影: 03d_rain_shelter_closeup.png
+ミナモ(あめやどり): {"x":29.7,"y":0.701587081515468,"z":14.5,"hidden":false}
+  撮影: 03b_rain_shelter_minamo.png
+  ミナモのアニメ(走り): run
+  撮影: 03c_rain_run.png
+JSエラー: 0

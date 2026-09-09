@@ -6,7 +6,8 @@ import type { StandardMaterial } from '@babylonjs/core/Materials/standardMateria
 import { CascadedShadowGenerator } from '@babylonjs/core/Lights/Shadows/cascadedShadowGenerator';
 import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
 import {
-  buildTerrain, COVE, coveGroundY, coveWalkable, insideCoveArea, terrainHeight, walkableGround, type Terrain,
+  buildTerrain, COVE, coveGroundY, coveWalkable, insideCoveArea, terrainHeight, vnoise, walkableGround,
+  type Terrain,
 } from '../entities/terrain';
 import {
   initEffects, attachLightPool, registerGlowSource, unregisterGlowSource, burst,
@@ -37,7 +38,7 @@ import {
 } from '../systems/FestivalSystem';
 import {
   GATHER_NODES, DECO_TREES, POIS, BUILDINGS, POND, POND_GLIMMER_SPOTS, STAR_SPOTS, DRIFT_SPOTS, SEABIRD_CIRCLES,
-  BUG_SPOTS, DIG_SPOTS, BOTTLE_SPOTS, BULLETIN_BOARD, PLAZA_BENCHES,
+  BUG_SPOTS, DIG_SPOTS, BOTTLE_SPOTS, BULLETIN_BOARD, PLAZA_BENCHES, BIRD_PERCHES,
   SAP_TREE, SAP_STUMP, SAP_TREE_R, SAP_STUMP_R,
   type BugSpotKind, type GatherNodeDef,
 } from '../data/island';
@@ -70,6 +71,14 @@ import { DriftScheduler } from '../systems/DriftSystem';
 import { BottleScheduler } from '../systems/BottleSystem';
 import { NightTrainScheduler } from '../systems/NightTrainSystem';
 import { seabirdPose } from '../systems/SeabirdSystem';
+// v29「島が いきている」: 魚かげ・小鳥・木のそよぎ
+import {
+  fishShadowState, initFishShadows, setFishShadowTime, setFishShadowsEnabled, updateFishShadows,
+} from '../entities/fishShadow';
+import {
+  initSmallBirds, setSmallBirdTime, setSmallBirdsEnabled, smallBirdState, updateSmallBirds,
+} from '../entities/smallBirds';
+import { sharedWeather } from '../systems/WeatherSystem';
 import {
   BugScheduler, bugOffset, BUG_BY_ID, type ActiveBug, type BugArea, type BugId, type BugPlayer,
 } from '../systems/BugSystem';
@@ -83,8 +92,51 @@ export interface RectCollider { x: number; z: number; w: number; d: number; rot:
 /** 建物コライダーの余白(片側)。壁の見た目+これだけ内側に近づける(軒・屋根は入れない) */
 const HOUSE_PAD = 0.125;
 
-/** 太陽の影がとどく奥ゆき(m)。木・岩・建物の影がそろって見える広さ */
-const SHADOW_Z_ISLAND = 120;
+// ---------------------------------------------------------------------------
+// v29 木のそよぎ
+//
+// 草花(deco.ts)は 前から 風で ゆれていたのに、木だけが 石のように 止まっていた。
+// ねもとを 軸に ごくわずか かたむけるだけで、島ぜんたいが 息をしはじめる。
+// **回すのは メッシュだけ**(flora.ts は 編集禁止)。当たり判定は 幹の根もとの円なので、
+// かたむけても 歩ける範囲は 1ミリも 変わらない。
+// ---------------------------------------------------------------------------
+/** かたむきの 大きさ(rad)。木の高さ6mで こずえが 4〜5cm 動くていど=「気づかないが 生きている」 */
+const TREE_SWAY_AMP = 0.0075;
+/** ゆれの 速さ(rad/秒)。ゆっくりの2つを かさねて、同じ形を くり返さない */
+const TREE_SWAY_W1 = 0.6;
+const TREE_SWAY_W2 = 0.41;
+/** 雨の日の 増しぶん(本ぶりで 1.8倍) */
+const TREE_SWAY_RAIN = 0.8;
+
+/**
+ * 太陽の影がとどく奥ゆき(m)。木・岩・建物の影がそろって見える広さ。
+ *
+ * v17 で 120 → 62 に つめた。理由は 影の「こまかさ」:
+ * 影マップは 1024px を カスケード2枚で 分けあうので、遠いほうの1枚が
+ * 受けもつ奥ゆきが そのまま 1画素あたりの m数になる。
+ *   120m のとき … 遠いカスケードは 約8〜120m = **11cm/画素**(木の枝の影が ギザギザ)
+ *    62m のとき … 約5〜62m = **5.6cm/画素**(同じ画素数で 2倍こまかい)
+ * 追従カメラは プレイヤーの まわり十数mを 見おろす構図で、62m 先は
+ * 霧(fogDensity 0.0038〜0.006)で すでに 溶けている。カメラの maxZ(400)は
+ * 遠景を 描くための値で、影が 要る 奥ゆきとは 別もの。
+ */
+const SHADOW_Z_ISLAND = 62;
+/**
+ * カスケードの わけ目(0=等分 1=対数)。
+ * 奥ゆきを つめたぶん、手前を もう少し 広く取ったほうが
+ * 「足もとの影だけ こまかくて 3m先が あらい」段差が 出ない。
+ */
+const SHADOW_LAMBDA = 0.86;
+/**
+ * 見えている いちばん手前・奥の 深さを 毎フレーム 測って カスケードを つめる機能。
+ *
+ * **切ってある**。Babylon の autoCalcDepthBounds は 場面ぜんたいを もう1回
+ * 深度だけ 描いて(DepthRenderer)から 最小・最大を 縮約するので、
+ * 影で すでに draw call の 4分の3を つかっている この島では 割に合わない。
+ * 上の SHADOW_Z_ISLAND を つめるほうが、**描画を 1回も 増やさずに**
+ * ほぼ 同じ こまかさを 得られる(v17 の実測で判断。報告の性能表を参照)。
+ */
+const SHADOW_AUTO_DEPTH = false;
 
 // ---- v13 よるの 海上でんしゃの 走る道(島の南の水平線) ----
 /** 島の中心からの きょり(m)。水平線のきらめき(100m)と そろえて「遠くのもの」に見せる */
@@ -206,6 +258,16 @@ export class IslandScene {
   // ---- うみどり(海の上を旋回するだけ。当たり判定なし) ----
   private birds: Seabird[] = [];
   private birdT = 0;
+  // ---- v29 木のそよぎ(装飾の木を ねもとで ゆらす) ----
+  //
+  // flora.ts(木の形)は 編集禁止なので、**メッシュの回転** だけで ゆらす。
+  // 木は もともと 影を落とす側=毎フレーム 描き直されているので、
+  // 回しても 影の枚数も drawCalls も 1つも 増えない。
+  private decoTrees: { m: Mesh; phase: number; amp: number }[] = [];
+  /** そよぎ・魚かげ・小鳥に共通の 通し時間(秒)。撮影は これを 決めうちできる */
+  private lifeT = 0;
+  /** v29 まとめて 出し入れする(性能A/B: tools/perf_mobile.mjs --off life) */
+  private lifeOn = true;
   // ---- v9 虫(出現・逃走は純ロジック、見た目だけここが持つ) ----
   //
   // v23: 場所が3つになった(島 / よるの入り江 / いちば島)。
@@ -273,12 +335,20 @@ export class IslandScene {
     this.dayNight.glow.addExcludedMesh(this.water.surf.glint.mesh);
     this.shadows = new CascadedShadowGenerator(1024, this.dayNight.sun);
     this.shadows.numCascades = 2;
-    this.shadows.lambda = 0.92;
+    this.shadows.lambda = SHADOW_LAMBDA;
     this.shadows.shadowMaxZ = SHADOW_Z_ISLAND;
-    this.shadows.darkness = 0.42;
+    // v17 影を すこし うすく(0.42 → 0.5)。ポストプロセスの 暗部のもち上げと 合わせて
+    // 「影の中は 青みグレー」にする(ART_DIRECTION「影は真っ黒にしない」)。
+    // 数字を 2か所で ばらばらに いじると 夜だけ 真っ黒に なるので、
+    // 影の こさ = ここ / 影の 色 = DayNight の amb、と 役わりを 分けてある。
+    this.shadows.darkness = 0.5;
     this.shadows.bias = 0.008;
     this.shadows.normalBias = 0.05;
     this.shadows.stabilizeCascades = true;
+    // カスケードの つなぎ目を すこし ぼかす(既定 0.1)。奥ゆきを つめたぶん
+    // つなぎ目が 手前に 寄るので、そのままだと 6m あたりに 線が 見える
+    this.shadows.cascadeBlendPercentage = 0.15;
+    if (SHADOW_AUTO_DEPTH) this.shadows.autoCalcDepthBounds = true;
     this.terrain.mesh.receiveShadows = true;
 
     const caster = (m: Mesh, receive = true): void => {
@@ -403,6 +473,13 @@ export class IslandScene {
       t.position.set(x, terrainHeight(x, z) - 0.03, z);
       caster(t, false);
       this.circles.push({ x, z, r: 0.32 * sc }); // 幹の根もとぶんだけ(葉群は通り抜けてよい)
+      // v29 そよぎ用に 参照を持っておく。位相は **場所から** 決める(乱数なし)ので、
+      // 同じ島なら いつ見ても 同じ ゆれかた。大きい木ほど ゆっくり 大きく ゆれる
+      this.decoTrees.push({
+        m: t,
+        phase: (vnoise(x * 0.7, z * 0.7) + vnoise(z * 1.3, x * 1.3) * 0.5) * Math.PI * 2,
+        amp: TREE_SWAY_AMP * (0.7 + sc * 0.45),
+      });
     }
 
     // ---- v27 じゅえきの木(林に1本だけ。毎日 カブクワが とまっている) ----
@@ -589,6 +666,15 @@ export class IslandScene {
       this.birds.push(makeSeabird(s, 300 + i * 11));
     }
     this.updateBirds(0); // 最初のフレームから海の上にいる状態にしておく
+
+    // ---- v29 水の中の 魚かげ(メッシュ2枚)と 島の小鳥(メッシュ1枚) ----
+    // どちらも 影・遮蔽フェード・当たり判定・発光レイヤーの どれにも入れない。
+    // 発光レイヤーから外すのは 水面・泡・きらめきと 同じ理由(よるの ヨザカナの光を
+    // 二重に にじませると 池ぜんたいが もやる。そのうえ 描く回数だけ 増える)。
+    for (const m of initFishShadows(s)) this.dayNight.glow.addExcludedMesh(m);
+    this.dayNight.glow.addExcludedMesh(
+      initSmallBirds(s, BIRD_PERCHES.map((p) => this.groundY(p.x, p.z)))
+    );
 
     // ---- v10 自宅のお庭(低い柵で囲った前庭+花だん6区画) ----
     // 柵だけが当たり判定を持つ(花だんの枠は踏みこえられる)。門の切れ目から出入りする
@@ -1190,6 +1276,88 @@ export class IslandScene {
     updateTreeMotes(dtSec, 1 - night, rain);
     // v26 よるの池の 光の群れ(昼と雨は出ない。木立ちの粒と ちょうど 裏がえし)
     updatePondGlimmer(dtSec, night, rain);
+    // ---- v29 島が いきている(魚かげ・小鳥・木のそよぎ) ----
+    // 雨あしは 天気そのものから 出す(dayNight.coldLevel は くもりでも 0.55 になる「寒色より」で、
+    // 雨の強さではない)。日づけと時刻から決まる純関数なので、更新の順番に よらない
+    const wet = sharedWeather().rainAt(this.time.day, this.time.hour);
+    this.updateLife(dtSec, night, wet);
+  }
+
+  /**
+   * v29 魚かげ・小鳥・木のそよぎの1フレーム。
+   * lifeOn が false のとき(性能A/B・撮影)は 何もしない=v28 とまったく同じ絵になる。
+   */
+  private updateLife(dtSec: number, night: number, rain: number): void {
+    if (!this.lifeOn) return;
+    this.lifeT += dtSec;
+    updateFishShadows(dtSec, night);
+    updateSmallBirds(dtSec, 1 - night, rain);
+    this.applyTreeSway();
+  }
+
+  /** 木のそよぎ(2つの ゆっくりの波を かさねて、前後(x)と左右(z)へ ごくわずか かたむける) */
+  private applyTreeSway(): void {
+    const t = this.lifeT;
+    const rain = sharedWeather().rainAt(this.time.day, this.time.hour);
+    const gain = 1 + TREE_SWAY_RAIN * Math.max(0, Math.min(1, rain));
+    for (const d of this.decoTrees) {
+      const a = d.amp * gain;
+      d.m.rotation.z = Math.sin(t * TREE_SWAY_W1 + d.phase) * a;
+      d.m.rotation.x = Math.cos(t * TREE_SWAY_W2 + d.phase * 1.3) * a * 0.62;
+    }
+  }
+
+  /**
+   * v29 「島が いきている」ぶんを まとめて 出し入れする。
+   * false にすると 魚かげ・小鳥は 消え、木は まっすぐに もどる = v28 の絵そのもの。
+   * 同じビルドの中で before/after を くらべるための口(教訓5「--off 方式」)。
+   */
+  setLifeEnabled(on: boolean): void {
+    this.lifeOn = on;
+    setFishShadowsEnabled(on);
+    setSmallBirdsEnabled(on);
+    if (!on) {
+      for (const d of this.decoTrees) {
+        d.m.rotation.z = 0;
+        d.m.rotation.x = 0;
+      }
+    }
+  }
+
+  /**
+   * v29 撮影のために 時間の位相を 決めうちする(教訓5:
+   * 明滅・ゆれの before/after は 位相を固定してから撮る)。
+   */
+  setLifeTime(t: number): void {
+    this.lifeT = t;
+    setFishShadowTime(t);
+    setSmallBirdTime(t);
+    this.applyTreeSway();
+  }
+
+  /** v29 いきものの ようす(検証・撮影用。読むだけで副作用はない) */
+  get lifeState(): {
+    t: number;
+    fish: ReturnType<typeof fishShadowState>;
+    birds: ReturnType<typeof smallBirdState>;
+    trees: { count: number; maxTilt: number; tilt: number[] };
+    on: boolean;
+  } {
+    let maxTilt = 0;
+    for (const d of this.decoTrees) maxTilt = Math.max(maxTilt, Math.abs(d.m.rotation.z));
+    return {
+      t: Math.round(this.lifeT * 100) / 100,
+      fish: fishShadowState(),
+      birds: smallBirdState(),
+      trees: {
+        count: this.decoTrees.length,
+        maxTilt: Math.round(maxTilt * 1e5) / 1e5,
+        // 位相の A/B を くらべるための「決まった3本」の かたむき(符号つき)。
+        // maxTilt は 31本の 最大なので いつも ほぼ同じ値になり、A/B の 証拠にならない
+        tilt: this.decoTrees.slice(0, 3).map((d) => Math.round(d.m.rotation.z * 1e5) / 1e5),
+      },
+      on: this.lifeOn,
+    };
   }
 
   /** v26 よるの池の 光の群れの ようす(検証・撮影用。読むだけで副作用はない) */

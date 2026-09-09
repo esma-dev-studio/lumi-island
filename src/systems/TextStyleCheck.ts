@@ -27,6 +27,7 @@
 // 起動時の呼び出し口は src/systems/ChatEventSystem.ts の validateChatData()。
 // GameScene の起動時検査の並びは 別の担当が持っているファイルなので、
 // **すでに その並びに入っている 会話まわりのデータ検査に 相乗り**させてある。
+import { type Line, lineText } from '../data/dialogueLine';
 import { QUESTS } from '../data/quests';
 import { NPCS } from '../data/npcs';
 import { LETTERS } from '../data/letters';
@@ -34,6 +35,7 @@ import { CHAT_PAIRS } from './ChatEventSystem';
 import { BOND_EVENTS } from './BondEventSystem';
 import { COMBO_HINT_TEXT, DISPLAY_HINTS, TUTORIAL_TEXTS } from './TutorialSystem';
 import { OBJECTIVE_FIXED_TEXTS } from './ObjectiveSystem';
+import { CINEMATIC_SKIP_LABEL, FINALE_CAPTIONS, OPENING_CAPTIONS } from '../ui/CinematicUI';
 
 // 分かっている すきま(いまは 検査していないもの):
 //   - src/scenes/QuestDialogueController.ts は 受注ずみの依頼に もういちど話しかけたとき、
@@ -186,8 +188,11 @@ const CHAPTER1 = (id: string): boolean => !id.startsWith('q2_') && !id.startsWit
  */
 export function collectDisplayTexts(): TextEntry[] {
   const out: TextEntry[] = [];
-  const add = (where: string, group: string, tier: TextTier, text?: string | null): void => {
-    if (typeof text === 'string' && text.length > 0) out.push({ where, group, text, tier });
+  // v29 台詞は string でも {text, face, act} でも 来る。ここで 文字だけを 取り出して
+  // 集めるので、検査するものは これまでと 1文字も 変わらない(lineText が 唯一の出口)。
+  const add = (where: string, group: string, tier: TextTier, text?: Line | null): void => {
+    const t = text == null ? null : lineText(text);
+    if (typeof t === 'string' && t.length > 0) out.push({ where, group, text: t, tier });
   };
 
   // ---- 依頼(第1章=core / 第2〜3章=story) ----
@@ -267,6 +272,13 @@ export function collectDisplayTexts(): TextEntry[] {
 
   // ---- いまやること(固定文言。UXボットが読むので文言は変えられない) ----
   OBJECTIVE_FIXED_TEXTS.forEach((t, i) => add(`いまやること[${i}]`, 'いまやること', 'frozen', t));
+
+  // ---- v29 見せ場の字幕(オープニング・第3章フィナーレ)----
+  // 子どもが **いちばん最初に読む文** が オープニングの字幕なので core。
+  // フィナーレも 同じ core にそろえる(ここだけ ゆるめる理由が無い)。
+  OPENING_CAPTIONS.forEach((t, i) => add(`オープニングの字幕[${i}]`, '見せ場の字幕', 'core', t));
+  FINALE_CAPTIONS.forEach((t, i) => add(`フィナーレの字幕[${i}]`, '見せ場の字幕', 'core', t));
+  add('見せ場の「とばす」', '見せ場の字幕', 'core', CINEMATIC_SKIP_LABEL);
 
   return out;
 }

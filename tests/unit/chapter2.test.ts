@@ -14,6 +14,7 @@ import {
   acceptQuest, completeQuest, questFor, questRemaining, questShortfall, syncQuestUnlocks,
 } from '../../src/systems/QuestSystem';
 import { CHAPTER2_QUEST_IDS, OFFER_RECIPES, QUESTS, QUEST_BY_ID } from '../../src/data/quests';
+import { lineText, lineTexts } from '../../src/data/dialogueLine';
 import {
   COVE_LIGHTHOUSE_POI, COVE_RETURN_POI, ISLAND_BOAT_POI, SAIL_TO_COVE_LABEL, SAIL_TO_ISLAND_LABEL,
   currentObjective, objectiveActionContext, withAreaTravel, type Objective,
@@ -143,7 +144,7 @@ describe('第2章1: ふねの修理(素材+500ルミナ)', () => {
     expect(Q().price).toBe(500);
     expect(Q().completeFlag).toBe('boat_repaired');
     // 金額は受注の会話にも かならず出す
-    expect(Q().offer.join('')).toContain('500ルミナ');
+    expect(lineTexts(Q().offer).join('')).toContain('500ルミナ');
     expect(Q().progress).toContain('500ルミナ');
   });
 
@@ -625,7 +626,8 @@ describe('第2章の伏線(第1章の雑談に1本ずつ)', () => {
     expect(categorizeObjective(QUEST_BY_ID.q_wood.progress)).toBe('gatherWood');
     expect(categorizeObjective(QUEST_BY_ID.q_ore.progress)).toBe('gatherOre');
     // 見せ場の1行(ルミの木が光る)は 意味も 語順も そのまま
-    expect(QUEST_BY_ID.q_lumi.done[0]).toBe('……見て! ルミの木が 光ってる!');
+    // v29 台詞は {text, face, act} にも なれる。**見せる文字**は 1文字も 変えていない
+    expect(lineText(QUEST_BY_ID.q_lumi.done[0])).toBe('……見て! ルミの木が 光ってる!');
     // 構造は不動
     expect(QUEST_BY_ID.q_wood.count).toBe(5);
     expect(QUEST_BY_ID.q_wood.reward.tool).toBe('pickaxe');

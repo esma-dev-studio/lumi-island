@@ -28,6 +28,14 @@ test('新規開始→誘導どおりに歩いてツムギから最初の依頼�
   await page.waitForFunction('window.__lumi && window.__lumi.ready===true', undefined, { timeout: 60000 });
   await page.waitForTimeout(600);
 
+  // v29 「はじめから」の直後は オープニング(ふねで島へ着く)が出る。
+  // どのキーでも とばせるので、実キーを1回おして 従来の画面へ入る
+  // ——ここが「とばした その あとから ふだんの操作にもどる」の実機での証拠でもある
+  expect(await page.evaluate('window.__lumi.game.seq.current')).toBe('opening');
+  await page.keyboard.press('e');
+  await page.waitForTimeout(300);
+  expect(await page.evaluate('window.__lumi.game.seq.current')).toBe('idle');
+
   // 1) 「いまやること」が表示されている(最初は移動チュートリアル)
   await expect(page.locator('.obj-hud')).toBeVisible();
   await expect(page.locator('.obj-label')).toContainText('あるいてみよう');

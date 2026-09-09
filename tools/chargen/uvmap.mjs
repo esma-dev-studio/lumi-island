@@ -32,4 +32,60 @@ export const REG = {
   accent2: rect(448, 128, 64, 48),   // タオル等の第2小物色
   tail: rect(352, 64, 48, 96),       // 尻尾
   muzzle: rect(256, 96, 96, 64),     // マズル・くちばし周辺
+
+  // ---- v29 表情(smile / surprised / sad)の絵 ----
+  // 使っていない下の帯(y>=364)に置く。いちばん下まで使う既存領域は legs(y 176..352)なので
+  // 12px あけてある。既存の絵を1ピクセルも動かさないための決まり(教訓1「UVアトラスは
+  // 隣の色まで設計する」):
+  //   - 既存領域からは 12px 以上あける(縮小表示のにじみよけ)
+  //   - 領域どうしは 8px あけ、paint 側で ふちの色を 4px 外へ広げる(のりしろ)
+  //   - ふくの色がえ(src/characters/outfit.ts の clothRegionOf)が見る cloth1/cloth2
+  //     (y 176..336)には かからない位置にする
+  // 目は 開き目(eyeOpen*)と同じ 32x32。同じ大きさのクアッドに貼るので、絵の描き方
+  // (虹彩の半径など)を そのまま 使いまわせる。
+  eyeSmileL: rect(8, 368, 32, 32),
+  eyeSmileR: rect(48, 368, 32, 32),
+  eyeSurprisedL: rect(88, 368, 32, 32),
+  eyeSurprisedR: rect(128, 368, 32, 32),
+  eyeSadL: rect(168, 368, 32, 32),
+  eyeSadR: rect(208, 368, 32, 32),
+  // 口は 頭の絵から 32x22 を そのまま 写して使う(下の MOUTH_PATCH と 大きさをそろえる)
+  mouthSmile: rect(256, 368, 32, 22),
+  mouthSurprised: rect(296, 368, 32, 22),
+  mouthSad: rect(336, 368, 32, 22),
+};
+
+/**
+ * 頭の絵の どこに「その角度(0=正面)・その高さ(ワールドy)」が 出ているか(px)。
+ *
+ * 頭のUVは 横=1周360度(u のまん中=正面)・縦=頭の高さ の 一様な写像(body.mjs の
+ * buildHead は リングを yBottom→yTop に 等間隔で ならべている)。
+ * 絵を描く側(paint.mjs の headPx)と、そこに クアッドを 置く側(face.mjs)で
+ * **同じ式**を 使わないと 1pxの ずれが 継ぎ目になるので、ここに 1本だけ 置く。
+ */
+export function headPxAt(head, thetaDeg, yAbs) {
+  const { px } = REG.head;
+  const t = (yAbs - head.yBottom) / (head.yTop - head.yBottom);
+  return [px.x + (0.5 + thetaDeg / 360) * px.w, px.y + (1 - t) * px.h];
+}
+
+/** 表情の名前(GLBのモーフターゲット名・CharacterView の setFace と そろえる) */
+export const FACE_NAMES = ['smile', 'surprised', 'sad'];
+
+/**
+ * 口の絵は「頭の絵の その場所を そのまま写して、口だけ描きかえた もの」。
+ * 写す元と 貼る先の 大きさが 同じでないと 1:1 で写せないので、ここで 1か所に決める。
+ * 頭の絵(REG.head)は 横=1周360度・縦=頭の高さ の一様な写像なので、
+ * この px の四角が そのまま クアッドの 角度・高さの ひろがりになる。
+ */
+export const MOUTH_PATCH = { w: 32, h: 22 };
+
+/** 写す元の 左はし(px)。顔の まん中(u=0.5=正面)に そろえる */
+export const MOUTH_X = Math.round((REG.head.px.w - MOUTH_PATCH.w) / 2);
+
+/** 表情ごとの「目」「口」の領域(くちばしの種族は口を使わない) */
+export const FACE_REG = {
+  smile: { eyeL: REG.eyeSmileL, eyeR: REG.eyeSmileR, mouth: REG.mouthSmile },
+  surprised: { eyeL: REG.eyeSurprisedL, eyeR: REG.eyeSurprisedR, mouth: REG.mouthSurprised },
+  sad: { eyeL: REG.eyeSadL, eyeR: REG.eyeSadR, mouth: REG.mouthSad },
 };

@@ -4,7 +4,8 @@ import { POIS } from '../data/island';
 import { homeShot } from './HomeInterior';
 import { NPC_HOME_BY_ID, npcHomeShot } from './NpcInteriors';
 import {
-  COVE_BOAT, COVE_BOAT_OFFSHORE, ISLAND_BOAT, ISLAND_BOAT_OFFSHORE, coveNightLevel, type BoatPose,
+  COVE_BOAT, COVE_BOAT_OFFSHORE, ISLAND_BOAT, ISLAND_BOAT_OFFSHORE, ISLAND_BOAT_POINT,
+  coveNightLevel, type BoatPose,
 } from './CoveArea';
 import { carCameraShot } from './TrainCarArea';
 import {
@@ -19,6 +20,7 @@ import {
 import { FESTIVAL_FLY_POINT } from '../systems/FestivalSystem';
 import type { BondSceneKind } from '../systems/BondEventSystem';
 import { toast } from '../ui/Toast';
+import { CinematicUI, FINALE_CAPTIONS, OPENING_CAPTIONS } from '../ui/CinematicUI';
 import { sfx } from '../audio/AudioSystem';
 import { save } from '../save/SaveSystem';
 import { statAdd } from '../game/GameState';
@@ -27,7 +29,7 @@ import type { GameScene } from './GameScene';
 
 export type SequenceState =
   | 'idle' | 'sleeping' | 'intro' | 'bloom' | 'travel' | 'voyage' | 'lighthouse' | 'festival'
-  | 'train' | 'bond';
+  | 'train' | 'bond' | 'opening' | 'finale';
 
 const SLEEP_FADE_IN = 0.45; // 暗転までの秒
 const SLEEP_TOTAL = 1.05; // 起床までの秒
@@ -161,6 +163,122 @@ export interface BondStage {
   camSide: 1 | -1;
 }
 
+// ---------------------------------------------------------------------------
+// v29 物語の「入口」と「出口」
+// ---------------------------------------------------------------------------
+// どちらも **どのキー・どのタップでも とばせる**(CinematicUI が window の捕そう段で聞く)。
+// とばしたときも 見おわったときも、世界の状態は 1ミリも ちがわない
+// ——片づけ(restoreOpening / restoreFinale)を 通る道が1本しかないので、構造で そうなる。
+//
+// 立ち位置について: ミオの **見た目だけ** を動かし、あしもと(GameState.player)は
+// さわらない(でんしゃの車内・ふたりのじかんと まったく同じやりかた)。
+// PlayerController.update は locked でも 毎フレーム 見た目を あしもとへ 書きもどすので、
+// 見た目は **毎フレーム** 置きなおす(教訓4。1回だけ置くと 次のフレームで消える)。
+
+/** 字幕1本ぶん(出る秒・消える秒) */
+interface CaptionCue {
+  at: number;
+  until: number;
+  text: string;
+}
+
+/** その時刻に出ている字幕(無ければ空文字) */
+function captionAt(cues: readonly CaptionCue[], t: number): string {
+  for (const c of cues) {
+    if (t >= c.at && t < c.until) return c.text;
+  }
+  return '';
+}
+
+/** 見た目の向き。CharacterView は「向く先」をそのまま rotation.y にする */
+function faceView(x: number, z: number, tx: number, tz: number): number {
+  return Math.atan2(tx - x, tz - z);
+}
+/** NPCSystem.placeAt に わたす向き(NPCSystem.apply が +π してから描く) */
+function faceNpc(x: number, z: number, tx: number, tz: number): number {
+  return faceView(x, z, tx, tz) + Math.PI;
+}
+
+// ---- オープニング(はじめから の直後・1回きり。全体で約22.2秒) ----
+// 3カット構成。ふねで着く → 桟橋に立つ → 島(ルミの木と工房)を見せる。
+//   カット1「ゆうがたの海」 0→7.4s  : 沖から 桟橋へ 小舟が 近づく(ミオが 乗っている)
+//   カット2「さんばし」    7.4→13.0s: 板の上に 立って、これから住む島を 見る
+//   カット3「ひろば」      13.0→19.6s: まだ ねむっている ルミの木と、ちいさな工房
+// カットの切りかえは **瞬間移動**(補間しない)。数十m飛ぶ場面転換を補間でつなぐと、
+// 追いつくまでの「何も写っていない画」が数フレーム出る(教訓4)。
+const OPEN_FADE_IN = 1.0; // まっ黒から 海が 見えてくるまで
+const OPEN_CUT_PIER = 7.4; // カット2へ
+const OPEN_CUT_PLAZA = 13.0; // カット3へ
+const OPEN_FADE_OUT = 19.6; // また 暗くなりはじめる
+const OPEN_RESTORE = 21.0; // 立ち位置・カメラ・ふねを もとへ もどす(暗転しきったところ)
+const OPEN_FADE_BACK = 1.2; // 明転にかける秒(ここから 広場での操作がはじまる)
+const OPEN_TOTAL = 22.2;
+/** 船のあとの 白い波あわを出す間かく(秒) */
+const OPEN_WAKE_EVERY = 0.34;
+
+const OPEN_CUES: readonly CaptionCue[] = [
+  { at: 1.3, until: 6.9, text: OPENING_CAPTIONS[0] },
+  { at: 7.9, until: 12.7, text: OPENING_CAPTIONS[1] },
+  { at: 13.6, until: 19.3, text: OPENING_CAPTIONS[2] },
+];
+
+// ---- 第3章フィナーレ(q3_taste の達成。全体で約18.2秒) ----
+// 2カット構成。ひろばに5人が集まる → クレーンで 上がって 島の全景。
+// 見せ場のあいだだけ **見た目の時刻** を夕方に差しかえる(ゲームの時計は1分も動かない。
+// 「ふたりのじかん」と まったく同じやりかた)。
+const FIN_FADE_IN = 0.5; // 暗転しきるまで
+const FIN_SWAP = 0.62; // 島へもどし、みんなを ひろばへ置く瞬間
+const FIN_LIGHT0 = 3.4; // あかりが 順に ともりはじめる
+const FIN_CRANE = 8.6; // クレーンで 上がりはじめる
+const FIN_FADE_OUT = 16.2;
+const FIN_RESTORE = 16.9; // 立ち位置・時刻を もとへ もどす
+const FIN_TOTAL = 18.2;
+/** 見せ場のあいだ 見せる時刻(ゆうがた) */
+const FIN_HOUR = 18.4;
+/** あかりが 1つずつ ともる間かく(秒) */
+const FIN_LIGHT_EVERY = 0.62;
+/** ルミの木の花が ひらききるまで(FIN_LIGHT0 から) */
+const FIN_BLOOM_SEC = 1.6;
+
+const FIN_CUES: readonly CaptionCue[] = [
+  { at: 1.2, until: 5.0, text: FINALE_CAPTIONS[0] },
+  { at: 5.4, until: 8.4, text: FINALE_CAPTIONS[1] },
+  { at: 12.0, until: 16.0, text: FINALE_CAPTIONS[2] },
+];
+
+/**
+ * ひろばの立ち位置(ゆるい弧。ぜんいん こちら(+Z)を向く)。
+ * 弧の うしろに ルミの木(0,-7)が 立つので、1枚に「みんな」と「木」が おさまる。
+ * 左右の はしを ±4.5m に おさえてあるのは、カメラ(8.6m先)の 画角に 入れるため。
+ */
+const FINALE_STAGE: readonly { id: string; x: number; z: number }[] = [
+  { id: 'nokto', x: -4.3, z: -3.1 },
+  { id: 'tsumugi', x: -2.4, z: -2.2 },
+  { id: 'ten', x: 1.3, z: -1.9 },
+  { id: 'minamo', x: 2.9, z: -2.5 },
+  { id: 'roka', x: 4.5, z: -3.2 },
+];
+/** ミオの立ち位置(みんなの まん中・すこし手前) */
+const FINALE_MIO = { x: -0.6, z: -1.6 };
+/** ぜんいんが 見ている先(カメラのほう) */
+const FINALE_LOOK_Z = 9;
+
+/**
+ * 順に ともる あかり(島のあちこち)。
+ * 実際の光源を ふやすのではなく、**すでにある あかりの場所**へ 光の粒を打つ
+ * ——照明そのものは 別の担当のもちぶんなので、見せ場は「見せるだけ」にとどめる。
+ */
+const FINALE_LIGHTS: readonly { x: number; z: number; h: number; kind: string }[] = [
+  { x: POIS.lumiTree.x, z: POIS.lumiTree.z, h: 5.0, kind: 'bloom' },
+  { x: POIS.shop.x, z: POIS.shop.z, h: 2.6, kind: 'craft' },
+  { x: POIS.playerHouse.x, z: POIS.playerHouse.z, h: 2.6, kind: 'moss' },
+  { x: POIS.minamoHouse.x, z: POIS.minamoHouse.z, h: 2.6, kind: 'moss' },
+  { x: POIS.noktoHouse.x, z: POIS.noktoHouse.z, h: 2.6, kind: 'ore' },
+  { x: POIS.pier.x, z: POIS.pier.z, h: 1.6, kind: 'splash' },
+  { x: POIS.hill.x, z: POIS.hill.z, h: 1.4, kind: 'ore' },
+  { x: POIS.forest.x, z: POIS.forest.z, h: 2.0, kind: 'moss' },
+];
+
 export class SequenceDirector {
   private state: SequenceState = 'idle';
   private t = 0; // 現在の状態の経過秒
@@ -203,8 +321,29 @@ export class SequenceDirector {
   private bondRestored = false;
   private bondPeaked = false;
   private bondSparkT = 0;
+  // ---- v29 オープニング / 第3章フィナーレ ----
+  /** 字幕・帯・暗転・「▶ とばす」の層(はじめて使うときに1つだけ作る) */
+  private cine: CinematicUI | null = null;
+  private openCut = -1;
+  private openRestored = false;
+  private openWakeT = 0;
+  private finSwapped = false;
+  private finRestored = false;
+  private finCut = -1;
+  private finLit = 0;
 
   constructor(private gs: GameScene) {}
+
+  /** 字幕の層(はじめて呼ばれたときに作る)。DOMは この1か所からしか さわらない */
+  private cinematic(): CinematicUI {
+    if (!this.cine) this.cine = new CinematicUI();
+    return this.cine;
+  }
+
+  /** いま字幕に出ている文(検証・撮影用) */
+  get caption(): string {
+    return this.cine?.shownCaption ?? '';
+  }
 
   /** 演出・就寝中はプレイヤー操作とワールド時間を止める */
   get active(): boolean {
@@ -242,9 +381,17 @@ export class SequenceDirector {
     }
   }
 
-  /** Eキーでの早送り(intro/bloomのみ。就寝はスキップ不可) */
+  /**
+   * 早送り(intro/bloom と v29のオープニング・フィナーレ。就寝はスキップ不可)。
+   *
+   * 入口は2つあるが、どちらも ここへ来る:
+   *   Eキー … InteractionRouting が `gs.seq.skip()` を呼ぶ(これまでどおり)
+   *   任意のキー・タップ … CinematicUI が window の捕そう段で聞いて ここを呼ぶ
+   */
   skip(): void {
     if (this.state === 'intro' || this.state === 'bloom') this.end();
+    else if (this.state === 'opening') this.finishOpening();
+    else if (this.state === 'finale') this.finishFinale();
   }
 
   private end(): void {
@@ -859,6 +1006,293 @@ export class SequenceDirector {
     );
   }
 
+  // ---------- v29 オープニング(ふねで島へ着く) ----------
+  /**
+   * 物語の入口。**「はじめから」を押した その直後に 1回だけ** 走る。
+   * 「1回きり」の記録(stats の1キー)と セーブは GameScene.startOpening が持つ
+   * ——ここは 見せるだけ(とうだいの点灯・ランタンとばしと まったく同じ流儀)。
+   */
+  startOpening(): void {
+    if (this.state !== 'idle') return;
+    this.state = 'opening';
+    this.t = 0;
+    this.openCut = -1;
+    this.openRestored = false;
+    this.openWakeT = 0;
+    const gs = this.gs;
+    gs.restoreAllOcclusionImmediately();
+    gs.player.locked = true;
+    this.cinematic().show(() => this.skip()); // まっ黒から はじまる
+    sfx('boat'); // 水を おす音(まだ まっ暗なうちから 聞こえる)
+  }
+
+  /** いまオープニングの最中か(検証・撮影用) */
+  get opening(): boolean {
+    return this.state === 'opening';
+  }
+
+  /** オープニングの1フレーム: 暗転・字幕・ふね・ミオ・カメラ */
+  private updateOpening(dt: number): void {
+    const gs = this.gs;
+    const t = this.t;
+    const cine = this.cinematic();
+    // ---- 暗転(はじめの明転 → おわりの暗転 → 広場での明転)----
+    let fade = 0;
+    if (t < OPEN_FADE_IN) fade = 1 - t / OPEN_FADE_IN;
+    else if (t >= OPEN_RESTORE) fade = 1 - Math.min(1, (t - OPEN_RESTORE) / OPEN_FADE_BACK);
+    else if (t >= OPEN_FADE_OUT) fade = (t - OPEN_FADE_OUT) / (OPEN_RESTORE - OPEN_FADE_OUT);
+    cine.setFade(fade);
+    cine.setCaption(captionAt(OPEN_CUES, t));
+    if (this.openRestored) return; // 片づけたあとは 世界に さわらない(明転を待つだけ)
+    // ---- カット ----
+    const cut = t < OPEN_CUT_PIER ? 0 : t < OPEN_CUT_PLAZA ? 1 : 2;
+    const cutStart = cut !== this.openCut;
+    this.openCut = cut;
+    if (cut === 0) this.openCutBoat(dt, t);
+    else if (cut === 1) this.openCutPier(t, cutStart);
+    else this.openCutPlaza(t, cutStart);
+    if (cutStart) gs.camCtl.snapDialogue(); // カットの切りかえは 補間しない(教訓4)
+    // ---- 片づけ(暗転しきったところ)----
+    if (t >= OPEN_RESTORE) {
+      this.openRestored = true;
+      this.restoreOpening();
+    }
+  }
+
+  /** カット1「ゆうがたの海」: 沖から 桟橋へ 小舟が 近づく */
+  private openCutBoat(dt: number, t: number): void {
+    const gs = this.gs;
+    const from = ISLAND_BOAT_OFFSHORE;
+    const to = ISLAND_BOAT;
+    const k = Math.min(1, t / OPEN_CUT_PIER);
+    const e = 1 - Math.pow(1 - k, 2.2); // 減速しながら 桟橋へ 着ける
+    const dx = to.x - from.x;
+    const dz = to.z - from.z;
+    const bx = from.x + dx * e;
+    const bz = from.z + dz * e;
+    const by = from.y + Math.sin(t * 1.9) * 0.045; // ゆっくりした たてゆれ
+    // 進む向きへ 船首を むける(もやいの向きへは 寄せない=最後に くるりと回さない)
+    const rot = Math.atan2(-dx, -dz) + Math.sin(t * 1.35) * 0.035;
+    gs.island.placeBoat('island', bx, by, bz, rot);
+    // ミオは 船のゆか板の上に **毎フレーム** 置きなおす
+    gs.playerView.root.position.set(bx, by - 0.38, bz);
+    gs.playerView.root.rotation.y = rot + Math.PI; // 進む先(島)を 見ている
+    this.openWakeT += dt;
+    if (this.openWakeT >= OPEN_WAKE_EVERY) {
+      this.openWakeT = 0;
+      burst(bx + Math.sin(rot) * 1.7, 0.34, bz + Math.cos(rot) * 1.7, 'splash', 6);
+    }
+    // カメラ: ふねの ななめ後ろ。ふねの むこうに 島の南がわが 立ちあがってくる
+    const c = smooth(k);
+    gs.camCtl.beginDialogue(
+      [bx + 6.2 - 1.8 * c, by + 4.2 - 1.0 * c, bz + 7.4 - 1.6 * c],
+      [bx - 1.5, by + 1.1, bz - 4.0]
+    );
+    gs.island.dayNight.update(gs.island.time.hour, bx, bz);
+  }
+
+  /**
+   * ミオを 桟橋の上に 立たせる(カット2と3で 毎フレーム 呼ぶ)。
+   * カット3(ひろば)でも 置きつづけるのは、置くのを やめると
+   * PlayerController が あしもと(広場の開始地点)へ 書きもどし、
+   * **ひろばの画に ミオが 写りこむ**から(実機のスクショで発覚)。
+   */
+  private placeMioOnPier(): void {
+    const gs = this.gs;
+    const px = ISLAND_BOAT_POINT.x;
+    const pz = ISLAND_BOAT_POINT.z;
+    gs.playerView.root.position.set(px, gs.island.groundY(px, pz), pz);
+    gs.playerView.root.rotation.y = faceView(px, pz, px, pz - 8); // 北(島のほう)を向く
+  }
+
+  /** カット2「さんばし」: 板の上に立って、これから住む島を 見る */
+  private openCutPier(t: number, cutStart: boolean): void {
+    const gs = this.gs;
+    const px = ISLAND_BOAT_POINT.x;
+    const pz = ISLAND_BOAT_POINT.z;
+    const py = gs.island.groundY(px, pz);
+    if (cutStart) {
+      // ふねは もやいの場所へ もどす(この画では 桟橋に ついている)
+      gs.island.placeBoat('island', ISLAND_BOAT.x, ISLAND_BOAT.y, ISLAND_BOAT.z, ISLAND_BOAT.rotY);
+      gs.playerView.play('idle');
+      sfx('step_wood'); // 板に 降り立つ音
+    }
+    this.placeMioOnPier();
+    // カメラは 桟橋の **西がわ**(-X)に立てる。東がわに置くと もやった小舟が
+    // レンズの すぐ手前に 来て 画の下を うめる(実機のスクショで確認)——
+    // 西からなら 小舟は ミオの むこうに 小さく のこる
+    const c = smooth(Math.min(1, (t - OPEN_CUT_PIER) / (OPEN_CUT_PLAZA - OPEN_CUT_PIER)));
+    gs.camCtl.beginDialogue(
+      [px - 4.4 + 0.8 * c, py + 2.5 - 0.3 * c, pz + 7.6 - 1.9 * c],
+      [px + 0.5, py + 1.25, pz - 0.8 - 0.6 * c]
+    );
+    gs.island.dayNight.update(gs.island.time.hour, px, pz);
+  }
+
+  /** カット3「ひろば」: まだ ねむっている ルミの木と、ちいさな工房 */
+  private openCutPlaza(t: number, cutStart: boolean): void {
+    const gs = this.gs;
+    const lp = POIS.lumiTree;
+    const gy = terrainHeight(lp.x, lp.z);
+    this.placeMioOnPier(); // ミオは まだ 桟橋(この画には 写らない)
+    if (cutStart) sfx('ui');
+    const c = smooth(Math.min(1, (t - OPEN_CUT_PLAZA) / (OPEN_FADE_OUT - OPEN_CUT_PLAZA)));
+    // ルミの木(0,-7)と ツムギ工房(-9,-1)が 1枚に おさまる、南東からの 見おろし
+    gs.camCtl.beginDialogue(
+      [8.6 + 1.6 * c, gy + 5.2 + 0.7 * c, 11.0 + 2.2 * c],
+      [-3.4, gy + 1.8, -3.6]
+    );
+    gs.island.dayNight.update(gs.island.time.hour, 0, 0);
+  }
+
+  /** 演出のあいだに動かしたものを ぜんぶ もとへ(見おわっても とばしても かならず通る) */
+  private restoreOpening(): void {
+    const gs = this.gs;
+    gs.island.placeBoat('island', ISLAND_BOAT.x, ISLAND_BOAT.y, ISLAND_BOAT.z, ISLAND_BOAT.rotY);
+    gs.player.teleport(gs.player.x, gs.player.z, gs.player.rotY); // 見た目を あしもとへ もどす
+    gs.playerView.play('idle');
+    gs.island.dayNight.update(gs.island.time.hour, gs.player.x, gs.player.z);
+    gs.camCtl.endDialogue();
+    gs.camCtl.snapTo(gs.player.x, gs.player.y, gs.player.z);
+  }
+
+  /** オープニングを おわる(最後まで見た / とばした のどちらも ここ) */
+  private finishOpening(): void {
+    if (!this.openRestored) {
+      this.openRestored = true;
+      this.restoreOpening();
+    }
+    this.state = 'idle';
+    this.cinematic().hide();
+  }
+
+  // ---------- v29 第3章フィナーレ(みんなと 島じゅうの あかり) ----------
+  /**
+   * 物語の出口。q3_taste(よその島の あじ)を とどけた瞬間に 1回だけ走る。
+   * 依頼の達成・報酬・じっせきの記録は **呼ぶ前に** GameScene が確定させている
+   * ——見せ場は「見せるだけ」(教訓4「見せ場の状態変化は演出の前に確定させる」)。
+   */
+  startFinale(): void {
+    if (this.state !== 'idle') return;
+    this.state = 'finale';
+    this.t = 0;
+    this.finSwapped = false;
+    this.finRestored = false;
+    this.finCut = -1;
+    this.finLit = 0;
+    const gs = this.gs;
+    gs.restoreAllOcclusionImmediately();
+    gs.player.locked = true;
+    const cine = this.cinematic();
+    cine.show(() => this.skip());
+    cine.setFade(0); // いまの画から 暗転していく(オープニングとは 逆むき)
+    sfx('door_close');
+  }
+
+  /** いまフィナーレの最中か(検証・撮影用) */
+  get finale(): boolean {
+    return this.state === 'finale';
+  }
+
+  /** フィナーレの1フレーム: 暗転・字幕・あかり・カメラ */
+  private updateFinale(): void {
+    const gs = this.gs;
+    const t = this.t;
+    const cine = this.cinematic();
+    let fade = 0;
+    if (t < FIN_SWAP) fade = Math.min(1, t / FIN_FADE_IN);
+    else if (t >= FIN_RESTORE) fade = 1 - Math.min(1, (t - FIN_RESTORE) / (FIN_TOTAL - FIN_RESTORE));
+    else if (t >= FIN_FADE_OUT) fade = (t - FIN_FADE_OUT) / (FIN_RESTORE - FIN_FADE_OUT);
+    cine.setFade(fade);
+    cine.setCaption(captionAt(FIN_CUES, t));
+    // ---- 暗転しきったところで 島へもどし、みんなを ひろばへ置く ----
+    if (!this.finSwapped && t >= FIN_SWAP) this.finaleSwap();
+    if (!this.finSwapped || this.finRestored) return;
+    // ---- 見た目の時刻(ゲームの時計は 1分も動かない)----
+    gs.island.dayNight.update(FIN_HOUR, POIS.plaza.x, POIS.plaza.z);
+    // ミオの見た目は 毎フレーム 置きなおす(locked でも あしもとへ 書きもどされる)
+    const my = gs.island.groundY(FINALE_MIO.x, FINALE_MIO.z);
+    gs.playerView.root.position.set(FINALE_MIO.x, my, FINALE_MIO.z);
+    gs.playerView.root.rotation.y = faceView(FINALE_MIO.x, FINALE_MIO.z, FINALE_MIO.x, FINALE_LOOK_Z);
+    // ---- ルミの木の花が ひらく ----
+    if (t >= FIN_LIGHT0) {
+      const k = Math.min(1, (t - FIN_LIGHT0) / FIN_BLOOM_SEC);
+      gs.island.lumiFruits.scaling.setAll(0.7 + 0.5 * smooth(k));
+    }
+    // ---- 島じゅうの あかりが 順に ともる ----
+    while (this.finLit < FINALE_LIGHTS.length && t >= FIN_LIGHT0 + this.finLit * FIN_LIGHT_EVERY) {
+      const p = FINALE_LIGHTS[this.finLit];
+      this.finLit++;
+      burst(p.x, gs.island.groundY(p.x, p.z) + p.h, p.z, p.kind, 12);
+      sfx('bloom', this.finLit === 1 ? 1 : 0.45); // 1つめだけ はっきり、あとは そっと
+    }
+    // ---- カメラ ----
+    const crane = t >= FIN_CRANE;
+    const cut = crane ? 1 : 0;
+    const cutStart = cut !== this.finCut;
+    this.finCut = cut;
+    const gy = terrainHeight(POIS.plaza.x, POIS.plaza.z);
+    if (!crane) {
+      // カット1「みんな」: 目の高さで 弧に ならんだ6人と、うしろの ルミの木
+      const c = smooth(Math.min(1, (t - FIN_SWAP) / (FIN_CRANE - FIN_SWAP)));
+      gs.camCtl.beginDialogue([0.2, gy + 2.35 + 0.25 * c, 8.6 + 1.0 * c], [0, gy + 1.3, -2.4]);
+    } else {
+      // カット2「クレーン」: 上がりながら 引き、ルミの木の てっぺんごと 島を見せる
+      const c = smooth(Math.min(1, (t - FIN_CRANE) / (FIN_FADE_OUT - FIN_CRANE)));
+      gs.camCtl.beginDialogue(
+        [0.2 + 6.8 * c, gy + 2.6 + 26.4 * c, 9.6 + 42.4 * c],
+        [0, gy + 1.3 + 3.7 * c, -2.4 - 5.6 * c]
+      );
+    }
+    if (cutStart) gs.camCtl.snapDialogue();
+  }
+
+  /** 暗転しきった一瞬の入れかえ: 島へもどす・みんなを ひろばへ */
+  private finaleSwap(): void {
+    const gs = this.gs;
+    this.finSwapped = true;
+    // いちば島で とどける依頼なので、ここで 島へ もどす
+    // (でんしゃの車内の見せ場と まったく同じ入口を通る=位置・表示・セーブが1か所でそろう)
+    if (gs.inMarket) gs.applyMarket(false);
+    for (const p of FINALE_STAGE) {
+      gs.npcs.placeAt(p.id, p.x, p.z, faceNpc(p.x, p.z, p.x, FINALE_LOOK_Z));
+      // テン(いちば島)と ロカ(入り江)は よその場所の人なので、置いただけでは 出ない。
+      // この見せ場のあいだだけ 見た目を出す(片づけは snapToSchedule が まとめてやる)
+      gs.npcs.npcs.get(p.id)?.view.setEnabled(true);
+      gs.npcs.playClip(p.id, 'idle');
+    }
+    const my = gs.island.groundY(FINALE_MIO.x, FINALE_MIO.z);
+    gs.playerView.root.position.set(FINALE_MIO.x, my, FINALE_MIO.z);
+    gs.playerView.play('idle');
+    gs.island.lumiFruits.scaling.setAll(0.7); // ここから ひらく
+    gs.island.dayNight.update(FIN_HOUR, POIS.plaza.x, POIS.plaza.z);
+  }
+
+  /** 演出のあいだに動かしたものを ぜんぶ もとへ(見おわっても とばしても かならず通る) */
+  private restoreFinale(): void {
+    const gs = this.gs;
+    gs.island.lumiFruits.scaling.setAll(1.2); // 花は ひらいたまま(第1章の開花と同じ形)
+    gs.island.lumiBuds.scaling.setAll(0.001);
+    gs.player.teleport(gs.player.x, gs.player.z, gs.player.rotY);
+    gs.playerView.play('idle');
+    gs.npcs.snapToSchedule(gs.island.time.hour); // 立ち位置・出す/出さない を まとめてもどす
+    gs.island.dayNight.update(gs.island.time.hour, gs.player.x, gs.player.z);
+    gs.camCtl.endDialogue();
+    gs.camCtl.snapTo(gs.player.x, gs.player.y, gs.player.z);
+  }
+
+  /** フィナーレを おわる(最後まで見た / とばした のどちらも ここ) */
+  private finishFinale(): void {
+    if (!this.finSwapped) this.finaleSwap(); // とばしても 島へは もどす(結果を そろえる)
+    if (!this.finRestored) {
+      this.finRestored = true;
+      this.restoreFinale();
+    }
+    this.state = 'idle';
+    this.cinematic().hide();
+    this.gs.onStoryFinaleDone(); // 音楽の締め・お祝いのことば・セーブ
+  }
+
   /** 自宅ベッドで寝る。連打しても1回ぶんしか実行されない */
   sleep(): void {
     if (this.state !== 'idle') return; // 排他: sleeping中の再実行を防ぐ
@@ -966,6 +1400,18 @@ export class SequenceDirector {
         gs.camCtl.snapTo(gs.player.x, gs.player.y, gs.player.z);
         gs.onFestivalLanternFlown(); // お祝いのことば・じっせき・セーブ
       }
+      return;
+    }
+
+    if (this.state === 'opening') {
+      this.updateOpening(dt);
+      if (this.t >= OPEN_TOTAL) this.finishOpening();
+      return;
+    }
+
+    if (this.state === 'finale') {
+      this.updateFinale();
+      if (this.t >= FIN_TOTAL) this.finishFinale();
       return;
     }
 

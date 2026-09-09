@@ -6,6 +6,9 @@ import { currentObjective } from '../systems/ObjectiveSystem';
 import { NPC_BY_ID, greetingTier } from '../data/npcs';
 import { bondEventOf, bondReady, dailyLineWithMemory } from '../systems/BondEventSystem';
 import type { QuestDef } from '../data/quests';
+import { type ActCue, type Line, lineAct, lineFace } from '../data/dialogueLine';
+import type { FaceCue } from '../characters/faceMixer';
+import type { CharacterView } from '../characters/CharacterView';
 import { ITEMS, type ItemId } from '../data/items';
 import { applyGift, canGift, friendshipText, type GiftResult } from '../systems/GiftSystem';
 import { deliverErrand, deliverableErrand, errandThanksLine } from '../systems/BulletinSystem';
@@ -42,6 +45,12 @@ export interface QuestDialogueDeps {
    */
   onBondEvent: (npcId: string) => void;
   /**
+   * v29 第3章の さいごの依頼(q3_taste)を とどけた。物語の むすびの見せ場がはじまる。
+   * 報酬・じっせきの記録は 呼ばれた先(GameScene)が 見せ場の **前** に確定させる
+   * ——「ふたりの じかん」「とうだいの点灯」と まったく同じ流儀。
+   */
+  onStoryFinale: () => void;
+  /**
    * v24 ふくを そめたことに 気づく一言(1回だけ)。null なら 何も足さない。
    *
    * ここだけに フックを1つ 置いてあるのは、会話の表(src/data/npcs.ts)を
@@ -49,7 +58,23 @@ export interface QuestDialogueDeps {
    * なかよし度は 1も 動かさない(気づいてもらう だけの ごほうび)。
    */
   noticeOutfit?: (npcId: string) => string | null;
+  /**
+   * v29 ミオ(プレイヤー)の顔を 動かす。おくりものを よろこんでもらえた ときだけ 使う。
+   * GameScene が playerView へ つなぐ(会話まわりから 描画を 直接 さわらないため)。
+   */
+  onMioFace?: (face: FaceCue, sec?: number) => void;
 }
+
+/**
+ * v29 会話の1行で 顔を 出しておく秒。
+ *
+ * 顔は「行を 送るまで ずっと」出しておきたいが、子どもは 1行を ゆっくり 読む。
+ * そこで **次の行で 消す**(顔の指定が ない行は ふつうの顔にもどす)のを 本すじにして、
+ * この秒数は「会話が 途中で 切れても 顔が のこらない」ための 保険にする。
+ */
+const LINE_FACE_SEC = 8;
+/** 顔の指定が ない行で うなずく 間かく(3行に1回) */
+const NOD_EVERY = 3;
 
 /** 家の拡張こうじを たのめる相手(島の大工=ツムギ) */
 export const HOME_BUILDER_NPC = 'tsumugi';
@@ -75,7 +100,7 @@ export class QuestDialogueController {
     d.onDialogueCamera(npcId);
 
     const q = questFor(d.state, npcId);
-    let lines: string[];
+    let lines: Line[];
     let after: (() => void) | null = null;
     if (q && q.mode === 'offer') {
       lines = q.def.offer;
@@ -136,6 +161,7 @@ export class QuestDialogueController {
     const bond = !questCritical && bondReady(d.state, npcId) ? bondEventOf(npcId) : null;
     if (bond) lines = [...lines, ...bond.invite];
     const endConversation = (): void => {
+      d.npcs.viewOf(npcId)?.setFace('normal'); // v29 顔を のこしたまま 会話を おえない
       d.npcs.setTalking(npcId, false);
       d.onDialogueCamera(null);
       after?.();
@@ -146,7 +172,7 @@ export class QuestDialogueController {
     const showNormalTalk = (): void => {
       d.dialogue.blockAdvance = false;
       d.dialogue.onBlockedAdvance = null;
-      d.dialogue.show(npcDef.name, lines, endConversation);
+      this.showWithReactions(npcId, npcDef.name, lines, endConversation);
       // 「おくりものをする」も下の「こうじを たのむ」も、押さなければ何も起きない任意ボタン。
       // questCritical(受注・報告)の会話には出さない(理由は上の questCritical のところ)。
       // v10 家の拡張こうじ。おくりものと同じ「最終行の任意ボタン」の仕組みで足す。
@@ -172,9 +198,10 @@ export class QuestDialogueController {
     // 大事な場面に 別の用事を かさねない。
     const errand = questCritical ? null : deliverableErrand(d.state, d.state.time.day, npcId);
     if (errand) {
-      d.dialogue.show(
+      this.showWithReactions(
+        npcId,
         npcDef.name,
-        [`あ、でんごんばん 見てくれたんだね。${ITEMS[errand.item].name}を もってきて くれた?`],
+        [{ text: `あ、でんごんばん 見てくれたんだね。${ITEMS[errand.item].name}を もってきて くれた?`, face: 'smile' }],
         endConversation
       );
       d.dialogue.blockAdvance = true;
@@ -186,6 +213,42 @@ export class QuestDialogueController {
       return;
     }
     showNormalTalk();
+  }
+
+  /**
+   * v29 会話を出す + **行送りに 合わせて NPCの顔と 動きを 出す**。
+   *
+   * 見せる文字は 1文字も 変えない(DialogueUI は lineText だけを DOMへ入れる)。
+   * 顔の指定が ある行は その顔、無い行は 3行に1回 だけ 短く うなずく——
+   * 全部の行で 動かすと せわしなくなり、逆に 何も 動かないと 置物に 見える。
+   */
+  private showWithReactions(npcId: string, name: string, lines: Line[], onEnd: () => void): void {
+    this.deps.dialogue.show(name, lines, onEnd, (line, idx) => this.reactToLine(npcId, line, idx));
+  }
+
+  /** 1行ぶんの 反応(顔・動き)。見つからない相手・持っていないクリップは 黙って とばす */
+  private reactToLine(npcId: string, line: Line, idx: number): void {
+    const view = this.deps.npcs.viewOf(npcId);
+    if (!view) return;
+    // 顔は **その行のあいだ** 出す。指定の ない行では ふつうの顔にもどす
+    // (時間で 消すと、ゆっくり 読む子の 画面では 途中で 顔が もどってしまう)
+    const face = lineFace(line);
+    view.pulseFace(face ?? 'normal', LINE_FACE_SEC);
+    // 動きの指定が なければ、顔も 指定されていない行にだけ うなずきを 入れる
+    const act = lineAct(line) ?? (!face && idx > 0 && idx % NOD_EVERY === 2 ? 'nod' : null);
+    if (act) this.playAct(npcId, view, act);
+  }
+
+  /** うなずき・よろこび などの 一発アニメ。おわったら 会話中なら talk へ もどす */
+  private playAct(npcId: string, view: CharacterView, act: ActCue): void {
+    const clip = act === 'nod' ? 'interact' : act;
+    if (!view.groups.has(clip)) return;
+    const d = this.deps;
+    view.play(clip, {
+      // 会話が つづいていれば 話す姿勢へ、おわっていれば ふだんの姿勢へ
+      // すわって 話している相手は 立たせない(生活担当の isSitting が唯一の情報源)
+      onEnd: () => view.play(d.npcs.isSitting(npcId) ? 'sit' : d.dialogue.open ? 'talk' : 'idle'),
+    });
   }
 
   /**
@@ -242,6 +305,11 @@ export class QuestDialogueController {
       // えきは その場では できない。たのんだ日を記録して 翌朝の6時に できあがる
       // (マイホームの拡張こうじと まったく同じ流儀。src/systems/StationBuild.ts)
       d.onStationOrdered();
+    } else if (def.id === 'q3_taste') {
+      // v29 第3章の さいごの依頼。ここで 物語の むすびの見せ場へ入る。
+      // 報酬(completeQuest)と じっせき用のカウンタは **この行より上** で
+      // すでに 確定しているので、見せ場のあいだ「報告しよう」の矛盾したHUDは出ない
+      d.onStoryFinale();
     }
     save(d.state);
   }
@@ -304,7 +372,12 @@ export class QuestDialogueController {
       d.dialogue.blockAdvance = false;
       sfx('coin');
       // 反応セリフは同じ会話のつづき。終わりかたは元の会話と同じ(カメラ・依頼処理を1本にする)
-      d.dialogue.show(npcDef.name, r.lines, endConversation);
+      // v29 よろこんでもらえた ときは、1行目から にっこりする
+      const glad = r.gain > 0 || r.atMax;
+      const giftLines: Line[] = r.lines.map((t, i) =>
+        i === 0 && glad ? { text: t, face: 'smile' as const, act: 'happy' as const } : t
+      );
+      this.showWithReactions(npcId, npcDef.name, giftLines, endConversation);
       // v11 おくりものは1日に なんどでも わたせる。会話をやり直させず、
       // 反応セリフの最終行に そのまま「もういちど」の入口を出す(あげられる物がある間だけ)。
       if (canGift(d.state, npcId)) {
@@ -325,6 +398,7 @@ export class QuestDialogueController {
     if (r.gain > 0) {
       toast(`${name}と なかよし +${r.gain} → ${friendshipText(r.friendship)}`, 'heart');
       this.sparkleAt(npcId); // 上がった瞬間の きらめき
+      this.deps.onMioFace?.('smile', 2.0); // v29 わたせた ミオも うれしい
     } else if (r.atMax) {
       toast(`${name}と なかよし ${friendshipText(r.friendship)} もう さいこう!`, 'heart');
     } else {

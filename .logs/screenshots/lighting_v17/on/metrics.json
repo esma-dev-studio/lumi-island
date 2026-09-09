@@ -1,0 +1,2179 @@
+{
+ "when": "2026-09-09T03:32:28.160Z",
+ "viewport": {
+  "width": 1180,
+  "height": 820,
+  "deviceScaleFactor": 2
+ },
+ "shots": {
+  "01_plaza_day.png": {
+   "activeMeshes": 117,
+   "totalMeshes": 604,
+   "drawCalls": 485,
+   "activeIndices": 1192656,
+   "activeTriangles": 397552,
+   "activeTrianglesSumOfMeshes": 109808,
+   "activeVerticesSumOfMeshes": 71060,
+   "sceneTotalVertices": 249118,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.6667,
+   "renderWidth": 1769,
+   "renderHeight": 1229,
+   "canvas": {
+    "w": 1769,
+    "h": 1229,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 64,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 11.16,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 23.907900000095346,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": 0,
+    "y": 1.21,
+    "z": 3
+   },
+   "camera": {
+    "x": 0,
+    "y": 6.19,
+    "z": 12.9,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 4.58
+  },
+  "02_plaza_evening.png": {
+   "activeMeshes": 114,
+   "totalMeshes": 604,
+   "drawCalls": 485,
+   "activeIndices": 1188432,
+   "activeTriangles": 396144,
+   "activeTrianglesSumOfMeshes": 103552,
+   "activeVerticesSumOfMeshes": 67632,
+   "sceneTotalVertices": 249118,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.6667,
+   "renderWidth": 1769,
+   "renderHeight": 1229,
+   "canvas": {
+    "w": 1769,
+    "h": 1229,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 65,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 17.77,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 28.698000000238398,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": 0,
+    "y": 1.21,
+    "z": 3
+   },
+   "camera": {
+    "x": 0,
+    "y": 6.19,
+    "z": 12.9,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 4.58
+  },
+  "03_plaza_night.png": {
+   "activeMeshes": 112,
+   "totalMeshes": 606,
+   "drawCalls": 478,
+   "activeIndices": 1140834,
+   "activeTriangles": 380278,
+   "activeTrianglesSumOfMeshes": 102104,
+   "activeVerticesSumOfMeshes": 66699,
+   "sceneTotalVertices": 249239,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.6667,
+   "renderWidth": 1769,
+   "renderHeight": 1229,
+   "canvas": {
+    "w": 1769,
+    "h": 1229,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 11,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 21.14,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 32.70290000033376,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": 0,
+    "y": 1.21,
+    "z": 3
+   },
+   "camera": {
+    "x": 0,
+    "y": 6.19,
+    "z": 12.9,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 4.58
+  },
+  "01b_lumitree_full.png": {
+   "activeMeshes": 72,
+   "totalMeshes": 604,
+   "drawCalls": 403,
+   "activeIndices": 1028652,
+   "activeTriangles": 342884,
+   "activeTrianglesSumOfMeshes": 82208,
+   "activeVerticesSumOfMeshes": 53105,
+   "sceneTotalVertices": 249118,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.8,
+   "renderWidth": 1475,
+   "renderHeight": 1025,
+   "canvas": {
+    "w": 1475,
+    "h": 1025,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 84,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 11.14,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 36.139400000333694,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": 0,
+    "y": 1.21,
+    "z": 3
+   },
+   "camera": {
+    "x": 5,
+    "y": 4.83,
+    "z": 1.3,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 3.63
+  },
+  "04_forest_north.png": {
+   "activeMeshes": 39,
+   "totalMeshes": 607,
+   "drawCalls": 336,
+   "activeIndices": 1007118,
+   "activeTriangles": 335706,
+   "activeTrianglesSumOfMeshes": 75878,
+   "activeVerticesSumOfMeshes": 46708,
+   "sceneTotalVertices": 249459,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.8,
+   "renderWidth": 1475,
+   "renderHeight": 1025,
+   "canvas": {
+    "w": 1475,
+    "h": 1025,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 85,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 10.13,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 40.35380000042907,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": -6,
+    "y": 1.06,
+    "z": -33
+   },
+   "camera": {
+    "x": -3.6,
+    "y": 6.28,
+    "z": -24.4,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 4.94
+  },
+  "05_pond_fishing.png": {
+   "activeMeshes": 30,
+   "totalMeshes": 609,
+   "drawCalls": 316,
+   "activeIndices": 964347,
+   "activeTriangles": 321449,
+   "activeTrianglesSumOfMeshes": 74365,
+   "activeVerticesSumOfMeshes": 45919,
+   "sceneTotalVertices": 250019,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.8,
+   "renderWidth": 1475,
+   "renderHeight": 1025,
+   "canvas": {
+    "w": 1475,
+    "h": 1025,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 90,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 14.12,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 43.9970000004768,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": 24,
+    "y": 0.52,
+    "z": 14.2
+   },
+   "camera": {
+    "x": 16.9,
+    "y": 5.73,
+    "z": 7.3,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 4.13
+  },
+  "06_hill_night.png": {
+   "activeMeshes": 61,
+   "totalMeshes": 612,
+   "drawCalls": 378,
+   "activeIndices": 995838,
+   "activeTriangles": 331946,
+   "activeTrianglesSumOfMeshes": 78106,
+   "activeVerticesSumOfMeshes": 49110,
+   "sceneTotalVertices": 251008,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.8,
+   "renderWidth": 1475,
+   "renderHeight": 1025,
+   "canvas": {
+    "w": 1475,
+    "h": 1025,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 80,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 21.15,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 48.19920000028611,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": 27.8,
+    "y": 5.94,
+    "z": -24.7
+   },
+   "camera": {
+    "x": 19.2,
+    "y": 11.25,
+    "z": -25,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 5.96
+  },
+  "07_cove_day.png": {
+   "activeMeshes": 65,
+   "totalMeshes": 612,
+   "drawCalls": 169,
+   "activeIndices": 459594,
+   "activeTriangles": 153198,
+   "activeTrianglesSumOfMeshes": 56842,
+   "activeVerticesSumOfMeshes": 39916,
+   "sceneTotalVertices": 252718,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.8,
+   "renderWidth": 1475,
+   "renderHeight": 1025,
+   "canvas": {
+    "w": 1475,
+    "h": 1025,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 116,
+   "beaconVisible": false,
+   "dirArrowVisible": true,
+   "hour": 11.12,
+   "day": 27,
+   "area": "cove",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": true,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 53.107400000333826,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": -53.5,
+    "y": 0.9,
+    "z": 61
+   },
+   "camera": {
+    "x": -45.8,
+    "y": 7.57,
+    "z": 66.7,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 9.62
+  },
+  "08_cove_night.png": {
+   "activeMeshes": 67,
+   "totalMeshes": 614,
+   "drawCalls": 173,
+   "activeIndices": 468090,
+   "activeTriangles": 156030,
+   "activeTrianglesSumOfMeshes": 58512,
+   "activeVerticesSumOfMeshes": 41566,
+   "sceneTotalVertices": 252839,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.8,
+   "renderWidth": 1475,
+   "renderHeight": 1025,
+   "canvas": {
+    "w": 1475,
+    "h": 1025,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 127,
+   "beaconVisible": false,
+   "dirArrowVisible": true,
+   "hour": 21.13,
+   "day": 27,
+   "area": "cove",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": true,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 56.80830000042921,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": -53.5,
+    "y": 0.9,
+    "z": 61
+   },
+   "camera": {
+    "x": -45.8,
+    "y": 7.57,
+    "z": 66.7,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 9.62
+  },
+  "09_market_station_train.png": {
+   "activeMeshes": 41,
+   "totalMeshes": 613,
+   "drawCalls": 126,
+   "activeIndices": 290358,
+   "activeTriangles": 96786,
+   "activeTrianglesSumOfMeshes": 27414,
+   "activeVerticesSumOfMeshes": 19454,
+   "sceneTotalVertices": 253631,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.8,
+   "renderWidth": 1475,
+   "renderHeight": 1025,
+   "canvas": {
+    "w": 1475,
+    "h": 1025,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 122,
+   "beaconVisible": false,
+   "dirArrowVisible": true,
+   "hour": 16.12,
+   "day": 27,
+   "area": "market",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": true,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 62.84930000042929,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": 25.8,
+    "y": 1.06,
+    "z": 52.4
+   },
+   "camera": {
+    "x": 31.2,
+    "y": 7.94,
+    "z": 60.7,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 6.14
+  },
+  "09b_market_street.png": {
+   "activeMeshes": 72,
+   "totalMeshes": 613,
+   "drawCalls": 184,
+   "activeIndices": 387966,
+   "activeTriangles": 129322,
+   "activeTrianglesSumOfMeshes": 43682,
+   "activeVerticesSumOfMeshes": 31328,
+   "sceneTotalVertices": 253631,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.8,
+   "renderWidth": 1475,
+   "renderHeight": 1025,
+   "canvas": {
+    "w": 1475,
+    "h": 1025,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 137,
+   "beaconVisible": false,
+   "dirArrowVisible": true,
+   "hour": 16.25,
+   "day": 27,
+   "area": "market",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": true,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 66.00100000047698,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": 27,
+    "y": 1.23,
+    "z": 54.6
+   },
+   "camera": {
+    "x": 22.4,
+    "y": 9.22,
+    "z": 45.5,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 11.17
+  },
+  "10_ten_shop.png": {
+   "activeMeshes": 50,
+   "totalMeshes": 613,
+   "drawCalls": 142,
+   "activeIndices": 301398,
+   "activeTriangles": 100466,
+   "activeTrianglesSumOfMeshes": 29254,
+   "activeVerticesSumOfMeshes": 21365,
+   "sceneTotalVertices": 253631,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.8,
+   "renderWidth": 1475,
+   "renderHeight": 1025,
+   "canvas": {
+    "w": 1475,
+    "h": 1025,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 131,
+   "beaconVisible": true,
+   "dirArrowVisible": true,
+   "hour": 16.38,
+   "day": 27,
+   "area": "market",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": true,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 69.26470000028597,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": 29.8,
+    "y": 1.52,
+    "z": 57.8
+   },
+   "camera": {
+    "x": 26.6,
+    "y": 5.32,
+    "z": 62.4,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 3.72
+  },
+  "11_home_day.png": {
+   "activeMeshes": 58,
+   "totalMeshes": 613,
+   "drawCalls": 244,
+   "activeIndices": 455358,
+   "activeTriangles": 151786,
+   "activeTrianglesSumOfMeshes": 29250,
+   "activeVerticesSumOfMeshes": 24505,
+   "sceneTotalVertices": 253631,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.8,
+   "renderWidth": 1475,
+   "renderHeight": 1025,
+   "canvas": {
+    "w": 1475,
+    "h": 1025,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 98,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 13.17,
+   "day": 27,
+   "area": "island",
+   "indoor": true,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 76.57450000047689,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": 54.5,
+    "y": 1.15,
+    "z": -56.4
+   },
+   "camera": {
+    "x": 54.9,
+    "y": 8.55,
+    "z": -44.4,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 12.71
+  },
+  "12_home_night.png": {
+   "activeMeshes": 59,
+   "totalMeshes": 615,
+   "drawCalls": 245,
+   "activeIndices": 452658,
+   "activeTriangles": 150886,
+   "activeTrianglesSumOfMeshes": 29758,
+   "activeVerticesSumOfMeshes": 25292,
+   "sceneTotalVertices": 253752,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.8,
+   "renderWidth": 1475,
+   "renderHeight": 1025,
+   "canvas": {
+    "w": 1475,
+    "h": 1025,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 100,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 21.17,
+   "day": 27,
+   "area": "island",
+   "indoor": true,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 83.96460000038171,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": 54.5,
+    "y": 1.15,
+    "z": -56.4
+   },
+   "camera": {
+    "x": 54.9,
+    "y": 8.55,
+    "z": -44.4,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 12.71
+  },
+  "13_npchome_nokto.png": {
+   "activeMeshes": 15,
+   "totalMeshes": 613,
+   "drawCalls": 82,
+   "activeIndices": 218010,
+   "activeTriangles": 72670,
+   "activeTrianglesSumOfMeshes": 15512,
+   "activeVerticesSumOfMeshes": 10216,
+   "sceneTotalVertices": 253631,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.8,
+   "renderWidth": 1475,
+   "renderHeight": 1025,
+   "canvas": {
+    "w": 1475,
+    "h": 1025,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 141,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 14.2,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": "nokto",
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 90.29200000047749,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": -56.8,
+    "y": 1.15,
+    "z": -57
+   },
+   "camera": {
+    "x": -57.8,
+    "y": 5.2,
+    "z": -52.8,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 12.14
+  },
+  "13b_npchome_minamo.png": {
+   "activeMeshes": 16,
+   "totalMeshes": 615,
+   "drawCalls": 84,
+   "activeIndices": 231462,
+   "activeTriangles": 77154,
+   "activeTrianglesSumOfMeshes": 17014,
+   "activeVerticesSumOfMeshes": 11332,
+   "sceneTotalVertices": 253752,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.6667,
+   "renderWidth": 1769,
+   "renderHeight": 1229,
+   "canvas": {
+    "w": 1769,
+    "h": 1229,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 76,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 20.22,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": "minamo",
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 97.26580000043018,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": 59.2,
+    "y": 1.15,
+    "z": 58.9
+   },
+   "camera": {
+    "x": 58.2,
+    "y": 5.1,
+    "z": 63.2,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 14.87
+  },
+  "14_saptree_night.png": {
+   "activeMeshes": 38,
+   "totalMeshes": 617,
+   "drawCalls": 333,
+   "activeIndices": 1006038,
+   "activeTriangles": 335346,
+   "activeTrianglesSumOfMeshes": 76558,
+   "activeVerticesSumOfMeshes": 47285,
+   "sceneTotalVertices": 253873,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.6667,
+   "renderWidth": 1769,
+   "renderHeight": 1229,
+   "canvas": {
+    "w": 1769,
+    "h": 1229,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 73,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 21.17,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 103.58410000038253,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": -2.5,
+    "y": 1.32,
+    "z": -32.4
+   },
+   "camera": {
+    "x": -2.5,
+    "y": 5.45,
+    "z": -24.8,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 4.1
+  },
+  "09c_island_station_night.png": {
+   "activeMeshes": 45,
+   "totalMeshes": 618,
+   "drawCalls": 347,
+   "activeIndices": 926244,
+   "activeTriangles": 308748,
+   "activeTrianglesSumOfMeshes": 76122,
+   "activeVerticesSumOfMeshes": 49733,
+   "sceneTotalVertices": 254621,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.6667,
+   "renderWidth": 1769,
+   "renderHeight": 1229,
+   "canvas": {
+    "w": 1769,
+    "h": 1229,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 72,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 21.57,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 108.26110000038236,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": -1,
+    "y": 0.92,
+    "z": 45.6
+   },
+   "camera": {
+    "x": 7.9,
+    "y": 7.4,
+    "z": 47.9,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 7.37
+  },
+  "B1_closeup_grass.png": {
+   "activeMeshes": 38,
+   "totalMeshes": 614,
+   "drawCalls": 333,
+   "activeIndices": 961020,
+   "activeTriangles": 320340,
+   "activeTrianglesSumOfMeshes": 68458,
+   "activeVerticesSumOfMeshes": 43078,
+   "sceneTotalVertices": 254379,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.6667,
+   "renderWidth": 1769,
+   "renderHeight": 1229,
+   "canvas": {
+    "w": 1769,
+    "h": 1229,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 79,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 12.17,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 112.455200000287,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": -16,
+    "y": 1.45,
+    "z": 10
+   },
+   "camera": {
+    "x": 9.5,
+    "y": 2.7,
+    "z": 15,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 0.86
+  },
+  "B2_closeup_beach_water.png": {
+   "activeMeshes": 29,
+   "totalMeshes": 614,
+   "drawCalls": 317,
+   "activeIndices": 848616,
+   "activeTriangles": 282872,
+   "activeTrianglesSumOfMeshes": 62170,
+   "activeVerticesSumOfMeshes": 39627,
+   "sceneTotalVertices": 254379,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.6667,
+   "renderWidth": 1769,
+   "renderHeight": 1229,
+   "canvas": {
+    "w": 1769,
+    "h": 1229,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 82,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 12.33,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 116.66340000033466,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": -24,
+    "y": 0.8,
+    "z": 26
+   },
+   "camera": {
+    "x": -2.6,
+    "y": 1.15,
+    "z": 33.4,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 0.41
+  },
+  "B3_closeup_building.png": {
+   "activeMeshes": 25,
+   "totalMeshes": 614,
+   "drawCalls": 309,
+   "activeIndices": 922182,
+   "activeTriangles": 307394,
+   "activeTrianglesSumOfMeshes": 67486,
+   "activeVerticesSumOfMeshes": 42143,
+   "sceneTotalVertices": 254379,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.6667,
+   "renderWidth": 1769,
+   "renderHeight": 1229,
+   "canvas": {
+    "w": 1769,
+    "h": 1229,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 83,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 12.48,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 120.29100000023931,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": 24,
+    "y": 0.36,
+    "z": 22
+   },
+   "camera": {
+    "x": 28.4,
+    "y": 2.87,
+    "z": 19,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 2.44
+  },
+  "B4_closeup_player.png": {
+   "activeMeshes": 66,
+   "totalMeshes": 616,
+   "drawCalls": 390,
+   "activeIndices": 1040460,
+   "activeTriangles": 346820,
+   "activeTrianglesSumOfMeshes": 84277,
+   "activeVerticesSumOfMeshes": 54603,
+   "sceneTotalVertices": 255342,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.6667,
+   "renderWidth": 1769,
+   "renderHeight": 1229,
+   "canvas": {
+    "w": 1769,
+    "h": 1229,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 78,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 12.67,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 125.08640000033449,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": -16,
+    "y": 1.45,
+    "z": 10
+   },
+   "camera": {
+    "x": -14.7,
+    "y": 2.32,
+    "z": 11.3,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 0.93
+  },
+  "B5_closeup_npc_tsumugi.png": {
+   "activeMeshes": 97,
+   "totalMeshes": 616,
+   "drawCalls": 453,
+   "activeIndices": 1132026,
+   "activeTriangles": 377342,
+   "activeTrianglesSumOfMeshes": 102209,
+   "activeVerticesSumOfMeshes": 69038,
+   "sceneTotalVertices": 255342,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.6667,
+   "renderWidth": 1769,
+   "renderHeight": 1229,
+   "canvas": {
+    "w": 1769,
+    "h": 1229,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 77,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 12.74,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 126.73630000042985,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": -2.4,
+    "y": 1.17,
+    "z": 0.9
+   },
+   "camera": {
+    "x": -2.6,
+    "y": 2.21,
+    "z": 0.9,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 1.04
+  },
+  "B6_closeup_pond_water.png": {
+   "activeMeshes": 21,
+   "totalMeshes": 619,
+   "drawCalls": 300,
+   "activeIndices": 864099,
+   "activeTriangles": 288033,
+   "activeTrianglesSumOfMeshes": 65957,
+   "activeVerticesSumOfMeshes": 41156,
+   "sceneTotalVertices": 255683,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.6667,
+   "renderWidth": 1769,
+   "renderHeight": 1229,
+   "canvas": {
+    "w": 1769,
+    "h": 1229,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 86,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 12.93,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 131.58090000033462,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": 20,
+    "y": 1.85,
+    "z": 10
+   },
+   "camera": {
+    "x": 24.4,
+    "y": 2.35,
+    "z": 14.8,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 1.97
+  },
+  "15_plaza_rain.png": {
+   "activeMeshes": 118,
+   "totalMeshes": 601,
+   "drawCalls": 491,
+   "activeIndices": 1159770,
+   "activeTriangles": 386590,
+   "activeTrianglesSumOfMeshes": 104386,
+   "activeVerticesSumOfMeshes": 67867,
+   "sceneTotalVertices": 245793,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 77,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.6667,
+   "renderWidth": 1769,
+   "renderHeight": 1229,
+   "canvas": {
+    "w": 1769,
+    "h": 1229,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 65,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 11.22,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "rainy",
+    "rain": 1,
+    "rainbow": 0,
+    "cold": 1,
+    "snails": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "t": 8.99610000014305,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": 0,
+    "y": 1.21,
+    "z": 3
+   },
+   "camera": {
+    "x": 0,
+    "y": 6.19,
+    "z": 12.9,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 4.58,
+   "weatherDebug": {
+    "day": 27,
+    "hour": 11.07,
+    "weather": "rainy",
+    "rain": 1,
+    "rainbow": 0,
+    "cold": 1,
+    "snails": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "t": 5.236800000190737,
+    "snow": 0,
+    "cover": 0,
+    "drifts": [],
+    "rainParticles": 359,
+    "rainEmitRate": 420,
+    "snowCover": 0,
+    "snowParticles": 0,
+    "snowEmitRate": 0,
+    "snowSurfaces": 8,
+    "driftsVisible": [],
+    "puddleAlpha": 0.62,
+    "puddlesVisible": 5,
+    "rainbowVisible": false,
+    "snailsVisible": [
+     0,
+     1,
+     2,
+     3
+    ]
+   }
+  },
+  "16_plaza_snow.png": {
+   "activeMeshes": 118,
+   "totalMeshes": 601,
+   "drawCalls": 488,
+   "activeIndices": 1194060,
+   "activeTriangles": 398020,
+   "activeTrianglesSumOfMeshes": 110140,
+   "activeVerticesSumOfMeshes": 71265,
+   "sceneTotalVertices": 245793,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 77,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.6667,
+   "renderWidth": 1769,
+   "renderHeight": 1229,
+   "canvas": {
+    "w": 1769,
+    "h": 1229,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 64,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 11.22,
+   "day": 27,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "snowy",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0.85,
+    "snails": [],
+    "t": 8.89890000009538,
+    "snow": 1,
+    "cover": 1,
+    "drifts": [
+     0,
+     1,
+     2,
+     3
+    ]
+   },
+   "player": {
+    "x": 0,
+    "y": 1.21,
+    "z": 3
+   },
+   "camera": {
+    "x": 0,
+    "y": 6.19,
+    "z": 12.9,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 4.58,
+   "weatherDebug": {
+    "day": 27,
+    "hour": 11.07,
+    "weather": "snowy",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0.85,
+    "snails": [],
+    "t": 5.011000000000001,
+    "snow": 1,
+    "cover": 1,
+    "drifts": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "rainParticles": 0,
+    "rainEmitRate": 0,
+    "snowCover": 1,
+    "snowParticles": 620,
+    "snowEmitRate": 300,
+    "snowSurfaces": 8,
+    "driftsVisible": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "puddleAlpha": 0,
+    "puddlesVisible": 0,
+    "rainbowVisible": false,
+    "snailsVisible": []
+   }
+  },
+  "17_festival.png": {
+   "activeMeshes": 62,
+   "totalMeshes": 599,
+   "drawCalls": 407,
+   "activeIndices": 1243482,
+   "activeTriangles": 414494,
+   "activeTrianglesSumOfMeshes": 105172,
+   "activeVerticesSumOfMeshes": 65114,
+   "sceneTotalVertices": 245270,
+   "shadowRenderList": 216,
+   "shadowMapSize": 1024,
+   "shadowCascades": 2,
+   "materials": 78,
+   "textures": 39,
+   "lights": 8,
+   "particleSystems": 3,
+   "effectLayers": [
+    "glow"
+   ],
+   "cameraPostProcesses": [
+    "lumiVignette"
+   ],
+   "scenePostProcesses": [
+    "lumiVignette"
+   ],
+   "hardwareScalingLevel": 0.6667,
+   "renderWidth": 1769,
+   "renderHeight": 1229,
+   "canvas": {
+    "w": 1769,
+    "h": 1229,
+    "cssW": 1180,
+    "cssH": 820
+   },
+   "devicePixelRatio": 2,
+   "fps": 64,
+   "beaconVisible": false,
+   "dirArrowVisible": false,
+   "hour": 18.66,
+   "day": 28,
+   "area": "island",
+   "indoor": false,
+   "npcHome": null,
+   "inCove": false,
+   "inMarket": false,
+   "weather": {
+    "weather": "sunny",
+    "rain": 0,
+    "rainbow": 0,
+    "cold": 0,
+    "snails": [],
+    "t": 7.9475000000000025,
+    "snow": 0,
+    "cover": 0,
+    "drifts": []
+   },
+   "player": {
+    "x": 3.8,
+    "y": 0.91,
+    "z": 31.2
+   },
+   "camera": {
+    "x": 3.8,
+    "y": 5.72,
+    "z": 23.6,
+    "fov": 0.8,
+    "minZ": 0.3,
+    "maxZ": 400
+   },
+   "camAboveGround": 4.1
+  }
+ },
+ "seed": {
+  "day": 27,
+  "weather": "sunny",
+  "furniture": 30,
+  "festivalDay": 28,
+  "trainDay": 27
+ },
+ "caps": {
+  "engine": {
+   "description": "WebGL2 - Parallel shader compilation",
+   "webGLVersion": 2,
+   "creationOptions": {
+    "antialias": true,
+    "adaptToDeviceRatio": false
+   },
+   "hardwareScalingLevel": 0.6667
+  },
+  "caps": {
+   "maxTextureSize": 16384,
+   "maxSamples": 16,
+   "maxMSAASamples": 16,
+   "maxAnisotropy": 16,
+   "textureFloat": true,
+   "textureHalfFloat": true,
+   "instancedArrays": true,
+   "standardDerivatives": true,
+   "s3tc": true,
+   "etc2": false,
+   "astc": false
+  },
+  "renderTargetSamples": 1,
+  "imageProcessingConfiguration": {
+   "isEnabled": true,
+   "applyByPostProcess": false,
+   "toneMappingEnabled": false,
+   "toneMappingType": 0,
+   "exposure": 1,
+   "contrast": 1,
+   "vignetteEnabled": false,
+   "vignetteWeight": 1.5,
+   "vignetteStretch": 0,
+   "vignetteCentreX": 0,
+   "vignetteCentreY": 0,
+   "vignetteColor": [
+    0,
+    0,
+    0
+   ],
+   "vignetteBlendMode": 0,
+   "colorCurvesEnabled": false,
+   "colorGradingEnabled": false,
+   "ditheringEnabled": false
+  },
+  "scene": {
+   "clearColor": [
+    0.2094912003062922,
+    0.2676256590245337,
+    0.39095976280731365
+   ],
+   "ambientColor": [
+    0.033949382841144814,
+    0.038155920606248485,
+    0.052368017691107015
+   ],
+   "fogMode": 2,
+   "fogStart": 0,
+   "fogEnd": 1000,
+   "fogDensity": 0.005589311699755923,
+   "fogColor": [
+    0.2550131440620459,
+    0.3136366099809968,
+    0.4226117445130412
+   ],
+   "imageProcessingOnScene": true,
+   "materialsByClass": {
+    "StandardMaterial": 72,
+    "PBRMaterial": 6
+   },
+   "lights": [
+    {
+     "name": "sun",
+     "kind": "DirectionalLight",
+     "intensity": 0.6312227152562805
+    },
+    {
+     "name": "hemi",
+     "kind": "HemisphericLight",
+     "intensity": 0.6095977954071615
+    },
+    {
+     "name": "poolLight",
+     "kind": "PointLight",
+     "intensity": 0.747208873049247
+    },
+    {
+     "name": "homeLight",
+     "kind": "PointLight",
+     "intensity": 0.85
+    },
+    {
+     "name": "npcHomeLight_minamo",
+     "kind": "PointLight",
+     "intensity": 0.86
+    },
+    {
+     "name": "npcHomeLight_nokto",
+     "kind": "PointLight",
+     "intensity": 0.34
+    },
+    {
+     "name": "npcHomeLight_tsumugi",
+     "kind": "PointLight",
+     "intensity": 0.95
+    },
+    {
+     "name": "trainCarLight",
+     "kind": "PointLight",
+     "intensity": 0
+    }
+   ],
+   "glowLayer": {
+    "name": "glow",
+    "intensity": 0.7781392486994979,
+    "blurKernelSize": 32
+   }
+  },
+  "shadows": {
+   "mapSize": 1024,
+   "numCascades": 2,
+   "lambda": 0.86,
+   "darkness": 0.5,
+   "bias": 0.008,
+   "normalBias": 0.05,
+   "shadowMaxZ": 62,
+   "filter": 6,
+   "usePercentageCloserFiltering": true
+  },
+  "dynRes": {},
+  "renderScale": 1.5,
+  "touchDevice": false
+ },
+ "festival": {
+  "day": 28,
+  "decor": true,
+  "attendees": [
+   "minamo",
+   "nokto",
+   "tsumugi",
+   "roka",
+   "ten"
+  ],
+  "lanterns": {
+   "count": 0,
+   "t": 0,
+   "topY": 0,
+   "reflections": 0
+  }
+ },
+ "consoleErrors": [],
+ "resolutionDropLogs": [
+  "[info] [dynres] down legacy renderScale -> 1.25 applied=0.8 reason=fps 15.6 < 48 が3秒連続",
+  "[info] [dynres] up legacy renderScale -> 1.5 applied=0.6667 reason=p95 19.00ms < 22ms が51秒つづいた"
+ ],
+ "notes": [
+  "セーブ: 27日め(sunny)・第3章まで完了・家具30こ・花だん満開・依頼はすべて done",
+  "01b ルミの木: 実測の高さ 6.56m。追従カメラ(見下ろし角が固定)では てっぺんが 画面の外へ出るので、全体は自由カメラでのみ撮れる",
+  "10 テンの店: テンの実位置 (35.2,61.0)",
+  "B2 南の水ぎわ z=38.0(地形から実測) / 波の位相 surf.t=4.6 (set)",
+  "B5 ツムギ: 会話中(こちらを向いた状態)の接写。会話ボックスだけDOMで隠してある",
+  "15 雨: weather=rainy rain=1 snow=0",
+  "16 雪(冬): weather=snowy rain=0 snow=1",
+  "17 まつり: かざり=true 集まった人=minamo,nokto,tsumugi,roka,ten"
+ ],
+ "off": []
+}

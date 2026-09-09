@@ -1,0 +1,140 @@
+
+Running 92 tests using 1 worker
+
+  ok  1 tests\e2e\badge.spec.ts:87:1 › バッジタブ: ぜんぶのマスが シルエット+進捗で ならぶ → 初つりで色つきに かわる (10.2s)
+  ok  2 tests\e2e\badge.spec.ts:138:1 › さかのぼり一括: あそんであるセーブを読むと まとめてつき、トーストは1枚だけ (9.9s)
+  ok  3 tests\e2e\badge.spec.ts:195:1 › ごほうび限定の3点: じっせきを たっせいすると とどき、家に おける (9.2s)
+  ok  4 tests\e2e\bottle.spec.ts:74:1 › メッセージボトル: 浜でひろう → 手紙が ひらく → ずかんに のこる (17.3s)
+  ok  5 tests\e2e\bottle.spec.ts:136:1 › じっせきの ごほうび: 達成でとどく / 達成ずみのセーブには さかのぼってとどく (16.8s)
+  ok  6 tests\e2e\chapter2.spec.ts:99:1 › ふねの修理: 500ルミナを ためて わたす → 桟橋の小舟に のれるようになる (24.4s)
+  ok  7 tests\e2e\chapter2.spec.ts:141:1 › 入り江でロカに出会い、レンズを作って とうだいを ともす (1.1m)
+  ok  8 tests\e2e\chapter2.spec.ts:265:1 › 誘導のエリアまたぎ: 場所がちがえば ふねの のりばへ案内する (12.8s)
+  ok  9 tests\e2e\chapter3.spec.ts:96:1 › 第3章: えきを たのむ → できる → でんしゃで いちば島 → 買いもの → 依頼 → かえる → セーブ復元 (1.3m)
+  ok 10 tests\e2e\chapter3.spec.ts:214:1 › 第3章: いちば島で 保存したセーブは いちば島から 始まり、いつでも 帰れる (34.6s)
+  ok 11 tests\e2e\combo.spec.ts:84:1 › くみあわせ: はずれても減らない → 当てて発見 → 作って たべると 効果が出る (17.7s)
+  ok 12 tests\e2e\combo.spec.ts:161:1 › いろみず: くみあわせで見つけて、おいてある家具の色を かえる(セーブでのこる) (22.9s)
+  ok 13 tests\e2e\daily.spec.ts:81:1 › 朝の「きょうの島」カード: 出る → Eで閉じる → その日はもう出ない (13.3s)
+  ok 14 tests\e2e\daily.spec.ts:121:1 › でんごんばん: 見る → 素材を集めて とどける → ごほうびと チェックマーク (18.1s)
+  ok 15 tests\e2e\dialogue_camera.spec.ts:33:3 › 会話カメラ: tsumugi(向き合い・遮蔽なし・カメラが建物外) (8.3s)
+  ok 16 tests\e2e\dialogue_camera.spec.ts:33:3 › 会話カメラ: minamo(向き合い・遮蔽なし・カメラが建物外) (8.4s)
+  ok 17 tests\e2e\dialogue_camera.spec.ts:33:3 › 会話カメラ: nokto(向き合い・遮蔽なし・カメラが建物外) (7.9s)
+  ok 18 tests\e2e\dialogue_click.spec.ts:158:1 › ねたあと・あめの日でも、会話の選択ボタンを実マウスで押せる (13.4s)
+  ok 19 tests\e2e\dialogue_click.spec.ts:188:1 › 会話ボックスの上に、クリックを吸う要素が1つものっていない (12.6s)
+  ok 20 tests\e2e\dialogue_click.spec.ts:230:1 › 数字キー(1・2)でも会話の選択ボタンをえらべる(クリックの保険) (18.5s)
+  ok 21 tests\e2e\display_big.spec.ts:89:1 › おおきな すいそうを お庭に置く → 魚6ぴき → セーブ/ロードで6ぴきとも およいでいる (16.2s)
+  ok 22 tests\e2e\display_big.spec.ts:187:1 › v12までのセーブ(content=1匹)を読むと contents に移り、中身が消えない (7.2s)
+  ok 23 tests\e2e\festival.spec.ts:94:1 › 7日めの朝: かざりが出て、カードが まつりを知らせる (5.8s)
+  ok 24 tests\e2e\festival.spec.ts:107:1 › 6日めの朝: 前日の予告が出る (5.8s)
+  ok 25 tests\e2e\festival.spec.ts:115:1 › ゆうがた: みんなが集まり、ランタンをもらって とばすと 記録がのこる (35.1s)
+  ok 26 tests\e2e\festival.spec.ts:171:1 › 翌朝: かざりも E候補も 片づいている (6.4s)
+  ok 27 tests\e2e\fishing.spec.ts:25:1 › 夜に釣ったヨルサカナでも釣り依頼が達成になる (6.8s)
+  ok 28 tests\e2e\fishing.spec.ts:51:1 › 釣った直後にEを3連打しても2匹目が始まらない (8.0s)
+  ok 29 tests\e2e\game.spec.ts:25:1 › タイトルから新規開始できる (6.8s)
+  ok 30 tests\e2e\game.spec.ts:35:1 › プレイヤーが移動できる(WASD) (6.6s)
+  ok 31 tests\e2e\game.spec.ts:58:1 › 採取: 木をきって木材を得る(ノードは枯れて非表示化) (6.3s)
+  ok 32 tests\e2e\game.spec.ts:70:1 › クラフト: 材料からカマを作る(UI操作) (5.2s)
+  ok 33 tests\e2e\game.spec.ts:82:1 › 家具配置→リロードで復元される (7.3s)
+  ok 34 tests\e2e\game.spec.ts:100:1 › NPC会話と依頼の受注 (6.0s)
+  ok 35 tests\e2e\game.spec.ts:121:1 › ポーズ中はゲーム内時間が止まる (6.8s)
+  ok 36 tests\e2e\game.spec.ts:146:1 › 釣り: 桟橋でサカナがつれる (5.6s)
+  ok 37 tests\e2e\home_expand2.spec.ts:120:1 › ツムギの ふだんの会話が、こうじのことを かならず教える (24.5s)
+  ok 38 tests\e2e\home_expand2.spec.ts:161:1 › 800ルミナの2回目のこうじで部屋がさらに広がり、家具もセーブも保たれる (24.1s)
+  ok 39 tests\e2e\home_pack.spec.ts:98:1 › 「?」行 → 条件を やると 本物のレシピに かわる(おおきな むしかご) (21.2s)
+  ok 40 tests\e2e\home_pack.spec.ts:161:1 › 新しい家具を 置くと ずかんの「すてき度」が 上がる (14.4s)
+  ok 41 tests\e2e\hotfix_v111.spec.ts:76:1 › 依頼のとちゅう(q2_shell受注中)でも 入り江 ⇄ 島 を往復できる (40.2s)
+  ok 42 tests\e2e\hotfix_v111.spec.ts:141:1 › 報告に行くとちゅうでも 採取・拾いもの・ほりあと が使える(釣りと店は出ない) (17.1s)
+  ok 43 tests\e2e\lifelike_v21.spec.ts:42:1 › なかよし度10のミナモに話しかけると「ふたりの じかん」が1回だけ起きる (20.3s)
+  ok 44 tests\e2e\lifelike_v21.spec.ts:101:1 › さんばしで20ひき つった人は ぬしを つりあげられる(タイミング押し3回) (9.8s)
+  ok 45 tests\e2e\lifelike_v21.spec.ts:143:1 › ぬしは 押しごろの まえに 押すと にげる。フラグは 立たないので 何度でも やりなおせる (6.6s)
+  ok 46 tests\e2e\lifelike_v21.spec.ts:172:1 › よるの入り江でも 釣りができる。ただし ふねの のりばが かならず 勝つ(島へ帰れなくならない) (5.4s)
+  ok 47 tests\e2e\lifelike_v21.spec.ts:205:1 › 立ち話は 会話ボックスを ひらかず、話しかけると ふつうの会話が 勝つ (5.3s)
+  ok 48 tests\e2e\lifelike_v24.spec.ts:75:1 › 置いた家具を Rで うごかして 置き直す → セーブに のこる (13.5s)
+  ok 49 tests\e2e\lifelike_v24.spec.ts:127:1 › Pで しゃしんを とる → アルバムに のこる → しゃしんたてに かざる (19.0s)
+  ok 50 tests\e2e\lifelike_v24.spec.ts:199:1 › ふくを そめる → セーブ/ロードで のこる → NPCが 1回だけ 気づく (16.1s)
+  ok 51 tests\e2e\lifelike_v24.spec.ts:256:1 › ゆきの日: 白い島で ゆきを3回 あつめると ゆきだるまが できる (24.1s)
+  ok 52 tests\e2e\modal_pause.spec.ts:26:1 › 会話を開いているあいだ時刻が進まず、NPCも帰宅しない (11.7s)
+  ok 53 tests\e2e\modal_pause.spec.ts:44:1 › クラフト画面を開いているあいだ時刻が進まない・閉じると再開する (17.3s)
+  ok 54 tests\e2e\modal_pause.spec.ts:60:1 › 複数UIを行き来しても停止が解除されない (17.2s)
+  ok 55 tests\e2e\modal_pause.spec.ts:80:1 › 依頼達成バナー表示中はプレイヤーが動かない (16.0s)
+  ok 56 tests\e2e\npc_home.spec.ts:114:1 › 在宅なら おじゃまできる: 入る → 家トーク → 出る (25.3s)
+  ok 57 tests\e2e\npc_home.spec.ts:170:1 › 留守のときは入れない(表示だけで、Eを押しても何も起きない) (11.0s)
+  ok 58 tests\e2e\npc_home.spec.ts:185:1 › おみやげの日: なかよし度3以上なら1日1回だけ もらえる (17.6s)
+  ok 59 tests\e2e\npc_home.spec.ts:216:1 › 家の中でセーブ → 読み直しても 同じ家の中から始まる (16.3s)
+  ok 60 tests\e2e\npc_home.spec.ts:249:1 › 3軒それぞれに入れる(ノクトは昼・ツムギとミナモは夜) (43.5s)
+  ok 61 tests\e2e\onboarding.spec.ts:22:1 › 新規開始→誘導どおりに歩いてツムギから最初の依頼を受ける(デバッグなし) (15.1s)
+  ok 62 tests\e2e\plush_shelf.spec.ts:88:1 › ぬいぐるみだなに 3つ ならべる → セーブ/ロードで 3つとも のこる (23.6s)
+  ok 63 tests\e2e\plush_shelf.spec.ts:168:1 › たなを 色ぬりしても ならべた ぬいぐるみの色は 変わらない (15.4s)
+  ok 64 tests\e2e\save_transfer.spec.ts:66:1 › 書き出し → 別セーブ → よみこみ → まえの データに もどす (18.0s)
+  ok 65 tests\e2e\save_transfer.spec.ts:153:1 › よみこんだデータで つづきから あそべる (19.5s)
+  ok 66 tests\e2e\sit_emote.spec.ts:64:1 › ベンチに すわって、Eで立てる (14.6s)
+  ok 67 tests\e2e\sit_emote.spec.ts:93:1 › すわっているときに 動かすと 立つ (9.0s)
+  ok 68 tests\e2e\sit_emote.spec.ts:123:1 › すわっているあいだも 時間は流れる (9.6s)
+  x  69 tests\e2e\sit_emote.spec.ts:140:1 › Xで てをふる → もう一度で よろこぶ / 近くの人が こたえる (6.8s)
+  ok 70 tests\e2e\sit_emote.spec.ts:173:1 › すわったままでも てをふれる(立ちあがらない) (10.2s)
+  ok 71 tests\e2e\sit_emote.spec.ts:195:1 › おいた家具のそばでは 家具の操作(もちかえる)が すわるより 先に出る (8.2s)
+  ok 72 tests\e2e\sleep.spec.ts:46:1 › 自宅のドアのEは「家に はいる」で、室内のベッドでだけ ねられる (8.2s)
+  ok 73 tests\e2e\sleep.spec.ts:90:1 › ベッドでEを10回連打しても日付は1日だけ進む (6.6s)
+  ok 74 tests\e2e\sleep.spec.ts:122:1 › 睡眠中はプレイヤーが動かず、NPCも動かない (6.6s)
+  ok 75 tests\e2e\sleep.spec.ts:137:1 › 睡眠直後にリロードしても朝の時刻から始まる(同期後セーブ) (10.9s)
+  ok 76 tests\e2e\sleep.spec.ts:155:1 › 睡眠途中にEscを押しても状態が壊れない(ポーズも開かない) (20.9s)
+  ok 77 tests\e2e\sleep.spec.ts:171:1 › 室内で壁に向かって歩いても外へ抜けない(自動脱出も島へ飛ばさない) (29.8s)
+  x  78 tests\e2e\story_v29.spec.ts:29:1 › はじめから → オープニングが出て、どのキーでも とばせる (17.9s)
+  ok 79 tests\e2e\story_v29.spec.ts:74:1 › タップ(実マウス)でも とばせる (10.4s)
+  ok 80 tests\e2e\story_v29.spec.ts:85:1 › つづきから では オープニングは出ない(1回きり) (11.2s)
+  ok 81 tests\e2e\ui_wave_v161.spec.ts:98:3 › P0-1 タイトルの そうさほうほう: ロゴと4ボタンが 画面にのこる(720p・キーボード) (4.6s)
+  ok 82 tests\e2e\ui_wave_v161.spec.ts:142:3 › P0-1 タイトルの せってい: 同じ形(720p) (4.7s)
+  ok 83 tests\e2e\ui_wave_v161.spec.ts:98:3 › P0-1 タイトルの そうさほうほう: ロゴと4ボタンが 画面にのこる(1024x768・キーボード) (5.1s)
+  ok 84 tests\e2e\ui_wave_v161.spec.ts:142:3 › P0-1 タイトルの せってい: 同じ形(1024x768) (4.2s)
+  ok 85 tests\e2e\ui_wave_v161.spec.ts:165:1 › P0-1 タッチのときも ロゴと4ボタンが のこる(そうさほうほう・タッチ版) (4.2s)
+  ok 86 tests\e2e\ui_wave_v161.spec.ts:189:1 › P0-1 ポーズメニューの そうさほうほうも パネルの中だけ 流れる (4.3s)
+  ok 87 tests\e2e\ui_wave_v161.spec.ts:226:1 › P0-2 ずかん: 3列とも 枠の中・個数が 読める・横スクロールなし (9.0s)
+  ok 88 tests\e2e\ui_wave_v161.spec.ts:317:1 › P0-3 3レーン: 小物=右下 / お祝い=中央上 / 左上は 目標カード専用 (3.5s)
+  ok 89 tests\e2e\ui_wave_v161.spec.ts:389:1 › P1-7 はいち中の帯: ○/× が 出て、色と 高さが かわる (7.0s)
+  ok 90 tests\e2e\world_v26.spec.ts:51:1 › 名札: 4mまで近づくと出て、会話中は消え、はなれると消える (4.9s)
+  ok 91 tests\e2e\world_v26.spec.ts:86:1 › ほしまつり: 5人ぜんいんが 輪に立ち、輪の上では 名札を出さない (6.3s)
+  ok 92 tests\e2e\world_v26.spec.ts:133:1 › よるの池の 光の群れ: 夜だけ 出る(メッシュ1枚・つかまえる候補は 出さない) (5.6s)
+
+
+  1) tests\e2e\sit_emote.spec.ts:140:1 › Xで てをふる → もう一度で よろこぶ / 近くの人が こたえる ─────────────────────────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "happy"
+    Received: "wave"
+
+      159 |   expect(
+      160 |     await ev(page, "window.__lumi.game.npcs.npcs.get('tsumugi').view.current?.name")
+    > 161 |   ).toBe('happy');
+          |     ^
+      162 |   // なかよし度は 動かない(ごほうびではなく 演出だけ)
+      163 |   const f0 = await ev<number>(page, "__lumiDebug.state().npcs.tsumugi.friendship");
+      164 |
+        at C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\tests\e2e\sit_emote.spec.ts:161:5
+
+    Error Context: .logs\pw-light-results\sit_emote-Xで-てをふる-→-もう一度で-よろこぶ-近くの人が-こたえる\error-context.md
+
+  2) tests\e2e\story_v29.spec.ts:29:1 › はじめから → オープニングが出て、どのキーでも とばせる ──────────────────────────────
+
+    Error: page.evaluate: TypeError: Converting circular structure to JSON
+        --> starting at object with constructor '_TransformNode'
+        |     property '_children' -> object with constructor 'Array'
+        |     index 0 -> object with constructor '_Mesh'
+        |     property '_cache' -> object with constructor 'Object'
+        --- property 'parent' closes the circle
+        at JSON.stringify (<anonymous>)
+        at eval (eval at evaluate (:311:30), <anonymous>:1:6)
+        at eval (<anonymous>)
+        at UtilityScript.evaluate (<anonymous>:311:30)
+        at UtilityScript.<anonymous> (<anonymous>:1:44)
+        at eval (eval at evaluate (:311:30), <anonymous>:1:6)
+        at UtilityScript.evaluate (<anonymous>:311:30)
+        at UtilityScript.<anonymous> (<anonymous>:1:44)
+        at C:\Users\2016k\Caoude作業フォルダ\90_Private\アプリ開発㉒_LumiIsland\tests\e2e\story_v29.spec.ts:53:30
+
+    Error Context: .logs\pw-light-results\story_v29-はじめから-→-オープニングが出て、どのキーでも-とばせる\error-context.md
+
+  2 failed
+    tests\e2e\sit_emote.spec.ts:140:1 › Xで てをふる → もう一度で よろこぶ / 近くの人が こたえる ──────────────────────────
+    tests\e2e\story_v29.spec.ts:29:1 › はじめから → オープニングが出て、どのキーでも とばせる ───────────────────────────────
+  90 passed (24.3m)
+PW_EXIT=1

@@ -7,7 +7,7 @@ import { sampleClip } from './anim.mjs';
 //   rig:{names,parents,locals}, clips:{name:clip}, png:Buffer, extraAnims?: {blink:true}
 // }
 export async function writeGLB(character, outPath) {
-  const { id, mesh, rig, clips, png, blinkDelta } = character;
+  const { id, mesh, rig, clips, png, blinkDelta, face } = character;
   const doc = new Document();
   doc.getRoot().getAsset().generator = 'lumi-chargen';
   const buffer = doc.createBuffer();
@@ -75,9 +75,39 @@ export async function writeGLB(character, outPath) {
 
   const meshNode = doc.createNode(id).setMesh(meshDef).setSkin(skin);
 
+  // 表情(smile/surprised/sad)は 本体とは 別のメッシュ・別のノードにする。
+  //
+  // なぜ 分けるのか: glTF の モーフの重みは **メッシュ単位**で、weights アニメの
+  // 出力は「キーごとに ターゲットの数だけ」値を並べる決まり。本体に ターゲットを
+  // 足すと blink のアニメが 1個/キー → 4個/キー に 変わってしまい、
+  // 「既存のアニメは 1ミリも 変わっていない」(tools/glb_anim_diff.mjs)が
+  // 示せなくなる。さらに blink を 再生した瞬間に 表情の重みが 0 に 上書きされる。
+  // 別メッシュなら blink の中身は そのまま、表情は 実行時に 重みで 出し入れできる。
+  let faceNode = null;
+  if (face) {
+    const fm = face.mesh;
+    const facePrim = doc
+      .createPrimitive()
+      .setAttribute('POSITION', acc('VEC3', new Float32Array(fm.pos)))
+      .setAttribute('NORMAL', acc('VEC3', new Float32Array(fm.nrm)))
+      .setAttribute('TEXCOORD_0', acc('VEC2', new Float32Array(fm.uv)))
+      .setAttribute('JOINTS_0', acc('VEC4', new Uint8Array(fm.jnt)))
+      .setAttribute('WEIGHTS_0', acc('VEC4', new Float32Array(fm.wgt)))
+      .setIndices(acc('SCALAR', new Uint32Array(fm.idx)))
+      .setMaterial(mat);
+    const faceMeshDef = doc.createMesh(`${id}_face_mesh`).addPrimitive(facePrim);
+    const names = Object.keys(face.targets);
+    for (const name of names) {
+      facePrim.addTarget(doc.createPrimitiveTarget(name).setAttribute('POSITION', acc('VEC3', face.targets[name])));
+    }
+    faceMeshDef.setWeights(names.map(() => 0));
+    faceNode = doc.createNode(`${id}_face`).setMesh(faceMeshDef).setSkin(skin);
+  }
+
   const scene = doc.createScene('scene');
   scene.addChild(nodes.root);
   scene.addChild(meshNode);
+  if (faceNode) scene.addChild(faceNode);
   doc.getRoot().setDefaultScene(scene);
 
   // アニメーション

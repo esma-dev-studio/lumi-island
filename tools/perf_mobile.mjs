@@ -66,7 +66,9 @@ const OPT = {
   off: (arg('off', '') || '').split(',').filter(Boolean),
 };
 const BASE = `http://localhost:${OPT.port}`;
-const URL_GAME = `${BASE}/?scene=game&debug=1`;
+// v17 ねもとのかげ(頂点AO)は **メッシュを作るときに 頂点色へ焼く**ので、
+// 走行中には 切れない。読みこみ前の ?noao=1 だけが 切る口になる。
+const URL_GAME = `${BASE}/?scene=game&debug=1${OPT.off.includes('ao') ? '&noao=1' : ''}`;
 
 /** 予算: スロットル4倍で p95 ≤ 33ms(≒30fps相当) */
 const BUDGET_P95 = 33;
@@ -319,6 +321,30 @@ async function applyOff(names) {
         if (sw) sw.frozen = true; // 海は描いたまま、法線の更新だけ止める(見えかたの差は小さい)
         done.push(n);
       }
+      // ---- v17 「絵づくり」で足したぶんだけを切る(--off sky と同じ考えかた) ----
+      // tonemap: ポストプロセスの中の トーンカーブ・露出・時刻グレーディング・
+      //          暗部のもち上げ・ビネットの寒色を まとめて 素通しに戻す
+      //          (パスの数は 変わらない = 「1枚のシェーダに 足しただけ」の コストが 出る)
+      else if (n === 'tonemap') { g.setGradeEnabled(false); done.push(n); }
+      // shadowcfg: 影の設定を v16.2 の値へ戻す(奥ゆき120m・深さ自動計算なし)
+      else if (n === 'shadowcfg') {
+        const sh = g.island.shadows;
+        sh.autoCalcDepthBounds = false;
+        sh.shadowMaxZ = 120;
+        sh.lambda = 0.92;
+        sh.darkness = 0.42;
+        sh.cascadeBlendPercentage = 0.1;
+        done.push(n);
+      }
+      // ao: 読みこみ前の ?noao=1 で すでに 切れている(ここでは 記録だけ)
+      else if (n === 'ao') done.push(n);
+      // ---- v29 「島が いきている」で足したぶんだけを切る(--off sky と同じ考えかた) ----
+      // life: 水の中の 魚かげ(メッシュ2枚)・島の小鳥(1枚)・木のそよぎ(毎フレームの回転)。
+      //       切った状態が v28 の絵そのものなので、**同じビルド・同じ機械・同じ分**で
+      //       before/after を くらべる 本命にできる。
+      //       NPCの しぐさ(すわる・水やり・あめやどり)は 立ち位置と クリップが 変わるだけで
+      //       描画の数は 1つも 増えないので、ここでは 切らない(切る意味がない)。
+      else if (n === 'life') { g.island.setLifeEnabled(false); done.push(n); }
     }
     return JSON.stringify(done);
   })()`);
