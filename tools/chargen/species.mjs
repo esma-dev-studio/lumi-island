@@ -1,6 +1,6 @@
 // キャラクター定義と組み立て: ミオ(人間)/ミナモ(カワウソ)/ノクト(フクロウ)/ツムギ(ヤギ)/ロカ(ペンギン)
 import { buildRig, defaultProportions } from './rig.mjs';
-import { buildHead, buildNeck, buildTorso, buildArms, buildLegs, buildEyes } from './body.mjs';
+import { buildHead, buildNeck, buildTorso, buildArms, buildLegs, buildEyes, checkEyeMesh } from './body.mjs';
 import {
   buildHair, buildRoundEars, buildFeatherHorns, buildLopEars, applyMuzzle,
   buildBeak, buildBeard, buildGoatHorns, buildTailThick, buildTailFan, buildTailStub, buildHeadTuft,
@@ -134,7 +134,10 @@ export function makeSpecs() {
     specs.tsumugi = {
       id: 'tsumugi', speciesId: 'tsumugi', prop,
       head: { rx: 0.163, rz: 0.172, ...hb, cheek: 0.035, flat: 0.04, jawForward: 0.013 },
-      eye: { thetaDeg: 27, y: hb.yBottom + (hb.yTop - hb.yBottom) * 0.45, w: 0.044, h: 0.05 },
+      // fitHead: ヤギのマズルは 楕円体より 最大15mm 前に出るので、目のクアッドを
+      // 実物の面まで 押し出す(body.mjs の buildEyes)。これが無いと 正面から 目が
+      // 点にしか 見えない(v17 実測: 開き目32点のうち 外に出ているのは 11点だけだった)
+      eye: { thetaDeg: 27, y: hb.yBottom + (hb.yTop - hb.yBottom) * 0.45, w: 0.044, h: 0.05, fitHead: true },
       face: { mouthT: 0.2, mouthPatch: { y: 140, erase: 0.48, mouth: 0.33, w: 0.25 } },
       neckR: 0.05,
       body: {
@@ -318,8 +321,10 @@ export function buildCharacter(id) {
     }
   }
 
-  // 目(まばたきモーフ)は最後にマージして差分配列を作る
-  const eyeParts = buildEyes(rig, spec);
+  // 目(まばたきモーフ)は最後にマージして差分配列を作る。
+  // head は **applyMuzzle のあと**の 実物なので、spec.eye.fitHead の種族(ツムギ)は
+  // ここで 鼻先に うまらない位置まで 押し出される(body.mjs の buildEyes)
+  const eyeParts = buildEyes(rig, spec, head);
   let mesh = mergeMeshes(parts);
   // ロカだけ: UVの継ぎ目の法線をそろえる(背中のまん中に細い光の線が出るため)。
   // 既存4体は見た目を変えないため対象外(呼ぶとGLBが作り直しになる)
@@ -344,10 +349,13 @@ export function buildCharacter(id) {
     eyeR: [eyeParts[1].mesh, eyeParts[3].mesh],
   }, id);
 
+  // ふだんの目も 同じように 実測する(見えるときは 面の外 / しまうときは 頭の中)
+  const eyeCheck = checkEyeMesh(spec, head, eyeParts, id);
+
   const clips = buildClips(spec.clipOpts);
   const png = encodePNG(paintTexture(spec));
   return {
     id, mesh, rig, clips, png, blinkDelta, face,
-    stats: { ...meshStats(mesh), faceTris: meshStats(face.mesh).tris, faceCheck },
+    stats: { ...meshStats(mesh), faceTris: meshStats(face.mesh).tris, faceCheck, eyeCheck },
   };
 }

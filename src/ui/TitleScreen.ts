@@ -8,6 +8,8 @@ import { setSoundEnabled, startTitleMusic, stopTitleMusic } from '../audio/Audio
 import { sfx } from '../audio/AudioSystem';
 import { byInput } from './inputMode';
 import { HELP_KEYBOARD, HELP_TOUCH } from './helpText';
+// v17.1 しょうごうの言いかたは src/ui/BadgeUI.ts が唯一の情報源
+import { titleLineText } from './BadgeUI';
 
 /** よみこみに失敗したときの言い換え(見出しは子ども向けに1つ。下の1行だけ理由を変える) */
 const IMPORT_FAIL_NOTE: Record<ImportFail, string> = {
@@ -18,9 +20,17 @@ const IMPORT_FAIL_NOTE: Record<ImportFail, string> = {
   badSave: '中の セーブデータが よみとれなかった。',
 };
 
-/** 要約(なんにちめ・ルミナ・バッジ数)の表示。うわがきの確認では かならず これを出す */
+/**
+ * 要約(なんにちめ・ルミナ・バッジ数・しょうごう)の表示。
+ * うわがきの確認では かならず これを出す。
+ *
+ * v17.1 しょうごうを 1つ ならべる。よび名は バッジの数だけで きまるので、
+ * セーブの中を のぞかずに `s.badges` から そのまま 出せる
+ * (文言は src/ui/BadgeUI.ts 1本。バッジ画面・ポーズと 同じ言いかた)。
+ */
 function summaryHtml(s: SaveSummary): string {
-  return `<div class="tm-sum"><span>${s.day}にちめ</span><span>ルミナ ${s.lumina}</span><span>バッジ ${s.badges}こ</span></div>`;
+  return `<div class="tm-sum"><span>${s.day}にちめ</span><span>ルミナ ${s.lumina}</span>` +
+    `<span>バッジ ${s.badges}こ</span><span>${titleLineText(s.badges)}</span></div>`;
 }
 
 /** ほぞんした日時(M/D HH:MM)。ゲーム内の日づけではなく じっさいの時計 */
@@ -82,7 +92,7 @@ export class TitleScreen {
           <div class="help-grid">${byInput(HELP_KEYBOARD, HELP_TOUCH)}
           </div>
         </div>
-        <div class="title-credit">オリジナル作品 / 3Dモデル・音はすべてプログラム生成 <span class="title-ver">v17.0</span></div>
+        <div class="title-credit">オリジナル作品 / 3Dモデル・音はすべてプログラム生成 <span class="title-ver">v17.1</span></div>
       </div>
     `;
     const file = this.el.querySelector<HTMLInputElement>('.tx-file')!;

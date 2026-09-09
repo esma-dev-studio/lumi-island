@@ -1,11 +1,12 @@
 // 共通ボディ生成: 頭・首・胴・腕・脚・目(まばたきモーフ用クアッド)
 // 基本図形の直結ではなく、プロファイル曲線ロフト+曲線チューブ+局所変形で有機的に作る。
 import {
-  lathe, tube, patch, mirrorX, bump, norm, add, mul,
+  lathe, tube, patch, mirrorX, bump, norm, add, mul, sub, len, rayFarHit,
 } from './geo.mjs';
+import { uvAtSurface } from './geo.mjs';
 import { solo, duo, torsoWeight, limbWeight } from './rig.mjs';
 import { keys } from './anim.mjs';
-import { REG } from './uvmap.mjs';
+import { REG, TEXSIZE, headPxAt } from './uvmap.mjs';
 
 const d2r = (d) => (d * Math.PI) / 180;
 
@@ -201,10 +202,10 @@ export function buildLegs(rig, spec) {
  * offset は 楕円体の面からの ずらし量。プラスで 顔の外、マイナスで 頭の中(=見えない)。
  * 返り値の dir は クアッドの中心の 外向き法線(モーフで 出し入れする向き)。
  *
- * adjust: グリッド点を さらに 動かす関数(省略可)。表情の目だけが 使う ——
+ * adjust: グリッド点を さらに 動かす関数(省略可)。呼び出しは adjust(点, その点の法線)。
  * 楕円体の近似と 実物の頭の面が ずれる種族(ヤギのマズル)で「頭に うまらない」
- * ところまで 押し出すため(face.mjs の faceEyeQuad)。省略すれば これまでと 1ミリも
- * 変わらない = ふだんの目(buildEyes)の 頂点は 1つも 動かない。
+ * ところまで 押し出すために つかう(headFitAdjust / face.mjs の faceEyeQuad)。
+ * 省略すれば これまでと 1ミリも 変わらない。
  */
 export function eyeQuad(rig, spec, thetaDeg, region, offset, adjust, thickness = 0.0016) {
   const hs = spec.head;
@@ -229,7 +230,7 @@ export function eyeQuad(rig, spec, thetaDeg, region, offset, adjust, thickness =
     surfaceFn: (u, v) => {
       const { p, n } = surfaceAt(thetaDeg, e.y, (u - 0.5), (v - 0.5), e.w, e.h);
       const q = add(p, mul(n, offset));
-      return adjust ? adjust(q) : q;
+      return adjust ? adjust(q, n) : q;
     },
     weightFn: () => solo(headI),
   });
@@ -237,10 +238,117 @@ export function eyeQuad(rig, spec, thetaDeg, region, offset, adjust, thickness =
   return { mesh, dir };
 }
 
-export function buildEyes(rig, spec) {
+/**
+ * ふだんの 開き目を 実測した頭の面から これだけ 外に出す(m)。
+ * 目の板の あつみは 0.0016 なので、板の おもて面は 面から 1.4mm 前に出る。
+ */
+export const EYE_CLEAR = 0.0006;
+
+/**
+ * 「頭の中心からの レイで 実物の面を測り、足りないぶんだけ 外へ押し出す」関数を作る。
+ * face.mjs の faceEyeQuad と まったく同じ しくみ(あちらは 表情の目、ここは ふだんの目)。
+ *
+ * なぜ 要るか:
+ *   クアッドの 置き場所は 頭を 楕円体で 近似して 決めている。ところが マズルを
+ *   前へ 押し出した ヤギ(ツムギ)では 実物の面が 楕円体より **最大15mm も 前**に出るので、
+ *   ふだんの目が 頭に うまり、正面から 見て 目が 点にしか 見えなかった
+ *   (実測 v17: 開き目クアッド32頂点のうち 外に出ているのは 11点だけ)。
+ *
+ * **測るレイは いつも「ふだんの開き目の位置」の 1本だけ**にする(refOffset で そこへ 寄せる)。
+ * クアッドごとに 別のレイで 測ると、鼻先のような **面をかすめる向き**では 1mm 位置が
+ * ちがうだけで hit が 数mm ずれ、「開き目 < 閉じ目 < 表情の目」の 前後関係が ひっくり返る
+ * (実測: クアッドごとに 測ったら 表情の目が ふだんの目の 1.5mm 後ろに 落ちた)。
+ * 1本のレイで 出した 同じ ベクトルを 4枚+表情に そのまま 足せば、出荷ずみの
+ * 前後関係(閉じ目=開き目+1mm / 表情の目=開き目+2.5mm)は 1ミリも 変わらない。
+ *
+ * **すでに 面より 外に出ている点は 1ミリも 動かさない**ので、うまっていない種族では
+ * 呼んでも 形は 1つも 変わらない。それでも spec.eye.fitHead を 立てた種族だけに
+ * かけるのは、ミナモ(1点 -1.5mm)・テン(最大5点 -4.0mm)にも わずかな うまりがあり、
+ * 出荷ずみの見た目を 1ミリも 動かさないため(species.mjs の weldSeamNormals と同じ流儀)。
+ *
+ * 差分(モーフ)は これまでどおり **全頂点そろって dir 方向へ 平行移動**のままなので、
+ * blink のアニメの中身は 1バイトも 変わらない。
+ *
+ * 基準点への 寄せは **その格子点の 法線 n**(クアッド中心の dir ではない)で行う。
+ * eyeQuad が offset を 足すのも n なので、こうすると どのクアッドでも 基準点が
+ * 「S + n×OUT」= まったく同じ1点になる(dir で寄せると 目じりで 3.8mm ずれ、
+ *  レイが 変わって 押し出し量が 2.4mm 食いちがった)。
+ *
+ * @param headMesh  変形ずみの頭  @param center 頭の楕円体の中心
+ * @param refOffset そのクアッドの点から「ふだんの開き目の点」までの n 方向の距離(m)
+ * @param clear     実測した面から 外に出す量(m)
+ * @returns (p, n) => 押し出したあとの点
+ */
+export function headFitAdjust(headMesh, center, refOffset, clear) {
+  return (p, n) => {
+    const ref = add(p, mul(n, refOffset)); // 押し出し量を 決める ただ1つの基準点
+    const d = norm(sub(ref, center));
+    const hit = rayFarHit(headMesh, center, d);
+    if (hit === null) return p;
+    const need = hit + clear - len(sub(ref, center));
+    return need > 0 ? add(p, mul(d, need)) : p;
+  };
+}
+
+/**
+ * クアッドの法線を **頭の面の法線に そろえる**(押し出した目・表情の目だけ)。
+ *
+ * なぜ 要るか: クアッドは 頭を 楕円体で 近似した面に 置くので、法線が 実物の頭と
+ * 3〜20度 ずれる(実測: ロカ 平均8度)。絵が ぴたり 同じでも 光の当たりかたが
+ * 変わるので、**クアッドの ふちだけ 明るい すじ**になり「うすい四角のシール」に見える
+ * (ロカの 白い顔で 実測: 顔186 → ふち195 → 中176)。押し出した目では、押し出し量が
+ * 目じりで 急に 変わる(0mm → 15mm)ので ずれが もっと 大きい。
+ * 同じUVの 頭の点の 法線を 引いて 上書きすると、光の当たりかたまで 頭と そろう。
+ *
+ * 頭の法線は マズルの押し出し(applyMuzzle)の前の 楕円体のまま(位置しか 動かさない)
+ * = 頭が 実際に 描かれるときの 法線そのもの なので、これに そろえるのが 正しい。
+ *
+ * patch() は グリッド点ごとに 表・裏の 2頂点を この順で 作る(geo.mjs)。
+ */
+export function useHeadNormals(mesh, spec, headMesh, thetaDeg) {
+  const hs = spec.head, e = spec.eye;
+  const COLS = 3, ROWS = 3; // eyeQuad と そろえる
+  const halfDeg = ((0.5 * e.w) / hs.rx) * (180 / Math.PI);
+  for (let r = 0; r <= ROWS; r++) {
+    for (let c = 0; c <= COLS; c++) {
+      // eyeQuad の surfaceAt と 同じ ならべかた(u=c/COLS, v=r/ROWS)
+      const th = thetaDeg + (c / COLS - 0.5) * 2 * halfDeg;
+      const y = e.y + (r / ROWS - 0.5) * e.h;
+      const [px, py] = headPxAt(hs, th, y);
+      const s = uvAtSurface(headMesh, px / TEXSIZE, py / TEXSIZE);
+      if (!s) continue; // 頭の外(ありえないが 念のため)は もとの法線のまま
+      const k = (r * (COLS + 1) + c) * 2;
+      for (const [side, sign] of [[0, 1], [1, -1]]) {
+        const o = (k + side) * 3;
+        mesh.nrm[o] = s.n[0] * sign;
+        mesh.nrm[o + 1] = s.n[1] * sign;
+        mesh.nrm[o + 2] = s.n[2] * sign;
+      }
+    }
+  }
+}
+
+/**
+ * 目のクアッド4枚(開きL/R・閉じL/R)と blink のモーフ差分。
+ * @param headMesh 変形ずみの頭。spec.eye.fitHead の種族だけ、これで 面を実測して 押し出す
+ */
+export function buildEyes(rig, spec, headMesh) {
   const e = spec.eye;
-  const mk = (thetaDeg, region, offset) => eyeQuad(rig, spec, thetaDeg, region, offset);
+  const hs = spec.head;
+  const center = [0, (hs.yBottom + hs.yTop) / 2 + (hs.yTop - hs.yBottom) * 0.02, (hs.jawForward ?? 0.008) * 0.5];
   const OUT = e.out ?? 0.004;
+  // refOffset: その点から「ふだんの開き目(楕円体+OUT)」までの 法線方向の距離
+  const fit = (offset) => (e.fitHead && headMesh
+    ? headFitAdjust(headMesh, center, OUT - offset, EYE_CLEAR)
+    : undefined);
+  const mk = (thetaDeg, region, offset) => {
+    const q = eyeQuad(rig, spec, thetaDeg, region, offset, fit(offset));
+    // 押し出した種族だけ 法線を 頭に そろえる(押し出し量が 目じりで 急に変わるので、
+    // patch が 出す法線だと クアッドの ふちに 明るい すじ=四角いシールが 出る)。
+    // 押し出していない5体は 出荷ずみの 法線のまま = GLBは 1バイトも 変わらない。
+    if (e.fitHead && headMesh) useHeadNormals(q.mesh, spec, headMesh, thetaDeg);
+    return q;
+  };
   const openL = mk(e.thetaDeg, REG.eyeOpenL, OUT);
   const openR = mk(-e.thetaDeg, REG.eyeOpenR, OUT);
   const closedL = mk(e.thetaDeg, REG.eyeClosedL, -0.014);
@@ -261,4 +369,51 @@ export function buildEyes(rig, spec) {
     { mesh: closedL.mesh, delta: deltaFor(closedL, 0.019) },
     { mesh: closedR.mesh, delta: deltaFor(closedR, 0.019) },
   ];
+}
+
+/**
+ * ふだんの目が「見えるときは 頭の面より 外」「しまうときは 頭の中」かを 実測する。
+ *
+ * 目視スクショの前に ここで 落とす(教訓5「思いこみでなく 実測で 証明する」)。
+ * fitHead を 立てた種族だけ **throw** する: ほかの種族は 出荷ずみの形を 動かさない
+ * ため 直していないので、数値を かえすだけに とどめる(完了報告で 一覧にする)。
+ *
+ * 見るのは **おもて面の頂点だけ**(patch は 格子点ごとに 表・裏の2頂点を この順で作る
+ * ので、頂点番号が 偶数のほう)。裏面は 板のあつみのぶん 0.8mm 内がわにあり、
+ * 不透明な頭に かくれていて よい —— 絵が 出るのは おもて面だけ。
+ *
+ * @param eyeParts buildEyes の返り値([開きL, 開きR, 閉じL, 閉じR])
+ * @returns {{openOut:number, blinkOut:number, restIn:number}} すべて m(+が面の外)
+ */
+export function checkEyeMesh(spec, headMesh, eyeParts, label = '') {
+  const hs = spec.head;
+  const c = [0, (hs.yBottom + hs.yTop) / 2 + (hs.yTop - hs.yBottom) * 0.02, (hs.jawForward ?? 0.008) * 0.5];
+  const AMOUNT = [0, 0, 0.019, 0.019]; // 見えるときの モーフ量(開き目は しまっていないとき)
+  let openOut = Infinity; // 見えるときに 面より どれだけ 外か(開き目)
+  let blinkOut = Infinity; // 同(閉じ目=まばたき)
+  let restIn = Infinity; // 閉じ目が しまっているとき 面より どれだけ 中か
+  for (let k = 0; k < eyeParts.length; k++) {
+    const m = eyeParts[k].mesh;
+    const dir = mul([eyeParts[k].delta[0], eyeParts[k].delta[1], eyeParts[k].delta[2]], 1 / (k < 2 ? -0.02 : 0.019));
+    for (let i = 0; i < m.pos.length; i += 3) {
+      if ((i / 3) % 2 !== 0) continue; // 裏面は 見ない(あつみのぶん 内がわにあってよい)
+      const p = [m.pos[i], m.pos[i + 1], m.pos[i + 2]];
+      const act = add(p, mul(dir, AMOUNT[k]));
+      const hit = rayFarHit(headMesh, c, norm(sub(act, c)));
+      if (hit === null) throw new Error(`${label}: 目のクアッドに 頭の面が 見つからない`);
+      const out = len(sub(act, c)) - hit;
+      if (k < 2) openOut = Math.min(openOut, out);
+      else {
+        blinkOut = Math.min(blinkOut, out);
+        const hit2 = rayFarHit(headMesh, c, norm(sub(p, c)));
+        if (hit2 !== null) restIn = Math.min(restIn, hit2 - len(sub(p, c)));
+      }
+    }
+  }
+  if (spec.eye.fitHead) {
+    if (openOut <= 0) throw new Error(`${label}: 開き目が 頭に うまっている(${(openOut * 1000).toFixed(2)}mm)`);
+    if (blinkOut <= 0) throw new Error(`${label}: 閉じ目が まばたきで 頭に うまる(${(blinkOut * 1000).toFixed(2)}mm)`);
+    if (restIn <= 0.002) throw new Error(`${label}: 閉じ目が ふだんから 顔に 出ている(${(restIn * 1000).toFixed(2)}mm)`);
+  }
+  return { openOut, blinkOut, restIn };
 }

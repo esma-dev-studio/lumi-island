@@ -68,9 +68,12 @@ import { BOTTLE_REACH, BOTTLE_TOTAL_KEY, letterOfDay, markLetterRead } from '../
 import { NIGHT_TRAIN_KEY } from '../systems/NightTrainSystem';
 import { paintHoney, paintedToday, SAP_PAINT_TOAST } from '../systems/SapTreeSystem';
 import { LETTER_BY_ID, validateLetterData } from '../data/letters';
+import { bondMailOf, isMailUnread, mailToastText, openMail } from '../systems/MailSystem';
 import { resetNpcDaily, validateGiftData } from '../systems/GiftSystem';
 import { validateBulletinData } from '../systems/BulletinSystem';
-import { markTodayCardShown, shouldShowTodayCard, todayCard } from '../systems/TodayCard';
+import {
+  markTodayCardShown, shouldShowTodayCard, todayCard, validateTodayCardData,
+} from '../systems/TodayCard';
 import {
   FESTIVAL_PLAZA, FESTIVAL_TAKE_TOAST, festivalAttendees, flyLantern, isFestivalDay,
   isFestivalTime, takeLantern, validateFestivalData,
@@ -443,7 +446,14 @@ export class GameScene {
     this.letterUI = new LetterUI();
     this.codexUI.onReadLetter = (id) => {
       const def = LETTER_BY_ID[id];
-      if (def) this.letterUI.show(def);
+      if (!def) return;
+      this.letterUI.show(def);
+      // v30 住民からの手紙は「ひらいた」記録をつけて 未読バッジを 消す
+      // (びんの手紙は ひろった時点で 読んだあつかいなので openMail は false を返す)
+      if (openMail(this.state, id)) {
+        this.codexUI.refresh();
+        save(this.state);
+      }
     };
     this.questComplete = new QuestCompleteUI();
     this.pauseMenu = new PauseMenu();
@@ -684,6 +694,7 @@ export class GameScene {
     for (const p of validateCookingData()) console.warn('[data]', p);
     for (const p of validateLetterData()) console.warn('[data]', p);
     for (const p of validateBulletinData()) console.warn('[data]', p);
+    for (const p of validateTodayCardData()) console.warn('[data]', p); // v30 きょうの おすすめ
     for (const p of validateAchievementRewards()) console.warn('[data]', p);
     for (const p of validateBadges()) console.warn('[data]', p);
     for (const p of validateFestivalData()) console.warn('[data]', p);
@@ -1014,6 +1025,10 @@ export class GameScene {
     sfx('quest');
     toast(def.toast, def.reward?.item ?? 'heart');
     if (def.reward) toast(`「${ITEMS[def.reward.item].name}」を 手に入れた!`, def.reward.item);
+    // v30 見せ場のあとに その人からの手紙が とどく(記録は completeBond がすませている)。
+    // まだ ひらいていない=いま とどいたばかり、なので ここで1本だけ しらせる
+    const bondMail = bondMailOf(npcId);
+    if (bondMail && isMailUnread(this.state, bondMail.id)) toast(mailToastText(bondMail), bondMail.icon);
     // ふつうの会話と 同じ道すじ(カメラ・終わりかた)にそろえる
     const rt = this.npcs.npcs.get(npcId);
     if (rt) {

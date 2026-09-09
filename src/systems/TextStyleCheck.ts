@@ -30,12 +30,18 @@
 import { type Line, lineText } from '../data/dialogueLine';
 import { QUESTS } from '../data/quests';
 import { NPCS } from '../data/npcs';
-import { LETTERS } from '../data/letters';
+import { ALL_LETTERS } from '../data/letters';
 import { CHAT_PAIRS } from './ChatEventSystem';
 import { BOND_EVENTS } from './BondEventSystem';
 import { COMBO_HINT_TEXT, DISPLAY_HINTS, TUTORIAL_TEXTS } from './TutorialSystem';
 import { OBJECTIVE_FIXED_TEXTS } from './ObjectiveSystem';
+import { MAIL_TIP_TEXT, QUIET_TEXT, RAIN_TIP_TEXT, SUGGESTIONS } from './TodayCard';
 import { CINEMATIC_SKIP_LABEL, FINALE_CAPTIONS, OPENING_CAPTIONS } from '../ui/CinematicUI';
+import { TIP_HEAD } from '../ui/ObjectiveHud';
+// v17.1 しょうごう。名まえは data、言いまわしは ui/BadgeUI が 唯一の情報源なので
+// **写経せずに 本物を よんで** 検査する(文言の二重持ちを 作らない)
+import { TITLES } from '../data/badges';
+import { titleNextText } from '../ui/BadgeUI';
 
 // 分かっている すきま(いまは 検査していないもの):
 //   - src/scenes/QuestDialogueController.ts は 受注ずみの依頼に もういちど話しかけたとき、
@@ -232,21 +238,27 @@ export function collectDisplayTexts(): TextEntry[] {
     add(`${n.name}のおみやげ`, `${n.name}/おみやげ`, 'story', n.homeGift?.line);
   }
 
-  // ---- びんの手紙 ----
-  for (const l of LETTERS) {
+  // ---- てがみ(びん8通 + v30 住民13通)----
+  // 住民からの手紙も 同じ story のわく。お礼の手紙の むすびの1行は
+  // npcs.ts の thanksLetter を 参照しているので、上の「◯◯のお礼の手紙」と
+  // 同じ文が もう一度 数えられるが、検査としては それで正しい
+  // (画面には 手紙の中でも トーストでも 出る文なので)。
+  for (const l of ALL_LETTERS) {
     const group = `てがみ${l.id}`;
     add(`てがみ${l.id}の題`, group, 'story', l.title);
     add(`てがみ${l.id}のさしだしにん`, group, 'story', l.from);
     l.lines.forEach((line, i) => add(`てがみ${l.id}[${i}]`, group, 'story', line));
   }
 
-  // ---- 立ち話 ----
+  // ---- 立ち話(v17.1 なかよし度の段ごとに 3本ずつ)----
   for (const p of CHAT_PAIRS) {
-    for (const sc of p.scripts) {
-      sc.lines.forEach((line, i) =>
-        add(`立ち話${p.id}/${sc.id}[${i}]`, `立ち話${p.id}`, 'story', line.text)
-      );
-    }
+    p.scripts.forEach((list, t) => {
+      for (const sc of list) {
+        sc.lines.forEach((line, i) =>
+          add(`立ち話${p.id}/段${t}/${sc.id}[${i}]`, `立ち話${p.id}`, 'story', line.text)
+        );
+      }
+    });
   }
 
   // ---- ふたりのじかん ----
@@ -257,6 +269,15 @@ export function collectDisplayTexts(): TextEntry[] {
     e.after.forEach((l, i) => add(`${group}のあと[${i}]`, group, 'story', l));
     add(`${group}のあのときの話`, group, 'story', e.memory);
     add(`${group}のトースト`, group, 'story', e.toast);
+  }
+
+  // ---- v17.1 しょうごう(称号)----
+  // 名まえは バッジと同じで「漢字を つかわない」機械検査が BadgeSystem.validateTitles に
+  // あるが、**画面に出る文**として 分かち書き・行の長さも ここで そろえて見る。
+  // 「つぎの◯◯まで あと N こ」の1行も、名まえを はめた かたちで 通す。
+  for (const t of TITLES) {
+    add(`しょうごう${t.id}の名まえ`, 'しょうごう', 'core', t.name);
+    add(`しょうごう${t.id}のつぎの1行`, 'しょうごう', 'core', titleNextText(Math.max(0, t.need - 1)));
   }
 
   // ---- チュートリアル ----
@@ -272,6 +293,19 @@ export function collectDisplayTexts(): TextEntry[] {
 
   // ---- いまやること(固定文言。UXボットが読むので文言は変えられない) ----
   OBJECTIVE_FIXED_TEXTS.forEach((t, i) => add(`いまやること[${i}]`, 'いまやること', 'frozen', t));
+
+  // ---- v30 きょうの おすすめ(朝のカードの文と、目標カードの3行めの みじかい形)----
+  // どちらも 島の側からの さそいで、依頼の指示ではない = てがみ・立ち話と同じ story。
+  // 3行めは クリアした子が **毎日 見る1行** なので、ここに 入れそこねると
+  // 誰の検査にも かからない場所になる(だから 収集の対象に 足す)。
+  add('きょうの おすすめの見出し', 'きょうのおすすめ', 'story', TIP_HEAD);
+  add('しずかな一日', 'きょうのおすすめ', 'story', QUIET_TEXT);
+  add('あめの日のおすすめ', 'きょうのおすすめ', 'story', RAIN_TIP_TEXT);
+  add('てがみのおすすめ', 'きょうのおすすめ', 'story', MAIL_TIP_TEXT);
+  for (const seed of SUGGESTIONS) {
+    add(`おすすめ${seed.id}のカードの文`, 'きょうのおすすめ', 'story', seed.text);
+    add(`おすすめ${seed.id}のみじかい形`, 'きょうのおすすめ', 'story', seed.tip);
+  }
 
   // ---- v29 見せ場の字幕(オープニング・第3章フィナーレ)----
   // 子どもが **いちばん最初に読む文** が オープニングの字幕なので core。

@@ -13,6 +13,7 @@ import { FESTIVAL_FLY_KEY } from './FestivalSystem';
 import { BOND_TOTAL_KEY } from './BondEventSystem';
 import { BOSS_FISH, NUSHI_TOTAL_KEY } from './BossFishSystem';
 import { SAP_CATCH_KEY } from './SapTreeSystem';
+import { collectPercent } from './CodexProgress';
 
 /** 達成の記録に使う stats のキーの接頭辞 */
 export const ACH_PREFIX = 'ach_';
@@ -325,6 +326,16 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     id: 'a_saptree', name: 'あまい においの木',
     desc: '林の おくの あまい においの木で 虫を つかまえよう',
     target: 1, icon: 'b_kabuto', progress: (s) => statCount(s, SAP_CATCH_KEY),
+  },
+  // v30 ずかんの コンプリート。数えるのは あつめもの3節(もの・くみあわせ・てがみ)の
+  // 達成率(src/systems/CodexProgress.ts collectPercent)。じっせき・バッジを 入れないのは、
+  // 「じっせきの達成率が じっせきの条件」になると 100%に とどかなくなるから。
+  // 置き場所は **うしろから3番め**まで: ならびの さいごの2つ
+  // (a_story_end → a_all_quests)は tests/unit/story_v29.test.ts が 固定している。
+  {
+    id: 'a_codex_all', name: 'ずかん コンプリート',
+    desc: 'ずかんの もの・くみあわせ・てがみを ぜんぶ うめよう',
+    target: 100, icon: 'f_bookcase', progress: collectPercent,
   },
   // v29 物語の むすび。第3章の さいごの おねがい(q3_taste)を とどけると たっせい。
   // **いちばん最後の a_all_quests より 前** に置くこと:

@@ -12,6 +12,8 @@ import type { CharacterView } from '../characters/CharacterView';
 import { ITEMS, type ItemId } from '../data/items';
 import { applyGift, canGift, friendshipText, type GiftResult } from '../systems/GiftSystem';
 import { deliverErrand, deliverableErrand, errandThanksLine } from '../systems/BulletinSystem';
+import { chapterMailOf, mailToastText, receiveMail } from '../systems/MailSystem';
+import { LETTER_BY_ID } from '../data/letters';
 import { burst } from '../entities/effects';
 import {
   canOrderHomeExpansion, homeExpandStage, homeExpandTalkLine, nextHomeExpandCost, orderHomeExpansion,
@@ -311,6 +313,14 @@ export class QuestDialogueController {
       // すでに 確定しているので、見せ場のあいだ「報告しよう」の矛盾したHUDは出ない
       d.onStoryFinale();
     }
+    // v30 章の さいごの依頼を おえた日は、その章の いちばんの相手から 手紙が とどく。
+    // 章の区切りを「あとから 読み返せる形」で のこす(ずかんの「てがみ」欄)。
+    // どの依頼が 章の さいごかは src/data/letters.ts の CHAPTER_LETTER_BY_QUEST が
+    // 唯一の情報源(ここに 依頼IDを 写経しない)。
+    const chapterMail = chapterMailOf(def.id);
+    if (chapterMail && receiveMail(d.state, chapterMail.id, d.state.time.day)) {
+      toast(mailToastText(chapterMail), chapterMail.icon);
+    }
     save(d.state);
   }
 
@@ -407,6 +417,10 @@ export class QuestDialogueController {
     if (r.reward.letter) {
       toast(`${name}から お礼の手紙: 「${r.reward.letter}」`, 'heart');
       sfx('quest');
+      // v30 同じ手紙が 受信箱にも 入った(記録は GiftSystem.applyGift がすませている)。
+      // 上の1本は「いま読む1行」、こちらは「あとで 読み返せる」ことの しらせ
+      const mail = r.reward.letterId ? LETTER_BY_ID[r.reward.letterId] : null;
+      if (mail) toast(mailToastText(mail), mail.icon);
     }
     // v25 なかよし度8: その人の ぬいぐるみが テンの店に とどいた、の 1本だけ知らせる
     // (品は 店に ならぶだけで、ここでは 手に入らない。買いに行く理由を つくる)

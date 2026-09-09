@@ -8,13 +8,23 @@
 // 大事な約束(ここを外すと ほかの遊びを こわす):
 //   1. **やっていることは ほしまつりと同じ「立ち位置の差しかえ」だけ**。
 //      スケジュールの状態機械にも 会話・依頼・店の道すじにも 1行も 手を入れていない。
-//   2. **依頼が1つでも動いている日は 立ち話を 出さない**(朝の来訪 visitorOfDay と同じ規則)。
-//      誘導(いまやること)が指すNPCが いつもの場所から いなくなると 子どもが迷うため。
-//      これは 回帰ボット・UXボットの走行に 一切 影響しないという保証でもある。
+//   2. **依頼の相手に なっている人が いる組は 立ち話を 出さない**(v17.1 で ここだけ ゆるめた)。
+//      v21 は「依頼が1つでも 動いていれば 3組ぜんぶ 止める」だったが、
+//      止める理由は「誘導(いまやること)が指すNPCが いつもの場所から いなくなると迷う」ことだけ。
+//      **その依頼に かかわらない二人**は 止めなくてよい —— クリア前の子は 依頼が
+//      ほぼ いつも動いているので、v21の 規則では 立ち話に 一度も 出あえなかった。
+//      誘導が 指す人(受注・報告の相手)は これまでどおり いつもの場所に 立ったまま。
 //   3. **プレイヤーが 話しかけたら ふつうの会話が かならず 勝つ**。
 //      立ち話は Eの候補を 1つも 作らない(NPCの talk 候補は これまでのまま)。
 //      話しかけられた瞬間に 立ち話は だまり、会話が おわれば また 立っている。
 //   4. 乱数を1つも使わない。日づけと時刻と座標だけで ぜんぶ決まる。
+//   5. v17.1 **なかよし度で 中身が かわる**(段0=よそよそしい / 段1=うちとけた /
+//      段2=ミオの話題が まざる)。段は「二人の なかよし度の 平均」ひとつで きまり、
+//      組が 立った ときに 1回だけ 決める(話の とちゅうで すりかわらない)。
+//      v21の 9本は そのまま 段1に 入れてあるので、聞けた話は 1本も 消えていない。
+//      **ロカ(入り江)・テン(いちば島)は 立ち話に 出られない**——NPCSystem が
+//      「島にいる人」しか 立ち話の 立ち位置に 差しかえないため。二人は 段2の
+//      **話題**として 名まえだけ 出している。
 //
 // 時間帯と立ち位置の決め方(実データから):
 //   スケジュール(src/data/npcs.ts)を つき合わせて、**ふたりが 同時に 外にいる帯**を
@@ -62,9 +72,22 @@ export interface ChatPairDef {
   /** 立ち位置(実測ずみ)。向きは たがいの相手のほうへ 自動でむく */
   standA: ChatStand;
   standB: ChatStand;
-  /** 日づけで1本 えらぶ(3本)。中身は「たがいの 性格が 出る」雑談だけ */
-  scripts: ChatScript[];
+  /**
+   * v17.1 **なかよし度の段ごとに 3本ずつ**(段0/段1/段2 の順)。
+   * その日の1本は 日づけで えらぶ(乱数は 1つも 使わない)。
+   *   段0 … まだ よそよそしい。名まえを たしかめ、ようすを 見ている
+   *   段1 … うちとけた。たがいの しごとの話(v21からの 9本が そのまま ここ)
+   *   段2 … ミオ(プレイヤー)の話題が まざる。「あの子」と よぶ
+   */
+  scripts: [ChatScript[], ChatScript[], ChatScript[]];
 }
+
+/** なかよし度の段(0=よそよそしい / 1=うちとけた / 2=ミオの話題) */
+export type ChatTier = 0 | 1 | 2;
+/** 段の さかいめ(二人の なかよし度の **平均**で 見る)。0-3 / 4-7 / 8以上 */
+export const CHAT_TIER_BOUNDS: readonly [number, number] = [4, 8];
+/** 1組あたり 1段に 何本 用意するか */
+export const CHAT_SCRIPTS_PER_TIER = 3;
 
 /** 立ち話が「聞こえる」きょり(m)。会話の輪(1.8m)より外なので、近づくだけで聞ける */
 export const CHAT_HEAR_R = 5.0;
@@ -87,7 +110,12 @@ function dayHash(day: number, salt: number): number {
 }
 
 // ---------------------------------------------------------------------------
-// 立ち話 9本(3組 × 3本)
+// 立ち話 27本(3組 × 3段 × 3本)
+//
+// v21 は 3組×3本の 9本だった。v17.1 で **なかよし度の段**を 足し、
+// おなじ二人でも「まだ よそよそしい ころ」と「ミオの話を する ころ」で
+// 中身が 変わるようにしてある。v21の 9本は そのまま **段1(うちとけた)**に
+// 置いてあるので、これまで 聞けた話は 1本も 消えていない。
 // ---------------------------------------------------------------------------
 export const CHAT_PAIRS: ChatPairDef[] = [
   {
@@ -100,33 +128,96 @@ export const CHAT_PAIRS: ChatPairDef[] = [
     standA: { x: 2.1, z: -1.5 }, // ツムギの bench スポットそのもの
     standB: { x: 2.7, z: 0.8 }, // ひろばがわ 2.38m。実測して えらんだ点
     scripts: [
-      {
-        id: 'rod_care',
-        lines: [
-          { who: 'a', text: 'ミナモ、その さおの にぎるところ、すりへってるわよ。' },
-          { who: 'b', text: 'あ、ほんとだ。まいにち にぎってるからなあ。' },
-          { who: 'a', text: 'こんど かりくさを まいて あげる。手に なじむように ね。' },
-          { who: 'b', text: 'ありがとう! ツムギの まいたのは、ぬれても すべらないんだ。' },
-        ],
-      },
-      {
-        id: 'good_wood',
-        lines: [
-          { who: 'b', text: 'ツムギは どうやって いい木を えらぶの?' },
-          { who: 'a', text: 'たたくのよ。こーん、って なる木は しんが とおってるの。' },
-          { who: 'b', text: 'さかなも おなじだ! いい日は うきの おとが ちがうんだよ。' },
-          { who: 'a', text: 'ふふ。わたしたち、にてるわね。' },
-        ],
-      },
-      {
-        id: 'noon_bench',
-        lines: [
-          { who: 'a', text: 'おひるの ベンチ、日なたで あったかいでしょう。' },
-          { who: 'b', text: 'うん。ここ、ぼくの さおを ほしてる ばしょなんだ。' },
-          { who: 'a', text: 'あら。じゃあ この ベンチ、あなたの ためにも つくったのね。' },
-          { who: 'b', text: 'そう おもうと、すわるのが ちょっと てれるなあ。' },
-        ],
-      },
+      // ---- 段0: まだ よそよそしい(なかよし度の平均 0〜3)----
+      [
+        {
+          id: 'rod_notice',
+          lines: [
+            { who: 'a', text: 'ミナモ。その さおの 木、どこで ひろったの?' },
+            { who: 'b', text: 'え、あ……はまべの ながれ木 なんだ。' },
+            { who: 'a', text: 'そう。……いい 木を えらんだのね。' },
+            { who: 'b', text: 'そ、そうかな。ありがとう、ツムギさん。' },
+          ],
+        },
+        {
+          id: 'bench_share',
+          lines: [
+            { who: 'b', text: 'ツムギさん。この ベンチ、すわっても いいのかな。' },
+            { who: 'a', text: 'どうぞ。わたしが つくったけれど、みんなの ものよ。' },
+            { who: 'b', text: 'じゃあ……はしっこ、かりるね。' },
+            { who: 'a', text: 'ええ。まんなかでも いいのに。' },
+          ],
+        },
+        {
+          id: 'noon_quiet',
+          lines: [
+            { who: 'a', text: 'おひるの ひろばは しずかね。' },
+            { who: 'b', text: 'うん。……なにか はなした ほうが いいのかな。' },
+            { who: 'a', text: 'いいえ。だまって いるのも、わるくないわ。' },
+            { who: 'b', text: 'そっか。じゃあ、そうする。' },
+          ],
+        },
+      ],
+      // ---- 段1: うちとけた(4〜7)。v21からの 3本 ----
+      [
+        {
+          id: 'rod_care',
+          lines: [
+            { who: 'a', text: 'ミナモ、その さおの にぎるところ、すりへってるわよ。' },
+            { who: 'b', text: 'あ、ほんとだ。まいにち にぎってるからなあ。' },
+            { who: 'a', text: 'こんど かりくさを まいて あげる。手に なじむように ね。' },
+            { who: 'b', text: 'ありがとう! ツムギの まいたのは、ぬれても すべらないんだ。' },
+          ],
+        },
+        {
+          id: 'good_wood',
+          lines: [
+            { who: 'b', text: 'ツムギは どうやって いい木を えらぶの?' },
+            { who: 'a', text: 'たたくのよ。こーん、って なる木は しんが とおってるの。' },
+            { who: 'b', text: 'さかなも おなじだ! いい日は うきの おとが ちがうんだよ。' },
+            { who: 'a', text: 'ふふ。わたしたち、にてるわね。' },
+          ],
+        },
+        {
+          id: 'noon_bench',
+          lines: [
+            { who: 'a', text: 'おひるの ベンチ、日なたで あったかいでしょう。' },
+            { who: 'b', text: 'うん。ここ、ぼくの さおを ほしてる ばしょなんだ。' },
+            { who: 'a', text: 'あら。じゃあ この ベンチ、あなたの ためにも つくったのね。' },
+            { who: 'b', text: 'そう おもうと、すわるのが ちょっと てれるなあ。' },
+          ],
+        },
+      ],
+      // ---- 段2: ミオの話題が まざる(8以上)----
+      [
+        {
+          id: 'mio_pond',
+          lines: [
+            { who: 'a', text: 'あの子、きょうも 池に いたわね。' },
+            { who: 'b', text: 'いたいた! あさから ずっと うきを 見てたよ。' },
+            { who: 'a', text: 'あの子が 来てから、しまの おとが ふえたわ。' },
+            { who: 'b', text: 'ぼくも そう おもう。まえは しずかだった もんね。' },
+          ],
+        },
+        {
+          id: 'mio_gift',
+          lines: [
+            { who: 'b', text: 'あの子、ぼくに かいがらを くれたんだ。' },
+            { who: 'a', text: 'まあ。わたしにも かんなを といでくれたわ。' },
+            { who: 'b', text: 'なんにも いわずに おいていくんだよね、あの子。' },
+            { who: 'a', text: 'そういう やさしさ、まねできないわね。' },
+          ],
+        },
+        {
+          id: 'mio_house',
+          lines: [
+            { who: 'a', text: 'あの子の おうち、見た? かざりが ふえていたわ。' },
+            { who: 'b', text: 'うん! ぼくの あげた さかなも かざってあったよ。' },
+            { who: 'a', text: 'ふふ。あなたの さかな、たいせつに されてるのね。' },
+            { who: 'b', text: 'なんだか てれるなあ。……うれしいけど!' },
+          ],
+        },
+      ],
     ],
   },
   {
@@ -141,33 +232,98 @@ export const CHAT_PAIRS: ChatPairDef[] = [
     standA: { x: 1.3, z: -5.5 }, // ノクトの tree スポットの すぐ そば
     standB: { x: -1.3, z: -5.5 }, // ツムギの lumi スポットの すぐ そば。2.6m
     scripts: [
-      {
-        id: 'book_mend',
-        lines: [
-          { who: 'a', text: 'ツムギや。この本の せなかが われてしもうた。' },
-          { who: 'b', text: 'まあ、ずいぶん よんだのね。……なおせるわ、まかせて。' },
-          { who: 'a', text: 'たのむ。40年 まえの 星の きろくじゃ。' },
-          { who: 'b', text: 'それなら じょうぶな 糸で かがるわね。あと 40年 もつように。' },
-        ],
-      },
-      {
-        id: 'book_tower',
-        lines: [
-          { who: 'b', text: 'ノクトさん、本を つみあげるの、たおれないの?' },
-          { who: 'a', text: 'たおれる。じゃが、たおれた ところに さがしものが あるのじゃ。' },
-          { who: 'b', text: 'それ、かたづけない いいわけに きこえるわ。' },
-          { who: 'a', text: 'ふぉっふぉ。……そうとも いうのう。' },
-        ],
-      },
-      {
-        id: 'lumi_light',
-        lines: [
-          { who: 'a', text: 'この木の下は 紙が しめらん。かみを ほすには もってこいじゃ。' },
-          { who: 'b', text: 'ルミの木は、ひかりも やわらかいものね。' },
-          { who: 'a', text: 'うむ。文字が おどらん あかりじゃ。' },
-          { who: 'b', text: 'こんど ここに 小さな だいを つくりましょうか。' },
-        ],
-      },
+      // ---- 段0: まだ よそよそしい ----
+      [
+        {
+          id: 'first_book',
+          lines: [
+            { who: 'a', text: 'そこの おぬし。……ああ、かぐやの ツムギか。' },
+            { who: 'b', text: 'こんばんは、ノクトさん。おじゃまだったかしら。' },
+            { who: 'a', text: 'いや。ワシは ただ 星を みておるだけじゃ。' },
+            { who: 'b', text: 'そう。……では、わたしも しずかに していますね。' },
+          ],
+        },
+        {
+          id: 'lumi_stand',
+          lines: [
+            { who: 'b', text: 'この 木の下、いつも ノクトさんが いるのね。' },
+            { who: 'a', text: 'うむ。ここは かみが しめらんのじゃ。' },
+            { who: 'b', text: 'そうなの。……しらなかったわ。' },
+            { who: 'a', text: 'しっておいて そんは ないぞ。' },
+          ],
+        },
+        {
+          id: 'night_cold',
+          lines: [
+            { who: 'a', text: 'よるは ひえるのう。おぬし、うわぎは あるか。' },
+            { who: 'b', text: 'ありがとう。でも、だいじょうぶよ。' },
+            { who: 'a', text: 'そうか。……ならば よい。' },
+            { who: 'b', text: 'ふふ。ノクトさんも きを つけてね。' },
+          ],
+        },
+      ],
+      // ---- 段1: うちとけた。v21からの 3本 ----
+      [
+        {
+          id: 'book_mend',
+          lines: [
+            { who: 'a', text: 'ツムギや。この本の せなかが われてしもうた。' },
+            { who: 'b', text: 'まあ、ずいぶん よんだのね。……なおせるわ、まかせて。' },
+            { who: 'a', text: 'たのむ。40年 まえの 星の きろくじゃ。' },
+            { who: 'b', text: 'それなら じょうぶな 糸で かがるわね。あと 40年 もつように。' },
+          ],
+        },
+        {
+          id: 'book_tower',
+          lines: [
+            { who: 'b', text: 'ノクトさん、本を つみあげるの、たおれないの?' },
+            { who: 'a', text: 'たおれる。じゃが、たおれた ところに さがしものが あるのじゃ。' },
+            { who: 'b', text: 'それ、かたづけない いいわけに きこえるわ。' },
+            { who: 'a', text: 'ふぉっふぉ。……そうとも いうのう。' },
+          ],
+        },
+        {
+          id: 'lumi_light',
+          lines: [
+            { who: 'a', text: 'この木の下は 紙が しめらん。かみを ほすには もってこいじゃ。' },
+            { who: 'b', text: 'ルミの木は、ひかりも やわらかいものね。' },
+            { who: 'a', text: 'うむ。文字が おどらん あかりじゃ。' },
+            { who: 'b', text: 'こんど ここに 小さな だいを つくりましょうか。' },
+          ],
+        },
+      ],
+      // ---- 段2: ミオの話題が まざる ----
+      [
+        {
+          id: 'mio_lantern',
+          lines: [
+            { who: 'a', text: 'あの子が ともした あかりは、よう ともるのう。' },
+            // 島の3人しか 立ち話に 出られないので、ロカ・テンは **話題**として 出す
+            // (二人を 立ち話の場に 出すには NPCSystem の 場所の きまりを 変える必要がある)
+            { who: 'b', text: 'ええ。ロカの とうだいの ひかりも もどったものね。' },
+            { who: 'a', text: 'ワシは ながく まっておった。ながすぎたわい。' },
+            { who: 'b', text: 'これからは、みんなで ともしましょう。' },
+          ],
+        },
+        {
+          id: 'mio_hands',
+          lines: [
+            { who: 'b', text: 'あの子の 手、わたしと おなじ かたちに なってきたわ。' },
+            { who: 'a', text: 'ほう。しごとを する 手に なったか。' },
+            { who: 'b', text: 'ええ。まめが できても、やめないの。' },
+            { who: 'a', text: 'よい 子じゃ。……ワシの 本より よく はたらく。' },
+          ],
+        },
+        {
+          id: 'mio_star',
+          lines: [
+            { who: 'a', text: 'あの子は 星の なまえを ぜんぶ おぼえおった。' },
+            { who: 'b', text: 'まあ。ノクトさんの 話を ちゃんと 聞いてたのね。' },
+            { who: 'a', text: 'うむ。ワシの 話を 聞く子は ひさしぶりじゃ。' },
+            { who: 'b', text: 'あなたの 話、おもしろいもの。わたしも すきよ。' },
+          ],
+        },
+      ],
     ],
   },
   {
@@ -183,33 +339,97 @@ export const CHAT_PAIRS: ChatPairDef[] = [
     standA: { x: 24.4, z: 9.6 }, // 池の西岸。実測して えらんだ点
     standB: { x: 25.6, z: 11.6 }, // 2.33m。ミナモの pond スポットの すぐ そば
     scripts: [
-      {
-        id: 'star_water',
-        lines: [
-          { who: 'a', text: 'ミナモや、池の みずに 星が うつっておるぞ。' },
-          { who: 'b', text: 'ほんとだ! 空が ふたつ あるみたいだね。' },
-          { who: 'a', text: 'よるの うみは もっと すごい。ぜんぶが 星の いれものに なる。' },
-          { who: 'b', text: 'いつか つれてって! ……ぼくの ふねで、だけどね。' },
-        ],
-      },
-      {
-        id: 'night_fish',
-        lines: [
-          { who: 'b', text: 'ノクトさん、よるの うみで つれる魚、しってる?' },
-          { who: 'a', text: 'ヨザカナじゃな。あれは 星の かけらを たべておる、と ワシは 思うておる。' },
-          { who: 'b', text: 'えっ、ほんとに?' },
-          { who: 'a', text: 'しらん。じゃが そう おもうと、はなすのが すこし おしくなるじゃろ。' },
-        ],
-      },
-      {
-        id: 'quiet_sky',
-        lines: [
-          { who: 'a', text: 'きょうの 空は しずかじゃ。かぜが ないと 星が またたかん。' },
-          { who: 'b', text: 'かぜが ないと、うきも うごかないんだ。' },
-          { who: 'a', text: 'おなじ空を、おぬしは 下から 見ておるのじゃな。' },
-          { who: 'b', text: 'うん。ぼくは 水に うつった 空の ほうが すきかも。' },
-        ],
-      },
+      // ---- 段0: まだ よそよそしい ----
+      [
+        {
+          id: 'pond_meet',
+          lines: [
+            { who: 'a', text: 'おや。ミナモか。こんな ところで 何を しておる。' },
+            { who: 'b', text: 'あ、ノクトさん。……よるの さかなを まってるんだ。' },
+            { who: 'a', text: 'ふむ。ワシも 星を まっておる。にたような ものじゃ。' },
+            { who: 'b', text: 'そ、そうかも しれないね。' },
+          ],
+        },
+        {
+          id: 'pond_quiet',
+          lines: [
+            { who: 'b', text: 'ノクトさん、しゃべっても だいじょうぶ?' },
+            { who: 'a', text: 'かまわん。さかなは にげんよ、まだ とおい。' },
+            { who: 'b', text: 'よかった! ……あ、ごめん。おおきい こえ だった。' },
+            { who: 'a', text: 'ふぉっふぉ。かまわんと いうたじゃろ。' },
+          ],
+        },
+        {
+          id: 'pond_names',
+          lines: [
+            { who: 'a', text: 'おぬし、この 池の なまえを しっておるか。' },
+            { who: 'b', text: 'えっ、なまえ あるの?' },
+            { who: 'a', text: 'ある。じゃが いまは おしえん。……また こんど じゃ。' },
+            { who: 'b', text: 'えー! きに なるよ、それ。' },
+          ],
+        },
+      ],
+      // ---- 段1: うちとけた。v21からの 3本 ----
+      [
+        {
+          id: 'star_water',
+          lines: [
+            { who: 'a', text: 'ミナモや、池の みずに 星が うつっておるぞ。' },
+            { who: 'b', text: 'ほんとだ! 空が ふたつ あるみたいだね。' },
+            { who: 'a', text: 'よるの うみは もっと すごい。ぜんぶが 星の いれものに なる。' },
+            { who: 'b', text: 'いつか つれてって! ……ぼくの ふねで、だけどね。' },
+          ],
+        },
+        {
+          id: 'night_fish',
+          lines: [
+            { who: 'b', text: 'ノクトさん、よるの うみで つれる魚、しってる?' },
+            { who: 'a', text: 'ヨザカナじゃな。あれは 星の かけらを たべておる、と ワシは 思うておる。' },
+            { who: 'b', text: 'えっ、ほんとに?' },
+            { who: 'a', text: 'しらん。じゃが そう おもうと、はなすのが すこし おしくなるじゃろ。' },
+          ],
+        },
+        {
+          id: 'quiet_sky',
+          lines: [
+            { who: 'a', text: 'きょうの 空は しずかじゃ。かぜが ないと 星が またたかん。' },
+            { who: 'b', text: 'かぜが ないと、うきも うごかないんだ。' },
+            { who: 'a', text: 'おなじ空を、おぬしは 下から 見ておるのじゃな。' },
+            { who: 'b', text: 'うん。ぼくは 水に うつった 空の ほうが すきかも。' },
+          ],
+        },
+      ],
+      // ---- 段2: ミオの話題が まざる ----
+      [
+        {
+          id: 'mio_boat',
+          lines: [
+            { who: 'a', text: 'あの子が ふねを なおしてから、うみが ちかく なったのう。' },
+            { who: 'b', text: 'うん! ぼくの ふねだったのに、あの子のほうが じょうずでさ。' },
+            // テンも 話題として 出す(いちば島の人なので 島には 立てない)
+            { who: 'a', text: 'ふぉっふぉ。くやしいか。いちばの テンにも 見せてやれ。' },
+            { who: 'b', text: 'ちょっとね! でも、うれしいほうが おおきいんだ。' },
+          ],
+        },
+        {
+          id: 'mio_night',
+          lines: [
+            { who: 'b', text: 'あの子、よるでも へいきで 池に 来るんだよね。' },
+            { who: 'a', text: 'うむ。ワシの ころは、よるは こわいものじゃった。' },
+            { who: 'b', text: 'ぼくも まだ ちょっと こわいよ、ほんとは。' },
+            { who: 'a', text: 'あの子が いれば、こわくは なかろう。' },
+          ],
+        },
+        {
+          id: 'mio_shard',
+          lines: [
+            { who: 'a', text: 'あの子は ほしのかけらを よく 見つけるのう。' },
+            { who: 'b', text: 'ぼくには ぜんぜん 見えないのに、ふしぎだよね!' },
+            { who: 'a', text: 'さがしものが うまい子は、まちかたが うまいのじゃ。' },
+            { who: 'b', text: 'まちかた か……。つりと おなじ かもね。' },
+          ],
+        },
+      ],
     ],
   },
 ];
@@ -226,12 +446,37 @@ export function chatHappensOn(pairId: string, day: number): boolean {
   return dayHash(Math.floor(day), 101 + i) % CHAT_SKIP_MOD !== 0;
 }
 
-/** その日 その組が 話す1本(しない日は null)。同じ日は 何度読んでも 同じ */
-export function chatScriptOf(pairId: string, day: number): ChatScript | null {
+/**
+ * その日 その組が 話す1本(しない日は null)。同じ日・同じ段なら 何度読んでも 同じ。
+ * @param tier なかよし度の段(chatTierOf で 出す)。省略すると 段1(v21と同じ本)
+ */
+export function chatScriptOf(pairId: string, day: number, tier: ChatTier = 1): ChatScript | null {
   const pair = CHAT_PAIR_BY_ID[pairId];
   if (!pair || !chatHappensOn(pairId, day)) return null;
   const i = CHAT_PAIRS.findIndex((p) => p.id === pairId);
-  return pair.scripts[dayHash(Math.floor(day), 211 + i) % pair.scripts.length];
+  const list = pair.scripts[tier] ?? pair.scripts[1];
+  if (!list || list.length === 0) return null;
+  return list[dayHash(Math.floor(day), 211 + i) % list.length];
+}
+
+/** その組の なかよし度の平均(まだ 出会っていない人は 0 とみなす) */
+export function chatFriendAvg(s: GameState, pair: ChatPairDef): number {
+  const of = (id: string): number => {
+    const f = (s.npcs ?? {})[id]?.friendship;
+    return typeof f === 'number' && Number.isFinite(f) && f > 0 ? f : 0;
+  };
+  return (of(pair.a) + of(pair.b)) / 2;
+}
+
+/**
+ * その組の いまの段(0=よそよそしい / 1=うちとけた / 2=ミオの話題)。
+ * さかいめは CHAT_TIER_BOUNDS ひとつだけ(ここに 数を 写経しない)。
+ */
+export function chatTierOf(s: GameState, pair: ChatPairDef): ChatTier {
+  const avg = chatFriendAvg(s, pair);
+  if (avg >= CHAT_TIER_BOUNDS[1]) return 2;
+  if (avg >= CHAT_TIER_BOUNDS[0]) return 1;
+  return 0;
 }
 
 /** いま その組の時間帯か */
@@ -241,7 +486,9 @@ export function chatTimeActive(pair: ChatPairDef, hour: number): boolean {
 
 /**
  * 依頼が1つでも 動いている日か(朝の来訪 visitorOfDay と まったく同じ規則)。
- * 動いている日は 立ち話を いっさい 出さない = 誘導が 指す人は いつもの場所にいる。
+ *
+ * v17.1 いまは **立ち話を止める判定には つかっていない**(下の chatBlockedForPair を見よ)。
+ * 朝の来訪など ほかの しくみと 見くらべるために のこしてある 読みとり用の関数。
  */
 export function chatBlockedByQuest(s: GameState): boolean {
   for (const id of Object.keys(s.npcs ?? {})) {
@@ -251,16 +498,33 @@ export function chatBlockedByQuest(s: GameState): boolean {
 }
 
 /**
+ * v17.1 その組が いま 立ち話を してはいけないか。
+ *
+ * v21 は「依頼が1つでも 動いている日は 3組ぜんぶ 止める」だった。
+ * 止める理由は **誘導(いまやること)が 指す人が いつもの場所から いなくなる**ことだけ
+ * なので、**その依頼に かかわらない二人**まで 止める必要は なかった
+ * ——クリア前の子は 依頼が ほぼ いつも動いているので、立ち話に 一度も 出あえない。
+ *
+ * 新しい規則は1つだけ: **受注・報告の相手に なっている人が 組に いれば その組は 出ない**。
+ * 誘導が 指す人は いつもの場所に 立ったままなので、迷子は 起きない。
+ * (立ち話は Eの候補を 1つも 作らないので、会話への わりこみは これまでどおり 起きない)
+ */
+export function chatBlockedForPair(s: GameState, pair: ChatPairDef): boolean {
+  return questFor(s, pair.a) !== null || questFor(s, pair.b) !== null;
+}
+
+/**
  * いま 立ち話をしている組(していなければ null)。純関数。
  * 島にいる人だけを見る(入り江・いちば島の人は 立ち話に 出てこない)。
  */
 export function activeChatPair(s: GameState, day: number, hour: number): ChatPairDef | null {
-  if (chatBlockedByQuest(s)) return null;
   for (const pair of CHAT_PAIRS) {
     if (!chatTimeActive(pair, hour)) continue;
     if (!chatHappensOn(pair.id, day)) continue;
     // まだ 出会っていない人は 立たせない(セーブに記録の無い人)
     if (!s.npcs?.[pair.a] || !s.npcs?.[pair.b]) continue;
+    // 依頼の相手が 組に いる日は その組だけ 出ない(誘導の指す人は 動かさない)
+    if (chatBlockedForPair(s, pair)) continue;
     return pair;
   }
   return null;
@@ -314,6 +578,8 @@ export interface ChatTick {
 export class ChatEventSystem {
   /** いま 立ち話をしている組(していなければ null) */
   private pair: ChatPairDef | null = null;
+  /** いま えらんでいる 段(なかよし度)。組が 立った ときに 1回だけ 決まる */
+  private tier: ChatTier = 1;
   private script: ChatScript | null = null;
   private idx = -1;
   private t = 0;
@@ -336,6 +602,11 @@ export class ChatEventSystem {
   /** いま 流れている本のid(検証・撮影用) */
   get activeScriptId(): string | null {
     return this.script?.id ?? null;
+  }
+
+  /** いま えらばれている 段(検証・撮影用) */
+  get activeTier(): ChatTier {
+    return this.tier;
   }
 
   /** その日 もう 聞いたか(検証用) */
@@ -371,7 +642,10 @@ export class ChatEventSystem {
     const pair = running ? this.pair : activeChatPair(s, day, tick.hour);
     if (pair?.id !== this.pair?.id) {
       this.pair = pair;
-      this.script = pair ? chatScriptOf(pair.id, day) : null;
+      // 段は 組が 立った ときに 1回だけ 決める。話の とちゅうで なかよし度が
+      // あがっても(話しかけると +1 される)、流れている本は すりかわらない
+      this.tier = pair ? chatTierOf(s, pair) : 1;
+      this.script = pair ? chatScriptOf(pair.id, day, this.tier) : null;
       this.finished = pair ? this.done.has(pair.id) : false;
       this.silence();
     }
@@ -464,21 +738,29 @@ export function validateChatData(): string[] {
     if (!(p.from < p.to)) problems.push(`立ち話${p.id}の時間帯が さかさま`);
     const d = Math.hypot(p.standA.x - p.standB.x, p.standA.z - p.standB.z);
     if (d < 1.6 || d > 3.2) problems.push(`立ち話${p.id}の二人のきょり${d.toFixed(2)}mが 立ち話らしくない`);
-    if (p.scripts.length !== 3) problems.push(`立ち話${p.id}の本数が3本でない`);
+    // v17.1 段は かならず3つ、1段につき CHAT_SCRIPTS_PER_TIER 本
+    // ——「段2だけ 1本しかない」を 起動時に 弾く(段が上がった とたん 毎日 同じ話になる)
+    if (p.scripts.length !== 3) problems.push(`立ち話${p.id}の段が3つでない`);
     const sids = new Set<string>();
-    for (const sc of p.scripts) {
-      if (sids.has(sc.id)) problems.push(`立ち話${p.id}の本${sc.id}が重複`);
-      sids.add(sc.id);
-      if (sc.lines.length < 3) problems.push(`立ち話${p.id}/${sc.id}が みじかすぎる`);
-      for (let i = 1; i < sc.lines.length; i++) {
-        if (sc.lines[i].who === sc.lines[i - 1].who) {
-          problems.push(`立ち話${p.id}/${sc.id}の${i}行めが 交互になっていない`);
+    p.scripts.forEach((list, t) => {
+      if (!Array.isArray(list) || list.length !== CHAT_SCRIPTS_PER_TIER) {
+        problems.push(`立ち話${p.id}の段${t}の本数が${CHAT_SCRIPTS_PER_TIER}本でない`);
+        return;
+      }
+      for (const sc of list) {
+        if (sids.has(sc.id)) problems.push(`立ち話${p.id}の本${sc.id}が重複`);
+        sids.add(sc.id);
+        if (sc.lines.length < 3) problems.push(`立ち話${p.id}/${sc.id}が みじかすぎる`);
+        for (let i = 1; i < sc.lines.length; i++) {
+          if (sc.lines[i].who === sc.lines[i - 1].who) {
+            problems.push(`立ち話${p.id}/${sc.id}の${i}行めが 交互になっていない`);
+          }
+        }
+        for (const l of sc.lines) {
+          if (l.text.trim().length < 4) problems.push(`立ち話${p.id}/${sc.id}に からの行がある`);
         }
       }
-      for (const l of sc.lines) {
-        if (l.text.trim().length < 4) problems.push(`立ち話${p.id}/${sc.id}に からの行がある`);
-      }
-    }
+    });
   }
   // 時間帯が かさならないこと(同じ時刻に 2組が 立ち話をしない = 人が 足りなくなる)
   for (let i = 0; i < CHAT_PAIRS.length; i++) {

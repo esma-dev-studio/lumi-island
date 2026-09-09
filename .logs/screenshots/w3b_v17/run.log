@@ -1,0 +1,32 @@
+起動: http://127.0.0.1:5223 / 1180x820
+バッジ 49こ / とどいた しょうごう ["ttl_nakama","ttl_tanken"]
+  見出し: 
+      
+      
+        しょうごう しまの たんけんか
+        つぎの「ルミの まもりびと」まで あと 11こ
+      
+    
+  [shot] 01_badge_title_head.png
+  [shot] 02_badge_title_head_closeup.png (接写)
+  ポーズ: 
+      
+      
+        しょうごう しまの たんけんか
+        つぎの「ルミの まもりびと」まで あと 11こ
+      
+    
+  [shot] 03_pause_title.png
+  タイトルの要約: 42にちめルミナ 2480バッジ 49こしょうごう: しまの たんけんか
+  [shot] 04_title_summary.png
+  [shot] 05_title_summary_closeup.png (接写)
+  tier0_yosoyososhii: {"day":3,"hour":12.67,"pair":"tsumugi_minamo","script":"noon_quiet","tier":0,"text":"おひるの ひろばは しずかね。","friendship":1}
+  [shot] 06_chat_tier0_yosoyososhii.png
+  [shot] 07_chat_tier0_yosoyososhii_closeup.png (接写)
+  tier1_uchitoketa: {"day":3,"hour":12.65,"pair":"tsumugi_minamo","script":"noon_bench","tier":1,"text":"おひるの ベンチ、日なたで あったかいでしょう。","friendship":5}
+  [shot] 08_chat_tier1_uchitoketa.png
+  [shot] 09_chat_tier1_uchitoketa_closeup.png (接写)
+  tier2_mio: {"day":3,"hour":12.67,"pair":"tsumugi_minamo","script":"mio_house","tier":2,"text":"あの子の おうち、見た? かざりが ふえていたわ。","friendship":10}
+  [shot] 10_chat_tier2_mio.png
+  [shot] 11_chat_tier2_mio_closeup.png (接写)
+consoleエラー: 0件

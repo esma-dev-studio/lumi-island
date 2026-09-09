@@ -8,19 +8,22 @@
 // 顔は小さいので、カメラを 頭の高さまで 上げて 寄る(showcase の setCameraAngle は
 // 注視点が 体の中ほどなので、radius を つめて 顔が 画面の中央に来る角度にしてある)。
 // 表情は setFace(変わる時間ほぼ0)で 出すので、1フレーム 待てば その顔で 撮れる。
-import puppeteer from 'puppeteer-core';
+import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
+import { launchEdge } from './launch_browser.mjs';
 
-const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
+const require = createRequire(import.meta.url);
+const puppeteer = require('puppeteer-core');
+
 const URL = process.argv[2] || 'http://localhost:5223/?scene=showcase';
 const OUT = process.argv[3] || '.logs/screenshots/faces_v29';
 mkdirSync(OUT, { recursive: true });
 
-const browser = await puppeteer.launch({
-  executablePath: EDGE,
-  headless: 'new',
+// Edge151 では puppeteer.launch() が この機で 必ず失敗するので、共通ヘルパーを通す
+// (spawn + connect。tools/launch_browser.mjs の コメントに 理由がある)
+const browser = await launchEdge(puppeteer, {
   protocolTimeout: 300000,
-  args: ['--window-size=900,900', '--use-angle=d3d11', '--enable-gpu'],
+  args: ['--window-size=900,900', '--use-angle=d3d11', '--enable-gpu', '--mute-audio'],
   defaultViewport: { width: 900, height: 900 },
 });
 const page = await browser.newPage();
@@ -111,7 +114,8 @@ for (const [id, targetY] of [['roka', 0.676], ['tsumugi', 0.878]]) {
       sc.setCameraAngle(180, 89, 3.3);
     })()`
   );
-  for (const f of ['smile', 'surprised']) {
+  // v17 'normal' も 撮る: ツムギの ふだんの目が 会話の きょりで 見えるかが 見どころ
+  for (const f of ['normal', 'smile', 'surprised']) {
     await snap(`talkdist_${id}_${f}`, `window.__lumi.showcase.setFace('${f}')`, 420);
   }
   await page.evaluate(`window.__lumi.showcase.setFace('normal')`);

@@ -11,14 +11,20 @@ import { ITEMS, RECIPES, type ItemId } from '../data/items';
 import { COMBOS, COMBO_GROUPS } from '../data/combos';
 import { LETTERS } from '../data/letters';
 import { isDiscovered } from '../systems/ComboSystem';
+import {
+  collectSections, letterSectionText, letterSections, sectionRest, sectionText, sumSections,
+  type CodexSection,
+} from '../systems/CodexProgress';
+import { mailRows, unreadMailCount } from '../systems/MailSystem';
 import { sfx } from '../audio/AudioSystem';
 import { ACHIEVEMENTS, achievedCount, achievementRows } from '../systems/AchievementSystem';
 import { isRewardGranted, rewardIcon, rewardLabel, rewardOf } from '../systems/AchievementRewards';
-import { hasReadLetter, readLetterCount } from '../systems/BottleSystem';
+import { hasReadLetter } from '../systems/BottleSystem';
 import { festivalMemo } from '../systems/FestivalSystem';
 import { nushiMemo } from '../systems/BossFishSystem';
 import { sapMemo } from '../systems/SapTreeSystem';
 import { badgeCountByCategory, badgeRows, earnedBadgeCount } from '../systems/BadgeSystem';
+import { ensureTitleCss, titleHeadHtml } from './BadgeUI';
 import {
   BADGES, BADGE_CATEGORIES, BADGE_CATEGORY_ORDER, BADGE_TIERS, type BadgeDef,
 } from '../data/badges';
@@ -82,6 +88,37 @@ function homeScoreBlock(s: GameState): string {
       <div class="hs-bar"><i style="width:${Math.round((total / HOME_SCORE_MAX) * 100)}%"></i></div>
       <div class="hs-parts">${chips}</div>
       ${goal}
+    </div>`;
+}
+
+/**
+ * v30 ずかん ぜんぶの あつまりぐあい(5節)。
+ * あつめもの3節は CodexProgress が数え、じっせき・バッジは ここで足す
+ * ——あちらから AchievementSystem を import すると、じっせき「ずかん コンプリート」が
+ * あちらを 読む形になって モジュールの わっかが できるため。
+ */
+function allSections(s: GameState): CodexSection[] {
+  return [
+    ...collectSections(s),
+    { key: 'ach', label: 'じっせき', got: achievedCount(s), all: ACHIEVEMENTS.length },
+    { key: 'badge', label: 'バッジ', got: earnedBadgeCount(s), all: BADGES.length },
+  ];
+}
+
+/**
+ * v30 いちばん上に出す「ぜんぶで N / M(xx%)」。
+ * 教訓3の「つぎの目標」を 数で 見せる1行——ずかんを 開くたびに
+ * 「あと何こで ぜんぶか」が わかる。ぜんぶ そろったら ほめて おわる。
+ */
+function codexTotalBlock(s: GameState): string {
+  const t = sumSections(allSections(s));
+  const rest = t.left === 0
+    ? '<b class="ct-done">ぜんぶ そろった! おめでとう!</b>'
+    : `あと <b>${t.left}</b>こ`;
+  return `<div class="codex-total">
+      <span class="ct-head">ずかん ぜんぶで <b>${t.got}</b> / ${t.all}(${t.pct}%)</span>
+      <span class="ct-bar"><i style="width:${t.pct}%"></i></span>
+      <span class="ct-rest">${rest}</span>
     </div>`;
 }
 
@@ -167,11 +204,23 @@ export class CodexUI {
     const btn = (id: CodexTab, label: string): string =>
       `<button class="shop-tab${this.tab === id ? ' on' : ''}" data-tab="${id}">${label}</button>`;
     const shots = this.getPhotos?.().length ?? 0;
+    // v30 まだ ひらいていない てがみの数。てがみ節は「ずかん」タブの中に あるので、
+    // 気づけるように タブの ほうへ 出す(数字だけの まるい しるし)
+    const unread = unreadMailCount(s);
+    const newMark = unread > 0 ? `<span class="tab-new">${unread}</span>` : '';
     return `<div class="shop-tabs codex-tabs">
-      ${btn('codex', 'ずかん')}
+      ${btn('codex', `ずかん${newMark}`)}
       ${btn('badge', `バッジ ${got}/${BADGES.length}`)}
       ${btn('album', `アルバム ${shots}/${PHOTO_MAX}`)}
     </div>`;
+  }
+
+  /**
+   * v30 開いたまま 中身を 描きなおす(手紙を ひらいて 未読が へったとき等)。
+   * 閉じているときは 何もしない=つぎに ひらいたときに どうせ 描きなおる。
+   */
+  refresh(): void {
+    if (this.open) this.render();
   }
 
   /** v24 アルバムを ひらく(しゃしんたてから えらぶときも ここを通る) */
@@ -245,10 +294,16 @@ export class CodexUI {
         <div class="badge-grid">${cells}</div>`;
     }).join('');
 
+    // v30 バッジのタブにも「あと何こ」を出す(数の形「N / M」は これまでどおり:
+    // tests/e2e/badge.spec.ts が この形を読む)
+    const badgeRow: CodexSection = { key: 'badge', label: 'バッジ', got, all: BADGES.length };
+    ensureTitleCss(); // v17.1 しょうごうの見出しは ここで直接 組みこむ(DOMの見張りは 使わない)
     this.el.innerHTML = `
       <div class="panel-title">ずかん <span class="panel-close" data-close>${byInput('とじる(Z)', 'とじる')}</span></div>
       ${this.tabsHtml(s)}
-      <div class="badge-total">あつめたバッジ <b>${got}</b> / ${BADGES.length}</div>
+      ${codexTotalBlock(s)}
+      ${titleHeadHtml(got)}
+      <div class="badge-total">あつめたバッジ <b>${got}</b> / ${BADGES.length} <small>${sectionRest(badgeRow)}</small></div>
       ${sections}
     `;
   }
@@ -264,12 +319,11 @@ export class CodexUI {
       return;
     }
     const codex = (s.codex ?? {}) as Partial<Record<ItemId, number>>;
-    let found = 0;
+    // 数えるのは CodexProgress の しごと(ここでは 数えない=数字の出どころを 1つにする)
     const cells = CODEX_ITEMS.map((id) => {
       const def = ITEMS[id];
       const n = codex[id] ?? 0;
       if (n > 0) {
-        found++;
         return `<div class="codex-cell got" title="${def.desc}">
           <span class="inv-ico">${icon(id)}</span>
           <span class="codex-name">${def.name}</span>
@@ -319,14 +373,32 @@ export class CodexUI {
       </div>`;
     }).join('');
 
+    // v30 住民からの てがみ(お礼・ふたりのじかん・章のおわり)。
+    // びんの手紙と **同じ わく・同じグリッド** に ならべる:
+    // 子どもから見れば どちらも「もらった てがみ」で、分ける理由が無い。
+    // まだ とどいていないものは「?」——のこりが 何通あるかが 見えると、
+    // 「だれかと もっと なかよくなろう」の 手がかりになる。
+    const mailCells = mailRows(s).map((r) => {
+      if (!r.got) {
+        return `<div class="codex-cell unknown" title="まだ とどいていない てがみ">
+          <span class="inv-ico">${icon('combo_unknown')}</span>
+          <span class="codex-name">?</span>
+        </div>`;
+      }
+      const when = r.day !== null ? `<small>${r.day}日め</small>` : '';
+      return `<button class="codex-cell got letter${r.unread ? ' unread' : ''}"
+        data-letter="${r.def.id}" title="${r.unread ? 'まだ よんでいない てがみ' : 'もういちど よむ'}">
+        <span class="inv-ico">${icon(r.def.icon)}</span>
+        <span class="codex-name">${r.def.title}${when}</span>
+      </button>`;
+    }).join('');
+
     // v12 くみあわせ: 見つけたものは 名前と絵、まだのものは「?」のシルエットわく。
     // 未発見でも「なかま(りょうり/いろ/かざり)」だけは見せる=何を ためせばよいかの
     // 手がかりになり、それでいて 答えは まだ分からない
-    let comboFound = 0;
     const comboCells = COMBOS.map((c) => {
       const g = COMBO_GROUPS[c.group];
       if (isDiscovered(s, c)) {
-        comboFound++;
         const recipe = RECIPES.find((r) => r.id === c.recipe);
         const out = recipe?.out ?? 'lumina';
         return `<div class="codex-cell got" title="${g.hint}">
@@ -363,19 +435,31 @@ export class CodexUI {
       <span class="codex-note-text"><b>${sap.title}</b><small>${sap.text}</small></span>
     </div>`;
 
+    // v30 節ごとの「N / M ・ xx% ・ あと Kこ」。数は CodexProgress ひとつから もらう
+    // ——ここで found / comboFound を 数え直すと、じっせきの判定と ずれる。
+    const secs = collectSections(s);
+    const secText = (key: CodexSection['key']): string => {
+      const row = secs.find((r) => r.key === key);
+      return row ? sectionText(row) : '';
+    };
+    // てがみ節だけは 分数が 2つ(ボトル / みんなから)。わけかたの理由は CodexProgress を見る
+    const letterSecs = letterSections(s);
     this.el.innerHTML = `
       <div class="panel-title">ずかん <span class="panel-close" data-close>${byInput('とじる(Z)', 'とじる')}</span></div>
       ${this.tabsHtml(s)}
+      ${codexTotalBlock(s)}
       ${homeScoreBlock(s)}
-      <div class="panel-sub first">あつめたもの <small>${found} / ${CODEX_ITEMS.length}</small></div>
+      <div class="panel-sub first">あつめたもの <small>${secText('item')}</small></div>
       <div class="codex-grid">${cells}</div>
-      <div class="panel-sub">くみあわせ <small>${comboFound} / ${COMBOS.length}</small></div>
+      <div class="panel-sub">くみあわせ <small>${secText('combo')}</small></div>
       <div class="codex-grid">${comboCells}</div>
-      <div class="panel-sub">てがみ <small>${readLetterCount(s)} / ${LETTERS.length}</small></div>
-      <div class="codex-grid">${letterCells}</div>
+      <div class="panel-sub">てがみ <small>${letterSectionText(letterSecs.bottle, letterSecs.mail)}</small></div>
+      <div class="codex-grid">${letterCells}${mailCells}</div>
       <div class="panel-sub">しまの ぎょうじ・いいつたえ</div>
       ${memo}
-      <div class="panel-sub">じっせき <small>${achievedCount(s)} / ${ACHIEVEMENTS.length}</small></div>
+      <div class="panel-sub">じっせき <small>${sectionText({
+        key: 'ach', label: 'じっせき', got: achievedCount(s), all: ACHIEVEMENTS.length,
+      })}</small></div>
       <div class="ach-list">${achRows}</div>
     `;
     // クリック処理はコンストラクタの委譲リスナーが担当(ここでは付けない)

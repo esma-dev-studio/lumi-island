@@ -25,7 +25,10 @@ import { SHELTER_SPOT_KEY, NPCSystem, turnToward, wanderTarget } from '../../src
 import {
   NPC_SHELTER_RAIN, RAIN_END_HOUR, npcShelterFor, sharedWeather,
 } from '../../src/systems/WeatherSystem';
-import { FISH_SPEED, fishPose, nightGlow, pondLanes, seaLanes } from '../../src/systems/FishShadowSystem';
+import {
+  FISH_SPEED, POND_CLEAR, POND_UNDER, SEA_UNDER, fishPose, nightGlow, pondFishY, pondLanes,
+  seaFishY, seaLanes,
+} from '../../src/systems/FishShadowSystem';
 import {
   BIRD_COUNT, BIRD_CYCLE, FLY_SEC, birdPhase, birdPose, perchIndex,
 } from '../../src/systems/BirdSystem';
@@ -214,6 +217,36 @@ describe('v29 スケジュール表の検査', () => {
       const sp = npcSpot(id, SHELTER_SPOT_KEY);
       const home = npcSpot(id, 'home');
       expect(Math.hypot(sp.x - home.x, sp.z - home.z), id).toBeLessThan(0.5);
+    }
+  });
+
+  // v17 あめやどりの 向き。壁を 向いて 立たせない(屋根の下から 外を見る)。
+  //
+  // 建物ローカル → 世界は Babylon の rotation.y と同じ(ローカル +Z が (sinθ, cosθ))。
+  // NPCの 顔の向きは (-sin rotY, -cos rotY)——NPCSystem.apply が
+  // root.rotation.y = rotY + π で 描くから(モデルの正面は +Z)。
+  it('あめやどりは 壁ではなく 外を 向いている', () => {
+    const outwardOf = (id: string, sx: number, sz: number): [number, number] => {
+      const b = BUILDINGS.find((x) => x.id === id)!;
+      const p = POIS[id];
+      const th = p.rotY ?? 0;
+      const co = Math.cos(th), si = Math.sin(th);
+      const lx = (sx - p.x) * co - (sz - p.z) * si;
+      const lz = (sx - p.x) * si + (sz - p.z) * co;
+      // はみ出しが 大きいほうの 面に 立っている
+      const nl: [number, number] = Math.abs(lx) - b.w / 2 > Math.abs(lz) - b.d / 2
+        ? [Math.sign(lx), 0] : [0, Math.sign(lz)];
+      return [nl[0] * co + nl[1] * si, -nl[0] * si + nl[1] * co];
+    };
+    for (const [npcId, houseId] of [['tsumugi', 'shop'], ['minamo', 'minamoHouse'], ['nokto', 'noktoHouse']]) {
+      const sp = npcSpot(npcId, SHELTER_SPOT_KEY);
+      expect(sp.rotY, `${npcId} に 向きがない`).not.toBeUndefined();
+      const face = [-Math.sin(sp.rotY!), -Math.cos(sp.rotY!)];
+      const out = outwardOf(houseId, sp.x, sp.z);
+      const dot = face[0] * out[0] + face[1] * out[1];
+      const deg = (Math.acos(Math.max(-1, Math.min(1, dot))) * 180) / Math.PI;
+      expect(dot, `${npcId} は 壁の外向き(${out[0].toFixed(2)}, ${out[1].toFixed(2)})から ${deg.toFixed(1)}度`)
+        .toBeGreaterThan(0.7); // 45度いないなら「外を見ている」
     }
   });
 
@@ -511,6 +544,49 @@ describe('v29 魚かげ', () => {
     expect(src).toMatch(/alphaIndex = 0/);
     // 毎フレーム頂点を動かすので updateExtends は true(教訓4)
     expect(src).toMatch(/updateVerticesData\(VertexBuffer\.PositionKind, p, true, false\)/);
+  });
+
+  // v17 泳ぐ高さ: 水面のすぐ下(底に めりこんで 体が 欠けない)。
+  // 池は 深い所でも 6cm しかないので、底ぎわに 置くと 体の前後で 底に 刺さる。
+  it('池の魚は 水面のすぐ下・底の上を およぐ', () => {
+    expect(POND_UNDER).toBeGreaterThan(0);
+    expect(POND_UNDER).toBeLessThan(0.05); // 水面から 5cm 以上 下げない(底に つく)
+    for (let i = 0; i < FISH_LANES.length; i++) {
+      if (FISH_LANES[i].body !== 'pond') continue;
+      for (const p of lanePoints(i)) {
+        const bed = terrainHeight(p.x, p.z);
+        const y = pondFishY(bed);
+        expect(y, `lane${i} 底(${bed.toFixed(3)})より 上`).toBeGreaterThanOrEqual(bed + POND_CLEAR - 1e-9);
+        expect(y, `lane${i} 水面より 下`).toBeLessThanOrEqual(POND.waterY - POND_UNDER + 1e-9);
+        // 体の まわり(前後左右 0.5m)でも 底に めりこまない = 体が 欠けない
+        for (const [dx, dz] of [[0.5, 0], [-0.5, 0], [0, 0.5], [0, -0.5]]) {
+          expect(y, `lane${i} まわりの底`).toBeGreaterThan(terrainHeight(p.x + dx, p.z + dz));
+        }
+      }
+    }
+  });
+
+  it('海の魚は 海面の下・海底の上を およぐ', () => {
+    expect(SEA_UNDER).toBeGreaterThan(0.02);
+    expect(seaFishY()).toBeLessThan(SEA_Y);
+    for (let i = 0; i < FISH_LANES.length; i++) {
+      if (FISH_LANES[i].body !== 'sea') continue;
+      for (const p of lanePoints(i)) {
+        // 上下の ゆらぎ(BOB=0.012)ぶんを 見こんで 判定する
+        expect(seaFishY() - 0.012, `lane${i}`).toBeGreaterThan(terrainHeight(p.x, p.z));
+        expect(seaFishY() + 0.012, `lane${i}`).toBeLessThan(SEA_Y);
+      }
+    }
+  });
+
+  // v17 こさ: 水面ごしに 1/4 しか 通らないので、魚がわの アルファは 落とさない
+  it('魚のこさは ふちまで 残す(水面ごしでも 形が 読める)', () => {
+    const src = read('src/entities/fishShadow.ts');
+    const edge = src.match(/const EDGE_A = ([\d.]+);/);
+    expect(edge, 'EDGE_A が 見つからない').not.toBeNull();
+    expect(Number(edge![1])).toBeGreaterThanOrEqual(0.5);
+    expect(Number(edge![1])).toBeLessThan(1); // ふちは まだ やわらかい
+    expect(src).toMatch(/mat\.alpha = 1\.0;/);
   });
 });
 

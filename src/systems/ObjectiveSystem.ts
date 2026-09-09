@@ -10,6 +10,7 @@ import { RECIPES, ITEMS, type ItemId, type ToolId, type RecipeDef } from '../dat
 import { NPC_BY_ID } from '../data/npcs';
 import { hasKitchen } from './ComboSystem';
 import { isStationBuilt } from './StationBuild';
+import { dailyTip } from './TodayCard';
 import { byInput } from '../ui/inputMode';
 import type { InteractionKind } from './InteractionResolver';
 
@@ -62,6 +63,16 @@ export interface Objective {
   lostHint?: string;
   /** 進められる場所(省略=island)。島と入り江のまたぎを1か所で判断するための印 */
   area?: ObjectiveArea;
+  /**
+   * v30 目標カードの **3行め**に出す「きょうの おすすめ」(free のときだけ)。
+   *
+   * 2行めまで(headline / label)は 1文字も 変えられない固定文言なので、
+   * 日替わりの さそいは この別の口から 出す。表示も 別の要素(.obj-tip)で、
+   * UXボットが読む .obj-label / .obj-sub には 1文字も 混ぜない。
+   * 目的地を持たないので、矢印・光の柱・Eの候補は 1つも 動かない
+   * (教訓3「日替わりの小さな目標は メインの目標表示を 乗っ取らずに 足せる」)。
+   */
+  tip?: string;
   // 回帰ボット・Eの候補選別用の構造情報(表示はlabelを使う)
   gatherItem?: ItemId;
   craftRecipe?: string;
@@ -466,11 +477,15 @@ export function currentObjective(
   // area は 'any' ではなく 'island'(=島でくらす)。こうしておくと、点灯のあと
   // 入り江に立ったままでも withAreaTravel が「ふねで しまへ もどろう」に差しかえる
   // (島に帰れば これまでどおり「クリア! 島で じゆうに くらそう」に戻る)。
+  // v30 3行めに「きょうの おすすめ」を そえる。2行めまでは 1文字も 変えない
+  // (UXボット・回帰ボット・tests/unit の OBJECTIVE_FIXED_TEXTS が 読む)。
+  // 日づけは state.time.day(毎フレーム 実物から 書きもどされる)ひとつだけを見る。
   return {
     id: 'free', headline: 'クリア!',
     label: '島で じゆうに くらそう',
     target: { kind: 'none' },
     area: 'island',
+    tip: dailyTip(state, state.time?.day ?? 1).text,
   };
 }
 

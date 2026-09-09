@@ -5,6 +5,9 @@ import { byInput } from './inputMode';
 import { PAINT_COLORS, ownedPaints, type ItemId, type PaintId } from '../data/items';
 // そうさほうほうの中身は helpText.ts が唯一の情報源(タイトル画面と同じものを出す)
 import { HELP_KEYBOARD, HELP_TOUCH } from './helpText';
+// v17.1 しょうごう。文言も 見た目も src/ui/BadgeUI.ts が唯一の情報源
+// (バッジ画面・タイトルの「つづきから」と 同じ言いかたにそろえる)
+import { badgeCountNow, ensureTitleCss, titleHeadHtml } from './BadgeUI';
 
 export class PauseMenu {
   private el: HTMLElement;
@@ -70,10 +73,14 @@ export class PauseMenu {
   private render(): void {
     const opts = loadOpts();
     const outfit = this.outfitHtml();
+    // v17.1 いまの しょうごうと「つぎまで あと何こ」。
+    // 数は BadgeSystem が 1秒ごとに 書きこんでいるものを 読むだけ(引き数は ふやさない)
+    ensureTitleCss();
     this.el.innerHTML = `
       <div class="panel-title">メニュー
         <span class="panel-close" data-close>${byInput('とじる(Esc)', 'とじる')}</span>
       </div>
+      ${titleHeadHtml(badgeCountNow(), true)}
       <div class="pause-list">
         <button class="title-btn" data-act="resume">つづける</button>
         <button class="title-btn sub" data-act="sound">おと: ${opts.sound ? 'オン' : 'オフ'}</button>

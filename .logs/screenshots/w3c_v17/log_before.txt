@@ -1,0 +1,21 @@
+  日=16 時刻=11.03
+  撮影: before_01_pond_fish_day.png
+  魚かげ: {"pond":3,"sea":2,"t":6.5,"glow":0,"visible":true}
+  撮影: before_02_pond_fish_day_closeup.png
+  撮影: before_02_pond_fish_day_closeup_nofish.png
+  撮影: before_03_pond_fish_night.png
+  魚かげ(よる): {"pond":3,"sea":2,"t":6.5,"glow":0.51,"visible":true}
+  撮影: before_04_pond_fish_night_closeup.png
+  撮影: before_04_pond_fish_night_closeup_nofish.png
+  撮影: before_05_sea_fish_day.png
+  撮影: before_06_sea_fish_day_closeup.png
+  撮影: before_06_sea_fish_day_closeup_nofish.png
+  日=16 時刻=10.03
+天気: "rainy" 雨あし=1.00
+tsumugi: 立ち位置(-5.05, 0.95) rotY=4.7124 顔の向き=(1.000, -0.000) 壁の外向き=(1, 0) ずれ=0.0度
+  撮影: before_07_tsumugi_shelter_face.png
+minamo: 立ち位置(29.70, 14.50) rotY=1.6000 顔の向き=(-1.000, 0.029) 壁の外向き=(-0.9898, 0.1423) ずれ=6.5度
+  撮影: before_07_minamo_shelter_face.png
+nokto: 立ち位置(22.30, -33.10) rotY=-0.5000 顔の向き=(0.479, -0.878) 壁の外向き=(-0.4794, -0.8776) ずれ=57.3度
+  撮影: before_07_nokto_shelter_face.png
+JSエラー: 0

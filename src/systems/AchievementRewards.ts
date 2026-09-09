@@ -37,7 +37,7 @@ export const rewardKey = (achievementId: string): string => `achrw_${achievement
  *       よふかしのたからもの → きんのランタン(ほしのランタンの きん色)
  *       かざりつけめいじん   → ボトルかべ(みどりの かべがみ)
  *       よるの でんしゃを 見た → よるのとうだい(とうだいのランタンの こんいろ)
- *   - おねがいマスターだけ 200ルミナ(いちばん最後の目標)。
+ *   - おねがいマスターと ずかんコンプリートだけ 200ルミナ(いちばん最後の目標2つ)。
  */
 export const ACHIEVEMENT_REWARDS: Record<string, AchievementReward> = {
   a_first_quest: { kind: 'lumina', amount: 30 },
@@ -80,6 +80,11 @@ export const ACHIEVEMENT_REWARDS: Record<string, AchievementReward> = {
   // v29 物語の むすび。見せ場そのものが ごほうびなので ルミナだけにする
   // (「ふたりのじかん」と同じ考えかた。ここで 限定のものまで 出すと 二重になる)
   a_story_end: { kind: 'lumina', amount: 150 },
+  // v30 ずかんの コンプリート。おねがいマスターと ならぶ いちばん とおい目標なので
+  // 上限いっぱいの 200ルミナ。ここでしか手に入らない「もの」を 出さないのは、
+  // ずかんを ぜんぶ うめた あとに **ずかんに 載る新しい品**が 手に入ると、
+  // 100%の 表示が その場で くずれて 見えるから
+  a_codex_all: { kind: 'lumina', amount: 200 },
   a_all_quests: { kind: 'lumina', amount: 200 },
 };
 

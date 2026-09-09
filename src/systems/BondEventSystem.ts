@@ -20,6 +20,7 @@ import type { Line } from '../data/dialogueLine';
 import { NPCS, NPC_BY_ID } from '../data/npcs';
 import { ITEMS, type ItemId } from '../data/items';
 import { FRIEND_BEST } from './GiftSystem';
+import { bondMailOf, receiveMail } from './MailSystem';
 
 /** 見せ場の種類(SequenceDirector が この名前で 画を作りわける) */
 export type BondSceneKind = 'pier_dusk' | 'hill_night' | 'shop_craft' | 'lighthouse_top' | 'market_map';
@@ -192,6 +193,12 @@ export interface BondResult {
   total: number;
   /** もらったものの表示名(無ければ null) */
   rewardName: string | null;
+  /**
+   * v30 この見せ場の あとに とどく手紙のID(src/data/letters.ts)。
+   * 手紙は 見せ場と 同じ「1回きり」なので、記録も ここで いっしょに つける
+   * ——受けとりの記録が 見せ場の 成立と 1つの関数の中で そろう。
+   */
+  letterId: string | null;
 }
 
 /**
@@ -212,7 +219,11 @@ export function completeBond(s: GameState, npcId: string, questCritical = false)
     invAddRecorded(s, def.reward.item, def.reward.count);
     rewardName = ITEMS[def.reward.item].name;
   }
-  return { def, total, rewardName };
+  // v30 その人からの手紙が 受信箱に とどく(ずかんの「てがみ」欄で いつでも 読み返せる)。
+  // 見せ場の 見のがし・とばしとは 関係なく のこるように、ここで 記録する。
+  const mail = bondMailOf(npcId);
+  const letterId = mail && receiveMail(s, mail.id, s.time?.day ?? 1) ? mail.id : null;
+  return { def, total, rewardName, letterId };
 }
 
 /** これまでに おえた回数(じっせき・バッジの唯一の情報源) */

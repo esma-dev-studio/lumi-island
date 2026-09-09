@@ -14,6 +14,7 @@ import { invCount, invRemove, learnRecipe, statAdd } from '../game/GameState';
 import { COOKED_FOODS, ITEMS, RECIPES, isCookedFood, type ItemId } from '../data/items';
 import { NPCS, NPC_BY_ID, type NpcDef } from '../data/npcs';
 import { sharedCooking } from './CookingEffects';
+import { receiveMail, thanksMailOf } from './MailSystem';
 
 /**
  * v12 りょうりの好み。
@@ -191,6 +192,13 @@ export function friendshipHearts(friendship: number): number {
 export interface GiftReward {
   /** なかよし度5: お礼の手紙(ちいさな詩のような1文) */
   letter?: string;
+  /**
+   * v30 なかよし度5: 受信箱に とどいた お礼の手紙のID(src/data/letters.ts)。
+   * letter(トーストに出す1文)と 別に持つのは、あちらが「その場で読む1行」、
+   * こちらが「ずかんで 読み返す1通」だから。手紙の本文の むすびは
+   * npcs.ts の thanksLetter を 参照しているので、二重持ちには ならない。
+   */
+  letterId?: string;
   /** なかよし度5: おぼえた とくべつなレシピの表示名(すでに知っていた場合は出さない) */
   recipeName?: string;
   /** そのレシピで作れるもののID(トーストのピクトグラム用) */
@@ -251,6 +259,11 @@ export function applyGift(s: GameState, npcId: string, item: ItemId): GiftResult
     if (!s.stats) s.stats = {};
     s.stats[thanksKey(npcId)] = 1;
     reward.letter = def.thanksLetter;
+    // v30 同じ手紙を 受信箱にも 入れる。「トーストで1回 見て 消える」を やめて、
+    // ずかんの「てがみ」欄から いつでも 読み返せるようにする(src/systems/MailSystem.ts)。
+    // 記録は とどいた この瞬間に つけるので、トーストを 見のがしても 手紙は のこる。
+    const mail = thanksMailOf(npcId);
+    if (mail && receiveMail(s, mail.id, s.time?.day ?? 1)) reward.letterId = mail.id;
     if (learnRecipe(s, def.thanksRecipe)) {
       const recipe = RECIPES.find((r) => r.id === def.thanksRecipe);
       reward.recipeName = recipe?.name ?? def.thanksRecipe;

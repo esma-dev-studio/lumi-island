@@ -15,8 +15,8 @@
 //   表情を 別メッシュに 分ければ、blink の中身は 1バイトも 変わらない。
 import { patch, mergeMeshes, norm, add, mul, sub, len, rayFarHit, uvAtSurface } from './geo.mjs';
 import { solo, duo } from './rig.mjs';
-import { eyeQuad } from './body.mjs';
-import { FACE_NAMES, FACE_REG, MOUTH_PATCH, MOUTH_X, REG, TEXSIZE, headPxAt } from './uvmap.mjs';
+import { eyeQuad, headFitAdjust, useHeadNormals, EYE_CLEAR } from './body.mjs';
+import { FACE_NAMES, FACE_REG, MOUTH_PATCH, MOUTH_X, REG, TEXSIZE } from './uvmap.mjs';
 
 /** 出し入れの寸法(m)。まばたき(開き目 +0.004 / 閉じ目 -0.014)と同じ桁にそろえてある */
 export const FACE_DEPTH = {
@@ -131,54 +131,26 @@ const FACE_EYE_THICK = 0.0003;
 function faceEyeQuad(rig, spec, headMesh, thetaDeg, region, amount) {
   const c = headCenter(spec);
   const { dir } = eyeQuad(rig, spec, thetaDeg, region, FACE_DEPTH.eyeRest);
-  const adjust = (p) => {
-    const act = add(p, mul(dir, amount)); // 出したときの位置
-    const d = norm(sub(act, c));
-    const hit = rayFarHit(headMesh, c, d);
-    if (hit === null) return p;
-    const need = hit + FACE_EYE_CLEAR - len(sub(act, c));
-    return need > 0 ? add(p, mul(d, need)) : p;
-  };
+  // ふだんの目も 面まで 押し出す種族(spec.eye.fitHead = ヤギ)は、**まったく同じ
+  // 押し出し**を つかう(基準は「ふだんの開き目の位置」の レイ1本 = body.mjs)。
+  // こうすると 出荷ずみの前後関係(表情の目 = ふだんの目 + eyeRise)が 押し出しの
+  // あとも 1ミリも 変わらない —— クアッドごとに 別のレイで 測ると、鼻先のように
+  // 面をかすめる向きでは hit が 数mm ずれて 表情の目が ふだんの目の 後ろに 落ちる
+  // (実測: あと -1.5mm で checkFaceMesh が 落ちた)。
+  // fitHead でない 5体は これまでの式のまま = 出荷ずみの表情を 1ミリも 動かさない。
+  const adjust = spec.eye.fitHead
+    ? headFitAdjust(headMesh, c, amount - FACE_DEPTH.eyeRise, EYE_CLEAR)
+    : (p) => {
+      const act = add(p, mul(dir, amount)); // 出したときの位置
+      const d = norm(sub(act, c));
+      const hit = rayFarHit(headMesh, c, d);
+      if (hit === null) return p;
+      const need = hit + FACE_EYE_CLEAR - len(sub(act, c));
+      return need > 0 ? add(p, mul(d, need)) : p;
+    };
   const { mesh } = eyeQuad(rig, spec, thetaDeg, region, FACE_DEPTH.eyeRest, adjust, FACE_EYE_THICK);
   useHeadNormals(mesh, spec, headMesh, thetaDeg);
   return { mesh, dir };
-}
-
-/**
- * クアッドの法線を **頭の面の法線に そろえる**(表情の目だけ)。
- *
- * なぜ 要るか: クアッドは 頭を 楕円体で 近似した面に 置くので、法線が 実物の頭と
- * 3〜20度 ずれる(実測: ロカ 平均8度)。絵が ぴたり 同じでも 光の当たりかたが
- * 変わるので、**クアッドの ふちだけ 明るい すじ**になり「うすい四角のシール」に見える
- * (ロカの 白い顔で 実測: 顔186 → ふち195 → 中176)。
- * 同じUVの 頭の点の 法線を 引いて 上書きすると、光の当たりかたまで 頭と そろう。
- *
- * 頭の法線は マズルの押し出し(applyMuzzle)の前の 楕円体のまま(位置しか 動かさない)
- * = 頭が 実際に 描かれるときの 法線そのもの なので、これに そろえるのが 正しい。
- *
- * patch() は グリッド点ごとに 表・裏の 2頂点を この順で 作る(geo.mjs)。
- */
-function useHeadNormals(mesh, spec, headMesh, thetaDeg) {
-  const hs = spec.head, e = spec.eye;
-  const COLS = 3, ROWS = 3; // body.mjs の eyeQuad と そろえる
-  const halfDeg = ((0.5 * e.w) / hs.rx) * (180 / Math.PI);
-  for (let r = 0; r <= ROWS; r++) {
-    for (let c = 0; c <= COLS; c++) {
-      // eyeQuad の surfaceAt と 同じ ならべかた(u=c/COLS, v=r/ROWS)
-      const th = thetaDeg + (c / COLS - 0.5) * 2 * halfDeg;
-      const y = e.y + (r / ROWS - 0.5) * e.h;
-      const [px, py] = headPxAt(hs, th, y);
-      const s = uvAtSurface(headMesh, px / TEXSIZE, py / TEXSIZE);
-      if (!s) continue; // 頭の外(ありえないが 念のため)は もとの法線のまま
-      const k = (r * (COLS + 1) + c) * 2;
-      for (const [side, sign] of [[0, 1], [1, -1]]) {
-        const o = (k + side) * 3;
-        mesh.nrm[o] = s.n[0] * sign;
-        mesh.nrm[o + 1] = s.n[1] * sign;
-        mesh.nrm[o + 2] = s.n[2] * sign;
-      }
-    }
-  }
 }
 
 /**

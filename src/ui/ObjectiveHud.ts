@@ -36,11 +36,21 @@ export function resetHudObjective(): void {
   shownObjective = null;
 }
 
+/**
+ * v30 3行めの小見出し。「命令ではなく さそい」だと ひと目で わかるようにする
+ * ——教訓3の「日替わりの小さな目標は メインの目標表示を 乗っ取らずに 足せる」。
+ * 文言の検査(TextStyleCheck)にも この定数のまま 通す。
+ */
+export const TIP_HEAD = 'きょうの おすすめ';
+
 export class ObjectiveHud {
   private el: HTMLElement;
   private headEl: HTMLElement;
   private labelEl: HTMLElement;
   private subEl: HTMLElement;
+  private tipEl: HTMLElement;
+  private tipTextEl: HTMLElement;
+  private lastTip = '';
   private lastKey = '';
 
   constructor() {
@@ -50,11 +60,15 @@ export class ObjectiveHud {
       <div class="obj-head">いまやること</div>
       <div class="obj-label"></div>
       <div class="obj-sub"></div>
+      <div class="obj-tip"><span class="obj-tip-head">${TIP_HEAD}</span><span class="obj-tip-text"></span></div>
     `;
     document.getElementById('ui-root')!.appendChild(this.el);
     this.headEl = this.el.querySelector('.obj-head')!;
     this.labelEl = this.el.querySelector('.obj-label')!;
     this.subEl = this.el.querySelector('.obj-sub')!;
+    this.tipEl = this.el.querySelector('.obj-tip')!;
+    this.tipTextEl = this.el.querySelector('.obj-tip-text')!;
+    this.tipEl.style.display = 'none';
   }
 
   update(o: Objective, dist: number | null): void {
@@ -74,6 +88,15 @@ export class ObjectiveHud {
       this.lastSub = sub;
       this.subEl.textContent = sub;
       this.subEl.style.display = sub ? '' : 'none';
+    }
+    // v30 3行め「きょうの おすすめ」。目標が これを 持っているとき(=クリア後)だけ 出す。
+    // 2行めまで(.obj-head / .obj-label)と 距離の行(.obj-sub)には 1文字も 混ぜない
+    // ——UXボットは あの3つを 読んで 目標を 見分けている
+    const tip = o.tip ?? '';
+    if (this.lastTip !== tip) {
+      this.lastTip = tip;
+      this.tipTextEl.textContent = tip;
+      this.tipEl.style.display = tip ? '' : 'none';
     }
   }
   private lastSub: string | null = null;

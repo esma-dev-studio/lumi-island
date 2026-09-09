@@ -11,11 +11,16 @@
 //   置くと **かならず水面より先**に描かれ、水の色ごしに にじんで見える
 //   (entities/water.ts の 泡・きらめきが グループ1にいるのと 同じ考え方の裏返し)。
 //
-// 高さの決めかた:
-//   池 … 池の底(terrainHeight)から POND_LIFT だけ 上。池の水は いちばん深い所でも
-//        6cmしかないので、水面(±4cmで ゆれる)と 底の あいだに 入るには 底に そわせるしかない。
-//   海 … 海面(SEA_Y)から SEA_DEPTH 下。海面の頂点は 動かない(法線だけ ゆらす)ので、
-//        一定の深さで よい。
+// 高さの決めかた(v17 で 底ぎわ → 水面のすぐ下 に 変えた):
+//   池 … 水面(POND.waterY)から POND_UNDER 下。底からは POND_CLEAR だけ 浮かせる。
+//        v29 は 底に そわせていたが、体の中心1点の 高さで 板を 置くので、体の前後で
+//        底が 上がっていると **魚が 底に めりこんで 欠ける**(池は6cmしか 深さがない)。
+//        水面がわに 寄せれば 欠けず、上から 見おろす カメラでも 形が そのまま 出る。
+//        さざ波の谷(-2〜3cm)より 上に 出る 瞬間はあるが、魚も水面も 深度を書かない
+//        半透明なので 描く順(alphaIndex)どおり **かならず水面の下**に 見える。
+//   海 … 海面(SEA_Y)から SEA_UNDER 下。海面の頂点は 動かない(法線だけ ゆらす)。
+//   どちらの数字も 純ロジック側(systems/FishShadowSystem.ts)に置いて、
+//   tests/unit/life_v29.test.ts が 底と水面の あいだに あることを 機械検査する。
 import type { Scene } from '@babylonjs/core/scene';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
@@ -24,34 +29,35 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { FishLane } from '../data/island';
 import { terrainHeight } from './terrain';
-import { fishPose, nightGlow, pondLanes, seaLanes } from '../systems/FishShadowSystem';
+import { fishPose, nightGlow, pondFishY, pondLanes, seaFishY, seaLanes } from '../systems/FishShadowSystem';
 
-/** 池の底からの うき(m)。底にはりつくと 面が ちらつくので すこし上げる */
-const POND_LIFT = 0.014;
-/** 海面からの ふかさ(m) */
-const SEA_DEPTH = 0.09;
-/** 海面の高さ(entities/water.ts の SEA_Y と同じ値。water.ts は編集禁止なので写して持つ) */
-const SEA_Y = 0.3;
 /** 更新の間びき(Hz)。魚は ゆっくりなので 12Hz で 見た目は変わらない */
 const FISH_HZ = 12;
 
 /** 魚1ぴきの形(ローカル。+Z が進む向き・XZ平面に ねかせた 平たい影) */
 const BODY_R = 12; // まわりの点の数
-const BODY_LEN = 0.38; // 鼻先までの長さ
-const BODY_BACK = 0.22; // 尾のつけ根までの長さ
-const BODY_W = 0.135; // いちばん太いところの 半はば
+const BODY_LEN = 0.46; // 鼻先までの長さ
+const BODY_BACK = 0.27; // 尾のつけ根までの長さ
+const BODY_W = 0.175; // いちばん太いところの 半はば
 /** 尾びれ(つけ根から うしろへ) */
-const TAIL_LEN = 0.19;
-const TAIL_W = 0.105;
+const TAIL_LEN = 0.23;
+const TAIL_W = 0.135;
 /**
- * 体の こさ(頂点アルファ)。まん中は こく、ふちは うすく。
+ * 体の こさ(頂点アルファ)。まん中は こく、ふちは やわらかく。
  *
- * ふちを 0 にすると 池では ほとんど 見えなくなる: 池の水面は アルファ0.86 なので
- * 下に あるものは **14%しか** 通らない(実測: 影が かすかな にじみに しか ならなかった)。
- * ふちにも こさを 残し、体も ひとまわり 大きくして 「さかなが いる」と 読めるようにする。
+ * 水面ごしに どれだけ こく 見えるかは 「(1 - 水面のアルファ) × 魚のアルファ × (底の色 - 魚の色)」で
+ * ぜんぶ 決まる。池の水面は アルファ0.86(釣り場のあたりで 実効0.74)なので、通るのは
+ * **1/4ほど**しかない —— v17 の実測では 魚が いてもいなくても 明るさの差は
+ * いちばん濃い所で 24段(平均10段)しかなく、ほとんど 気づけなかった。
+ * 上げられるのは 魚がわの こさだけなので、
+ *   ・ふち 0.22 → 0.62(体の中心の 点だけでなく **形ぜんたい**が 読める)
+ *   ・マテリアルのアルファ 0.9 → 1.0
+ *   ・体を ひとまわり 大きく(BODY_* を 約1.2倍)
+ * の3つを 重ねる。white-out はしない: 通るのは 1/4 なので、いちばん こくても
+ * 水面の色から 十数段 ずれるだけ。
  */
 const CORE_A = 1.0;
-const EDGE_A = 0.22;
+const EDGE_A = 0.62;
 
 /** 体の まわりの点(ローカル XZ)。前は とがり、後ろは しぼる */
 function bodyRing(): [number, number][] {
@@ -84,10 +90,22 @@ let fishAcc = 1;
 let fishOn = true;
 let lastGlow = 0;
 
-/** 影の色(昼)。水にとけて見えるよう、まっ黒ではなく ふかい青みどり */
-const C_SHADOW = new Color3(0.055, 0.105, 0.115);
-/** よるの ヨザカナの ひかり(池だけ) */
-const C_NIGHT = new Color3(0.46, 1.0, 0.84);
+/**
+ * 影の色(昼)。水にとけて見えるよう、まっ黒ではなく ふかい青みどり。
+ * v17 で すこし 落とした(0.055,0.105,0.115 → いま): 見えかたは
+ * 「底の色 - 魚の色」に 比例するので、暗くするぶんだけ 形が 読めるようになる
+ * (池の底は オリーブの泥 C_PONDBED(0.345,0.365,0.285)= 魚より ずっと 明るい)。
+ */
+const C_SHADOW = new Color3(0.03, 0.06, 0.07);
+/**
+ * よるの ヨザカナの ひかり(池だけ)。
+ * v17 で 強めた(0.46,1.0,0.84 → いま): 水面ごしに 1/4 しか 通らないので、
+ * 1.0 で 止めておくと 水面の色から 7段しか ずれず、光っていることが 分からなかった。
+ * 1をこえた ぶんは 表示のときに 切りつめられるが、**水にうすめられた あとの色**が
+ * 出てくるので 白とびは しない —— 実測(.logs/screenshots/w3c_v17 の よるの池):
+ * min(R,G,B) が 250 以上の画素は 直す前と同じ **0個**、いちばん明るい画素も 246 のまま。
+ */
+const C_NIGHT = new Color3(0.72, 1.45, 1.2);
 
 function build(scene: Scene, name: string, lanes: FishLane[], body: 'pond' | 'sea'): FishMesh {
   const pos: number[] = [];
@@ -129,7 +147,8 @@ function build(scene: Scene, name: string, lanes: FishLane[], body: 'pond' | 'se
   mat.emissiveColor = C_SHADOW.clone(); // disableLighting なので 色は emissive に置く(教訓1)
   mat.disableLighting = true;
   mat.backFaceCulling = false;
-  mat.alpha = 0.9;
+  // 水面ごしに 1/4 しか 通らないので、魚がわは 下げない(頂点アルファで ふちを やわらげる)
+  mat.alpha = 1.0;
   mesh.material = mat;
   return { mesh, mat, lanes, pos: new Float32Array(pos), body };
 }
@@ -150,10 +169,10 @@ function writeFish(f: FishMesh, t: number): void {
   const p = f.pos;
   for (let i = 0; i < f.lanes.length; i++) {
     const q = fishPose(f.lanes[i], t);
-    // 池は「底ぎわ」に そわせる。上下の ゆらぎ(dy)は 足さない——池の水は 深いところでも
-    // 6cmしかなく、水面は さざ波と 上下動で ±4cm 動くので、動かせる すきまが無い。
+    // 池は「水面のすぐ下」。上下の ゆらぎ(dy)は 足さない——池の水は 深いところでも
+    // 6cmしかなく、水面も さざ波と 上下動で 動くので、ゆらす すきまが無い。
     // 輪の上の 水ぶかさが 0.05m 以上あることは tests/unit/life_v29.test.ts が 機械検査する。
-    const y = f.body === 'pond' ? terrainHeight(q.x, q.z) + POND_LIFT : SEA_Y - SEA_DEPTH + q.dy;
+    const y = f.body === 'pond' ? pondFishY(terrainHeight(q.x, q.z)) : seaFishY() + q.dy;
     const cs = Math.cos(q.rotY);
     const sn = Math.sin(q.rotY);
     let b = i * VERTS * 3;
@@ -198,9 +217,9 @@ export function updateFishShadows(dt: number, night: number): void {
   e.r = C_SHADOW.r + (C_NIGHT.r - C_SHADOW.r) * g;
   e.g = C_SHADOW.g + (C_NIGHT.g - C_SHADOW.g) * g;
   e.b = C_SHADOW.b + (C_NIGHT.b - C_SHADOW.b) * g;
-  // よるは こさを 落とさない: 池の水面(アルファ0.86)は 下のものを 14%しか 通さないので、
+  // よるは こさを 落とさない: 池の水面(アルファ0.86)は 下のものを 1/4 しか 通さないので、
   // ここで うすくすると ヨザカナの 光が 消えてしまう(実測: ほとんど 見えなかった)
-  pondFish.mat.alpha = 0.9;
+  pondFish.mat.alpha = 1.0;
 }
 
 /** 性能A/B(tools/perf_mobile.mjs --off life)と 撮影のための 出し入れ */

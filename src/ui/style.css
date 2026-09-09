@@ -1186,3 +1186,70 @@ body.photo-mode #ui-root > *:not(.photo-frame) { display: none; }
 .album-when { font-size: 0.78rem; color: #6f6350; }
 .album-row { display: flex; gap: 6px; }
 .album-row .craft-btn { flex: 1; min-width: 0; }
+
+/* =========================================================================
+   v30 クリア後の「きょうの おすすめ」(目標カードの3行め)・てがみの受信箱・
+   ずかんの コンプ率。ここより上の宣言は 1つも さわっていない
+   (あとの宣言が 勝つので、追記は かならず ファイルの さいごに まとめる)。
+   ========================================================================= */
+
+/* ---- 目標カードの3行め ---- */
+/* 2行めまで(.obj-head / .obj-label)と 距離の行(.obj-sub)は そのまま。
+   細い線で 区切って「べつの たぐいの ことば」だと 目で わかるようにする */
+.obj-tip {
+  margin-top: 6px; padding-top: 5px; border-top: 1px dashed var(--line);
+}
+.obj-tip-head {
+  display: block; font-size: 0.62rem; font-weight: 700;
+  color: var(--amber); letter-spacing: 0.08em;
+}
+/* 分かち書きの空白で 折る(keep-all + break-word)。これが無いと
+   「ゆきだる/まを」のように ことばの まん中で 割れる(教訓2) */
+.obj-tip-text {
+  display: block; font-size: 0.78rem; font-weight: 700;
+  color: var(--ink-soft); line-height: 1.45;
+  word-break: keep-all; overflow-wrap: break-word;
+}
+html.touch-ui .obj-tip-head { font-size: 0.74rem; }
+html.touch-ui .obj-tip-text { font-size: 0.86rem; }
+
+/* ---- ずかん: ぜんたいの あつまりぐあい ---- */
+.codex-total {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+  margin: 8px 0 2px; padding: 8px 10px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: #fffdf6;
+}
+.ct-head { font-size: 0.88rem; font-weight: 900; color: var(--ink); }
+.ct-head b { font-size: 1.05rem; color: var(--amber); }
+.ct-rest { font-size: 0.8rem; font-weight: 700; color: var(--ink-soft); }
+.ct-done { color: #4f9a78; }
+.ct-bar {
+  flex: 1 1 8em; min-width: 6em; height: 7px; border-radius: 4px;
+  background: #e8e0cd; overflow: hidden;
+}
+.ct-bar i { display: block; height: 100%; background: var(--amber); }
+
+/* ---- てがみ: まだ ひらいていない しるし ---- */
+/* 未読は マスの 右上に ちいさな まる。文字を そえないのは、マスの中の
+   題名が みじかく 折れてしまうため(かわりに title= で ことばも のこす) */
+.codex-cell.letter { position: relative; }
+.codex-cell.letter.unread { border-color: var(--amber); background: #fff7e6; }
+.codex-cell.letter.unread::after {
+  content: ''; position: absolute; top: 5px; right: 5px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: #d4703a; box-shadow: 0 0 0 2px #fffdf6;
+}
+/* 手紙の題は マスの中で 2行まで 折りかえす(「…」で 切ると 題が わからない)。
+   ことばの まん中で 割れないよう keep-all + break-word にする(教訓2) */
+.codex-cell.letter .codex-name {
+  white-space: normal; word-break: keep-all; overflow-wrap: break-word; line-height: 1.3;
+}
+.codex-cell.letter .codex-name small {
+  display: block; font-size: 0.68rem; font-weight: 700; color: #8a7c66;
+}
+/* タブの上の 未読の数(まるい しるし) */
+.tab-new {
+  display: inline-block; margin-left: 5px; min-width: 1.25em; padding: 0 0.3em;
+  border-radius: 999px; background: #d4703a; color: #fff;
+  font-size: 0.72rem; font-weight: 900; line-height: 1.5; text-align: center;
+}

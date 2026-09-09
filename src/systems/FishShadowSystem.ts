@@ -9,10 +9,40 @@
 //   - つかまえられない・当たり判定なし・音なし。見るだけの存在(教訓: 光の群れと同じ立ち位置)。
 //
 // 時間は IslandScene.update から渡す実秒の累積。ポーズ・会話中は update が呼ばれないので止まる。
-import { FISH_LANES, type FishLane } from '../data/island';
+import { FISH_LANES, POND, type FishLane } from '../data/island';
 
 /** 輪を1周する角速度(rad/秒)。全部の魚で同じ = 追いつかない */
 export const FISH_SPEED = 0.17;
+
+/** 海面の高さ(entities/water.ts の SEA_Y と同じ値。water.ts は Babylon を読むので写して持つ) */
+export const SEA_Y = 0.3;
+/** 池の魚を 水面から これだけ 下に 置く(m) */
+export const POND_UNDER = 0.03;
+/** 池の魚を 底から これだけは 浮かせる(m。ここを 割ると 体が 底に めりこんで 欠ける) */
+export const POND_CLEAR = 0.02;
+/** 海の魚を 海面から これだけ 下に 置く(m) */
+export const SEA_UNDER = 0.05;
+
+/**
+ * v17 池の魚が およぐ 高さ。
+ *
+ * v29 は「底から 1.4cm」だった。池は いちばん深い所でも 6cm しかないので、
+ * 体(長さ1m ちかく)の 前後で 底が 2cm 上がるだけで **体が 底に めりこんで 欠ける**
+ * うえ、水面から いちばん 遠い所を 泳ぐ ことになる。
+ * 水面の すぐ下に 上げると、欠けが なくなり、上から 見おろす カメラでも
+ * 「水の中に いる」形が そのまま 出る。
+ *
+ * 底ぎわは POND_CLEAR だけ 残す(輪の上の 水ぶかさは 0.05m 以上あることを
+ * tests/unit/life_v29.test.ts が 機械検査しているので、ふつうは 水面がわが 勝つ)。
+ *
+ * @param bedY その点の 池の底の高さ(entities/terrain の terrainHeight)
+ */
+export function pondFishY(bedY: number): number {
+  return Math.max(bedY + POND_CLEAR, POND.waterY - POND_UNDER);
+}
+
+/** 海の魚が およぐ 高さ(海面は 上下に 動かないので 一定) */
+export const seaFishY = (): number => SEA_Y - SEA_UNDER;
 /** 尾の ふり(rad)と その速さ(rad/秒) */
 const TAIL_AMP = 0.42;
 const TAIL_SPEED = 3.1;

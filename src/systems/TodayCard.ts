@@ -20,7 +20,12 @@ import { NPCS, NPC_BY_ID, homeGiftFor } from '../data/npcs';
 import { ITEMS, isDisplayFurniture, isPaint, type ItemId } from '../data/items';
 import { willVisitToday } from './NPCSystem';
 import { plotsBloomingOn } from './GardenSystem';
-import { willRainbowOn, willSnowOn } from './WeatherSystem';
+import { weatherOfDay, willRainbowOn, willSnowOn } from './WeatherSystem';
+// v30 「きょうの おすすめ」で つかう(でんごんばんの まだ とどけていない1件・日づけのくじ)。
+// 文も 日づけの計算も あちらから もらう=でんごんばんの行と 同じ文になる
+import { dayHash, errandText, errandsOfDay, isErrandDone } from './BulletinSystem';
+// v30 きょう とどいた手紙(受信箱への みちしるべ)
+import { unreadMailArrivedOn, unreadMailCount } from './MailSystem';
 import { isBottleDay } from './BottleSystem';
 import {
   FESTIVAL_DAY_TEXT, FESTIVAL_EVE_TEXT, isFestivalDay, isFestivalEve,
@@ -59,7 +64,9 @@ export interface TodayCardData {
 export const QUIET_TEXT = 'しずかな 一日に なりそう。のんびり しよう';
 
 /**
- * きょう起きること(強い順)。上から2件までを カードに出す。
+ * きょう起きること(強い順)。上から2件までを カードに出す(eventsOf)。
+ * v30 の「きょうの おすすめ」(目標カードの3行め)は 全部を 見るので、
+ * ここでは 切らずに 返し、切るのは カード側の eventsOf にする。
  *
  * 順番の意味:
  *   来訪 > ぬしのきはい > 花だん > おみやげ > 虹 > ボトル
@@ -68,7 +75,7 @@ export const QUIET_TEXT = 'しずかな 一日に なりそう。のんびり �
  *   v21の「ぬしの きはい」も同じ たぐい(その釣り場に かよいつめた人にしか 出ない)ので、
  *   来訪の すぐ下に 置いてある。
  */
-function eventsOf(s: GameState, day: number): TodayEvent[] {
+export function eventsOfDay(s: GameState, day: number): TodayEvent[] {
   const out: TodayEvent[] = [];
 
   // 1) 朝の来訪(src/systems/NPCSystem.ts willVisitToday)
@@ -144,7 +151,12 @@ function eventsOf(s: GameState, day: number): TodayEvent[] {
     out.unshift({ id: 'festival_eve', text: FESTIVAL_EVE_TEXT, icon: 'festival' });
   }
 
-  return out.slice(0, CARD_EVENT_MAX);
+  return out;
+}
+
+/** カードに ならべる ぶん(強い順に2件まで) */
+function eventsOf(s: GameState, day: number): TodayEvent[] {
+  return eventsOfDay(s, day).slice(0, CARD_EVENT_MAX);
 }
 
 /**
@@ -157,6 +169,16 @@ export interface SuggestionSeed {
   id: string;
   icon: string;
   text: string;
+  /**
+   * v30 「いまやること」の3行めに出す みじかい形(TIP_MAX 文字まで)。
+   *
+   * text と 2つ持つ理由: 出る場所の はばが ちがう。
+   *   text … 朝のカード(画面まん中の 1枚)。ひとこと そえる ゆとりが ある
+   *   tip  … 左上の目標カード(はば 320px)。2行に おさめないと 目標が 読みにくくなる
+   * 中身が ずれないように、tests/unit/dailytip_v30.test.ts が
+   * 「どの たねにも 両方ある・tip は みじかい・同じ行動を さしている」を 機械検査する。
+   */
+  tip: string;
   when: (s: GameState) => boolean;
 }
 
@@ -167,26 +189,31 @@ export const SUGGESTIONS: SuggestionSeed[] = [
   {
     id: 'combo', icon: 'combo_unknown',
     text: 'ふたつの ざいりょうを えらんで、くみあわせを ためしてみよう',
+    tip: 'くみあわせを ためしてみよう',
     when: (s) => s.flags?.unlock_craft === true && discoveredCount(s) < 2,
   },
   {
     id: 'garden', icon: 'flower',
     text: 'にわの はなだんに のばなを うえてみよう',
+    tip: 'にわの はなだんに のばなを うえてみよう',
     when: (s) => (s.garden?.length ?? 0) === 0,
   },
   {
     id: 'cove_night', icon: 'starweed',
     text: 'よるの入り江で ほしくさが きらきら するよ。見にいってみる?',
+    tip: 'よるの入り江の ほしくさを 見にいこう',
     when: (s) => s.flags?.roka_arrived === true,
   },
   {
     id: 'market', icon: 'train',
     text: 'いちば島の テンの店を のぞいてみよう。しなものは 週ごとに 入れかわるよ',
+    tip: 'いちば島の テンの店を のぞいてみよう',
     when: (s) => s.flags?.market_arrived === true,
   },
   {
     id: 'display', icon: 'f_aquarium',
     text: 'すいそうや むしかごに いきものを いれて かざってみよう',
+    tip: 'すいそうに いきものを いれてみよう',
     when: (s) => {
       const list = Array.isArray(s.furniture) ? s.furniture : [];
       return list.some((f) => isDisplayFurniture(f.item)) &&
@@ -196,16 +223,19 @@ export const SUGGESTIONS: SuggestionSeed[] = [
   {
     id: 'gift', icon: 'heart',
     text: 'だれかに おくりものを して みよう。よろこぶ かおが 見られるよ',
+    tip: 'だれかに おくりものを してみよう',
     when: (s) => num(s, GIFT_TOTAL_KEY) < 3,
   },
   {
     id: 'dig', icon: 'shovel',
     text: 'シャベルで ほりあとを ほって みよう。なにか 出てくるかも',
+    tip: 'シャベルで ほりあとを ほってみよう',
     when: (s) => hasTool(s, 'shovel') && codexCount(s, 'shiny_stone') + codexCount(s, 'gold_piece') < 2,
   },
   {
     id: 'bug', icon: 'net',
     text: 'むしあみを もって、はらっぱの むしを さがしてみよう',
+    tip: 'はらっぱの むしを さがしてみよう',
     when: (s) => hasTool(s, 'net') && codexCount(s, 'b_shiro') + codexCount(s, 'b_ageha') < 2,
   },
   // v27 じゅえきの木に みつを ぬる。
@@ -217,26 +247,31 @@ export const SUGGESTIONS: SuggestionSeed[] = [
   {
     id: 'sap', icon: 'nectar',
     text: 'じゅえきの木に みつを ぬってみよう。めずらしい虫が くるかも',
+    tip: 'じゅえきの木に みつを ぬってみよう',
     when: (s) => hasTool(s, 'net') && heldHoney(s) !== null,
   },
   {
     id: 'nightfish', icon: 'nightfish',
     text: 'よるの池では ヨザカナが つれるらしいよ',
+    tip: 'よるの池で ヨザカナを つってみよう',
     when: (s) => hasTool(s, 'rod') && codexCount(s, 'nightfish') === 0,
   },
   {
     id: 'cook', icon: 'f_kitchen',
     text: 'キッチンだいで りょうりを つくって みよう',
+    tip: 'キッチンだいで りょうりを つくろう',
     when: (s) => hasKitchen(s) && !Object.keys(s.codex ?? {}).some((k) => k.startsWith('d_')),
   },
   {
     id: 'paint', icon: 'paint_blue',
     text: 'いろみずで、おいた家具に いろを ぬってみよう',
+    tip: 'おいた家具に いろを ぬってみよう',
     when: (s) => Object.keys(s.inventory ?? {}).some((k) => isPaint(k)),
   },
   {
     id: 'style', icon: 'wall_sky',
     text: 'かべがみを かえて、へやの ようすを かえてみよう',
+    tip: 'かべがみを かえてみよう',
     when: (s) =>
       num(s, STYLE_CHANGE_KEY) < 1 &&
       Object.keys(s.inventory ?? {}).some((k) => ITEMS[k as ItemId]?.kind === 'decor'),
@@ -246,6 +281,7 @@ export const SUGGESTIONS: SuggestionSeed[] = [
   {
     id: 'bulletin', icon: 'board',
     text: 'ひろばの でんごんばんに、きょうの おてつだいが はってあるよ',
+    tip: 'ひろばの でんごんばんを 見にいこう',
     when: () => true,
   },
 ];
@@ -287,4 +323,193 @@ export function shouldShowTodayCard(s: GameState, day: number, hour: number): bo
 /** 出したことを記録する(1日1回の唯一の情報源) */
 export function markTodayCardShown(s: GameState, day: number): void {
   s.cardDay = Math.max(1, Math.floor(Number.isFinite(day) ? day : 1));
+}
+
+// ---------------------------------------------------------------------------
+// v30 クリアしたあとの「きょうの おすすめ」(目標カードの3行め)
+// ---------------------------------------------------------------------------
+//
+// なにを解くか:
+//   依頼を ぜんぶ おえると、目標カードは「クリア! / 島で じゆうに くらそう」の
+//   1行のまま 永遠に 動かなくなる。朝のカード(3秒)と でんごんばんに
+//   日々の さそいを まかせていたが、**画面に ずっと 出ている場所**には
+//   きょうの たのしみが 1つも 出ていなかった。
+//
+// 大事な約束(ここを外すと 誘導が こわれる):
+//   1. **固定の2文字列は 1文字も 変えない**。「クリア!」「島で じゆうに くらそう」は
+//      UXボット(tools/ux_semantic_check.mjs の cat:'free')・回帰ボット・
+//      tests/unit の OBJECTIVE_FIXED_TEXTS が 読む。おすすめは **3行め**に足すだけで、
+//      DOMも 別の要素(.obj-tip)に出す(.obj-label / .obj-sub は さわらない)。
+//   2. **矢印・光の柱・Eの候補を 1つも 動かさない**。おすすめは 目的地を持たない
+//      ただの ことばなので、Objective.target は kind:'none' のまま
+//      (教訓3「日替わりの小さな目標は メインの目標表示を 乗っ取らずに 足せる」)。
+//   3. **乱数を1つも使わない**。同じ日・同じ状態なら 何度呼んでも 同じ。
+//      日づけの計算は 各システムの問い合わせ口を 通す(このファイルの約束2と同じ)。
+
+/** おすすめの1行。みじかい形(SuggestionSeed.tip)の 上限 */
+export const TIP_MAX = 26;
+/** おすすめの くじの塩(でんごんばんの塩とは 別の空間にする) */
+const TIP_SALT = 613;
+
+/** その日の おすすめ(表示は text だけ。icon は 将来 目標カードに 絵を出すときのため) */
+export interface DailyTip {
+  id: string;
+  text: string;
+  icon: string;
+}
+
+/**
+ * 「その日しかない」出来事(これが あれば おすすめは これに なる)。
+ *
+ * えらびかた: **のがすと つぎが 遠くて、しかも きょう 出かける先が ある**もの だけ。
+ *   まつり当日(7日に1回・ゆうがた さんばしへ)/ ゆきの日(まれな天気・ゆきだるま)/
+ *   ぬしのきはい(かよいつめた人にしか 出ない)
+ *
+ * 入れなかったもの と その理由:
+ *   にじ・まつりの前日・ボトル・でんしゃ・来訪・花だん・おみやげ
+ *     … どれも「見るだけ・知らせるだけ」で、きょう すぐ 出かける さそいでは ない。
+ *       朝のカードが すでに 知らせているので、ここでは ふつうの たねと 同じ わく
+ *       (下の pool)で 順ぐりに 出す。
+ *   ——強いものを ふやしすぎると、ふだんの さそい(SUGGESTIONS)が 出る日が 無くなる。
+ *     3つに しぼった今で「強い日」は 2〜3割
+ *     (tests/unit/dailytip_v30.test.ts が 割合を 機械検査する)。
+ */
+const STRONG_EVENT_IDS: readonly string[] = ['festival', 'snow', 'nushi'];
+
+/** その日の あめ(カタツムリ)の さそい。あめの日だけ */
+export const RAIN_TIP_TEXT = 'あめの日。草の上の カタツムリを さがそう';
+
+/**
+ * v30 きょう 手紙が とどいた日の さそい(受信箱への みちしるべ)。
+ *
+ * なぜ ここに 出すか: とどいた しらせは トースト1本きりで、
+ * ずかんの 未読バッジは **ずかんを ひらいた人にしか 見えない**。
+ * 家の中に「ゆうびんうけ」を 足すのが 王道だが、それは
+ * 新しいEの候補・室内の家具・ホットヒントの分類まで さわることになり、
+ * UXボットの ヒント分類(tools/ux_semantic_check.mjs)にも 手が いる。
+ * ——目標カードの3行めなら **すでに ある口**で、Eの候補を 1つも ふやさずに
+ * 「ずかんを ひらけば 読める」ことだけを 伝えられる。
+ *
+ * 出すのは **とどいた その日だけ**。読まないまま 何日も 出しつづけると
+ * 「せかす表示」になる(未読の しるしは ずかん側に のこるので 見のがさない)。
+ */
+export const MAIL_TIP_TEXT = 'あたらしい てがみ。ずかんで よめるよ';
+
+/**
+ * その日の おすすめの もとになる たね(強いもの・その日のもの・ふだんのもの)。
+ * pool は かならず 1つ以上(SUGGESTIONS の さいごが「いつでも true」の 受け皿)。
+ */
+export function tipPoolOf(s: GameState, day: number): { strong: DailyTip[]; pool: DailyTip[] } {
+  const events = eventsOfDay(s, day);
+  const strong: DailyTip[] = [];
+  const pool: DailyTip[] = [];
+  // きょう とどいた手紙が まだ 読まれていない(受信箱への みちしるべ)。
+  // ならびの さきほうに 入れておき、dailyTipOf が ほかより 先に えらぶ
+  if (unreadMailArrivedOn(s, day)) {
+    strong.push({ id: 'mail', text: MAIL_TIP_TEXT, icon: 'scroll' });
+  }
+  for (const e of events) {
+    (STRONG_EVENT_IDS.includes(e.id) ? strong : pool).push({ id: e.id, text: e.text, icon: e.icon });
+  }
+  // あめの日の カタツムリ(朝のカードには 出していない出来事なので ここで足す)。
+  // 天気の判断は 1つも写経せず WeatherSystem に聞く
+  if (weatherOfDay(Math.max(1, Math.floor(day))) === 'rainy') {
+    pool.push({ id: 'rain', text: RAIN_TIP_TEXT, icon: 'snail' });
+  }
+  // でんごんばんの まだ とどけていない おてつだい(1件だけ)。
+  // 文は BulletinSystem の errandText ひとつから もらう(でんごんばんの行と 同じ文になる)
+  const errand = errandsOfDay(s, day).find((e) => !isErrandDone(s, day, e.id));
+  if (errand) pool.push({ id: `errand_${errand.npc}`, text: errandText(errand), icon: errand.item });
+  // ふだんの さそい(あてはまるものだけ)
+  for (const seed of SUGGESTIONS) {
+    if (seed.when(s)) pool.push({ id: seed.id, text: seed.tip, icon: seed.icon });
+  }
+  if (pool.length === 0) {
+    const last = SUGGESTIONS[SUGGESTIONS.length - 1];
+    pool.push({ id: last.id, text: last.tip, icon: last.icon });
+  }
+  return { strong, pool };
+}
+
+/**
+ * n個を 日づけで ならべかえた順番の、その日の ばんごう。
+ *
+ * ただの `day % n` にしないのは、日づけと ならびが ぴったり くっついて
+ * 「あしたは あれ」が 読めてしまうから。かわりに **n日を1まわりとして、
+ * まわりごとに ならべかえる**(かばんの中の くじを ひきなおす形)。
+ * こうすると
+ *   - 同じ日は かならず 同じ(乱数を使わない)
+ *   - n日の あいだに 1度ずつ 全部 出る(出ない たねが 生まれない)
+ * の 両方が 成り立つ。
+ */
+export function tipIndexOf(day: number, n: number): number {
+  if (n <= 1) return 0;
+  const d = Math.max(0, Number.isFinite(day) ? Math.floor(day) : 1);
+  const cycle = Math.floor(d / n);
+  const order = [...Array(n).keys()];
+  // Fisher-Yates。ひく数は まわりの ばんごうから作る(まわりごとに ならびが かわる)
+  for (let i = n - 1; i > 0; i--) {
+    const j = dayHash(cycle, TIP_SALT + i) % (i + 1);
+    const t = order[i];
+    order[i] = order[j];
+    order[j] = t;
+  }
+  return order[d % n];
+}
+
+/**
+ * きょうの おすすめ(純関数)。同じ日・同じ状態なら 何度呼んでも 同じ。
+ * 「その日しかない」出来事が あれば それ、無ければ たねを 順ぐりに 1つ。
+ */
+export function dailyTipOf(s: GameState, day: number): DailyTip {
+  const { strong, pool } = tipPoolOf(s, day);
+  // きょう とどいた手紙は 何よりも 先。その日のうちに 気づかないと、
+  // あとは ずかんの 未読の しるししか のこらない(そして その しるしは
+  // ずかんを ひらいた人にしか 見えない)。まつり・ゆきは 朝のカード・でんごんばん・
+  // 世界の見た目からも 気づけるので、この1日だけは ゆずる
+  const mail = strong.find((t) => t.id === 'mail');
+  if (mail) return mail;
+  const list = strong.length > 0 ? strong : pool;
+  return list[tipIndexOf(day, list.length)];
+}
+
+/**
+ * きょうの おすすめ(目標カードが 毎フレーム 呼ぶので おぼえておく版)。
+ *
+ * おぼえる理由は 2つ:
+ *   - 毎フレーム たねの when を ぜんぶ ためすのが もったいない
+ *   - **1日のあいだ 文が 変わらない**。もちものが かわるたびに 左上の3行めが
+ *     入れかわると、目標カードが そわそわして 読みにくい
+ * おてつだいを とどけたら すぐ 入れかわってほしいので、おぼえる合いことばには
+ * 「きょう とどけた件数」も 入れてある。手紙が とどいた・読んだ ときも
+ * その場で 入れかわってほしいので、未読の数も 合いことばに 入れる。
+ */
+const tipMemo = new WeakMap<GameState, { key: string; tip: DailyTip }>();
+export function dailyTip(s: GameState, day: number): DailyTip {
+  const d = Math.max(1, Math.floor(Number.isFinite(day) ? day : 1));
+  const errands = s.bulletin?.day === d ? (s.bulletin?.done?.length ?? 0) : 0;
+  const key = `${d}:${errands}:${unreadMailCount(s)}`;
+  const hit = tipMemo.get(s);
+  if (hit && hit.key === key) return hit.tip;
+  const tip = dailyTipOf(s, d);
+  tipMemo.set(s, { key, tip });
+  return tip;
+}
+
+/** データ整合性チェック(起動時に呼ぶ): たねに みじかい形が あるか・長すぎないか */
+export function validateTodayCardData(): string[] {
+  const problems: string[] = [];
+  for (const seed of SUGGESTIONS) {
+    if (!seed.tip) problems.push(`おすすめ${seed.id}に みじかい形(tip)が無い`);
+    else if (seed.tip.length > TIP_MAX) {
+      problems.push(`おすすめ${seed.id}のみじかい形が ${seed.tip.length}文字(上限${TIP_MAX})`);
+    }
+    if (!seed.text) problems.push(`おすすめ${seed.id}のカードの文が空`);
+  }
+  if (new Set(SUGGESTIONS.map((x) => x.id)).size !== SUGGESTIONS.length) {
+    problems.push('おすすめのIDが重複');
+  }
+  if (RAIN_TIP_TEXT.length > TIP_MAX) problems.push('あめの日のおすすめが長すぎる');
+  if (MAIL_TIP_TEXT.length > TIP_MAX) problems.push('てがみのおすすめが長すぎる');
+  return problems;
 }

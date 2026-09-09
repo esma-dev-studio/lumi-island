@@ -29,13 +29,16 @@ import { homeScore } from './HomeScore';
 import { COOKED_FOODS, DECOR_SLOT, ITEMS, type ItemId } from '../data/items';
 import {
   BADGES, BADGE_BY_ID, BADGE_CATEGORIES, BADGE_CATEGORY_ORDER, BADGE_COUNT_MAX,
-  BADGE_COUNT_MIN, BADGE_TIERS, achSource,
-  type BadgeCategory, type BadgeDef,
+  BADGE_COUNT_MIN, BADGE_TIERS, TITLES, achSource, nextTitleOf, titleOf, titleRemain,
+  type BadgeCategory, type BadgeDef, type TitleDef,
 } from '../data/badges';
 import { ICONS } from '../ui/icons';
+import { announceTitles, setBadgeCount } from '../ui/BadgeUI';
 
 /** バッジを取った記録に使う stats のキーの接頭辞 */
 export const BADGE_PREFIX = 'bdg_';
+/** しょうごうに とどいた記録に使う stats のキーの接頭辞(バッジと まったく同じ流儀) */
+export const TITLE_PREFIX = 'ttl_';
 
 // ---------------------------------------------------------------------------
 // v14で 新しく足した カウンタ(6つ)。
@@ -282,7 +285,99 @@ export function evaluateBadges(s: GameState): BadgeDef[] {
       got.push(def);
     }
   }
+  // v17.1 しょうごう。数が かわるのは バッジが 付いた瞬間だけなので、
+  // 判定も お知らせも ここに ぶらさげる(GameScene に 1行も 足さずに すむ)。
+  // 表示側(バッジ画面・ポーズ)が よむ「いまの数」も ここで 書きかえる。
+  const titles = evaluateTitles(s);
+  setBadgeCount(earnedBadgeCount(s));
+  announceTitles(titles);
   return got;
+}
+
+// ---------------------------------------------------------------------------
+// v17.1 しょうごう(称号)。バッジの数だけで きまる 5つの よび名。
+//
+// 記録は stats の ttl_◯◯(値=とどいた日)。バッジ bdg_◯◯ と まったく同じ形なので、
+// **新しいセーブ項目は 1つも ふえない**(古いセーブも そのまま 読める)。
+// ---------------------------------------------------------------------------
+
+/** すでに とどいた しょうごうか */
+export function isTitleReached(s: GameState, id: string): boolean {
+  return statCount(s, TITLE_PREFIX + id) >= 1;
+}
+
+/** とどいた日(まだなら0) */
+export function titleDay(s: GameState, id: string): number {
+  return statCount(s, TITLE_PREFIX + id);
+}
+
+/** いまの しょうごう(まだ 1つも とどいていなければ null) */
+export function currentTitle(s: GameState): TitleDef | null {
+  return titleOf(earnedBadgeCount(s));
+}
+
+/** つぎの しょうごう(ぜんぶ とどいていれば null) */
+export function nextTitle(s: GameState): TitleDef | null {
+  return nextTitleOf(earnedBadgeCount(s));
+}
+
+/** つぎの しょうごうまで あと何こ(ぜんぶ とどいていれば 0) */
+export function titleToNext(s: GameState): number {
+  return titleRemain(earnedBadgeCount(s));
+}
+
+/**
+ * しょうごうの判定。**新しく**とどいたものだけを返し、同時に stats へ記録する。
+ * バッジの evaluateBadges と まったく同じ考えかたなので、
+ * ロード直後に1回よべば さかのぼりの 一括付与にもなる。
+ */
+export function evaluateTitles(s: GameState): TitleDef[] {
+  if (!s.stats) s.stats = {};
+  const day = Math.max(1, Math.floor(s.time?.day ?? 1));
+  const count = earnedBadgeCount(s);
+  const got: TitleDef[] = [];
+  for (const t of TITLES) {
+    if (isTitleReached(s, t.id)) continue;
+    if (count >= t.need) {
+      s.stats[TITLE_PREFIX + t.id] = day;
+      got.push(t);
+    }
+  }
+  return got;
+}
+
+/**
+ * しょうごうの表の検査(validateBadges から よぶ = 起動時に かならず通る)。
+ *   - IDの重複・セーブのキーの規則
+ *   - しきい値が 1以上・昇順(同じ数が 2つ ないこと)
+ *   - 名前が ひらがな中心(漢字を使っていない)・長さ2〜16文字
+ *   - いちばん上の しきい値が バッジの総数と ぴったり合っているか
+ */
+export function validateTitles(): string[] {
+  const problems: string[] = [];
+  const KANJI = /[㐀-䶿一-鿿]/;
+  const seen = new Set<string>();
+  for (const t of TITLES) {
+    if (seen.has(t.id)) problems.push(`しょうごう${t.id}のIDが重複`);
+    seen.add(t.id);
+    const key = TITLE_PREFIX + t.id;
+    if (!/^[A-Za-z0-9_]{1,40}$/.test(key)) problems.push(`しょうごう${t.id}の記録キー${key}がセーブの規則に合わない`);
+    if (!Number.isInteger(t.need) || t.need < 1) problems.push(`しょうごう${t.id}のしきい値が1以上の整数でない`);
+    if (t.need > BADGES.length) problems.push(`しょうごう${t.id}のしきい値${t.need}がバッジの総数をこえている`);
+    if (KANJI.test(t.name)) problems.push(`しょうごう${t.id}の名前「${t.name}」に漢字が入っている`);
+    if (t.name.length < 2 || t.name.length > 16) problems.push(`しょうごう${t.id}の名前の長さが2〜16文字でない`);
+  }
+  for (let i = 1; i < TITLES.length; i++) {
+    if (TITLES[i].need <= TITLES[i - 1].need) {
+      problems.push(`しょうごうのしきい値が昇順でない(${TITLES[i - 1].id}と${TITLES[i].id})`);
+    }
+  }
+  if (TITLES.length < 2) problems.push('しょうごうが2つ未満');
+  const last = TITLES[TITLES.length - 1];
+  if (last && last.need !== BADGES.length) {
+    problems.push(`いちばん上のしょうごう${last.id}のしきい値${last.need}がバッジの総数${BADGES.length}と合わない`);
+  }
+  return problems;
 }
 
 /**
@@ -352,5 +447,8 @@ export function validateBadges(): string[] {
     if (b.pict.startsWith('f_') && !(b.pict in ITEMS)) problems.push(`バッジ${b.id}のピクト${b.pict}は家具の名まえに見えるが存在しない`);
   }
   if (Object.keys(BADGE_BY_ID).length !== BADGES.length) problems.push('BADGE_BY_IDの数が合わない');
+  // v17.1 しょうごうの表も ここで まとめて 見る(起動時の検査の並びは 別の担当のファイルなので、
+  // すでに 並びに入っている validateBadges に 相乗りさせてある)
+  problems.push(...validateTitles());
   return problems;
 }

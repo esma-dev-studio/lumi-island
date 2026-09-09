@@ -16,7 +16,8 @@ import { newGameState, statAdd, type GameState } from '../../src/game/GameState'
 import { save, load, clearSave } from '../../src/save/SaveSystem';
 import {
   CHAT_HEARD_KEY, CHAT_HEAR_R, CHAT_LINE_SEC, CHAT_PAIRS, CHAT_SKIP_MOD, ChatEventSystem,
-  activeChatPair, chatBlockedByQuest, chatHappensOn, chatScriptOf, chatStandOf, chatTimeActive,
+  activeChatPair, chatBlockedByQuest, chatHappensOn, chatScriptOf,
+  chatStandOf, chatTierOf, chatTimeActive,
   validateChatData,
 } from '../../src/systems/ChatEventSystem';
 import {
@@ -88,19 +89,31 @@ describe('立ち話: データ', () => {
     expect(validateChatData()).toEqual([]);
   });
 
-  it('3組 × 3本 = 9本ある。掛け合いは かならず 交互', () => {
+  // v17.1 3組 × 3段 × 3本。v21の 9本は そのまま 段1(うちとけた)に 入っている
+  it('3組 × 3段 × 3本 = 27本ある。掛け合いは かならず 交互', () => {
     expect(CHAT_PAIRS).toHaveLength(3);
     let total = 0;
     for (const p of CHAT_PAIRS) {
-      expect(p.scripts).toHaveLength(3);
-      for (const sc of p.scripts) {
-        total++;
-        for (let i = 1; i < sc.lines.length; i++) {
-          expect(sc.lines[i].who, `${p.id}/${sc.id}`).not.toBe(sc.lines[i - 1].who);
+      expect(p.scripts).toHaveLength(3); // 段は3つ
+      for (const list of p.scripts) {
+        expect(list).toHaveLength(3); // 1段につき 3本
+        for (const sc of list) {
+          total++;
+          for (let i = 1; i < sc.lines.length; i++) {
+            expect(sc.lines[i].who, `${p.id}/${sc.id}`).not.toBe(sc.lines[i - 1].who);
+          }
         }
       }
     }
-    expect(total).toBe(9);
+    expect(total).toBe(27);
+  });
+
+  it('段1(うちとけた)は v21の 9本が そのまま のこっている', () => {
+    const ids = CHAT_PAIRS.flatMap((p) => p.scripts[1].map((sc) => sc.id)).sort();
+    expect(ids).toEqual([
+      'book_mend', 'book_tower', 'good_wood', 'lumi_light', 'night_fish',
+      'noon_bench', 'quiet_sky', 'rod_care', 'star_water',
+    ]);
   });
 
   it('主要ペアは ミナモ×ノクト / ツムギ×ミナモ / ノクト×ツムギ の3組', () => {
@@ -173,13 +186,16 @@ describe('立ち話: いつ・どこで(決定論)', () => {
     }
   });
 
-  it('依頼が1つでも 動いている日は だれも 立ち話をしない(誘導を こわさない)', () => {
+  // v17.1 きまりを ゆるめた: v21は「依頼が1つでも 動いていれば 3組ぜんぶ 止める」だったが、
+  // いまは「その依頼の相手が いる組だけ 止める」。誘導が 指す人は これまでどおり 動かない
+  it('依頼の相手(ツムギ)が いる組は 立ち話をしない(誘導を こわさない)', () => {
     const s = clearedState();
     const day = [...Array(60).keys()].map((i) => i + 1).find((d) => chatHappensOn(CHAT_PAIRS[0].id, d))!;
     expect(activeChatPair(s, day, CHAT_PAIRS[0].from + 0.5)?.id).toBe(CHAT_PAIRS[0].id);
-    // 依頼を1つ ひらく = だれかが questFor に かかる
+    // 依頼を1つ ひらく = ツムギが questFor に かかる(CHAT_PAIRS[0] は ツムギ×ミナモ)
     s.quests.q_wood = 'open';
     expect(chatBlockedByQuest(s)).toBe(true);
+    expect(CHAT_PAIRS[0].a === 'tsumugi' || CHAT_PAIRS[0].b === 'tsumugi').toBe(true);
     expect(activeChatPair(s, day, CHAT_PAIRS[0].from + 0.5)).toBeNull();
   });
 
@@ -269,7 +285,7 @@ describe('立ち話: 近づくと 1本 流れる', () => {
       const t = chat.bubble?.text;
       if (t && seen[seen.length - 1] !== t) seen.push(t);
     }
-    const script = chatScriptOf(pair.id, day)!;
+    const script = chatScriptOf(pair.id, day, chatTierOf(s, pair))!;
     expect(seen).toEqual(script.lines.map((l) => l.text));
     expect(heard).toBe(1); // 1日1本(なんど まわしても 2回は 立たない)
     expect(chat.heardToday(pair.id)).toBe(true);
@@ -286,7 +302,7 @@ describe('立ち話: 近づくと 1本 流れる', () => {
       const b = chat.bubble;
       if (b?.text && speakers[speakers.length - 1] !== b.speaker) speakers.push(b.speaker);
     }
-    const script = chatScriptOf(pair.id, day)!;
+    const script = chatScriptOf(pair.id, day, chatTierOf(s, pair))!;
     expect(speakers).toEqual(script.lines.map((l) => (l.who === 'a' ? pair.a : pair.b)));
     expect(new Set(speakers).size).toBe(2);
   });

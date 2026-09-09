@@ -277,6 +277,67 @@ export const BADGE_COUNT_MIN = 98;
 // v24 おうちパック(すてき度30・70)で2つ足して114個
 export const BADGE_COUNT_MAX = 114;
 
+// ---------------------------------------------------------------------------
+// v17.1 しょうごう(称号)。**バッジの数だけ**で決まる、5つの よび名。
+//
+// なにを解くか:
+//   バッジは 114個も あるのに、**集めても 呼ばれかたが 変わらなかった**。
+//   「あと何こで つぎの よび名か」が いつも見えていれば、
+//   1つ取るたびに 階段を のぼっている感じが 出る(教訓3「目標の階段」)。
+//
+// 決まりごと(BadgeSystem.validateTitles が 起動時に 機械検査する):
+//   - しきい値は **昇順**で かさならない
+//   - 名まえに **漢字を つかわない**(バッジと まったく同じ規則)
+//   - 記録は stats の ttl_◯◯ に入れる=**新しいセーブ項目を 1つも 増やさない**
+//   - いちばん上の しきい値は かならず バッジの総数(BADGES.length)
+//     ——「ぜんぶ あつめた ひと」が 取れない/早すぎる、を 機械で ふせぐ
+//
+// ここは純データ。数え方も お知らせの出しかたも 書かない
+// (数える人=src/systems/BadgeSystem.ts、見せる人=src/ui/BadgeUI.ts)。
+// ---------------------------------------------------------------------------
+export interface TitleDef {
+  /** 記録は stats の ttl_◯◯ に入るので [A-Za-z0-9_] だけ */
+  id: string;
+  /** 表示名(漢字を使わない) */
+  name: string;
+  /** これだけ バッジを あつめたら とどく */
+  need: number;
+}
+
+export const TITLES: TitleDef[] = [
+  { id: 'nakama', name: 'しまの なかま', need: 10 },
+  { id: 'tanken', name: 'しまの たんけんか', need: 30 },
+  { id: 'mamori', name: 'ルミの まもりびと', need: 60 },
+  { id: 'densetsu', name: 'でんせつの すみびと', need: 100 },
+  // いちばん上は かならず「バッジぜんぶ」。数を じか書きせず BADGES.length を読むので、
+  // バッジを 1つ足しても ここが 自動で ついてくる(validateTitles が それも 見張る)
+  { id: 'zenbu', name: 'ぜんぶ あつめた ひと', need: BADGES.length },
+];
+
+export const TITLE_BY_ID: Record<string, TitleDef> = Object.fromEntries(TITLES.map((t) => [t.id, t]));
+
+/** いまの数で とどいている しょうごう(まだ1つも とどいていなければ null) */
+export function titleOf(count: number): TitleDef | null {
+  const n = Number.isFinite(count) ? Math.floor(count) : 0;
+  let best: TitleDef | null = null;
+  for (const t of TITLES) if (n >= t.need) best = t;
+  return best;
+}
+
+/** つぎに とどく しょうごう(ぜんぶ とどいていれば null) */
+export function nextTitleOf(count: number): TitleDef | null {
+  const n = Number.isFinite(count) ? Math.floor(count) : 0;
+  return TITLES.find((t) => n < t.need) ?? null;
+}
+
+/** つぎの しょうごうまで あと何こか(ぜんぶ とどいていれば 0) */
+export function titleRemain(count: number): number {
+  const next = nextTitleOf(count);
+  if (!next) return 0;
+  const n = Number.isFinite(count) ? Math.floor(count) : 0;
+  return Math.max(0, next.need - n);
+}
+
 /** ならび順つきの カテゴリ一覧(ずかんの見出しの順) */
 export const BADGE_CATEGORY_ORDER: BadgeCategory[] = (
   Object.keys(BADGE_CATEGORIES) as BadgeCategory[]
