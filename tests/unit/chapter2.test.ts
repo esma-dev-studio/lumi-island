@@ -335,7 +335,9 @@ describe('第2章6: とうだいの点灯', () => {
     expect(ctx.targetItemIds).toBeUndefined();
     expect(ctx.preferredKinds).toContain('gather');
     expect(ctx.preferredKinds).toContain('fish');
-    expect(ctx.preferredKinds).not.toContain('shop');
+    // v17.3 店・家具も この段階で通す(隠す種類は1つも無くなった)
+    expect(ctx.preferredKinds).toContain('shop');
+    expect(ctx.preferredKinds).toContain('pickup');
   });
 
   it('とびらの案内は 状態で切りかわる(表示とEの動きは1か所で決まる)', () => {
@@ -680,14 +682,15 @@ describe('意味チェッカー: 第2章の語彙', () => {
     }
   });
 
-  it('レンズを つける段階でも 採取は矛盾ではない。店だけは矛盾(v17.2)', () => {
+  it('レンズを つける段階でも 採取・釣り・店・家具は矛盾ではない(v17.3)', () => {
     expect(isSemanticMatch('lighthouse', 'lighthouse')).toBe(true);
     expect(isSemanticMatch('lighthouse', 'blocked')).toBe(true); // 理由表示は矛盾ではない
     // v17.2: とうだいへ向かう道すがらの採取・釣りは 仕様どおりの画面
     expect(isSemanticMatch('lighthouse', 'gatherStarweed')).toBe(true);
     expect(isSemanticMatch('lighthouse', 'fish')).toBe(true);
-    expect(isSemanticMatch('lighthouse', 'shop')).toBe(false);
-    expect(isSemanticMatch('lighthouse', 'carry')).toBe(false);
+    // v17.3 店・もちかえるも 矛盾ではない(どの誘導段階でも 候補に残る)
+    expect(isSemanticMatch('lighthouse', 'shop')).toBe(true);
+    expect(isSemanticMatch('lighthouse', 'carry')).toBe(true);
     // 入り江の素材どうしも v17.2 から矛盾ではない
     expect(isSemanticMatch('gatherLightshell', 'gatherStarweed')).toBe(true);
     expect(isSemanticMatch('gatherLightshell', 'gatherLightshell')).toBe(true);

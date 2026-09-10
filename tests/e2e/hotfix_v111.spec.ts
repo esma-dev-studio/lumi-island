@@ -3,7 +3,8 @@
 // 実プレイ(家族)からの報告2件を、そのまま通しで再現する:
 //   1. 「報告しに行く間にアイテムが拾えない」
 //      → 報告の誘導中に 採取・時間限定の拾いもの・ほりあと が E で使えること。
-//        釣り(長い専念行動)と 店 は これまでどおり出ないこと。
+//      → v17.3: 釣りと店も 出ること(「やれることを塞がない」)。かわりに
+//        **報告できる相手の目の前では かならず「はなす」が勝つ**ことを 固定する。
 //   2. 「帰りの船がのれない」
 //      → 依頼のとちゅう(q2_shell を受注したまま)で 入り江 ⇄ 島 を往復できること。
 //        見えている小舟のよこに立っただけで案内が出ること(v11.1でEの輪を2.6mに広げた)。
@@ -138,7 +139,7 @@ test('依頼のとちゅう(q2_shell受注中)でも 入り江 ⇄ 島 を往復
   expect(await hintAt(page, COVE_RETURN), '3たび 帰れる').toContain('ふねで しまへ かえる');
 });
 
-test('報告に行くとちゅうでも 採取・拾いもの・ほりあと が使える(釣りと店は出ない)', async ({ page }) => {
+test('報告に行くとちゅうでも 採取・拾いもの・ほりあと・釣り・店が使える(相手の前では報告が勝つ)', async ({ page }) => {
   test.setTimeout(180000);
   watchErrors(page);
   await page.goto(GAME);
@@ -198,7 +199,9 @@ test('報告に行くとちゅうでも 採取・拾いもの・ほりあと が
     'ほって出土品が手に入る'
   ).toBeGreaterThan(0);
 
-  // ④ 池のそばでは 釣りの案内が出ない(長い専念行動なので報告中は塞いだまま)
+  // ④ v17.3 池のそばでは 釣りの案内が **出る**(報告のとちゅうの寄り道を塞がない)。
+  //    v17.2までは ここを「出ない」で固定していた。オーナーの設計方針
+  //    「やれることを塞がない」で 開放したので、断言も 新仕様へ入れかえる。
   const pond = JSON.parse(
     await str(page, `(() => { const g = window.__lumi.game;
       for (let z = 12; z < 30; z += 0.5) for (let x = 20; x < 40; x += 0.5) {
@@ -209,6 +212,23 @@ test('報告に行くとちゅうでも 採取・拾いもの・ほりあと が
   ) as { x: number; z: number } | null;
   expect(pond, '池の釣り場が見つかる').toBeTruthy();
   const pondHint = await hintAt(page, pond!);
-  expect(pondHint, '報告中に釣りの案内は出さない').not.toContain('つり');
+  expect(pondHint, '報告中でも 釣りの案内は出る(道具が無ければ理由表示)').toContain('つり');
   expect(await objective(page)).toContain('ほうこくしよう');
+
+  // ⑤ v17.3 工房のカウンターでは 店の案内も **出る**(買いものが 進行を横取りしない)
+  const shopHint = await hintAt(page, { x: -4.4, z: -1 });
+  expect(shopHint, '報告中でも 店の案内は出る').toContain('お店をみる');
+  expect(await objective(page), '店の案内が出ても 目標は報告のまま').toContain('ほうこくしよう');
+
+  // ⑥ **報告できる相手の目の前では、かならず「はなす」が勝つ**。
+  //    (c)の釣りも (d)の店も 開放できるのは この1点が 構造で保証されているから。
+  //    ツムギの立ち位置から 1.0m の点(会話の輪 1.8m の内がわ)に立って確かめる。
+  const npcHint = await str(
+    page,
+    `(async () => { const p = window.__lumiDebug.npcPos('tsumugi');
+      window.__lumiDebug.tp(p.x + 1.0, p.z);
+      await new Promise((r) => setTimeout(r, 500));
+      return document.querySelector('.hud-hint')?.textContent ?? ''; })()`
+  );
+  expect(npcHint, '報告相手の目の前は かならず「はなす」').toContain('ツムギと はなす');
 });

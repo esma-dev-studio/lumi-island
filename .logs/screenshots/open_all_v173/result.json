@@ -1,0 +1,203 @@
+{
+  "version": "v17.3",
+  "port": "5222",
+  "startedAt": "2026-09-10T01:48:47.671Z",
+  "parts": [
+    {
+      "part": 1,
+      "injected": false,
+      "what": "(a) 依頼中の 店の売り買い / (b) 依頼中の 家具の配置と持ち帰り",
+      "objective": "もくざいを あつめよう",
+      "inventory": {
+        "f_sign": 1
+      },
+      "lumina": 4
+    },
+    {
+      "part": 2,
+      "injected": true,
+      "injectedWhat": "q_wood=done / q_fish=open+accepted / tools(axe,pickaxe,rod) / fish×1 / 朝7時",
+      "what": "(c) 報告中の 桟橋の釣り / (d) ミナモの目の前のEで ほうこく",
+      "objective": "ツムギの はなしを聞こう",
+      "quests": {
+        "q_wood": "done",
+        "q_fish": "done",
+        "q_ore": "locked",
+        "q_lantern": "open",
+        "q_lumi": "locked",
+        "q2_boat": "locked",
+        "q2_meet": "locked",
+        "q2_shell": "locked",
+        "q2_starweed": "locked",
+        "q2_lens": "locked",
+        "q2_light": "locked",
+        "q3_station": "locked",
+        "q3_lantern": "locked",
+        "q3_gift": "locked",
+        "q3_taste": "locked"
+      },
+      "inventory": {
+        "fish": 1
+      }
+    }
+  ],
+  "finishedAt": "2026-09-10T01:51:26.627Z",
+  "checks": [
+    {
+      "label": "__lumiDebug が生えていない(デバッグなしの走行)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "ツムギの立ち位置",
+      "ok": true,
+      "detail": "(-3.9, 1.4)",
+      "measurement": true
+    },
+    {
+      "label": "ツムギから最初の依頼を受注できた",
+      "ok": true,
+      "detail": "目標: もくざいを あつめよう"
+    },
+    {
+      "label": "売るための のばな",
+      "ok": true,
+      "detail": "flower=1",
+      "measurement": true
+    },
+    {
+      "label": "(a-1) 依頼の誘導中でも カウンターで「Eお店をみる」が出る",
+      "ok": true,
+      "detail": "目標「もくざいを あつめよう」/ ヒント「Eお店をみる(うる・かう)」/ ツムギまで 5.22m"
+    },
+    {
+      "label": "(a-2) Eで 店のパネルが開く",
+      "ok": true,
+      "detail": "パネル「ツムギ工房\n        30\n        とじる(Esc)」"
+    },
+    {
+      "label": "(a-3) 依頼の最中に 「うる」ができる(ルミナが増えた)",
+      "ok": true,
+      "detail": "ルミナ 30 → 34"
+    },
+    {
+      "label": "(a-4) 依頼の最中に 「かう」ができる(かんばんが もちものに入った)",
+      "ok": true,
+      "detail": "f_sign 0 → 1 / ルミナ 34 → 4"
+    },
+    {
+      "label": "店を閉じても 目標は変わらない",
+      "ok": true,
+      "detail": "目標「もくざいを あつめよう」"
+    },
+    {
+      "label": "もちものが開く",
+      "ok": true,
+      "detail": "パネル「もちもの とじる(Tab)」"
+    },
+    {
+      "label": "(b-1) 依頼の最中でも 配置モードに入れる",
+      "ok": true,
+      "detail": "ヒント「○Eおく Rまわす Escやめる」"
+    },
+    {
+      "label": "(b-2) 依頼の最中に 家具を 島に置けた",
+      "ok": true,
+      "detail": "f_sign 1 → 0 / 目標「もくざいを あつめよう」"
+    },
+    {
+      "label": "(b-3) 依頼の最中でも「もちかえる」のヒントが出る",
+      "ok": true,
+      "detail": "目標「もくざいを あつめよう」/ ヒント「Eかんばんを もちかえる Rうごかす」"
+    },
+    {
+      "label": "(b-4) Eで 実際に 持ち帰れた(もちものに もどった)",
+      "ok": true,
+      "detail": "f_sign 0 → 1 / 目標「もくざいを あつめよう」"
+    },
+    {
+      "label": "(c-0) 注入で 目標が「ミナモに ほうこくしよう」になった",
+      "ok": true,
+      "detail": "見出し「できた!」/ 目標「ミナモに ほうこくしよう」"
+    },
+    {
+      "label": "ミナモの立ち位置(注入直後)",
+      "ok": true,
+      "detail": "(23.3, 12.7)",
+      "measurement": true
+    },
+    {
+      "label": "(c-1) 報告の誘導中でも 桟橋で「Eつりをする」が出る",
+      "ok": true,
+      "detail": "目標「ミナモに ほうこくしよう」(→ 41m)/ ヒント「Eつりをする」/ ミナモまで 40.6m"
+    },
+    {
+      "label": "(c-2) 報告の最中に 実際に 1ぴき つれた",
+      "ok": true,
+      "detail": "さかな 1 → 2 / 目標「ミナモに ほうこくしよう」"
+    },
+    {
+      "label": "(c-3) 釣ったあとも 目標は「ほうこく」のまま",
+      "ok": true,
+      "detail": "目標「ミナモに ほうこくしよう」"
+    },
+    {
+      "label": "(d-1) ミナモの目の前では 釣りではなく「Eミナモと はなす」が出る",
+      "ok": true,
+      "detail": "ミナモまで 1.76m / 目標「ミナモに ほうこくしよう」()/ ヒント「Eミナモと はなす」"
+    },
+    {
+      "label": "(d-2) Eで 報告できた(依頼が done になった)",
+      "ok": true,
+      "detail": "q_fish open → done / 目標「ツムギの はなしを聞こう」"
+    }
+  ],
+  "ng": [],
+  "ok": true,
+  "errors": [],
+  "log": [
+    "第1部 デバッグなしの実キー走行(injected:false)",
+    "  撮影 00_title.png",
+    "  OK  __lumiDebug が生えていない(デバッグなしの走行)",
+    "  --  ツムギの立ち位置 — (-3.9, 1.4)",
+    "  OK  ツムギから最初の依頼を受注できた — 目標: もくざいを あつめよう",
+    "  撮影 01_quest_accepted.png",
+    "(a) 「もくざいを あつめよう」の最中に 工房のカウンターへ",
+    "  --  売るための のばな — flower=1",
+    "  OK  (a-1) 依頼の誘導中でも カウンターで「Eお店をみる」が出る — 目標「もくざいを あつめよう」/ ヒント「Eお店をみる(うる・かう)」/ ツムギまで 5.22m",
+    "  撮影 02a_shop_hint_during_quest.png",
+    "  OK  (a-2) Eで 店のパネルが開く — パネル「ツムギ工房\n        30\n        とじる(Esc)」",
+    "  撮影 02b_shop_open.png",
+    "  OK  (a-3) 依頼の最中に 「うる」ができる(ルミナが増えた) — ルミナ 30 → 34",
+    "  撮影 02c_shop_buy_tab.png",
+    "  OK  (a-4) 依頼の最中に 「かう」ができる(かんばんが もちものに入った) — f_sign 0 → 1 / ルミナ 34 → 4",
+    "  撮影 02d_shop_after_buy.png",
+    "  OK  店を閉じても 目標は変わらない — 目標「もくざいを あつめよう」",
+    "(b) 「もくざいを あつめよう」の最中に 家具を 置く → 持ち帰る",
+    "  OK  もちものが開く — パネル「もちもの とじる(Tab)」",
+    "  撮影 03a_inventory_place_button.png",
+    "  OK  (b-1) 依頼の最中でも 配置モードに入れる — ヒント「○Eおく Rまわす Escやめる」",
+    "  撮影 03b_placing.png",
+    "  OK  (b-2) 依頼の最中に 家具を 島に置けた — f_sign 1 → 0 / 目標「もくざいを あつめよう」",
+    "  撮影 03c_placed.png",
+    "  OK  (b-3) 依頼の最中でも「もちかえる」のヒントが出る — 目標「もくざいを あつめよう」/ ヒント「Eかんばんを もちかえる Rうごかす」",
+    "  撮影 03d_carry_hint.png",
+    "  OK  (b-4) Eで 実際に 持ち帰れた(もちものに もどった) — f_sign 0 → 1 / 目標「もくざいを あつめよう」",
+    "  撮影 03e_carried_back.png",
+    "第2部 ?debug=1 で 状態を作ってからの実キー走行(injected:true)",
+    "  OK  (c-0) 注入で 目標が「ミナモに ほうこくしよう」になった — 見出し「できた!」/ 目標「ミナモに ほうこくしよう」",
+    "  撮影 04a_report_objective.png",
+    "  --  ミナモの立ち位置(注入直後) — (23.3, 12.7)",
+    "  OK  (c-1) 報告の誘導中でも 桟橋で「Eつりをする」が出る — 目標「ミナモに ほうこくしよう」(→ 41m)/ ヒント「Eつりをする」/ ミナモまで 40.6m",
+    "  撮影 04b_fish_hint_during_report.png",
+    "  撮影 04c_fishing.png",
+    "  OK  (c-2) 報告の最中に 実際に 1ぴき つれた — さかな 1 → 2 / 目標「ミナモに ほうこくしよう」",
+    "  OK  (c-3) 釣ったあとも 目標は「ほうこく」のまま — 目標「ミナモに ほうこくしよう」",
+    "  撮影 04d_after_fish.png",
+    "  OK  (d-1) ミナモの目の前では 釣りではなく「Eミナモと はなす」が出る — ミナモまで 1.76m / 目標「ミナモに ほうこくしよう」()/ ヒント「Eミナモと はなす」",
+    "  撮影 05a_report_hint_at_minamo.png",
+    "  撮影 05b_report_dialogue.png",
+    "  OK  (d-2) Eで 報告できた(依頼が done になった) — q_fish open → done / 目標「ツムギの はなしを聞こう」",
+    "  撮影 05c_after_report.png"
+  ]
+}

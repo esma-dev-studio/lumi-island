@@ -16,7 +16,11 @@ import {
   seatOfFurniture, seatOfPlazaBench, sitPose, type Seat,
 } from '../../src/systems/SitSystem';
 import { PRIORITY } from '../../src/systems/InteractionResolver';
-import { matchesObjective } from '../../src/systems/ObjectiveInteractionPolicy';
+import { matchesObjective, selectInteraction } from '../../src/systems/ObjectiveInteractionPolicy';
+import { currentObjective, objectiveActionContext } from '../../src/systems/ObjectiveSystem';
+import { acceptQuest } from '../../src/systems/QuestSystem';
+import { QUEST_BY_ID } from '../../src/data/quests';
+import { newGameState } from '../../src/game/GameState';
 import { hasMoveInput } from '../../src/systems/PlayerController';
 import { BULLETIN_BOARD, PLAZA_BENCHES } from '../../src/data/island';
 import { BULLETIN_REACH } from '../../src/systems/BulletinSystem';
@@ -176,17 +180,23 @@ describe('すわる候補が ほかの遊びを 奪わない', () => {
     expect(PRIORITY.sit).toBeLessThan(PRIORITY.catchNear);
   });
 
-  it("kind='place' なので、依頼の誘導中(guided)は そもそも出ない", () => {
+  it("v17.3 kind='place' も 依頼の誘導中に 出る(横取りは優先度が受けもつ)", () => {
     const cand = {
       id: 'sit_bench_0', kind: 'place' as const, priority: PRIORITY.sit,
       distance: 0.4, enabled: true, hint: '', run: () => {},
     };
-    // 誘導中の代表的な文脈(採取・会話・ねる)には place が入らない
-    for (const preferred of [['gather'], ['talk'], ['sleep'], ['gather', 'talk']] as const) {
-      expect(
-        matchesObjective(cand, { guided: true, preferredKinds: [...preferred] as never })
-      ).toBe(false);
-    }
+    // 実物の誘導文脈(objectiveActionContext が返すもの)には place が入っている
+    const s = newGameState();
+    acceptQuest(s, QUEST_BY_ID.q_wood);
+    const ctx = objectiveActionContext(currentObjective(s));
+    expect(ctx.guided).toBe(true);
+    expect(matchesObjective(cand, ctx)).toBe(true);
+    // ほかに1つでもできることがあれば ゆずる(sit=61 はほぼ最弱)
+    const tree = {
+      id: 'node_tree1', kind: 'gather' as const, itemId: 'wood' as const, targetId: 'tree1',
+      priority: PRIORITY.gather, distance: 1.8, enabled: true, hint: '', run: () => {},
+    };
+    expect(selectInteraction([cand, tree], ctx)?.id).toBe('node_tree1');
   });
 
   it('すわる輪(1.0m)は でんごんばんの輪と重ならない', () => {

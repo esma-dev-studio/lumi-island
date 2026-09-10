@@ -106,11 +106,17 @@ describe('ObjectiveInteractionPolicy(目的に合う候補だけを出す)', () 
   it('木材あつめ中: 店が近くても木が主ヒントになる', () => {
     expect(selectInteraction([shop(0.3), node('tree1', 'wood', 1.7)], woodCtx())?.id).toBe('node_tree1');
   });
-  it('木材あつめ中: 店だけが近いときは主ヒントなし(Eも無効)', () => {
+  it('v17.3 木材あつめ中でも 店だけが近ければ 店のヒントが出る(Eで開ける)', () => {
+    // v17.2までは null(工房のカウンターに立っても 何も反応しない)だった。
+    // オーナーの設計方針「やれることを塞がない」で 開放した
     const spy = vi.fn();
     const s = { ...shop(0.3), run: spy };
-    expect(selectInteraction([s], woodCtx())).toBeNull(); // 表示されない=実行もされない
-    expect(spy).not.toHaveBeenCalled();
+    const best = selectInteraction([s], woodCtx());
+    expect(best?.id).toBe('shop');
+    best?.run();
+    expect(spy).toHaveBeenCalledTimes(1);
+    // ただし 木が同じEの輪にあれば 優先度(採取30 < 店40)で 木が勝つ
+    expect(selectInteraction([s, node('tree1', 'wood', 1.9)], woodCtx())?.id).toBe('node_tree1');
   });
   it('こうせきほり中: コケのほうが近くても鉱石が主ヒントになる', () => {
     expect(
@@ -163,8 +169,12 @@ describe('ObjectiveInteractionPolicy(目的に合う候補だけを出す)', () 
     expect(
       selectInteraction([fishing(1.0), node('tree1', 'wood', 1.8)], woodCtx())?.id
     ).toBe('node_tree1');
-    // 報告の段階だけは これまでどおり釣りを出さない(報告に行かず釣りつづけるのを防ぐ)
-    expect(selectInteraction([fishing(1.0)], reportCtx())).toBeNull();
+    // v17.3 報告の段階でも 釣り場に立てば「つりをする」が出る。
+    // 報告に行かず釣りつづける心配は、相手が射程に入れば かならず会話が勝つことで受ける
+    expect(selectInteraction([fishing(1.0)], reportCtx())?.id).toBe('fishing');
+    expect(
+      selectInteraction([fishing(1.0), talk('tsumugi', true, 1.79)], reportCtx())?.id
+    ).toBe('npc_tsumugi');
   });
   it('道具が足りない理由表示は、目的に合う対象なら残る', () => {
     const reason = cand({

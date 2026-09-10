@@ -50,12 +50,15 @@ describe('v11.1 誘導中でも「すぐ終わる・資源が増える」操作�
     expect(matchesObjective(cand('catch', PRIORITY.catch, 1), ctx), '虫とり').toBe(true);
   });
 
-  it('報告のとちゅうでも 釣り・店・家具のもちかえるは出ない', () => {
+  it('v17.3 報告のとちゅうの 釣り・店・家具も 出る(隠す種類は1つも無い)', () => {
+    // v11.1〜v17.2 は この4つを隠していた。オーナーの設計方針
+    // 「やれることを塞がない」に合わせて 開放した(ObjectiveSystem の OPEN_KINDS)。
+    // 報告が横取りされないのは 下のテスト(受注/報告NPCの先取り)が保証する
     const ctx = reportCtx();
-    expect(matchesObjective(cand('fish', PRIORITY.fishing, 1), ctx), '釣り').toBe(false);
-    expect(matchesObjective(cand('shop', PRIORITY.shop, 1), ctx), '店').toBe(false);
-    expect(matchesObjective(cand('pickup', PRIORITY.furniture, 1), ctx), 'もちかえる').toBe(false);
-    expect(matchesObjective(cand('place', PRIORITY.garden, 1), ctx), 'はなを うえる').toBe(false);
+    expect(matchesObjective(cand('fish', PRIORITY.fishing, 1), ctx), '釣り').toBe(true);
+    expect(matchesObjective(cand('shop', PRIORITY.shop, 1), ctx), '店').toBe(true);
+    expect(matchesObjective(cand('pickup', PRIORITY.furniture, 1), ctx), 'もちかえる').toBe(true);
+    expect(matchesObjective(cand('place', PRIORITY.garden, 1), ctx), 'はなを うえる').toBe(true);
   });
 
   it('報告の相手が射程にいれば、足もとの採取より かならず会話が勝つ', () => {

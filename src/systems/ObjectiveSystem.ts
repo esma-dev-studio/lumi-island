@@ -120,17 +120,48 @@ export interface ObjectiveActionContext {
 //   - 誘導を横取りしない: dig=33 は 採取(30)・庭(29)・報告相手のNPC(10)より弱く、
 //     DIG_SPOTS も既存の判定帯から3m以上はなして置いてある(src/data/island.ts)。
 //
-// ここに入れていないもの(意図的に隠したままにするもの):
-//   - shop  : 店は依頼の進行に一切寄与せず、パネルを開くと画面が止まる
-//             (UXボットの shopOpens ゲートの対象)。
-//   - pickup: 「もちかえる」「いきものを いれる/とりだす」= 自分で置いた家具の操作。
-//             家具は動かないので いつでも戻れる相手で、資源も増えない(むしろ島から減る)。
-//   - place : 花だんに うえる・灯台にレンズを つける等。誘導の見せ場そのものなので絞る。
-//   - fish  : ここ(全誘導文脈への一括許可)には入れないが、v17.2 から
-//             **報告(report)いがいの誘導段階には 段階ごとに足してある**
-//             (採取・釣り・クラフト・配置・ベッド待ち・とうだい)。理由は
-//             objectiveActionContext の各段階のコメントを参照。
+// v17.3 で 残りの4種(shop / place / pickup / fish)も 隠さなくなったので、
+// 「ここに入れていないから隠れる」種類は **1つも無くなった**。
+// ただし ALWAYS_ALLOWED は そのまま残す —— 意味がちがうため:
+//   ALWAYS_ALLOWED = 「目的が何であっても 意味が変わらない補助導線」(ねる・出入り・虫・ほりあと)
+//   OPEN_KINDS     = 「誘導中でも 塞がないと決めた 遊びの操作」(下の定数を参照)
+// 2つを1つの配列にまとめると、あとから「なぜ ここに居るのか」が読めなくなる。
 const ALWAYS_ALLOWED: InteractionKind[] = ['sleep', 'enter', 'exit', 'catch', 'dig'];
+
+/**
+ * v17.3 **どの誘導段階でも 候補から外さない操作**(オーナーの設計方針)。
+ *
+ *   「常にアイテムは集められる / やれることを塞がない
+ *     (言われたことだけをやる作業ゲームにしない)」
+ *
+ * v17.2 で 採取(gather)と 報告いがいの釣り(fish)を開放したが、まだ3種の制限が残っていた。
+ * v17.3 で その3つも やめる。判定の緩和ではなく、設計の意味論の変更:
+ *
+ *   shop   : 店は「うる・かう」で、島でとれた物の出口・道具の入口。買いものが依頼を
+ *            横取りする心配は **優先度で受ける**(shop=40 は 採取30・会話35・ドア35 より弱く、
+ *            受注/報告できるNPCは selectInteraction が距離より先に選ぶ)。
+ *            ツムギは 依頼NPC かつ 店主なので、本人に近づけば かならず「はなす」が勝ち、
+ *            カウンターにだけ近い位置でだけ 店が出る(tests/unit/open_all_v173.test.ts)。
+ *            「工房に来たのに 何も反応しない」ほうが 子どもには理解できない。
+ *   place  : でんごんばん・花だんに うえる・すわる・まつり・じゅえきの木・灯台のとびら…
+ *            = 「島のあちこちに置いた 小さな遊び」。どれも一瞬で終わり、依頼の進行を
+ *            1ミリも遅らせない。優先度は どれも 採取30・会話35 と同じか弱い帯に置いてある。
+ *   pickup : 自分で置いた家具の もちかえる/かざる/いろをぬる/いきものを いれる。
+ *            v11.1 は「いつでも戻れる相手だから隠してよい」と書いたが、これは
+ *            **「戻れるなら塞いでよい」ではなく「戻れないなら必ず開ける」だった**——
+ *            塞ぐ側の理由になっていなかった。自分の家の中で 自分の家具に
+ *            何をしても反応しないのは、島が死んで見える。
+ *   fish   : 報告の段階にだけ 入れていなかった(v17.2 据えおき)。ここも開ける。
+ *            報告は「その相手に会う」1手で、桟橋に寄って1匹つっても 誰も待っていない。
+ *            **報告が横取りされないことは 位置と優先度で保証されている**:
+ *            報告できるNPCが Eの輪(1.8m)に入れば selectInteraction が距離より先に選ぶので、
+ *            相手の前に立ったEは かならず「ほうこく」になる(釣り場は桟橋の先だけ)。
+ *
+ * 「案内していること」は **隠すことではなく 優先で表す**——これが v17.2 から一貫した方針で、
+ * 実装は ObjectiveInteractionPolicy の OBJECTIVE_ITEM_BONUS(優先度に -0.5 の下駄)と
+ * 受注/報告NPCの先取り(isQuestActionable)の2つだけ。
+ */
+const OPEN_KINDS: InteractionKind[] = ['gather', 'fish', 'shop', 'place', 'pickup'];
 
 /**
  * 「そのとき その場でしか手に入らない」拾いもの。
@@ -707,9 +738,28 @@ export function withAreaTravel(o: Objective, at: boolean | ObjectiveArea): Objec
  *     ノードどうしは 目的ではなく距離で決まる(実測: tools/shots_gather_free_v172.mjs)。
  *   - 釣り(fish)も **報告いがいの全段階**に足した。道具が無ければ これまでどおり
  *     「つりには ツリザオが ひつよう」の理由表示になるだけ(押しても何も起きない)。
- *     報告の段階にだけ入れないのは、報告は「その相手に会う」1手で終わるのに
- *     釣りは「かかるまで待つ」長い専念行動で、待っているあいだ報告に行かなくなるから
- *     (UXボットの refishDuringReport ゲートが この1点を見張っている)。
+ *
+ * ---------------------------------------------------------------------------
+ * v17.3 **のこりの3つも 開放する**(オーナーの設計方針の続き)
+ *
+ *   店(shop) / 家具の 配置・操作(place・pickup) / 報告段階の 釣り(fish)
+ *
+ * v17.2 のあとも この3種だけは 段階ごとに 隠れていた。開放したので、
+ * **どの誘導段階でも preferredKinds は同じ**(下の OPEN_KINDS + ALWAYS_ALLOWED)になり、
+ * 段階ごとに ちがうのは 次の2つだけになった:
+ *   - 報告の段階だけ 'talk' が入る(相手は targetNpcId の1人にしぼる=雑談は横取りしない)
+ *   - 採取・釣りの段階だけ targetItemIds が入る(=優先の下駄。隠す条件ではない)
+ * 「案内中の相手・素材」は **隠すのではなく 優先で**表す、という v17.2 の方針そのまま。
+ *
+ * 報告の段階に 釣りを入れても「報告に行かず釣りつづける」にならない理由(位置と優先度):
+ *   - 報告できるNPCが Eの輪(NPCSystem.nearest の既定 1.8m)に入れば、selectInteraction が
+ *     距離より先に そのNPCを選ぶ。**相手の前に立ったEは かならず「ほうこく」**になる。
+ *   - 釣り場は 桟橋の先・帰りの桟橋の先だけ(FishingCast.fishingGate)。
+ *     報告相手の立ち位置と重ならないので、「釣りのヒントが出ている=まだ相手にとどいていない」。
+ * 同じ意味論を UXボットの意味判定器にも写してある
+ * (tools/ux_semantic_check.mjs の isSemanticMatch / refishDuringReport は
+ *  「報告相手が 1.8mの内がわにいる(=目標カードに→Nmも矢印も出ていない)のに
+ *   釣りのヒントが出ている」ときだけ 矛盾に数える)。
  * ---------------------------------------------------------------------------
  */
 export function objectiveActionContext(obj: Objective | null): ObjectiveActionContext {
@@ -732,19 +782,21 @@ export function objectiveActionContext(obj: Objective | null): ObjectiveActionCo
     // 報告そのものが横取りされないことは優先度で保証している:
     // 報告できるNPCは PRIORITY.npcQuest=10 で最強、さらに selectInteraction が
     // 受注・報告できるNPCを距離より先に選ぶ(tests/unit/objective.test.ts が機械検査)。
-    // 店(shop)と釣り(fish)だけは足さない——上の ALWAYS_ALLOWED のコメントを参照。
-    // v17.2 でも ここだけは 釣りを入れないまま(報告は1手で終わる/釣りは待つ行動)。
+    // v17.3 のこっていた 店(shop)・家具(place/pickup)・釣り(fish)も ここへ足した
+    // ——「報告に行くとちゅうに 工房で うる」「桟橋で1匹つる」は 寄り道であって
+    // 進行の じゃまではない。相手の前に立てば かならず「ほうこく」が勝つ(上のコメント)。
     return {
-      preferredKinds: ['talk', 'gather', ...ALWAYS_ALLOWED],
+      preferredKinds: ['talk', ...OPEN_KINDS, ...ALWAYS_ALLOWED],
       targetNpcId: obj.target.id, guided: true,
     };
   }
   // NPC不在でベッドへ誘導中(withAvailabilityが作る目的)。
   // ベッドは家の中なので、出入り(enter/exit)も許可しないと誘導どおりに動けない。
   // v17.2 朝まで待つあいだの採取・釣りは ふさがない(案内する素材が無いので prefer も無し)。
+  // v17.3 店・家具の操作も 同じ理由で ふさがない(朝を待つあいだこそ 家の模様がえをする)。
   if (obj.target.kind === 'poi' && obj.target.id === 'bed') {
     return {
-      preferredKinds: ['gather', 'fish', ...ALWAYS_ALLOWED],
+      preferredKinds: [...OPEN_KINDS, ...ALWAYS_ALLOWED],
       targetPoiId: 'bed', guided: true,
     };
   }
@@ -754,7 +806,7 @@ export function objectiveActionContext(obj: Objective | null): ObjectiveActionCo
   // とうだい本体(place)は 判定圏に入れば PRIORITY.door 帯で必ず勝つ。
   if (obj.target.kind === 'poi' && obj.target.id === COVE_LIGHTHOUSE_POI) {
     return {
-      preferredKinds: ['place', 'gather', 'fish', ...ALWAYS_ALLOWED],
+      preferredKinds: [...OPEN_KINDS, ...ALWAYS_ALLOWED],
       targetPoiId: COVE_LIGHTHOUSE_POI, guided: true,
     };
   }
@@ -762,7 +814,7 @@ export function objectiveActionContext(obj: Objective | null): ObjectiveActionCo
     // 採取の段階。**どの採取ノードも隠さない**(v17.2)。targetItemIds は
     // 「同じEの輪に案内中の素材があれば そちらを先に出す」ための prefer リスト。
     return {
-      preferredKinds: ['gather', 'fish', ...ALWAYS_ALLOWED],
+      preferredKinds: [...OPEN_KINDS, ...ALWAYS_ALLOWED],
       targetItemIds: [obj.gatherItem], guided: true,
     };
   }
@@ -773,7 +825,7 @@ export function objectiveActionContext(obj: Objective | null): ObjectiveActionCo
     // はなす約束で置いてあり、いま重なっているのは tree11(池の南西の岸)の1本だけ
     // ——tests/unit/gather_free_v172.test.ts が その1本に数を固定して機械検査する。
     return {
-      preferredKinds: ['fish', 'gather', ...ALWAYS_ALLOWED],
+      preferredKinds: [...OPEN_KINDS, ...ALWAYS_ALLOWED],
       targetItemIds: [...obj.fishItems], guided: true,
     };
   }
@@ -781,8 +833,10 @@ export function objectiveActionContext(obj: Objective | null): ObjectiveActionCo
     // クラフト・配置はCキー/もちものでする作業。Eの主ヒントは この段階の目的ではない。
     // v17.2 だからこそ 採取・釣りを ふさがない: 「Cで ツリザオを作ろう」と言われている
     // 最中に 目の前の きのこが とれないほうが おかしい(案内する素材が無いので prefer も無し)。
+    // v17.3 家具の配置・操作(place/pickup)も 同じ理由で ふさがない
+    // ——「ランタンを 島に置こう」の最中に 置いた家具を もちかえれないのは あべこべ。
     return {
-      preferredKinds: ['gather', 'fish', ...ALWAYS_ALLOWED],
+      preferredKinds: [...OPEN_KINDS, ...ALWAYS_ALLOWED],
       guided: true,
     };
   }

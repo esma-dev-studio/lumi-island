@@ -74,8 +74,14 @@ function carryHint(item: ItemId): string {
  * 採取ノードには最初から重ねて置けない(PlacementSystem.checkPlacement)ので、
  * 採取(30)より弱いままでも「見えているのに使えない」は起きない。
  *
- * kind は既存の 'pickup'(家具まわりの操作)を使う。ObjectiveSystem の preferredKinds には
- * pickup が入らないので、依頼の誘導中(guided)は自動で隠れる=依頼の進行を横取りしない。
+ * kind は既存の 'pickup'(家具まわりの操作)を使う。
+ * v17.3 pickup も 依頼の誘導中に 隠れなくなった(ObjectiveSystem の OPEN_KINDS)。
+ * この31は **採取(30)より弱く、会話(35)・ドア(35)より強い**ので、
+ * 依頼を止めないことを 支えているのは 次の2つ:
+ *   - 判定圏が せまい(自分で置いた家具から1.6m)。しかも 家具は 入口(1.6m)・
+ *     NPCの立ち位置(1.4m)・採取ノードに 重ねて置けない(checkPlacement)。
+ *   - 受注・報告できるNPCは selectInteraction が **距離より先に**選ぶので、
+ *     依頼が進む会話を この候補が 奪うことは 構造的に起きない。
  */
 function displayCandidate(gs: GameScene, near: PlacedRuntime, px: number, pz: number): InteractionCandidate | null {
   const kind = gs.placement.displayKindOf(near);
@@ -116,7 +122,7 @@ function displayCandidate(gs: GameScene, near: PlacedRuntime, px: number, pz: nu
  * その家具にしか 無い あそびなので、いろみず(59)より1つ強い58にして、
  * 「もちかえる」(60)は パネルの中(アルバム)ではなく R の「うごかす」と
  * ふつうの もちかえりに ゆずる。
- * kind は 'pickup' なので、依頼の誘導中(guided)は 自動で かくれる。
+ * kind は 'pickup'。v17.3 から 依頼の誘導中でも 出る(判定圏に入ったときだけ)。
  */
 function photoStandCandidate(
   gs: GameScene, near: PlacedRuntime, px: number, pz: number
@@ -146,8 +152,8 @@ function photoStandCandidate(
  * もちかえる が消えてしまわないよう、PaintUI のパネルの中に「もちかえる」を置いてある
  * (すいそう・むしかご(DisplayUI)と まったく同じ考え方)。
  *
- * kind は 'pickup'。ObjectiveSystem の preferredKinds に pickup は入らないので、
- * 依頼の誘導中(guided)は自動で隠れる。
+ * kind は 'pickup'。v17.3 から 依頼の誘導中でも 出る
+ * (優先度59は 採取30・会話35・ドア35 より弱いので、誘導を横取りしない)。
  */
 function paintCandidate(gs: GameScene, near: PlacedRuntime, px: number, pz: number): InteractionCandidate | null {
   if (!gs.placement.canPaint()) return null;
@@ -172,9 +178,9 @@ function paintCandidate(gs: GameScene, near: PlacedRuntime, px: number, pz: numb
  * 判定は SIT_REACH(1.0m)と せまくしてある——家具の「もちかえる」の輪(1.6m)の
  * 内がわだけを取るので、1歩さがれば これまでどおり もちかえれる。
  *
- * kind は 'place'。ObjectiveSystem の preferredKinds に 'place' は入らないので、
- * **依頼の誘導中は 自動的に かくれる**(でんごんばん・庭の花だん・るすの家と同じ流儀)。
- * = すわる候補が 会話や採取の E を 奪うことは 構造的に起きない。
+ * kind は 'place'。v17.3 から 依頼の誘導中でも すわれる
+ * (「依頼のあいだは ベンチにも すわれない」を やめた)。
+ * すわる候補が 会話や採取の E を 奪わないのは 優先度(sit=61 = ほぼ最弱)が受けもつ。
  */
 function pushSitCandidates(
   gs: GameScene, cands: InteractionCandidate[], px: number, pz: number
@@ -316,8 +322,9 @@ function pushBugCandidate(gs: GameScene, cands: InteractionCandidate[], px: numb
  *              ぬった あとに 木の前へ立つと 表示だけの候補が Eを にぎりつづけ、
  *              **目の前の カブクワが つかまえられない**(進行不能級の じゃま)。
  *
- * kind は 'place'。ObjectiveSystem の preferredKinds に 'place' は ふつう入らないので、
- * 依頼の誘導中は 自動で かくれる(でんごんばん・庭の花だん・まつりと まったく同じ流儀)。
+ * kind は 'place'。v17.3 から 依頼の誘導中でも 出る。
+ * みつを 持っている子にしか 候補を作らないうえ、判定圏は みきから1.6mだけなので、
+ * 誘導の じゃまにならないのは これまでどおり(上の優先度の使いわけを参照)。
  */
 function pushSapCandidate(gs: GameScene, cands: InteractionCandidate[], px: number, pz: number): void {
   const d = Math.hypot(px - SAP_TREE.x, pz - SAP_TREE.z);
@@ -376,9 +383,10 @@ function pushNpcCandidate(gs: GameScene, cands: InteractionCandidate[], px: numb
  *   ランタンの台   … <kbd>E</kbd>ほしランタンを もらう(無料・1回の まつりにつき1こ)
  *   桟橋の先       … <kbd>E</kbd>ランタンを とばす(見せ場がはじまる)
  *
- * どちらも kind='place' にしてある。ObjectiveSystem の preferredKinds に 'place' は
- * ふつう入らないので、**依頼の誘導中は 自動的に かくれる**——まつりは 依頼の じゃまを
- * 1ミリも しない、という設計を 構造で保証する(でんごんばん・庭の花だん・るすの家と同じ流儀)。
+ * どちらも kind='place'。v17.3 から 依頼の誘導中でも 出る
+ * ——ほしまつりは 年に何回もない 時間かぎりの見せ場なので、
+ * 「依頼を受けている子だけ まつりに出られない」ほうが おかしい。
+ * 依頼の じゃまにならないことは 下の優先度と 判定圏の せまさが受けもつ。
  *
  * 優先度:
  *   台     = 自宅のドアと同じ35。会話(35)とは 距離で決まるので、輪(半径1.7m)の上に立てば
@@ -496,7 +504,7 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     // 室内に置いた家具の持ち帰り。ドア・ベッドより優先度が低い(PRIORITY.furniture=60 > door=35)ので、
     // 判定圏に重ねて置けないルール(HomeInterior.checkHomePlacement)と合わせて、
     // 「そとへ でる」「ねる」が家具に横取りされることはない。
-    // 誘導中(ベッドで待つ等)は preferredKinds に pickup が入っていないので、そもそも出ない
+    // v17.3 誘導中(ベッドで待つ等)でも 出す ——朝を待つあいだの模様がえを ふさがない
     pushSitCandidates(gs, cands, px, pz); // v18 室内に置いた ベンチ・いすにも すわれる
     const inNear = gs.placement.nearest(px, pz);
     if (inNear) {
@@ -601,9 +609,9 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
     // こわれた灯台のとびら。
     // ふだんは「しまっている」の表示だけ。第2章の最後の依頼(q2_light)を引き受けていて
     // ひかりのレンズを持っているときだけ、Eで点灯の見せ場がはじまる。
-    // kind='place' は ObjectiveSystem の preferredKinds に ふつうは入らない種類なので、
-    // 入り江で素材をあつめている最中に この案内が誘導を横取りすることはない
-    // (レンズを つける段階だけ、objectiveActionContext が 'place' を通す)。
+    // kind='place'。v17.3 から どの誘導中でも 出る(表示だけの「しまっている」を
+    // 隠す理由が無い)。入り江で素材をあつめている最中に 誘導を横取りしないのは
+    // 優先度(door+2=37 は 採取30・会話35 より弱い)が受けもつ。
     const doorD = Math.hypot(px - COVE_DOOR.x, pz - COVE_DOOR.z);
     if (doorD < COVE_ACT_R) {
       const flags = gs.state.flags ?? {};
@@ -667,8 +675,11 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
         run: () => gs.seq.rideTrain('island'),
       });
     }
-    // テンの店(週がわり)。ツムギ工房と同じ kind='shop' なので、
-    // 依頼の誘導中(guided)は 自動で隠れる=買いものが 進行を横取りしない
+    // テンの店(週がわり)。ツムギ工房と同じ kind='shop'。
+    // v17.3 から 依頼の誘導中でも 出る(ObjectiveSystem の OPEN_KINDS)。
+    // 進行を横取りしないのは 優先度(shop=40 < 会話35・採取30)と、
+    // 受注/報告できるNPCの先取り(selectInteraction)が受けもつ
+    // ——テンの前に立てば かならず「テンと はなす」が勝つ
     const shopD = Math.hypot(px - MARKET_SHOP_POINT.x, pz - MARKET_SHOP_POINT.z);
     if (shopD < MARKET_SHOP_R) {
       cands.push({
@@ -713,7 +724,16 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
       });
     }
   }
-  // 店
+  // 店(ツムギ工房のカウンター)。
+  //
+  // v17.3 から **依頼の誘導中でも 隠れない**(ObjectiveSystem の OPEN_KINDS)。
+  // ツムギは 依頼NPC かつ 店主なので「本人へのE」と「カウンターのE」が同じ場所に
+  // ならぶことがあるが、勝つのは かならず 本人のほう:
+  //   立ち位置 ツムギ(-3.9, 1.4)⇔ カウンター SHOP_POINT(-4.4, -1) は 2.45m はなれていて、
+  //   会話の輪(1.8m)と カウンターの輪(2.0m)は 重なる帯を持つ。その帯では
+  //     受注/報告できる … selectInteraction が 距離より先に選ぶ(PRIORITY.npcQuest=10)
+  //     進行中で話すだけ … 優先度 35(gather+5)が 店の 40 より強い
+  //   のどちらかで 会話が勝つ。tests/unit/open_all_v173.test.ts が 0.1m格子で機械検査する。
   const shopD = Math.hypot(px - SHOP_POINT.x, pz - SHOP_POINT.z);
   if (shopD < 2.0) {
     cands.push({
@@ -743,8 +763,8 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
   // v11 ミナモの桟橋のよこの小舟。
   //   boat_repaired が立っていない(=いまのプレイヤー全員)ときは、表示だけの候補。
   //   採取ノードの「道具がない理由」とまったく同じ流儀で、押しても何も起きない。
-  //   kind='place' は誘導中(guided)の preferredKinds に決して入らないので、
-  //   依頼のとちゅうで桟橋を通っても案内が横取りされることはない。
+  //   kind='place'。v17.3 から 誘導中でも 出る(表示だけの1行を隠す理由が無い)。
+  //   依頼のとちゅうで桟橋を通っても案内が横取りされないのは 優先度(door+2=37)が受けもつ。
   //   立ち位置は釣り場のはじまり(z>45.5)から3.9mはなしてあるので、釣りとも競合しない。
   const boatD = Math.hypot(px - ISLAND_BOAT_POINT.x, pz - ISLAND_BOAT_POINT.z);
   if (boatD < BOAT_ACT_R) {
@@ -787,8 +807,8 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
   //
   //   在宅  : <kbd>E</kbd>おじゃまする(kind='enter'。自宅の出入りと同じ「常時許可」なので、
   //           どの目的の最中でも押せる=家に入って会う道すじを ふさがない)
-  //   るす  : 「るすみたい。また こよう」の表示だけ(kind='place' なので、依頼の誘導中は
-  //           自動で隠れる。押しても何も起きない=灯台のとびら・しゅうりちゅうの船と同じ流儀)
+  //   るす  : 「るすみたい。また こよう」の表示だけ(kind='place'。v17.3 から
+  //           誘導中でも 出る。押しても何も起きない=灯台のとびら・しゅうりちゅうの船と同じ流儀)
   //
   // 優先度はどちらも自宅のドア(35)より弱くしてある。会話(35)と同じ点に立つことがある
   // ——ミナモとノクトの「家にいる時間帯の立ち位置」はドアの前そのもの——ので、
@@ -820,10 +840,9 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
   pushFestivalCandidates(gs, cands, px, pz);
   // v15 広場の でんごんばん(きょうの おてつだいを 読む)。
   //
-  // kind='place' にしてある。ObjectiveSystem の preferredKinds に 'place' は
-  // ふつう入らないので、依頼の誘導中は 自動的に かくれる
-  // ——おてつだいは 依頼の じゃまを 1ミリも しない、という設計を 構造で保証する
-  // (庭の花だん・るすの家・こわれた ふね と まったく同じ流儀)。
+  // kind='place'。v17.3 から 依頼の誘導中でも 出る
+  // ——きょうの おてつだいは「その日かぎり」の目標なので、依頼を受けている子だけ
+  // 板が読めないのは あべこべ。依頼の じゃまにならないことは 下の優先度が受けもつ。
   //
   // 優先度は自宅のドア(35)と同じ。ちかくを 通りかかった人(会話も35)とは
   // 距離で決まるので、板の真ん前に立てば 板が、人の真ん前に立てば 会話が出る。
@@ -850,10 +869,10 @@ export function routeInteraction(gs: GameScene, uiOpen: boolean): string {
   //   空き    : のばなを1つ うえる(持っていなければ理由だけ出す)
   //   芽/つぼみ: まだ つみとれない理由を出す(押しても何も起きない表示専用)
   //   満開    : つみとる(のばな×2)
-  // 「うえる」「まだ育っていない」は kind='place' にしてある。ObjectiveSystem の
-  // preferredKinds に 'place' は決して入らないので、依頼の誘導中は自動的に隠れる
-  // (虫あみ・シャベルと同じ考え方)。つみとりだけは kind='gather'/itemId='flower' なので、
-  // 「のばなを あつめよう」の誘導中に出てよい(実際にのばなが2つ手に入る)。
+  // 「うえる」「まだ育っていない」は kind='place'、つみとりは kind='gather'/itemId='flower'。
+  // v17.3 から どちらも 依頼の誘導中に 出る(「うえる」を隠していたのを やめた
+  // ——お庭の世話は いつでもできる遊びで、依頼の進行を1ミリも遅らせない)。
+  // 花だん(garden=29)は 採取(30)より強いので、区画の上に立てば かならず花だんが出る。
   const plot = nearestPlot(px, pz);
   if (plot) {
     const stage = stageOf(gs.state.garden, plot.slot, gs.island.time.day);

@@ -15,7 +15,8 @@
 //   (a) 全誘導段階 × 全採取ノード種で、候補が1つも隠れない(総当たり)
 //   (b) 案内している素材と ほかのノードが 同時にEの輪にいれば、案内している素材が勝つ
 //   (c) 報告できるNPCが射程にいれば、足もとの採取より 報告が勝つ(v11.1からの性質)
-//   (d) 「隠したまま」を意図している種類(店・家具のもちかえる/展示・花だんに うえる)は隠れたまま
+//   (d) v17.3 で 店・家具のもちかえる/展示・花だんに うえる も 隠れなくなった
+//       (のこる「隠す」は 目的の相手いがいとの雑談ただ1つ。総当たりは open_all_v173.test.ts)
 //   (e) 釣り場と採取ノードの重なりは 既知の1本(tree11)だけ
 //       (採取30 > 釣り50 なので、重なると「つりをする」が採取に食われる)
 import { describe, it, expect } from 'vitest';
@@ -156,11 +157,10 @@ describe('v17.2 (a) 全誘導段階 × 全採取ノード種で 候補が1つも
     }
   });
 
-  it('釣りは 報告の段階だけ出さない(それ以外の全段階では出る)', () => {
+  it('v17.3 釣りは 報告の段階もふくめて 全段階で出る', () => {
     const fishing = cand('fish', PRIORITY.fishing, 1.0, undefined, 'fishing');
     for (const { label, ctx } of guidedContexts()) {
-      const isReport = ctx.targetNpcId !== undefined;
-      expect(matchesObjective(fishing, ctx), `${label}: つりをする`).toBe(!isReport);
+      expect(matchesObjective(fishing, ctx), `${label}: つりをする`).toBe(true);
     }
   });
 });
@@ -245,19 +245,20 @@ describe('v17.2 (c) 報告できるNPCは 足もとの採取より かならず�
   });
 });
 
-describe('v17.2 (d) 隠したままにしている種類は 隠れたまま', () => {
-  it('店・家具のもちかえる/展示・うえる・雑談は どの誘導段階でも出ない', () => {
+describe('v17.3 (d) 隠れるのは「目的の相手いがいとの雑談」ただ1つ', () => {
+  it('店・家具のもちかえる/展示・うえるは どの誘導段階でも出る(v17.3 で開放)', () => {
     for (const { label, ctx } of guidedContexts()) {
-      expect(matchesObjective(cand('shop', PRIORITY.shop, 0.5), ctx), `${label}: 店`).toBe(false);
+      expect(matchesObjective(cand('shop', PRIORITY.shop, 0.5), ctx), `${label}: 店`).toBe(true);
       expect(
         matchesObjective(cand('pickup', PRIORITY.furniture, 0.5), ctx), `${label}: もちかえる`
-      ).toBe(false);
-      // 「うえる」「すわる」は kind='place'。とうだいの段階だけ place を通す(レンズをつける)
-      const placeOk = ctx.targetPoiId === 'coveLighthouse';
+      ).toBe(true);
       expect(
         matchesObjective(cand('place', PRIORITY.garden, 0.5), ctx), `${label}: うえる`
-      ).toBe(placeOk);
-      // 目的の相手いがいとの雑談
+      ).toBe(true);
+    }
+  });
+  it('目的の相手いがいとの雑談だけは これまでどおり出ない', () => {
+    for (const { label, ctx } of guidedContexts()) {
       const chat: InteractionCandidate = {
         ...cand('talk', PRIORITY.npc, 0.5), targetId: 'minamo', questActionable: false,
       };

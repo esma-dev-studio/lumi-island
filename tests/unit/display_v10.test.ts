@@ -483,13 +483,16 @@ describe('ヒントの意味カテゴリ(display)', () => {
     ]).unknownHints).toEqual([]);
   });
 
-  it('「もちかえる」を横取りしない / 誘導中は矛盾として検出される', () => {
+  it('「もちかえる」を横取りしない / v17.3 誘導中でも矛盾ではない', () => {
     expect(categorizeHint('Eすいそうを もちかえる')).toBe('carry');
     expect(categorizeHint('Eつみとる')).toBe('gatherFlower'); // 庭の花だん(別カテゴリのまま)
-    // 自由行動中は寄り道してよい。誘導中(採取・報告)は矛盾
+    // v17.3 家具の操作(kind='pickup')は どの誘導段階でも 候補に残るようになった
+    // (ObjectiveSystem の OPEN_KINDS)。自分の家具に何をしても反応しない島にしない
     expect(isSemanticMatch('free', 'display')).toBe(true);
     expect(isSemanticMatch('talk', 'display')).toBe(true);
-    expect(isSemanticMatch('report', 'display')).toBe(false);
-    expect(isSemanticMatch('gatherWood', 'display')).toBe(false);
+    expect(isSemanticMatch('gatherWood', 'display')).toBe(true);
+    // 報告のとちゅうも 寄り道あつかい。相手の目の前(atTarget)でだけ 矛盾のまま
+    expect(isSemanticMatch('report', 'display', { atTarget: false })).toBe(true);
+    expect(isSemanticMatch('report', 'display', { atTarget: true })).toBe(false);
   });
 });

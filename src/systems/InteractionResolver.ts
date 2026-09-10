@@ -10,9 +10,15 @@ import type { ItemId } from '../data/items';
  * とくに乗り降り(移動手段)は、どんな誘導中でも隠してはいけない——隠すと
  * 「入り江から帰れない」のような進行不能になる(tests/unit/objective.test.ts が機械検査)。
  *
- * 誘導中(guided)に隠れるのは shop / fish / place / pickup の4種だけ。
- * v11.1 から catch(虫とり)・dig(穴ほり)・時間限定の拾いもの は隠さない
- * (理由は ObjectiveSystem の ALWAYS_ALLOWED / TRANSIENT_PICKUPS のコメント)。
+ * v17.3 **どの kind も 誘導中に隠れない**。
+ * v11.1 で catch/dig を、v17.2 で gather と 報告いがいの fish を、
+ * v17.3 で 残っていた shop / place / pickup / 報告段階の fish を開放した
+ * (理由は ObjectiveSystem の ALWAYS_ALLOWED / OPEN_KINDS のコメント)。
+ * いま誘導が絞るのは **目的の相手いがいとの会話(talk)ただ1つ**で、
+ * それも「受注・報告できるNPCは先取り」の例外つき
+ * (ObjectiveInteractionPolicy.selectInteraction)。
+ * 案内していることは 隠すのではなく **優先**で表す
+ * ——受注/報告NPCの先取りと、案内中の素材への -0.5 の下駄の2つだけ。
  */
 export type InteractionKind =
   | 'talk' | 'gather' | 'shop' | 'fish' | 'place' | 'pickup' | 'sleep' | 'enter' | 'exit'
@@ -63,7 +69,9 @@ export const PRIORITY = {
   //   ひろばのベンチ … ほかの候補が無いので いつでも すわれる
   //   置いた ベンチ/いす … 家具の操作(もちかえる)が 判定圏(1.6m)にあるあいだは そちらが出る
   // 会話(35)・採取(30)・ドア(35)より弱いのは 58 のときと同じなので、誘導も会話も 横取りしない。
-  // 候補の kind は 'place' なので、依頼の誘導中は そもそも出ない。
+  // v17.3 kind='place' も 誘導中に隠れなくなったので、依頼の最中でも ベンチに すわれる。
+  // 横取りしないことを保証しているのは この優先度(61 = ほぼ最弱)だけになった
+  // ——すわるは いつでも立てる操作なので、ほかに1つでもできることがあれば ゆずる。
   sit: 61,
   // v11 「むしが いる! ちかづいて つかまえよう」の予告(表示だけ・5m)。
   // わざと いちばん弱くしてある: 採取・釣り・店・家具など「いま そこでできること」が

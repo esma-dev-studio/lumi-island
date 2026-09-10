@@ -167,8 +167,11 @@ describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
     const ctx = objectiveActionContext(currentObjective(s));
     expect(ctx.guided).toBe(true);
     expect(ctx.preferredKinds).toContain('gather');
-    expect(ctx.preferredKinds).toContain('fish'); // v17.2 釣りも塞がない(報告段階だけ別)
-    expect(ctx.preferredKinds).not.toContain('shop');
+    expect(ctx.preferredKinds).toContain('fish'); // v17.2 釣りも塞がない
+    // v17.3 店・家具の配置/操作も 塞がない(OPEN_KINDS)
+    expect(ctx.preferredKinds).toContain('shop');
+    expect(ctx.preferredKinds).toContain('place');
+    expect(ctx.preferredKinds).toContain('pickup');
     // v17.2: targetItemIds は「これ以外を隠す」ではなく「同じ強さならこれを先に出す」
     expect(ctx.targetItemIds).toEqual(['wood']);
   });
@@ -202,8 +205,12 @@ describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
     // v11.1: 報告に行くとちゅうの採取は ふさがない(素材の絞りこみもしない)
     expect(ctx.preferredKinds).toContain('gather');
     expect(ctx.targetItemIds).toBeUndefined();
-    expect(ctx.preferredKinds).not.toContain('fish');
-    expect(ctx.preferredKinds).not.toContain('shop');
+    // v17.3 報告のとちゅうでも 釣り・店・家具は 塞がない。
+    // 報告が横取りされないのは 優先度(selectInteraction が受注/報告NPCを先取り)が受けもつ
+    expect(ctx.preferredKinds).toContain('fish');
+    expect(ctx.preferredKinds).toContain('shop');
+    expect(ctx.preferredKinds).toContain('place');
+    expect(ctx.preferredKinds).toContain('pickup');
     expect(ctx.targetNpcId).toBe('tsumugi');
   });
   it('未受注の「話を聞こう」はまだ自由(採取も店も従来どおり)', () => {
@@ -225,8 +232,10 @@ describe('objectiveActionContext(目的から行動の文脈を導く)', () => {
     const ctx = objectiveActionContext(o);
     expect(ctx.guided).toBe(true);
     // v11: 虫とり(catch) / v11.1: 穴ほり(dig)も常時許可(ObjectiveSystem の ALWAYS_ALLOWED)
-    // v17.2: 釣り(fish)も この段階には入る(報告段階だけ入れない)
-    expect(ctx.preferredKinds).toEqual(['gather', 'fish', 'sleep', 'enter', 'exit', 'catch', 'dig']);
+    // v17.2: 釣り(fish) / v17.3: 店(shop)・家具(place/pickup)も この段階に入る
+    expect(ctx.preferredKinds).toEqual([
+      'gather', 'fish', 'shop', 'place', 'pickup', 'sleep', 'enter', 'exit', 'catch', 'dig',
+    ]);
     // 案内している素材が無い段階なので、優先の下駄をはく候補も無い
     expect(ctx.targetItemIds).toBeUndefined();
     expect(ctx.targetPoiId).toBe('bed');

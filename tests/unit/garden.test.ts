@@ -273,42 +273,51 @@ describe('誘導中の見え方(ObjectiveInteractionPolicy)', () => {
     expect(selectInteraction([pick], ctx)?.hint).toContain('つみとる');
   });
 
-  it('v17.2 もくざい集めの誘導中でも「つみとる」は出る(「うえる」は出ない)', () => {
+  it('v17.3 もくざい集めの誘導中でも「うえる」「つみとる」の両方が出る', () => {
     const ctx = objOf({
       id: 'q_wood_gather', headline: 'いまやること', label: 'もくざいを あつめよう',
       target: { kind: 'poi', id: 'forest' }, gatherItem: 'wood',
     });
-    // 「うえる」は kind='place' なので これまでどおり誘導中は出ない(のばなを1つ使う操作)
-    expect(selectInteraction([plant], ctx)).toBeNull();
-    // 「つみとる」は kind='gather'。v17.2 から どの誘導中でも採れる
-    expect(selectInteraction([plant, pick], ctx)?.hint).toContain('つみとる');
+    // v17.2までは 「うえる」(kind='place')を隠していた。v17.3 で 開放
+    // ——お庭の世話は いつでもできる遊びで、依頼の進行を1ミリも遅らせない
+    expect(selectInteraction([plant], ctx)?.hint).toContain('うえる');
+    // 「つみとる」は kind='gather'。v17.2 から どの誘導中でも採れる。
+    // ※ うえる と つみとる が **同じ区画に同時に出ることは無い**
+    //   (InteractionRouting は 区画の育ちぐあいで どちらか1つだけを作る)ので、
+    //   ここも 実物と同じく 1つずつ 確かめる
+    expect(selectInteraction([pick], ctx)?.hint).toContain('つみとる');
     // 花だん(garden 29)は 案内している素材の下駄(gather 30 → 29.5)より強いまま。
     // 「区画の上に立ったら 必ず花だんが出る」という別の設計を 目的の優先が壊さない
     // (実際の島では 花だんと いちばん近い採取ノードが2.3m以上はなれているので競合しない)
-    expect(selectInteraction([plant, pick, woodNode], ctx)?.hint).toContain('つみとる');
+    expect(selectInteraction([pick, woodNode], ctx)?.hint).toContain('つみとる');
+    expect(selectInteraction([plant, woodNode], ctx)?.hint).toContain('うえる');
     // 花だんが無ければ 案内どおり木が出る
     expect(selectInteraction([woodNode], ctx)?.hint).toContain('木をきる');
   });
 
-  it('のばな集めの誘導中は「つみとる」だけ出る(実際にのばなが手に入るため)', () => {
+  it('のばな集めの誘導中も「うえる」は出る。区画が満開なら「つみとる」が勝つ', () => {
     const ctx = objOf({
       id: 'x_flower', headline: 'いまやること', label: 'のばなを あつめよう',
       target: { kind: 'poi', id: 'meadow' }, gatherItem: 'flower',
     });
-    expect(selectInteraction([plant], ctx)).toBeNull(); // うえるのは進行の逆なので出さない
+    // v17.3 「うえるのは進行の逆」でも 隠さない(何をしても反応しない区画を作らない)。
+    // 空き区画には そもそも「つみとる」が無いので、どちらを出すかで迷う場面は起きない
+    expect(selectInteraction([plant], ctx)?.hint).toContain('うえる');
+    // 満開の区画では「つみとる」が出る(下駄つきで 採取ノードにも勝つ)
+    expect(selectInteraction([pick], ctx)?.hint).toContain('つみとる');
     expect(selectInteraction([plant, pick], ctx)?.hint).toContain('つみとる');
   });
 
-  it('v17.2 クラフト・配置・報告のどの誘導中でも「つみとる」は出る(「うえる」は出ない)', () => {
-    // 「うえる」は kind='place'(のばなを1つ 使う操作)なので どの誘導中も出ないまま。
-    // 「つみとる」は kind='gather'(のばなが2つ 手に入る)なので どの誘導中でも出る
+  it('v17.3 クラフト・配置・報告のどの誘導中でも「うえる」「つみとる」が出る', () => {
+    // v17.2 は「うえる」(kind='place')だけ 隠していた。v17.3 で 開放し、
+    // どの誘導段階でも 花だんは ふつうに世話できる
     for (const o of [
       { id: 'q_fish_craft', headline: 'いまやること', label: 'ツリザオを作ろう', target: { kind: 'none' as const }, craftRecipe: 'r_rod' },
       { id: 'q_lumi_place', headline: 'いまやること', label: '光る家具を 島に置こう', target: { kind: 'none' as const }, placeFurniture: true },
       { id: 'q_wood_report', headline: 'できた!', label: 'ツムギに ほうこくしよう', target: { kind: 'npc' as const, id: 'tsumugi' } },
     ]) {
-      expect(selectInteraction([plant], objOf(o)), `${o.id} うえる`).toBeNull();
-      expect(selectInteraction([plant, pick], objOf(o))?.id, `${o.id} つみとる`).toBe('garden_pick_0');
+      expect(selectInteraction([plant], objOf(o))?.id, `${o.id} うえる`).toBe('garden_plant_0');
+      expect(selectInteraction([pick], objOf(o))?.id, `${o.id} つみとる`).toBe('garden_pick_0');
     }
   });
 

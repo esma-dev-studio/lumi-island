@@ -41,7 +41,17 @@ export interface TraceRow {
 export interface RowAnnotation {
   objectiveCategory: ObjectiveCategory;
   hintCategory: HintCategory;
+  /** v17.3 目的地に もう ついているか(「→ Nm」も 矢印も 出ていない) */
+  atTarget: boolean;
   semanticMatch: boolean;
+}
+
+/**
+ * v17.3 isSemanticMatch に わたす位置の手がかり。
+ * atTarget を 省くと「分からない」= 矛盾にしない(過剰検出をしない側に倒す)。
+ */
+export interface SemanticContext {
+  atTarget?: boolean;
 }
 
 export interface SemanticMismatch {
@@ -93,7 +103,10 @@ export declare const HINT_RULES: CategoryRule[];
 export declare function categorizeObjective(text: string, headline?: string): ObjectiveCategory;
 export declare function categorizeHint(text: string): HintCategory;
 export declare function isShopPanelTitle(title: string): boolean;
-export declare function isSemanticMatch(objCat: string, hintCat: string): boolean;
+export declare function isSemanticMatch(
+  objCat: string, hintCat: string, ctx?: SemanticContext
+): boolean;
+export declare function atTargetOf(row: TraceRow): boolean;
 export declare function annotateRow<T extends TraceRow>(row: T): T & RowAnnotation;
 export declare function summarizeTrace(rows: TraceRow[], stallSec?: number): TraceSummary;
 export declare function uxVerdictOf(input: UxVerdictInput): 'PASS' | 'FAIL';

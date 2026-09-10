@@ -38,8 +38,10 @@ const GATHER = new Set(GATHER_CATEGORIES);
  * v17.2 追記: 復活するふつうの採取ノード(木・岩・草・ベリー・コケ・こうせき)も
  * 誘導中に採れるようになったので、この集合は「報告(report)の段階でも許す」ための
  * 例外リストではなくなった —— いまは どの段階でも通る道が 下の GATHER_OK_OBJ にもある。
- * それでも残してあるのは、報告の段階を GATHER_OK_OBJ に入れない設計(釣りだけを見張る)を
- * 保ちながら「時間で消える拾いものは 何があっても許す」を1行で表すため。
+ * それでも残してあるのは、「時間で消える拾いものは 何があっても許す」——
+ * 報告の相手の目の前(atTarget)でさえ 許す——を 1行で表すため。
+ * 報告の段階だけ 別あつかいなのは いまも同じで、v17.3 からは
+ * 「相手が Eの輪の内がわにいるか」で 見る(下の isSemanticMatch の report の枝)。
  */
 const TRANSIENT_PICKUP = new Set(['gatherStar', 'gatherFloat', 'gatherSnail']);
 /**
@@ -56,8 +58,9 @@ const TRANSIENT_PICKUP = new Set(['gatherStar', 'gatherFloat', 'gatherSnail']);
  * 全候補から優先度と距離だけで選ぶので、道すがらの採取・釣り・買い物のEヒントが出るのは仕様どおり。
  * つまり未受注段階の「いまやること」は指示ではなく提案であり、寄り道は矛盾ではない
  * (受注前に採取や売買を塞ぐと、依頼と依頼のあいだの自由時間が死んでしまう)。
- * 引き受けたあとの段階(報告'report'・採取・釣り・クラフト・配置・ベッド待ち)は guided:true なので、
- * 従来どおり厳格に判定する。特に'report'は talk系のヒントだけをtrueにする。
+ * 引き受けたあとの段階(報告'report'・採取・釣り・クラフト・配置・ベッド待ち)は guided:true。
+ * v17.3 からは その段階でも 候補は1つも隠れないので、厳格に見るのは
+ * 「誘導中の雑談」と「報告の相手の目の前での よそ見」の2つだけ(下の isSemanticMatch)。
  *
  * v11第2章で足した2つも、同じ「設計の意味論への較正」:
  *   money : ふねの しゅうり代(500ルミナ)をためる段階。
@@ -72,7 +75,9 @@ const TRANSIENT_PICKUP = new Set(['gatherStar', 'gatherFloat', 'gatherSnail']);
 const ANYTHING_OK_OBJ = new Set(['free', 'tutorial', 'talk', 'money', 'sail']);
 
 /**
- * v17.2 「誘導中でも とる・ひろう・つるは ふさがない」段階(報告 report だけが例外)。
+ * v17.2 「誘導中でも とる・ひろう・つるは ふさがない」段階。
+ * (v17.2では 報告 report だけが例外だったが、v17.3 で その例外も なくなった
+ *  —— report は 下の isSemanticMatch で 位置(atTarget)を見る 専用の枝が うけもつ)
  *
  * オーナーの指摘:
  *   「チュートリアルの最中に『木材を集めよう』だと 木材いがいが 集められないように
@@ -89,15 +94,8 @@ const ANYTHING_OK_OBJ = new Set(['free', 'tutorial', 'talk', 'money', 'sail']);
  *
  * この較正で v4コーパスの既知陽性8件のうち2件
  *   179 gatherOre × gatherMoss / 262 gatherMoss × gatherStone
- * は「旧仕様(他素材を隠す)を陽性として固定していたもの」なので陰性へ再ラベルする
- * (=既知陽性は6件になる)。残る6件の性質は1つも変えていない:
- *   13 gatherWood × talk … 誘導中の雑談は いまも隠す(preferredKinds に talk が入らない)
- *   141/146/151/157 report × fish … 報告に行かず釣りつづける の検出(合否条件そのもの)
- *   224 gatherWood × shop … 店は どの誘導中でも矛盾
- *
- * report を **入れない**のが要点。報告は「その相手に会う」1手で終わるのに対し、
- * 釣りは「かかるまで待つ」長い専念行動なので、報告段階の fish だけは
- * これまでどおり矛盾のまま(refishDuringReport ゲートと同じ意味論)。
+ * は「旧仕様(他素材を隠す)を陽性として固定していたもの」なので陰性へ再ラベルした
+ * (=既知陽性は6件になった)。
  */
 const GATHER_OK_OBJ = new Set([
   ...GATHER_CATEGORIES, // 採取の段階(もくざい・いし・ヒカリゴケ…)
@@ -107,6 +105,32 @@ const GATHER_OK_OBJ = new Set([
   'sleep', // NPC不在で「ベッドで ねて まとう」
   'lighthouse', // 「とうだいに レンズを つけよう」
 ]);
+
+/**
+ * v17.3 「誘導中でも 隠さない」と決めた のこりの操作(設計の意味論への較正・教訓5)。
+ *
+ * src/systems/ObjectiveSystem.ts の OPEN_KINDS が 店(shop)・家具の 配置/操作
+ * (place / pickup)・報告段階の 釣り(fish)を **どの誘導段階でも 候補に残す**ように
+ * なったので、これらのEヒントが 誘導中に出るのは **仕様どおりの画面**になった。
+ * オーナーの設計方針:
+ *   「常にアイテムは集められる / やれることを塞がない
+ *     (言われたことだけをやる作業ゲームにしない)」
+ *
+ * ヒントのカテゴリで言うと:
+ *   shop    … 「Eお店をみる(うる・かう)」「Eテンの店を みる」
+ *   carry   … 「E◯◯を もちかえる」(kind='pickup')
+ *   display … 「E◯◯を いれる / とりだす / かざる」(kind='pickup')
+ *   place   … 「Eおく Rまわす Escやめる」= もちものから 家具を 置いている最中の1行
+ *   fish    … 「Eつりをする」。報告の段階でも 出るようになった
+ * ※ 「Eはなを うえる」「Eつみとる」は もともと gatherFlower に分類されるので ここには無い。
+ * ※ すわる・でんごんばん・いろをぬる等は カテゴリ表に無い(=unknown)ので もとから矛盾にしない。
+ *
+ * 「案内している相手・素材」を どう守るかは 隠すことではなく **優先度**が受けもつ:
+ *   受注/報告できるNPCは selectInteraction が 距離より先に選ぶ(PRIORITY.npcQuest=10)。
+ * だから「報告の相手が Eの輪の内がわにいるのに 別の行動ヒントが出ている」画面だけが
+ * 壊れた画面で、そこを見張るのが 下の isSemanticMatch の report の枝(atTarget)。
+ */
+const OPENED_HINTS = new Set(['shop', 'carry', 'display', 'place', 'fish']);
 
 /** HTML片(kbdタグ等)と全角スペースをならして、素の1行にする */
 function normalize(text) {
@@ -348,18 +372,34 @@ export function isShopPanelTitle(title) {
  *    次の家具の素材集めが必要になる。よって採取系のヒントは矛盾に数えない。
  *  - 目的=report + hint=talk: 報告は「はなす」で行うので同じ行動。
  *  - 目的=unknown: 判定材料がないものを矛盾と断定しない。
- * 逆に必ずfalseにするもの:
- *  - hint=shop(「Eお店をみる」): 店は依頼の進行に一切寄与しない。
- *    行動が絞られている段階(受注済み)では必ず矛盾。
+ * 逆に必ずfalseにするもの(v17.3 で 2つに減った):
  *  - 誘導中の hint=talk(雑談): 目的の相手いがいとの会話は preferredKinds に入らない設計。
- *  - 目的=report + hint=fish(報告に行くべき場面での釣り再開)。
+ *    これは v17.3 でも変えていない —— 依頼が進まない相手との世間話がEを奪うと、
+ *    報告のつもりで押したEが空ぶりして 誘導が空回りするため。
+ *    (受注・報告できるNPCは selectInteraction が先取りするので、ここには来ない)
+ *  - 目的=report で **報告の相手が Eの輪の内がわにいる**のに、報告いがいのヒントが出ている。
+ *    見分けかたは下の atTarget を参照。
  *  ※ v17.2 まで ここにあった「別素材の採取ヒント(例: 目的=ヒカリゴケ + ヒント=岩をくだく)」は
  *    設計変更により **陰性**になった(GATHER_OK_OBJ のコメントを参照)。
  *    どの誘導中でも どの素材でも採れるのが仕様なので、別素材のEヒントが出るのは正しい画面。
- *  - hint=display(v10の すいそう・むしかごの出し入れ): carry と同じ「かざる遊び」の寄り道。
- *    候補の kind は 'pickup' なので ObjectiveSystem の preferredKinds には決して入らず、
- *    誘導中(guided)は表示されない設計。出ていたら候補の絞りこみが壊れたということなので、
- *    sleep/enter/exit のような「常時許可」にはしない(GATHER_CATEGORIES にも入れない)。
+ *  ※ v17.3 で hint=shop / carry / display と 目的=report × hint=fish も **陰性**になった
+ *    (OPENED_HINTS のコメントを参照)。店も 家具の操作も 釣りも、どの誘導段階でも
+ *    候補に残るのが仕様。ただし「報告の相手の目の前」だけは 上の1行で見張りつづける。
+ *
+ * ---- 第3引数 ctx.atTarget(v17.3)----
+ * 「いま 目的地に もう ついているか」。ux_bot の trace 1行から annotateRow が作る:
+ *   目標カード(.obj-sub)の「→ Nm」も 画面端の矢印も 出ていない = ついている(true)
+ * 「→ Nm」は 目的地まで **1.8mより遠い**ときだけ出る(src/ui/ObjectiveHud.ts SUB_DIST_MIN=1.8)。
+ * 報告の目的では 目的地 = 報告する相手なので、これは
+ *   「相手が 1.8mの内がわにいる」= InteractionRouting の npcs.nearest(既定 range=1.8)が
+ *   かならず その相手を返す距離 = selectInteraction が 報告のEを 最優先で選ぶ距離
+ * と ぴったり同じ意味になる。だから
+ *   atTarget=true なのに 報告いがいのヒントが出ている → 候補の選びかたが壊れている(矛盾)
+ *   atTarget=false(まだ距離や矢印が出ている)       → 道すがらの寄り道(矛盾ではない)
+ * 位置が読めない古いログ(arrowの項目が無い v4コーパス等)では
+ *   「→ Nm」が無い = ついている とみなす(=検出をゆるめない側に倒す)。
+ * ctxを渡さずに呼んだ場合(atTarget=undefined)は「分からない」なので矛盾にしない
+ * ——このファイルの方針「迷ったら矛盾にしない」に そろえる。
  *
  * v11で常時許可に足したもの(判定の緩和ではなく、設計の意味論への較正):
  *  - hint=catch(虫あみ): src/systems/ObjectiveSystem.ts の ALWAYS_ALLOWED に 'catch' が入り、
@@ -377,16 +417,16 @@ export function isShopPanelTitle(title) {
  *  - 目的=report × 採取のヒント: 報告は「その相手に会う」ことだけが条件で、
  *    道すがら何を採っても1ミリも遅れない。ObjectiveSystem は報告の文脈に 'gather' を入れ、
  *    素材の絞りこみ(targetItemIds)もしない。報告そのものが横取りされないことは優先度で保証。
- *    ※ report × fish / report × shop は これまでどおり false のまま
- *      (「報告に行かず釣りつづける」「店を開いてしまう」の検出は合否条件そのもの)。
- *  - hint=pickup系(carry「もちかえる」/ display「いれる・とりだす」)は 従来どおり厳格のまま。
- *    自分で置いた家具はいつでも戻れる相手で、資源も増えない(むしろ島から減る)。
- *    ObjectiveSystem の preferredKinds に 'pickup' は入らないので、誘導中は表示されない設計。
- *    出ていたら候補の絞りこみが壊れたということなので、常時許可にはしない。
+ *    ※ v17.3 report × fish / report × shop も **相手の目の前(atTarget)でだけ** false。
+ *      道すがらの釣り・買いものは 寄り道なので 矛盾に数えない。
+ *  - hint=pickup系(carry「もちかえる」/ display「いれる・とりだす・かざる」): v17.3 で
+ *    ObjectiveSystem の OPEN_KINDS に 'pickup' が入り、誘導中でも出るようになった。
+ *    自分の家で 自分の家具に 何をしても反応しないのは、島が死んで見えるため。
+ *    誘導を横取りしないのは 優先度(もちかえる60・いろをぬる59・いれる31)が受けもつ。
  */
-export function isSemanticMatch(objCat, hintCat) {
+export function isSemanticMatch(objCat, hintCat, ctx = {}) {
   if (!hintCat || hintCat === 'none') return true;
-  // shopより先に見る。未受注(talk)は自由行動あつかいなので店のヒントも矛盾ではない
+  // 未受注(talk)は自由行動あつかいなので店のヒントも矛盾ではない
   if (ANYTHING_OK_OBJ.has(objCat)) return true;
   if (hintCat === 'blocked') return true;
   if (hintCat === 'dialogue') return true;
@@ -401,16 +441,19 @@ export function isSemanticMatch(objCat, hintCat) {
   // 時間で消える拾いもの(夜のかけら・朝のうきだま・雨のカタツムリ)も同じ扱い
   if (TRANSIENT_PICKUP.has(hintCat)) return true;
   if (hintCat === 'unknown') return true;
-  if (hintCat === 'shop') return false;
-  if (objCat === hintCat) return true;
   if (objCat === 'report') {
-    // 報告は「その相手に会う」1手。会話も、道すがらの採取も 進行を1ミリも遅らせない。
-    // 釣り(かかるまで待つ長い行動)・店・もちかえる・展示は これまでどおり矛盾のまま
-    return hintCat === 'talk' || GATHER.has(hintCat);
+    // 報告は「その相手に会う」1手。会話も、道すがらの採取・釣り・買いもの・家具いじりも
+    // 進行を1ミリも遅らせない(v17.3 OPEN_KINDS)。
+    // ただし **相手が Eの輪(1.8m)の内がわにいるのに 報告いがいが出ている**画面だけは
+    // 設計上ありえない(selectInteraction が 受注/報告NPCを 距離より先に選ぶ)ので矛盾。
+    if (hintCat === 'talk') return true;
+    return ctx.atTarget !== true;
   }
-  // v17.2 報告いがいの誘導段階は、採取(gather*)も 釣り(fish)も 設計として ふさいでいない
-  // (GATHER_OK_OBJ のコメントに根拠と、コーパス再ラベル2件の内訳がある)
-  if (GATHER_OK_OBJ.has(objCat) && (GATHER.has(hintCat) || hintCat === 'fish')) return true;
+  if (objCat === hintCat) return true;
+  // v17.2 採取(gather*)と 釣り(fish)、v17.3 店(shop)・家具(carry/display)は
+  // どの誘導段階でも 設計として ふさいでいない
+  // (GATHER_OK_OBJ / OPENED_HINTS のコメントに根拠と、コーパス再ラベルの内訳がある)
+  if (GATHER_OK_OBJ.has(objCat) && (GATHER.has(hintCat) || OPENED_HINTS.has(hintCat))) return true;
   if (objCat === 'unknown') return true;
   return false;
 }
@@ -425,15 +468,35 @@ function distOf(sub) {
   return m ? parseInt(m[1], 10) : null;
 }
 
+/**
+ * その行で「目的地に もう ついているか」(v17.3)。
+ *
+ * 画面に出ている2つだけを見る:
+ *   .obj-sub の「→ Nm」  … 目的地まで 1.8mより遠いときだけ 出る(ObjectiveHud SUB_DIST_MIN)
+ *   画面端の 誘導矢印     … 目的地が 画面に入ると 消える(WorldMarkerController)
+ * どちらも出ていなければ「ついている」。報告の目的では 目的地 = 報告する相手なので、
+ * これが そのまま「相手が Eの輪(1.8m)の内がわにいる」の意味になる
+ * (根拠と使いみちは isSemanticMatch の ctx.atTarget の説明を参照)。
+ *
+ * arrow の項目そのものが無い 古いログ(v4コーパス)では「矢印は出ていない」とみなす
+ * ——検出をゆるめない側に倒す。
+ */
+export function atTargetOf(row) {
+  if (distOf(row?.sub) !== null) return false; // まだ距離が出ている = ついていない
+  return row?.arrow === null || row?.arrow === undefined;
+}
+
 /** traceの1行にカテゴリ判定を足す(既存の項目は消さない・順序も変えない) */
 export function annotateRow(row) {
   const objectiveCategory = categorizeObjective(row.obj ?? '', row.head ?? '');
   const hintCategory = categorizeHint(row.hint ?? '');
+  const atTarget = atTargetOf(row);
   return {
     ...row,
     objectiveCategory,
     hintCategory,
-    semanticMatch: isSemanticMatch(objectiveCategory, hintCategory),
+    atTarget,
+    semanticMatch: isSemanticMatch(objectiveCategory, hintCategory, { atTarget }),
   };
 }
 
@@ -478,8 +541,12 @@ export function summarizeTrace(rows, stallSec = 60) {
       sec: r.sec, obj: r.obj, hint: r.hint,
       objectiveCategory: r.objectiveCategory, hintCategory: r.hintCategory,
     }));
+  // v17.3 「報告に行かず釣りつづける」の見張り。
+  // 釣りそのものは 報告の段階でも できるようになった(OPEN_KINDS)ので、
+  // **相手の目の前(atTarget)で 報告ではなく釣りのヒントが出ている**ときだけ数える。
+  // 桟橋の先で1匹つってから 報告に向かうのは 寄り道であって 足ぶみではない。
   const refishDuringReport = trace
-    .filter((r) => r.objectiveCategory === 'report' && r.hintCategory === 'fish')
+    .filter((r) => r.objectiveCategory === 'report' && r.hintCategory === 'fish' && r.atTarget)
     .map((r) => ({ sec: r.sec, obj: r.obj, hint: r.hint }));
   const stalls = findStalls(trace, stallSec);
   // 表にないヒント文言。矛盾には数えないが、カテゴリ表の更新もれに気づくために残す

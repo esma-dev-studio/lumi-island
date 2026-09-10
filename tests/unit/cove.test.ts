@@ -445,8 +445,8 @@ describe('入り江の中のE候補', () => {
   });
 
   it('灯台のとびらの案内は、依頼の誘導を横取りしない優先度になっている', () => {
-    // kind='place' は ObjectiveSystem の preferredKinds に決して入らない種類。
-    // 優先度も採取(30)・ドア(35)より弱い
+    // v17.3 kind='place' も 誘導中に隠れなくなったので、横取りを防いでいるのは 優先度だけ。
+    // 採取(30)・ドア(35)より弱い
     expect(PRIORITY.door + 2).toBeGreaterThan(PRIORITY.gather);
     expect(PRIORITY.door + 2).toBeGreaterThan(PRIORITY.door);
   });
